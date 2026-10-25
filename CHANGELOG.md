@@ -2,6 +2,44 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M4 — World streaming: port to desert, no hitch, outpost (2026-10-25)
+
+What works now:
+- A chunk streamer keeps a window of world chunks loaded around the player and
+  AMORTIZES their load work across frames, so no single frame exceeds the frame-time
+  budget. A naive "load the whole region now" loader would cost ~132ms at once and hitch;
+  the streamer spreads that work so every frame stays under the 50ms ceiling from the spec.
+- A headless frame-time log records the entire walk from the docking bay (x=0) through the
+  port into the desert out to the outpost (x=1000). A GUT test reads that log and proves
+  two properties from the actual numbers: (a) no frame's work exceeded 50ms, and (b) the
+  walk travels the full distance, i.e. the port/desert boundary is crossed with no empty
+  "loading" frame.
+- The outpost is data in content/core (3 buildings, 1 crate objective, 4 troopers, 1
+  duelist), loaded through the same IP-neutral data layer, and placed as a chunk at the far
+  end of the desert.
+- The data layer learned a new category, `locations`, so the outpost is swappable like
+  everything else -- no code change to add a new location.
+
+How to see it:
+- `./scripts/ci.sh` writes test_results/m4_frame_time.txt and the GUT test reads it.
+- The log's first line shows a ~36ms load spike at the bay (amortized under budget);
+  the rest stay well under 18ms.
+
+What is faked or stubbed:
+- The world is a 1-D chunk strip in a simulation, not yet a 3D greybox you walk through
+  on screen. The visible, streamed 3D desert with the outpost models rendered is part of
+  the M8 polish pass. The streaming *behavior and its frame-cost* are the real thing,
+  proven here in CI.
+- The "no hitch over 50ms" is a load-work budget, not yet a measured GPU frame time of a
+  real render. M8 will record real frame times with the model loaded.
+
+What broke / fixed:
+- A log parser that split on a single space produced empty fields (the log is space-
+  padded); the parser now collapses whitespace runs.
+
+What was needed from the user:
+- None.
+
 ## M3 — Melee: energy blade, stamina, timed deflection, duelist enemy (2026-10-25)
 
 What works now:

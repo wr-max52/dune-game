@@ -4,5 +4,6 @@
   "npcs": ["fixer", "bartender"],
   "weapons": ["pistol_blaster", "rifle_blaster", "energy_blade"],
   "factions": ["imperial_remnant", "smuggler"],
+  "locations": ["outpost"],
   "notes": "All names and labels live in this layer only. Code references entries by id."
 }
