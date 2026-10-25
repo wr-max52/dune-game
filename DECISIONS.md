@@ -52,3 +52,42 @@ Every significant technical choice, the alternative, and why. Newest on top.
 - **No GPL anywhere.** Godot MIT, GUT MIT, NobodyWho EUPL-1.2, llama.cpp/ONNX
   permissive, greybox assets CC0. Studied OpenJK for melee/deflection mechanics only;
   nothing is copied.
+
+## 2026-10-25 — M3 (melee + duelist)
+
+- **The energy blade and the duelist are pure, testable `RefCounted` state machines**
+  (`src/systems/combat/energy_blade.gd`, `src/systems/ai/duelist_brain.gd`), with no
+  Node3D. This mirrors M1/M2: the gameplay math is proven by GUT, and a node wraps it for
+  the live game. A duelist that *uses the player's exact blade logic* is the design so
+  "a melee duelist that blocks, parries, and pressures" and the "timed deflection" skill
+  are the *same code* on both sides.
+
+- **Timed deflection is modeled as a block-timing window, not as a separate input.**
+  `intercept_bolt()` checks how long the current block has been held: a block opened
+  within `deflect_window` reflects the bolt and refunds stamina; a block held longer only
+  absorbs it. This is the "deflection of incoming bolts when blocking with correct
+  timing" from the spec, and it reduces to one number (`deflect_window`) so the skill can
+  be tuned from the data layer in a future skin.
+
+- **Process-ordering rule for multi-stage timers.** When a single `update(dt)` both ends
+  a state and starts the next, the *recovery* timer must be advanced before the *drain*/
+  *end* logic of that frame, otherwise a state reached that frame is instantly advanced
+  out of its own recovery. The `energy_blade.update` is structured in that order and the
+  rule is noted here for the next timer-based system (reload, parry cooldowns).
+
+- **M2 was committed before it was merged, so M3 was built on a base missing M2.**
+  This is a process bug, not a code one: a feature branch can be complete and correct
+  while not yet integrated. The fix was to merge the in-flight work into `main` before
+  branching the next milestone, and to keep the rule **"branch each milestone off the
+  latest main, and merge only when its tests pass."** If this pattern ever recurs, the
+  recovery is `git merge --no-ff <branch>` because the branches are disjoint.
+
+- **The trace, not the render, is the M2/M3 proof in CI.** Each combat milestone ships a
+  headless *trace* (a text log of a simulated encounter) plus GUT assertions on that log.
+  A rendered GUI fight with bullets and animation is M8 polish. This keeps the merge gate
+  fast and deterministic while still proving the *behavior* the spec asks for.
+
+- **One known non-failing artifact is disclosed, not hidden.** GUT flags "1 orphan" at
+  process exit: a test bolt created without a scene tree is freed at exit. It does not
+  fail the suite (exit 0, "All tests passed"); it is tracked in KNOWN_ISSUES.md for M8
+  cleanup.
