@@ -21,12 +21,22 @@ echo "CI: pinned=$PIN  actual=$GODOT_VER"
 # M1: generate a headless bot-driven trace of the demo (movement + FPV/TPV toggle)
 # before the test run so tests/test_m1_trace.gut.gd has something to check.
 echo "CI: generating m1 bot trace..."
-"$GODOT_BIN" --headless --path . -s res://scenes/m1_trace.gd >/dev/null 2>&1 || true
+"$GODOT_BIN" --headless --path . -s res://scenes/m1_trace.gd >/dev/null 2>&1
 if [ ! -f test_results/m1_trace.txt ]; then
   echo "CI: ERROR -- m1 trace was not generated" >&2
   exit 1
 fi
 echo "CI: m1 trace present ($(wc -l < test_results/m1_trace.txt) lines)"
+
+# M2: generate the headless combat-integration trace so tests/test_m2_combat.gut.gd
+# can check "the trooper seals to cover, both blasters work, health/death work".
+echo "CI: generating m2 combat trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m2_combat_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m2_combat_trace.txt ]; then
+  echo "CI: ERROR -- m2 combat trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m2 trace present ($(wc -l < test_results/m2_combat_trace.txt) lines)"
 
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
