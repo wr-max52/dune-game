@@ -1,0 +1,21 @@
+# Godot
+.godot/
+*.uid
+# Editor state
+*.tmp
+
+# Test + build outputs
+test_results/
+builds/
+rec/
+*.mp4
+
+# Local LLM model downloads (downloaded, not committed)
+models/
+*.gguf
+
+# OS
+.DS_Store
+
+# Keep the pinned version file
+!scripts/pin.txt

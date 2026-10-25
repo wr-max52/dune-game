@@ -1,0 +1,14 @@
+{
+  "id": "pistol_blaster",
+  "class": "pistol",
+  "label": "Pistol Blaster",
+  "damage": 12,
+  "bolt_speed": 32.0,
+  "rate": 0.12,
+  "recoil": 2.0,
+  "range": 60.0,
+  "mag": 15,
+  "reload_time": 1.4,
+  "visible_bolt": true,
+  "note": "IP-neutral. Generic label only."
+}

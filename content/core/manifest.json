@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "generated": "M0",
+  "npcs": ["fixer", "bartender"],
+  "weapons": ["pistol_blaster", "rifle_blaster", "energy_blade"],
+  "factions": ["imperial_remnant", "smuggler"],
+  "notes": "All names and labels live in this layer only. Code references entries by id."
+}

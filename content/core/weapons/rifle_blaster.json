@@ -1,0 +1,14 @@
+{
+  "id": "rifle_blaster",
+  "class": "rifle",
+  "label": "Rifle Blaster",
+  "damage": 18,
+  "bolt_speed": 48.0,
+  "rate": 0.18,
+  "recoil": 3.5,
+  "range": 110.0,
+  "mag": 30,
+  "reload_time": 2.2,
+  "visible_bolt": true,
+  "note": "IP-neutral. Generic label only."
+}

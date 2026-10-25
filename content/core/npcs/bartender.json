@@ -1,0 +1,9 @@
+{
+  "id": "bartender",
+  "kind": "llm",
+  "label": "Bartender",
+  "persona_prompt_file": "dialogue/bartender_persona.txt",
+  "tools": ["give_rumor", "set_disposition", "offer_drink", "call_guards"],
+  "fallback_lines": ["dialogue/bartender_fallback"],
+  "notes": "The single LLM-driven npc. Tools are restricted to this exact set."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "energy_blade",
+  "class": "melee",
+  "label": "Energy Blade",
+  "light_damage": 16,
+  "heavy_damage": 30,
+  "block_cost_stamina": 8,
+  "deflect_window": 0.18,
+  "deflect_refund_stamina": 6,
+  "note": "IP-neutral. Generic label only."
+}
