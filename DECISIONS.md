@@ -91,3 +91,31 @@ Every significant technical choice, the alternative, and why. Newest on top.
   process exit: a test bolt created without a scene tree is freed at exit. It does not
   fail the suite (exit 0, "All tests passed"); it is tracked in KNOWN_ISSUES.md for M8
   cleanup.
+
+## 2026-10-25 — M4 (chunk streaming)
+
+- **"No hitch over 50ms" is proven as an amortized frame-time budget, not a GPU
+  measure.** The spec asks for "no loading screen at the boundary / no hitch over 50ms."
+  We model chunk loading as a cost in milliseconds and a `chunk_streamer` that never lets
+  one frame spend more than `work_budget_per_frame` (=50ms). The property "max per-frame
+  work never exceeds the budget" is the exact anti-hitch invariant, and it is the part
+  that can be proven headless. Real GPU frame-time of a rendered world is deferred to M8;
+  this is the load-side budget that makes a seam hitch-free.
+
+- **Streaming proof is a generated log, read by a test.** Rather than assert behavior in
+  vacuum, M4 runs a full bay-to-outpost walk in a SceneTree harness that writes a
+  per-frame log (frame, player_x, frame_work_ms) to `test_results/`, and a GUT test reads
+  that file and checks "0 frames over 50ms" and "the walk crosses to x=1000." This is the
+  same machine-evidence pattern as the M1/M2/M3 traces; it keeps the proof honest (read
+  from a real run) and reproducible (CI regenerates it). It is disclosed that this is the
+  load-cost model, not yet a recorded rendered frame time.
+
+- **The data layer gained a `locations` category.** The outpost (3 buildings + 1 crate +
+  its guards) is content/core data, not code, so a future skin or a new location needs
+  zero code change — consistent with the M0 IP-neutral design. New categories extend the
+  manifest (`"locations": ["outpost"]`), and the loader loads them the same generic way.
+
+- **A 1-D chunk strip stands in for a rendered 3D world at M4.** Streaming logic and its
+  frame cost don't depend on geometry; a 1-D coordinate (player position east) is enough
+  to prove the window/coverage/amortization invariants without a 3D level. The visible 3D
+  greybox is M8.

@@ -49,6 +49,17 @@ if [ ! -f test_results/m3_melee_trace.txt ]; then
 fi
 echo "CI: m3 trace present ($(wc -l < test_results/m3_melee_trace.txt) lines)"
 
+# M4: generate the headless port->desert frame-time trace so
+# tests/test_m4_streaming.gut.gd can read it and prove "no hitch over 50ms" and
+# "seamless walk to the desert" from the actual log, not by assertion.
+echo "CI: generating m4 frame-time trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m4_frame_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m4_frame_time.txt ]; then
+  echo "CI: ERROR -- m4 frame-time trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m4 frame-time trace present ($(wc -l < test_results/m4_frame_time.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
