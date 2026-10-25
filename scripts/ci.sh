@@ -18,6 +18,16 @@ PIN="$(cat scripts/pin.txt)"
 GODOT_VER="$("$GODOT_BIN" --version 2>/dev/null || true)"
 echo "CI: pinned=$PIN  actual=$GODOT_VER"
 
+# M1: generate a headless bot-driven trace of the demo (movement + FPV/TPV toggle)
+# before the test run so tests/test_m1_trace.gut.gd has something to check.
+echo "CI: generating m1 bot trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m1_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/m1_trace.txt ]; then
+  echo "CI: ERROR -- m1 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m1 trace present ($(wc -l < test_results/m1_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
