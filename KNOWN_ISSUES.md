@@ -2,7 +2,39 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M14 (2026-10-26)
+## After M15 part 1, guards on foot (2026-10-26)
+
+**What is real and proven by tests:** the two gate guards are NpcBody nodes on the
+player's movement code, with Health, flinch and death; the town navmesh bakes from
+data on a worker thread; guards walk a patrol, 165 m across town and back, and down
+the pit ramps and back up with real physics and no stuck events; their senses see,
+miss (side, crouched far), are blocked by the watchtower, feel you close behind,
+spot a weapon faster, hear shots within range, and forget
+(`test_results/npc_trace.txt`). Unit tests cover the view cone, the awareness
+meter, hearing, the ray throttle, path following, corner and stuck handling, the
+nav source geometry and obstructions, and the soldier data.
+
+**Not done, honestly:**
+- **No brain.** Guards hold their posts. They see you, notice you and turn their
+  heads, then do nothing about it: no challenge, no hostility from Remnant
+  standing, no shooting back, no alerting each other. That is part 2.
+- **They do not shoot.** The trooper brain and squad coordinator (M2/M5) are still
+  only used by the old traces.
+- **Death is a tip-over.** No ragdoll, no hit reactions beyond a chest flinch, no
+  sound. A dead guard stays down until the scene reloads and is not saved, and
+  killing one changes nothing in WorldState yet.
+- **No avoidance between NPCs.** Paths come from `map_get_path`; two guards on
+  one narrow path will bump (the capsule physics keeps them apart, crudely).
+- **Navmesh covers the town and its apron only.** Nothing paths into the dunes.
+  The bake does not rerun if the town changes at runtime (it does not today).
+- **The tower and yard troopers are still statues.** Only markers with a
+  `"soldier"` field get a body.
+- **Head tracking only.** Eyes follow the body's facing; the head turns but the
+  view cone does not.
+- **Not played by a human yet.** The F4 line is the way to tune it on the Mac.
+  Sight range, fov, reaction time and forget time are first guesses.
+
+## After M14 (2026-10-26) -- still current; the guard notes above add to it.
 
 **What is real and proven by tests:** the whole port-to-space loop with real physics
 and the real scenes (`test_results/m14_flight_trace.txt`): boarding, vertical
