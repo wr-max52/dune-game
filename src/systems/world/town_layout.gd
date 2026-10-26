@@ -1,0 +1,225 @@
+extends RefCounted
+## Town layout (M9). Reads port_town from the data layer and validates it.
+## Pure: no nodes. The scene builder (town_demo.gd) and the walk trace use it.
+## The validator mirrors docs/town/validate_town.py rule for rule (V1 to V8).
+
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+
+var data: Dictionary = {}
+
+
+func load_town(town_id: String = "port_town") -> bool:
+	var cc := CoreContent.new()
+	if not cc.load_from():
+		return false
+	data = cc.get_location(town_id)
+	return not data.is_empty()
+
+
+func load_from_dict(d: Dictionary) -> void:
+	data = d
+
+
+func boxes() -> Array:
+	return data.get("boxes", [])
+
+
+func markers() -> Array:
+	return data.get("markers", [])
+
+
+func routes() -> Array:
+	return data.get("routes", [])
+
+
+func zones() -> Array:
+	return data.get("zones", [])
+
+
+func get_box(id: String) -> Dictionary:
+	return _find(boxes(), id)
+
+
+func get_marker(id: String) -> Dictionary:
+	return _find(markers(), id)
+
+
+func get_route(id: String) -> Dictionary:
+	return _find(routes(), id)
+
+
+func _find(list: Array, id: String) -> Dictionary:
+	for item in list:
+		if str(item.get("id", "")) == id:
+			return item
+	return {}
+
+
+func marker_pos(id: String) -> Vector3:
+	var p = get_marker(id).get("pos", [0, 0, 0])
+	return Vector3(float(p[0]), float(p[1]), float(p[2]))
+
+
+func spawn_pos() -> Vector3:
+	var list := markers_with_role("spawn")
+	return marker_pos(str(list[0].id)) if list.size() > 0 else Vector3.ZERO
+
+
+func markers_with_role(role: String) -> Array:
+	var out: Array = []
+	for m in markers():
+		if str(m.get("role", "")) == role:
+			out.append(m)
+	return out
+
+
+func route_points_3d(route_id: String) -> Array:
+	var out: Array = []
+	for p in get_route(route_id).get("points", []):
+		out.append(Vector3(float(p[0]), 0.0, float(p[1])))
+	return out
+
+
+func route_length(route_id: String) -> float:
+	var pts := route_points_3d(route_id)
+	var total := 0.0
+	for i in range(1, pts.size()):
+		total += (pts[i - 1] as Vector3).distance_to(pts[i])
+	return total
+
+
+## Every rule broken, as "Vn ..." strings. Empty means the town is valid.
+func validate() -> Array:
+	var errs: Array = []
+	var clearance := float(data.get("player_clearance", 0.6))
+	var blocking: Array = data.get("blocking_kinds", [])
+	var zone_by_id := {}
+	for z in zones():
+		zone_by_id[str(z.id)] = z
+
+	# V1 unique ids
+	var seen := {}
+	for item in boxes() + markers():
+		var id := str(item.get("id", ""))
+		if seen.has(id):
+			errs.append("V1 duplicate id: " + id)
+		seen[id] = true
+
+	for b in boxes():
+		var mn := _v3(b.min)
+		var mx := _v3(b.max)
+		# V2 min < max
+		if not (mn.x < mx.x and mn.y < mx.y and mn.z < mx.z):
+			errs.append("V2 bad min/max: " + str(b.id))
+		# V3 overhead height
+		if str(b.kind) == "overhead" and mn.y < 2.2:
+			errs.append("V3 overhead too low: " + str(b.id))
+		# V4 inside zone
+		var zid := str(b.get("zone", ""))
+		if zid != "ground" and zid != "perimeter":
+			if not zone_by_id.has(zid):
+				errs.append("V4 unknown zone: " + str(b.id))
+			else:
+				var z: Dictionary = zone_by_id[zid]
+				var inside := mn.x >= float(z.min[0]) and mx.x <= float(z.max[0]) \
+					and mn.z >= float(z.min[1]) and mx.z <= float(z.max[1])
+				if not inside:
+					errs.append("V4 outside zone: " + str(b.id))
+
+	# V5 no 3D overlap (strict, so touching is fine)
+	var bs := boxes()
+	for i in bs.size():
+		for j in range(i + 1, bs.size()):
+			if _aabb_overlap(bs[i], bs[j]):
+				errs.append("V5 overlap: %s / %s" % [bs[i].id, bs[j].id])
+
+	# V6 marker not blocked, V7 marker supported
+	for m in markers():
+		var p := _v3(m.pos)
+		var supported := false
+		for b in bs:
+			var mn := _v3(b.min)
+			var mx := _v3(b.max)
+			if str(b.kind) in blocking and mn.y <= p.y and p.y < mx.y:
+				if _point_rect_dist(p.x, p.z, b) <= clearance:
+					errs.append("V6 marker blocked: %s by %s" % [m.id, b.id])
+			if (str(b.kind) == "floor" or str(b.kind) == "solid") and absf(mx.y - p.y) < 0.05 \
+					and p.x >= mn.x and p.x <= mx.x and p.z >= mn.z and p.z <= mx.z:
+				supported = true
+		if not supported:
+			errs.append("V7 marker unsupported: " + str(m.id))
+
+	# V8 routes clear of blocking boxes
+	for r in routes():
+		var pts: Array = r.points
+		for k in range(1, pts.size()):
+			for b in bs:
+				if str(b.kind) in blocking:
+					if _segment_rect_dist(pts[k - 1], pts[k], b) <= clearance:
+						errs.append("V8 route %s segment %d hits %s" % [r.id, k, b.id])
+	return errs
+
+
+func _v3(a) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+
+func _aabb_overlap(a, b) -> bool:
+	for k in 3:
+		if not (float(a.min[k]) < float(b.max[k]) and float(b.min[k]) < float(a.max[k])):
+			return false
+	return true
+
+
+## 2D distance from point (x, z) to a box footprint. 0 if inside.
+func _point_rect_dist(x: float, z: float, b) -> float:
+	var dx := maxf(maxf(float(b.min[0]) - x, 0.0), x - float(b.max[0]))
+	var dz := maxf(maxf(float(b.min[2]) - z, 0.0), z - float(b.max[2]))
+	return sqrt(dx * dx + dz * dz)
+
+
+## 2D distance from segment p->q (each [x, z]) to a box footprint.
+## Sampled every 0.1 m, the same method as the Python reference.
+func _segment_rect_dist(p, q, b) -> float:
+	var a := Vector2(float(p[0]), float(p[1]))
+	var c := Vector2(float(q[0]), float(q[1]))
+	var n := maxi(2, int(a.distance_to(c) / 0.1))
+	var best := INF
+	for s in n + 1:
+		var t := float(s) / float(n)
+		var pt := a.lerp(c, t)
+		best = minf(best, _point_rect_dist(pt.x, pt.y, b))
+	return best
+
+
+## A ramp box is the space the ramp fills. Returns the center, size and basis of a
+## slab whose TOP face runs from the low edge to the high edge along rise_toward.
+static func ramp_transform(box: Dictionary, thickness: float = 0.4) -> Dictionary:
+	var mn := Vector3(float(box.min[0]), float(box.min[1]), float(box.min[2]))
+	var mx := Vector3(float(box.max[0]), float(box.max[1]), float(box.max[2]))
+	var rise := mx.y - mn.y
+	var dir: String = str(box.get("rise_toward", "+x"))
+	var along_x := dir == "+x" or dir == "-x"
+	var run := (mx.x - mn.x) if along_x else (mx.z - mn.z)
+	var width := (mx.z - mn.z) if along_x else (mx.x - mn.x)
+	var slope_len := sqrt(run * run + rise * rise)
+	var angle := atan2(rise, run)
+
+	var basis := Basis.IDENTITY
+	var size := Vector3.ZERO
+	if along_x:
+		# Rotating about Z by +angle lifts the +X end. "-x" lifts the -X end.
+		var signed := angle if dir == "+x" else -angle
+		basis = Basis(Vector3(0, 0, 1), signed)
+		size = Vector3(slope_len, thickness, width)
+	else:
+		# Rotating about X by -angle lifts the +Z end. "-z" lifts the -Z end.
+		var signed := -angle if dir == "+z" else angle
+		basis = Basis(Vector3(1, 0, 0), signed)
+		size = Vector3(width, thickness, slope_len)
+
+	# Middle of the top surface is the middle of the box. Push the slab down by half
+	# its thickness along its own up axis, so its TOP face is the walking surface.
+	var top_mid := (mn + mx) * 0.5
+	var center := top_mid - basis.y * (thickness * 0.5)
+	return { "center": center, "size": size, "basis": basis, "angle": angle }

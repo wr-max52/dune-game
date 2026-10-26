@@ -114,6 +114,18 @@ if [ ! -f test_results/m8_playthrough.txt ] || [ ! -f test_results/m8_perf_repor
 fi
 echo "CI: m8 trace present (playthrough: $(wc -l < test_results/m8_playthrough.txt) lines, perf: $(wc -l < test_results/m8_perf_report.txt) lines)"
 
+# M9: generate the headless town walk trace so tests/test_town_walk.gut.gd can
+# check "the town is built from data and every main route is walkable with real
+# collision: spawn -> ramp -> cantina, cantina -> gate, gate -> cantina, back gap
+# -> cantina, with no frame over the 50ms budget."
+echo "CI: generating m9 town walk trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/town_walk_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/town_walk_trace.txt ]; then
+  echo "CI: ERROR -- m9 town trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m9 trace present ($(wc -l < test_results/town_walk_trace.txt) lines)"
+
 # M10: generate the headless dogfight trace so tests/test_m10_dogfight.gut.gd can
 # check "the starfighter flies and fights, the encounter's waves are beaten, the
 # enemy pilots fight back, and the AI pursues, attacks, breaks and extends."
