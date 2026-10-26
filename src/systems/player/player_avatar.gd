@@ -11,6 +11,9 @@ extends Node3D
 ## - First person: the body stays (feet and shadow are real) but every mesh except
 ##   the forearms, hands and weapon renders as shadow only, and the chest follows
 ##   the camera pitch so the weapon stays in view. One body, both cameras.
+## - With a rigged model (SkinnedBody, from characters.json "model") the skin is one
+##   mesh, so first person shows the kit's primitive forearms and hands instead and
+##   the whole skin goes shadow only.
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
@@ -36,8 +39,11 @@ var last_frame: Dictionary = {}
 var _recoil := 0.0                 ## 1 right after a shot, decays to 0
 var _flash_left := 0.0
 
+var skin: SkinnedBody              ## the rigged model over the joints (null = primitives)
+
 var _arm_meshes: Array = []
 var _other_meshes: Array = []
+var _kit_arms: Array = []          ## kit forearms shown in first person over a skin
 
 
 func _init(materials: LookMaterials = null) -> void:
@@ -48,6 +54,7 @@ func _init(materials: LookMaterials = null) -> void:
 	add_child(body)
 	joints = body.get_meta("joints")
 	look = CharacterKit._read_json(LOOK_PATH)
+	skin = SkinnedBody.dress(body, kit.palettes.get("player_smuggler", {}).get("model", {}))
 	_collect_meshes()
 
 
@@ -211,18 +218,34 @@ func set_first_person(on: bool) -> void:
 		(m as GeometryInstance3D).cast_shadow = shadow_only if on else normal
 	for m in _arm_meshes:
 		(m as GeometryInstance3D).cast_shadow = normal
+	# The kit forearms stand in for the skin's in first person; they cast no shadow
+	# (the skin already does).
+	for m in _kit_arms:
+		(m as GeometryInstance3D).visible = on
+		(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _collect_meshes() -> void:
 	_arm_meshes.clear()
 	_other_meshes.clear()
+	_kit_arms.clear()
 	var keep := {}
 	for jn in ["l_elbow", "r_elbow"]:
 		for m in _meshes_under(joints[jn]):
 			keep[m] = true
+	var weapon_meshes := {}
 	for w in weapons.values():
 		for m in _meshes_under(w):
 			keep[m] = true
+			weapon_meshes[m] = true
+	if skin != null:
+		_other_meshes = skin.skin_meshes()
+		for m in keep:
+			if weapon_meshes.has(m):
+				_arm_meshes.append(m)
+			else:
+				_kit_arms.append(m)
+		return
 	for m in _meshes_under(body):
 		if keep.has(m):
 			_arm_meshes.append(m)
@@ -286,6 +309,8 @@ func animate(dt: float, inp: Dictionary) -> void:
 			if w != null and w.has_node("Muzzle/Flash"):
 				(w.get_node("Muzzle/Flash") as Node3D).visible = false
 	_place_weapon(upper, pitch)
+	if skin != null:
+		skin.sync(body)
 
 
 func _place_weapon(upper: String, pitch: float) -> void:

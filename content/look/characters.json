@@ -1,5 +1,5 @@
 {
-  "note": "Character palettes and proportions. Shapes live in src/systems/look/character_kit.gd; colours and sizes live here. See docs/ART_DIRECTION.md, Characters.",
+  "note": "Character palettes and proportions. An archetype with a \"model\" wears that rigged .glb over its joints (src/systems/look/skinned_body.gd; prep: tools/look/prep_character.gd). Shapes live in src/systems/look/character_kit.gd; colours and sizes live here. See docs/ART_DIRECTION.md, Characters.",
   "archetypes": {
     "remnant_trooper": {
       "height": 1.9, "bulk": 1.12,
@@ -30,7 +30,17 @@
     "player_smuggler": {
       "height": 1.8, "bulk": 1.0,
       "skin_wrap": "#1f8a86", "shirt": "#c9b896", "trousers": "#4a3c30", "coat": "#6e4a2c", "gloves": "#4a3020",
-      "hat": "#6a5038", "boots": "#3e2c20", "leather": "#5a3a24", "goggles": "#2a2a2a", "lens": "#7fd0c8"
+      "hat": "#6a5038", "boots": "#3e2c20", "leather": "#5a3a24", "goggles": "#2a2a2a", "lens": "#7fd0c8",
+      "model": {
+        "scene": "res://assets/characters/smuggler/smuggler.glb",
+        "bones": {
+          "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
+          "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
+          "r_shoulder": "RightArm", "r_elbow": "RightForeArm", "r_wrist": "RightHand",
+          "l_hip": "LeftUpLeg", "l_knee": "LeftLeg", "l_ankle": "LeftFoot",
+          "r_hip": "RightUpLeg", "r_knee": "RightLeg", "r_ankle": "RightFoot"
+        }
+      }
     },
     "local": {
       "height": 1.72, "bulk": 1.0,

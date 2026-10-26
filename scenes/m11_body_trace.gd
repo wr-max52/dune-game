@@ -119,8 +119,15 @@ func _run() -> void:
 	for m in kit.avatar._other_meshes:
 		if m.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
 			hidden += 1
-	out("FPV_BODY_SHADOW_ONLY", hidden == kit.avatar._other_meshes.size() and hidden > 20)
-	out("FPV_ARMS_VISIBLE", kit.avatar._arm_meshes.size() > 4)
+	# A rigged skin is one mesh; the primitive body is 20+. Over a skin the arms in
+	# first person are the kit's primitive forearms (_kit_arms), shown only then.
+	var skinned: bool = kit.avatar.skin != null
+	out("FPV_BODY_SHADOW_ONLY", hidden == kit.avatar._other_meshes.size() and hidden >= (1 if skinned else 21))
+	var arms_shown := 0
+	for m in kit.avatar._kit_arms:
+		if m.visible:
+			arms_shown += 1
+	out("FPV_ARMS_VISIBLE", (arms_shown == kit.avatar._kit_arms.size() and arms_shown > 4) if skinned else kit.avatar._arm_meshes.size() > 4)
 
 	# ---- third person camera never ends up inside a wall
 	rig.set_first_person(false)
