@@ -13,6 +13,7 @@ var mats: LookMaterials
 var look: LookEnvironment
 var lamps: Array[OmniLight3D] = []
 var banners: Array[MeshInstance3D] = []
+var parked_ships: Array[Node3D] = []   ## ship models on launch pads (same as flight)
 var skipped_kinds := {}       ## kind -> true, for boxes that keep their greybox color
 var _rng := RandomNumberGenerator.new()
 
@@ -25,6 +26,7 @@ func dress(town, look_env: LookEnvironment) -> void:
 	_apply_materials(town)
 	_add_lamps(town)
 	_add_banners(town)
+	_park_ships(town)
 
 
 # ---------------------------------------------------------------- materials
@@ -201,3 +203,59 @@ func _add_banners(town) -> void:
 	_banner(root, Vector3(mx.x + 0.05, y, c.z), 0.0, 2.4, 7.0, LookMaterials.REMNANT_OXBLOOD)
 	# Toward main street (-Z): torn short.
 	_banner(root, Vector3(c.x, y, mn.z - 0.05), -PI * 0.5, 2.4, 4.0, LookMaterials.REMNANT_OXBLOOD)
+
+
+# ---------------------------------------------------------------- parked ships
+
+## The ship you fly, parked on its pad: the exact model the dogfight draws, built
+## by the same ShipKit from the same look id (pad encounter -> player ship -> look).
+## The box keeps its collision; only its greybox mesh is hidden. The box in
+## port_town.json is sized to this model (tests/test_town_decor checks the fit).
+func _park_ships(town) -> void:
+	var scene_path := "res://scenes/town_demo.tscn"
+	var content = preload("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var kit: ShipKit = null
+	for p in GameFlow.pads_for_scene(scene_path):
+		var box: Dictionary = town.get_box(str(p.get("town_box", "")))
+		var enc: Dictionary = content.encounters.get(str(p.get("encounter", "")), {})
+		var ship_id := str(enc.get("player", {}).get("ship", ""))
+		var look_id := str(content.ships.get(ship_id, {}).get("look", ""))
+		if box.is_empty() or look_id == "":
+			push_warning("TownDecor: pad %s has no ship to park" % str(p.get("id", "")))
+			continue
+		if kit == null:
+			kit = ShipKit.new()
+		var ship := kit.build(look_id)
+		ship.name = "Parked_" + str(p.id)
+		ship.rotation.y = deg_to_rad(float(p.get("parked_yaw_deg", 0.0)))
+		add_child(ship)
+		# Belly on the pad: drop the model so its lowest point sits on the box base.
+		var c := (_v3(box.min) + _v3(box.max)) * 0.5
+		ship.position = Vector3(c.x, float(box.min[1]), c.z)
+		var a := visual_aabb(ship)
+		ship.position.y += float(box.min[1]) - a.position.y
+		ship.position.x += c.x - a.get_center().x
+		ship.position.z += c.z - a.get_center().z
+		var mi := _box_mesh(str(box.id))
+		if mi != null:
+			mi.visible = false
+		parked_ships.append(ship)
+
+
+## World-space bounds of every mesh under `root`.
+static func visual_aabb(root: Node3D) -> AABB:
+	var acc := [null]
+	_merge_aabb(root, root.global_transform if root.is_inside_tree() else root.transform, acc)
+	return acc[0] if acc[0] != null else AABB()
+
+
+static func _merge_aabb(n: Node, xf: Transform3D, acc: Array) -> void:
+	for c in n.get_children():
+		var t := xf
+		if c is Node3D:
+			t = xf * (c as Node3D).transform
+		if c is MeshInstance3D and c.mesh != null:
+			var a: AABB = t * c.mesh.get_aabb()
+			acc[0] = a if acc[0] == null else acc[0].merge(a)
+		_merge_aabb(c, t, acc)

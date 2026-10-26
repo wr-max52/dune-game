@@ -20,7 +20,8 @@ after it (`tests/test_flow.gut.gd`).
 - **The town is not on the beauty corner plinth or terrain.** The roads down the
   cliff are unplanned. The aprons have no sand shader (flat sand color; at golden
   hour they read as dark grey from low angles).
-- **The ship is a box** and the market stalls are bare boxes.
+- **The market stalls are bare boxes.** (The parked ship is now the real flight model.)
+- **The parked ship is small in the pit.** The fighter is 9.3 m long and 2.6 m tall in a 36 by 44 m pit, 6 m deep, so it is hidden from the street until you reach the rim.
 - **The gate lintel keeps its greybox color** (overhead outside the cantina has no
   decor rule).
 - **Flight payout is shown, not saved.** No early abort from a flight.
