@@ -257,6 +257,7 @@ func _shoot(id: String) -> void:
 		rig_node.shake(0.15)
 	_play("shot_" + id)
 	_muzzle_flash(origin, b.color)
+	avatar.fire_kick()
 	var in_range: bool = in_range_zone.is_valid() and bool(in_range_zone.call(player.global_position))
 	WorldState.on_player_fired(in_range)
 	fired.emit(id)
@@ -267,14 +268,14 @@ func _muzzle_flash(at: Vector3, col: Color) -> void:
 		return
 	var l := OmniLight3D.new()
 	l.light_color = col
-	l.light_energy = 3.0
-	l.omni_range = 3.5
+	l.light_energy = 6.0
+	l.omni_range = 4.5
 	l.shadow_enabled = false
 	var host: Node = bolt_parent if bolt_parent != null else self
 	host.add_child(l)
 	l.global_position = at
 	var tw := l.create_tween()
-	tw.tween_property(l, "light_energy", 0.0, 0.06)
+	tw.tween_property(l, "light_energy", 0.0, 0.08)
 	tw.tween_callback(l.queue_free)
 
 

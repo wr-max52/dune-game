@@ -11,7 +11,7 @@ rec/
 *.mp4
 
 # Local LLM model downloads (downloaded, not committed)
-models/
+/models/
 *.gguf
 runtime/
 
