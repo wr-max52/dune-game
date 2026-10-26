@@ -142,7 +142,7 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_label = Label3D.new()
 	_label.name = "Debug"
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.position.y = 2.25
+	_label.position.y = 2.65        # the F4 line, above the speech
 	_label.pixel_size = 0.004
 	_label.no_depth_test = true
 	_label.visible = false
@@ -150,13 +150,22 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_speech = Label3D.new()
 	_speech.name = "Speech"
 	_speech.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_speech.position.y = 2.05
+	_speech.position.y = 2.35       # above the nameplate (2.05)
 	_speech.pixel_size = 0.005
 	_speech.font_size = 40
 	_speech.outline_size = 10
 	_speech.modulate = Color(1.0, 0.93, 0.78)
 	_speech.visible = false
 	add_child(_speech)
+	_nameplate = Label3D.new()
+	_nameplate.name = "Nameplate"
+	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_nameplate.position.y = 2.05
+	_nameplate.pixel_size = 0.0028
+	_nameplate.outline_size = 8
+	_nameplate.modulate = Color(0.96, 0.92, 0.84)
+	_nameplate.visible = false
+	add_child(_nameplate)
 
 
 ## The profile's weapon block over the base weapon's data (content/core/weapons).
@@ -170,15 +179,6 @@ static func _weapon_config(w: Dictionary) -> Dictionary:
 	for k in w:
 		cfg[k] = w[k]
 	return cfg
-	_nameplate = Label3D.new()
-	_nameplate.name = "Nameplate"
-	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_nameplate.position.y = 2.05
-	_nameplate.pixel_size = 0.0028
-	_nameplate.outline_size = 8
-	_nameplate.modulate = Color(0.96, 0.92, 0.84)
-	_nameplate.visible = false
-	add_child(_nameplate)
 
 
 ## Give this NPC its name, from the soldier profile's "naming" block (NameHooks,
