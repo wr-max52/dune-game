@@ -27,7 +27,7 @@ var max_pitch := PI / 2.0 - 0.05
 
 func look_direction() -> Vector3:
 	## Where the camera points, as a normalized direction. Same for both modes.
-	var cp: Variant = cos(pitch)
+	var cp: float = cos(pitch)
 	return Vector3(sin(yaw) * cp, sin(pitch), cos(yaw) * cp)
 
 
@@ -40,11 +40,12 @@ func camera_transform(player_pos: Vector3) -> Transform3D:
 	else:
 		# Sit behind and above the player, along the backward of the look dir.
 		position = player_pos - look * tpv_distance + Vector3(0.0, tpv_height, 0.0)
-	# Look along the look direction: build a basis whose forward (-Z) is the look dir.
-	var fwd := -look  # camera looks down its -Z
-	var right: Vector3 = fwd.cross(Vector3.UP).normalized()
-	var up: Vector3 = right.cross(fwd)
-	var basis := Basis(right, up, fwd)
+	# Build a right-handed basis whose -Z axis points along the look direction.
+	# right = look x up. (Using -look x up flips right and gives a mirrored,
+	# determinant -1 basis, which rendered the world left-right reversed.)
+	var right: Vector3 = look.cross(Vector3.UP).normalized()
+	var up: Vector3 = right.cross(look)
+	var basis := Basis(right, up, -look)
 	return Transform3D(basis, position)
 
 
