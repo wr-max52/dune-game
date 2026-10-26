@@ -37,6 +37,7 @@
     "towed": "Your ship is back on its pad.",
     "space_edge": "EDGE OF SPACE",
     "leaving_atmosphere": "Leaving the atmosphere...",
+    "leaving_planet": "Leaving %s...",
     "dive_to_land": "Dive toward the planet to go back down.",
     "sector_clear_dive": "Sector clear. Dive toward the planet to land."
   },

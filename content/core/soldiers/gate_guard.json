@@ -3,6 +3,11 @@
   "label": "Gate guard",
   "archetype": "remnant_trooper",
   "faction": "imperial_remnant",
+  "naming": {
+    "kind": "person_remnant",
+    "titles": "remnant_rank",
+    "nameplate_range": 8.0
+  },
   "hp": 60,
   "walk_speed": 3.2,
   "sprint_speed": 6.2,

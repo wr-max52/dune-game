@@ -31,6 +31,8 @@ static var show_debug := false
 var profile: Dictionary = {}
 var soldier_id := ""
 var post_id := ""              ## the marker this NPC was placed at
+var display_name := ""         ## issue #15: "Corporal Varo Kesh" (assign_name); "" until named
+var nameplate_range := 0.0     ## metres: the name floats over them when the target is this close
 var command := { "go_to": Vector3.INF, "face": Vector3.INF, "sprint": false, "crouch": false }
 
 var health
@@ -71,6 +73,7 @@ var _was_noticed := false
 var _flinch := 0.0
 var _fall_t := 0.0
 var _label: Label3D
+var _nameplate: Label3D
 var _shape: CollisionShape3D
 
 
@@ -120,6 +123,33 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_label.no_depth_test = true
 	_label.visible = false
 	add_child(_label)
+	_nameplate = Label3D.new()
+	_nameplate.name = "Nameplate"
+	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_nameplate.position.y = 2.05
+	_nameplate.pixel_size = 0.0028
+	_nameplate.outline_size = 8
+	_nameplate.modulate = Color(0.96, 0.92, 0.84)
+	_nameplate.visible = false
+	add_child(_nameplate)
+
+
+## Give this NPC its name, from the soldier profile's "naming" block (NameHooks,
+## issue #15). `key` is stable for this NPC ("npc:port_town/trooper_gate_n"), so
+## the same post always has the same person, across scenes and saves. Call after
+## setup(), as soon as it spawns.
+func assign_name(key: String) -> String:
+	var naming: Dictionary = profile.get("naming", {})
+	display_name = NameHooks.person(naming, key)
+	nameplate_range = float(naming.get("nameplate_range", 0.0))
+	if _nameplate != null:
+		_nameplate.text = display_name
+	return display_name
+
+
+## True when the floating name is up: named, alive, and the target within range.
+func nameplate_shown() -> bool:
+	return _nameplate != null and _nameplate.visible
 
 
 func _ready() -> void:
@@ -185,6 +215,7 @@ func _physics_process(delta: float) -> void:
 	_last_pos = global_position
 	_animate(delta, move)
 	_debug_line()
+	_update_nameplate()
 
 
 func _walk(dt: float) -> Vector3:
@@ -309,6 +340,7 @@ func _fall(dt: float) -> void:
 		look.rotation.x = -PI * 0.5 * k
 		look.position.y = (0.9 if kit == null else 0.0) * (1.0 - k) + 0.25 * k
 	_debug_line()
+	_update_nameplate()
 
 
 # ------------------------------------------------------------------ look
@@ -357,13 +389,23 @@ func _animate(dt: float, move: Vector3) -> void:
 		(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
 
 
+func _update_nameplate() -> void:
+	if _nameplate == null:
+		return
+	var show := display_name != "" and not dead and not show_debug and target != null \
+		and nameplate_range > 0.0 and is_instance_valid(target) \
+		and global_position.distance_to(target.global_position) <= nameplate_range
+	_nameplate.visible = show
+
+
 func debug_text() -> String:
+	var who := ("%s (%s)" % [display_name, post_id]) if display_name != "" else post_id
 	if dead:
-		return "%s  DEAD" % post_id
+		return "%s  DEAD" % who
 	var p := perception
 	var goal := "post" if command.go_to == Vector3.INF else ("walk" if is_moving() else "there")
 	return "%s  hp %d  %s\nsee %s  aware %.2f%s%s" % [
-		post_id, health.hp, goal, "yes" if p.visible else ("cone" if p.in_cone else "no"),
+		who, health.hp, goal, "yes" if p.visible else ("cone" if p.in_cone else "no"),
 		p.awareness, "  NOTICED" if p.noticed else "", "  heard " + p.heard_kind if p.since_heard < 2.0 else ""]
 
 

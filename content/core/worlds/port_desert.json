@@ -2,6 +2,10 @@
   "id": "port_desert",
   "label": "The Port Desert",
   "town": "port_town",
+  "naming": {
+    "town": "town",
+    "planet": "planet"
+  },
   "terrain": {
     "extent": 6000.0,
     "skirt_height": 4.0,

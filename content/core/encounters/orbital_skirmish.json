@@ -1,6 +1,7 @@
 {
   "id": "orbital_skirmish",
   "label": "Orbital Skirmish",
+  "world": "port_desert",
   "location": "outpost",
   "payout": 200,
   "arena": { "center": [0, 0, 0], "radius": 1600.0 },
