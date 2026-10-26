@@ -1,0 +1,13 @@
+{
+  "note": "Landforms around the playable town, from the beauty corner's horizon (scenes/lookdev/beauty_corner.gd). Metres, town coordinates (origin = town centre, floor y = 0). Each sits on the terrain at its x, z. keep_out_margin = no boulders this close to the town's floor area.",
+  "seed": 4242,
+  "mesas":   [[-1500, -3100, 300, 230], [1700, -3800, 450, 320], [-2900, -1400, 320, 180],
+              [2700, -1300, 240, 170], [-300, -4900, 620, 270], [1500, 1700, 360, 210],
+              [-900, 2500, 420, 250], [3100, 900, 300, 190]],
+  "hoodoos": [[-260, -520, 10, 48], [-410, -760, 16, 80], [210, -640, 12, 62], [520, -900, 18, 92],
+              [-700, -300, 14, 58], [120, -980, 9, 40], [760, -420, 13, 70], [-180, -1150, 20, 96],
+              [640, 380, 15, 66], [-520, 610, 12, 54]],
+  "boulders": { "count": 420, "min_dist": 165.0, "spread": 1500.0 },
+  "keep_out_margin": 25.0,
+  "collision": true
+}

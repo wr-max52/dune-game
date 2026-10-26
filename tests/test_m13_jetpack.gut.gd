@@ -1,7 +1,7 @@
 extends GutTest
 ## M13: the jetpack, from the headless trace (scenes/m13_jetpack_trace.gd, real
 ## physics in the town). Picked up, attached, flown, recharged, taken off and put
-## back on, flown out over the wall and caught, sold, bought back, and still taken
+## back on, flown out over the wall onto the sand, sold, bought back, and still taken
 ## after a reload. See also test_jetpack, test_inventory and test_item_kit.
 
 const Reader := preload("res://tests/trace_reader.gd")
@@ -80,11 +80,15 @@ func test_it_comes_off_and_goes_back_on() -> void:
 	assert_eq(t.get("REATTACHED_PLAYER_HAS_JET"), "true")
 
 
-func test_flying_out_of_town_is_caught() -> void:
+## Since the desert: there is ground outside the walls, so flying out lands you on
+## sand. The fall guard (now measured from the ground under you) is proven in
+## tests/test_desert_walk.gut.gd.
+func test_flying_out_of_town_lands_on_sand() -> void:
 	assert_eq(t.get("WALL_CLEARED"), "true", "the pack clears the north wall")
 	assert_gt(float(t.get("FLEW_OUT_MAX_Z", 0)), 75.0)
-	assert_eq(int(t.get("RECOVERED", 0)), 1, "caught once")
-	assert_eq(t.get("RECOVERED_INSIDE"), "true", "back on the ground inside the walls")
+	assert_eq(int(t.get("RECOVERED", 9)), 0, "no rescue: there is ground out there")
+	assert_eq(t.get("LANDED_OUTSIDE"), "true", "standing on the sand outside the wall")
+	assert_almost_eq(float(t.get("LANDED_Y", 9)), 0.0, 1.0, "at about the town's floor level")
 
 
 func test_it_sells_at_the_market() -> void:

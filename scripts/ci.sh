@@ -181,6 +181,16 @@ if [ ! -f test_results/m13_jetpack_trace.txt ]; then
   exit 1
 fi
 echo "CI: m13 trace present ($(wc -l < test_results/m13_jetpack_trace.txt) lines)"
+# Desert: the town seated on the terrain, with real physics: from the pit out of
+# the gate onto sand, 700 m into the dunes and back with the collider following,
+# sand outside the walls, and falling through the world still caught.
+echo "CI: generating desert walk trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/desert_walk_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/desert_walk_trace.txt ]; then
+  echo "CI: ERROR -- desert walk trace was not generated" >&2
+  exit 1
+fi
+echo "CI: desert trace present ($(wc -l < test_results/desert_walk_trace.txt) lines)"
 # M12 (optional): a REAL llama-server through the game's sidecar, when one and a
 # model are available (LLAMA_SERVER=/path/llama-server TEST_GGUF=/path/model.gguf).
 rm -f test_results/m12_sidecar_trace.txt

@@ -41,8 +41,8 @@ func _all(node: Node, cls: String, out: Array) -> Array:
 func test_decor_adds_no_collision() -> void:
 	var on = _demo(true)
 	var off = _demo(false)
-	assert_eq(_count(on, "StaticBody3D"), 112, "one body per box with look on")
-	assert_eq(_count(off, "StaticBody3D"), 112, "and with look off")
+	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), 112, "one body per box with look on")
+	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), 112, "and with look off")
 	assert_eq(_count(on.decor, "CollisionObject3D"), 0, "decor has no colliders")
 	assert_eq(_count(on.decor, "CollisionShape3D"), 0, "decor has no shapes")
 
@@ -97,7 +97,8 @@ func test_presets_switch() -> void:
 
 func test_town_shots_load() -> void:
 	var d = _demo(true)
-	for id in ["gate_approach", "plaza", "cantina_bar", "top_down"]:
+	for id in ["gate_approach", "plaza", "cantina_bar", "top_down",
+			"gate_to_desert", "desert_look_back", "north_wall_outside", "desert_aerial"]:
 		assert_true(d.show_shot(id), "shot %s exists" % id)
 
 

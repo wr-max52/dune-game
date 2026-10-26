@@ -2,6 +2,43 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Seamless desert: the town sits on the dunes (2026-10-26)
+
+What works now:
+- **Walk out of the gate into the desert.** The town no longer floats in the sky.
+  It sits on the same dune terrain as the beauty corner, at its own floor level:
+  the paving runs straight into packed sand at the gate and the back gap, there is
+  flat sand outside every wall, and about 30 m out the sand starts to swell into
+  open dunes (fully dunes by about 300 m out).
+- **The desert goes on.** The ground's collider follows you and rebuilds a little
+  each frame (at most about 2 ms), so you can keep walking. The trace walks 700 m out
+  and back with real physics, the collider re-centring under you on the way, with
+  the worst frame well under the 50 ms budget. The visible terrain reaches about 6 km, with fog at
+  the edge.
+- **The pit is still a pit.** The ground dips under the landing pit, so the ship
+  bay, its ramps and the launch pad work exactly as before.
+- **Something to walk to.** Mesas on the horizon, hoodoos 300 m to 1 km out (solid,
+  so you can walk up to them) and a few hundred boulders, all from
+  `content/look/desert_landforms.json` (the same recipes as the beauty corner).
+  The camera now sees 12 km.
+- **The jetpack lands you on sand.** Flying out over a wall now sets you down on the
+  sand outside. The fall guard still catches a fall through the world, measured
+  from the ground under you (the old rule, "20 m under the town's lowest floor",
+  would have yanked you home from any dune trough).
+- **Review shots:** `gate_to_desert`, `desert_look_back`, `north_wall_outside`,
+  `desert_aerial` in `content/look/town_shots.json`; golden-hour renders in
+  `docs/town/look/desert/`.
+
+How to see it: F5, walk up the ramp, head east through the gate and keep going.
+`with_desert = false` on the town scene gives the old town in the void.
+
+Proof: `scenes/desert_walk_trace.gd` (in `scripts/ci.sh`) +
+`tests/test_desert_walk.gut.gd`, and `tests/test_desert_terrain.gut.gd` (the site
+footprint from town data, nothing poking through the paving, the dip under the pit
+for both mesh and collider, the follow-and-rebuild budget, teleports, landforms
+clear of the town, the fall guard). The beauty corner's terrain is unchanged
+(checked bit for bit against main over 20,000 points).
+
 ## M13 — Jetpack (issue #5) (2026-10-26)
 
 What works now:

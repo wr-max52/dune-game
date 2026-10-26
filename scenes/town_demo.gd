@@ -8,6 +8,12 @@ extends Node3D
 ## Layers: the gameplay layer (boxes + collision, from TownLayout) is built first
 ## and never changes; TownDecor only adds visuals on top. `use_look = false` gives
 ## the plain greybox the CI walk trace uses.
+##
+## The desert: the town sits on the same DesertTerrain as the beauty corner, seated
+## at its floor level, so walking out of the gate (or flying over a wall) lands on
+## sand that runs on into the dunes. Its collider follows the player. The greybox
+## builds the collider only; the look adds the mesh, sand on the aprons and the
+## landforms on the horizon. `with_desert = false` is the old town in the void.
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const Greybox := preload("res://src/systems/world/greybox.gd")
@@ -33,6 +39,9 @@ const ROLE_COLORS := {
 @export var with_body := true         ## M11: animated body + hand weapons (needs use_look)
 @export var with_bar := true          ## M12: the live bartender (needs use_look)
 @export var with_gear := true         ## M13: pickups, the gear trader, the jetpack (works in greybox too)
+@export var with_desert := true       ## the terrain around the town (collider in greybox too)
+@export var terrain_resolution := 400 ## mesh vertices per side (look only)
+@export var with_landforms := true    ## mesas, hoodoos, boulders (look only)
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -49,6 +58,8 @@ var bartender: Node3D                 ## M12 (null in the CI greybox)
 var bar: Node
 var gear: GearController              ## M13
 var characters: Dictionary = {}       ## marker id -> built character
+var terrain: DesertTerrain            ## null when with_desert is off
+var landforms: DesertLandforms
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 
@@ -64,6 +75,8 @@ func _ready() -> void:
 		return                  # never build a broken town
 	_build_boxes()
 	_build_markers()
+	if with_desert:
+		_build_desert()
 	if use_look:
 		look = LookEnvironment.new()
 		add_child(look)
@@ -71,13 +84,15 @@ func _ready() -> void:
 		decor = TownDecor.new()
 		add_child(decor)
 		decor.dress(town, look)
+		if terrain != null:
+			_dress_desert()
 	else:
 		_add_light_and_sky()
 	if lookdev_mode:
 		shots = _load_shots()
 		camera = Camera3D.new()
 		camera.name = "ShotCamera"
-		camera.far = 4000.0
+		camera.far = view_far()
 		add_child(camera)
 		camera.current = true
 		show_shot("gate_approach")
@@ -196,7 +211,9 @@ func _spawn_player() -> void:
 	_rig.set_player(_player as Node3D)
 	_rig.rig.yaw = yaw
 	if _rig._camera is Camera3D:
-		_rig._camera.far = 4000.0
+		_rig._camera.far = view_far()
+	if terrain != null:
+		terrain.follow(_player)
 	if not lookdev_mode and DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -252,11 +269,74 @@ func _build_bar(scripted = null, save_path: String = "user://save.json") -> void
 func _build_gear() -> void:
 	gear = GearController.new()
 	gear.setup(null, town, _player, _rig, "port_town")
+	if terrain != null:
+		gear.ground_at = terrain.ground_at
 	add_child(gear)
 
 
 func _physics_process(dt: float) -> void:
 	WorldState.tick(dt)
+
+
+# ---------------------------------------------------------------- desert
+
+## The far plane: out to the horizon landforms when the desert is on.
+func view_far() -> float:
+	return 12000.0 if terrain != null else 4000.0
+
+
+## Footprints from the town data (no coordinates in this file): every floor box
+## at floor level, the walled area, and the floors sunk below it (the pit).
+func desert_site() -> Dictionary:
+	var floor_rect := Rect2()
+	var sunken := []
+	var first := true
+	for b in town.boxes():
+		if str(b.kind) != "floor":
+			continue
+		var r := Rect2(float(b.min[0]), float(b.min[2]), float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2]))
+		if float(b.max[1]) < -0.1:
+			sunken.append({ "rect": r, "y": float(b.min[1]) })
+			continue
+		floor_rect = r if first else floor_rect.merge(r)
+		first = false
+	var bounds: Dictionary = town.data.get("bounds", {})
+	var walls := floor_rect
+	if not bounds.is_empty():
+		walls = Rect2(float(bounds.min[0]), float(bounds.min[1]),
+			float(bounds.max[0]) - float(bounds.min[0]), float(bounds.max[1]) - float(bounds.min[1]))
+	return { "floor": floor_rect, "walls": walls, "sunken": sunken }
+
+
+func _build_desert() -> void:
+	var site := desert_site()
+	terrain = DesertTerrain.new()
+	terrain.resolution = terrain_resolution
+	terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
+	terrain.collider_size = 512.0
+	add_child(terrain)
+	terrain.build(use_look)          # greybox: collider only
+
+
+## Look only: the aprons outside the walls are hidden (still solid) so the terrain's
+## sand, which lies exactly at their top, is what you see: paving runs straight
+## into sand. The sun drives the sand's glitter, and the horizon gets landforms.
+func _dress_desert() -> void:
+	look.track_material(terrain.material)
+	var walls: Rect2 = desert_site().walls
+	for b in town.boxes():
+		if str(b.kind) != "floor" or float(b.max[1]) < -0.1:
+			continue
+		var r := Rect2(float(b.min[0]), float(b.min[2]), float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2]))
+		if walls.encloses(r):
+			continue
+		var mi := get_node_or_null("Town/%s/Mesh" % str(b.id)) as MeshInstance3D
+		if mi != null:
+			mi.visible = false
+	if with_landforms:
+		landforms = DesertLandforms.new()
+		add_child(landforms)
+		landforms.build(terrain, _flat_mats(), desert_site().floor)
 
 
 # ---------------------------------------------------------------- launch pads
@@ -321,6 +401,8 @@ func show_shot(id: String) -> bool:
 		return false
 	var s: Dictionary = shots[id]
 	var pos := Vector3(s["pos"][0], s["pos"][1], s["pos"][2])
+	if s.has("height_above_ground") and terrain != null:
+		pos.y = terrain.height_at(pos.x, pos.z) + float(s["height_above_ground"])
 	var target := Vector3(s["target"][0], s["target"][1], s["target"][2])
 	camera.fov = float(s.get("fov", 65.0))
 	camera.global_position = pos

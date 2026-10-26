@@ -2,6 +2,34 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the seamless desert (2026-10-26)
+
+**What is real and proven by tests:** the town sits on the dunes at floor level.
+With real physics (`test_results/desert_walk_trace.txt`), the player walks from the
+pit through the gate onto sand, 700 m into the dunes and back with no fall, the
+collider re-centring under them, and every frame under budget. Outside the north
+wall there is sand at floor level, the jetpack lands you on it, and a fall through
+the world in the desert is still caught. Unit tests cover the footprint from data,
+the dip under the pit, nothing poking through the paving, the rebuild budget and
+teleports, and the landforms staying clear of the town.
+
+**Not done, honestly:**
+- **The collider is coarser than the sand you see** (2 m cells against 1.5 m near
+  the town). On sharp dune crests the feet can sit up to about 0.7 m off the drawn
+  surface. A finer collider costs more rebuild time; the Mac playtest decides.
+- **The visible terrain ends at about 6 km** (fog hides the edge). The collider
+  follows you past it, so you can walk on, but there is nothing drawn out there.
+- **No sand drifts against the walls,** no wind-blown sand at the gate, no
+  footprints. The join is flat sand meeting a plaster wall.
+- **The wreck, the orbital ring and the smoke plume are not around the town.**
+  They are the beauty corner's horizon and would need moving out of that scene.
+- **No navmesh in the desert.** Nothing walks out there yet but the player.
+- **The M4 outpost is not placed in this desert.** It still lives in its own data
+  for the M4/M5 traces.
+- **Boulders have no collision** (as in the beauty corner): you walk through them.
+- **Reviewed in software Vulkan only** (lavapipe, `docs/town/look/desert/`);
+  re-shoot on the Mac with `tools/town/shoot_town.sh shots=gate_to_desert,desert_look_back,north_wall_outside,desert_aerial`.
+
 ## After M13 (2026-10-26)
 
 **What is real and proven by tests:** the jetpack with real physics in the town
@@ -22,7 +50,8 @@ look kit, and gear added from data alone.
 - **Rooftops are reachable** with the pack. Nothing breaks, but nothing was designed
   for up there either, and the town's routes do not cover it.
 - **The fall guard is a safety net, not a boundary.** You can fly out over the wall;
-  you are put back once you drop 20 m below the lowest floor.
+  you are put back once you drop 20 m below the lowest floor. (Since the seamless
+  desert you land on sand outside instead; the guard measures from the ground.)
 - **One item, one trader, one pickup.** No drop key, no inventory screen, no
   shop menu: E acts on the first sellable item, then on the first item in stock.
 - **Fuel is not saved** (a reload refills the tank). Ownership, slot, taken pickups
@@ -84,9 +113,9 @@ after it (`tests/test_flow.gut.gd`).
 - **Residential is a uniform grid.** The art pass will vary it.
 - **The ramps have no railings,** so you can fall into the pit (no fall damage exists).
 - **Town streamer chunks are data only;** they do not load or unload geometry yet.
-- **The town is not on the beauty corner plinth or terrain.** The roads down the
-  cliff are unplanned. The aprons have no sand shader (flat sand color; at golden
-  hour they read as dark grey from low angles).
+- ~~**The town is not on the beauty corner plinth or terrain.**~~ Fixed by the
+  seamless desert: the town sits on the beauty corner's terrain (not its plinth)
+  and the aprons show the sand shader.
 - **The market stalls are bare boxes.** (The parked ship is now the real flight model.)
 - **The parked ship is small in the pit.** The fighter is 9.3 m long and 2.6 m tall in a 36 by 44 m pit, 6 m deep, so it is hidden from the street until you reach the rim.
 - **The gate lintel keeps its greybox color** (overhead outside the cantina has no
