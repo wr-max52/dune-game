@@ -82,8 +82,11 @@ func start_sidecar() -> void:
 	_check_health("local", func(ok: bool):
 		if ok:
 			sidecar.reused = true
-		else:
-			sidecar.start())
+			sidecar.state = LLMSidecar.State.REUSED
+		elif sidecar.start():
+			# Loading a big model takes a while; do not count it as down meanwhile.
+			health.erase("local")
+		status_changed.emit())
 
 
 ## The chain for the current mode, minus anything down or tripped.
@@ -144,6 +147,43 @@ func cancel(turn_id: int) -> void:
 
 func busy() -> bool:
 	return not _turns.is_empty()
+
+
+## Why each provider is or is not answering, in plain words, plus a summary line.
+## { lines: [..], summary: String, any_up: bool }
+func brain_report() -> Dictionary:
+	var lines: PackedStringArray = []
+	var chain := active_chain()
+	var order: Array = scripted_chain if mode == "scripted" else (config.chain() if mode == "auto" and config != null else [mode])
+	for id in order:
+		var why := ""
+		if scripted_chain.has(id):
+			why = "scripted (tests)"
+		elif not providers.has(id):
+			why = "no such profile"
+		elif config != null and not bool(config.profile(id).get("enabled", true)):
+			why = "off" + (" (no key)" if config.api_key(id) == "" else "") + ". F10 to turn it on"
+		elif config != null and not config.usable(id):
+			why = "needs an API key. F10 or the DUNE_LLM_KEY env var"
+		elif circuit_open(id):
+			why = "paused after repeated failures (retrying in under 2 min)"
+		elif id == "local" and sidecar != null and sidecar.state != LLMSidecar.State.READY and sidecar.state != LLMSidecar.State.REUSED:
+			why = sidecar.reason()
+		elif health.has(id) and not bool(health[id].get("up", true)):
+			why = "not running at " + str(config.profile(id).get("base_url", "")) if id != "local" else "not answering at " + str(config.profile(id).get("base_url", ""))
+		elif chain.has(id):
+			why = "ready (%s)" % providers[id].model() if health.has(id) else "not checked yet"
+		lines.append("%s: %s" % [id, why])
+	var any_up := not chain.is_empty()
+	var loading := sidecar != null and sidecar.state == LLMSidecar.State.STARTING
+	var summary := ""
+	if loading:
+		summary = "Her brain is loading (%s). Canned lines until then." % sidecar.reason()
+	elif not any_up:
+		summary = "No brain: canned lines only. " + (lines[0] if not lines.is_empty() else "")
+	else:
+		summary = "Brain: " + str(chain[0])
+	return { "lines": Array(lines), "summary": summary, "any_up": any_up and not (loading and chain == ["local"]) }
 
 
 func status() -> Dictionary:
@@ -217,6 +257,13 @@ func _process(dt: float) -> void:
 	for id in _turns.keys():
 		if _turns.has(id):
 			_step(_turns[id])
+	if sidecar != null:
+		sidecar.poll()
+		if sidecar.state == LLMSidecar.State.STARTING and not _health_reqs.has("local"):
+			_check_health("local", func(ok: bool):
+				if ok:
+					sidecar.mark_ready()
+					status_changed.emit())
 	_recheck_left -= dt
 	if _recheck_left <= 0.0 and config != null:
 		_recheck_left = float(config.data.get("health_recheck_s", 30))
@@ -410,8 +457,21 @@ func circuit_open(pid: String) -> bool:
 
 # ------------------------------------------------------------------ health
 
+var _health_cbs: Dictionary = {}     ## id -> [Callable] waiting on the in-flight check
+
 func _check_health(pid: String, done: Callable = Callable()) -> void:
-	if not providers.has(pid) or _health_reqs.has(pid) or not is_inside_tree():
+	if not providers.has(pid):
+		if done.is_valid():
+			done.call(false)
+		return
+	# A check already in flight: wait for it instead of dropping the callback
+	# (dropping it here once meant the sidecar was never started).
+	if _health_reqs.has(pid):
+		if done.is_valid():
+			_health_cbs[pid].append(done)
+		return
+	if not is_inside_tree():
+		call_deferred("_check_health", pid, done)
 		return
 	var hr: Dictionary = providers[pid].health_request()
 	if hr.is_empty():
@@ -423,22 +483,24 @@ func _check_health(pid: String, done: Callable = Callable()) -> void:
 	req.timeout = 2.0
 	add_child(req)
 	_health_reqs[pid] = req
+	_health_cbs[pid] = [done] if done.is_valid() else []
 	req.request_completed.connect(func(result: int, code: int, _h, _b):
-		var ok := result == HTTPRequest.RESULT_SUCCESS and code == 200
-		var was: bool = bool(health.get(pid, {}).get("up", true))
-		health[pid] = { "up": ok, "checked_ms": Time.get_ticks_msec(), "error": "" if ok else "health %d/%d" % [result, code] }
-		_health_reqs.erase(pid)
-		req.queue_free()
-		if was != ok:
-			status_changed.emit()
-		if done.is_valid():
-			done.call(ok))
+		_health_done(pid, req, result == HTTPRequest.RESULT_SUCCESS and code == 200, "health %d/%d" % [result, code]))
 	if req.request(str(hr.url)) != OK:
-		health[pid] = { "up": false, "checked_ms": Time.get_ticks_msec(), "error": "health request" }
-		_health_reqs.erase(pid)
-		req.queue_free()
-		if done.is_valid():
-			done.call(false)
+		_health_done(pid, req, false, "health request")
+
+
+func _health_done(pid: String, req: HTTPRequest, ok: bool, err: String) -> void:
+	var was: bool = bool(health.get(pid, {}).get("up", true))
+	health[pid] = { "up": ok, "checked_ms": Time.get_ticks_msec(), "error": "" if ok else err }
+	_health_reqs.erase(pid)
+	req.queue_free()
+	var cbs: Array = _health_cbs.get(pid, [])
+	_health_cbs.erase(pid)
+	if was != ok:
+		status_changed.emit()
+	for cb in cbs:
+		(cb as Callable).call(ok)
 
 
 func _notification(what: int) -> void:

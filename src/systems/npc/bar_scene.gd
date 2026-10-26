@@ -63,6 +63,8 @@ func setup(town_demo, scripted = null) -> void:
 	if scripted == null:
 		llm.start_sidecar()
 	llm.status_changed.connect(_on_llm_status)
+	if is_inside_tree():
+		get_tree().create_timer(3.0).timeout.connect(_on_llm_status)
 	brain = BartenderBrain.new(llm)
 	brain.thinking.connect(_on_thinking)
 	brain.line_delta.connect(_on_delta)
@@ -90,7 +92,9 @@ func setup(town_demo, scripted = null) -> void:
 	_prompt = _label(Control.PRESET_CENTER_BOTTOM, Vector2(-260, -140), 22, HORIZONTAL_ALIGNMENT_CENTER)
 	_prompt.text = "[E]  Talk to " + str(brain.card.get("name", "the bartender"))
 	_prompt.visible = false
-	_status_dot = _label(Control.PRESET_TOP_RIGHT, Vector2(-300, 12), 13, HORIZONTAL_ALIGNMENT_RIGHT)
+	_status_dot = _label(Control.PRESET_TOP_RIGHT, Vector2(-760, 12), 14, HORIZONTAL_ALIGNMENT_RIGHT)
+	_status_dot.offset_right = -16
+	_status_dot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_dot.visible = false
 
 
@@ -139,8 +143,13 @@ func _process(_dt: float) -> void:
 	if not warmed and llm.mode == "auto" and bool(llm.health.get("local", {}).get("up", false)):
 		warmed = true
 		brain.warm_up()
-	_status_dot.visible = talking and llm.active_chain().is_empty()
-	_status_dot.text = "brain offline: canned lines"
+	if talking:
+		var rep := llm.brain_report()
+		_status_dot.visible = true
+		_status_dot.text = rep.summary
+		_status_dot.add_theme_color_override("font_color", Color(1.0, 0.75, 0.35) if not rep.any_up else Color(0.7, 0.68, 0.62))
+	else:
+		_status_dot.visible = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -246,7 +255,7 @@ func _on_delta(text: String) -> void:
 
 func _on_done(turn: Dictionary) -> void:
 	panel.set_line(str(turn.say))
-	panel.set_mood(brain.rel.mood)
+	panel.set_mood(brain.rel.mood + ("   (canned: no brain answered)" if str(turn.source) == "canned" else ""))
 	panel.set_money(WorldState.credits, brain.rel.tab)
 	panel.set_input_enabled(true)
 	npc.speak_pulse()
@@ -273,6 +282,15 @@ func _end_soon(_reason: String) -> void:
 func _on_llm_status() -> void:
 	if overlay != null:
 		overlay.refresh()
+	# Say why in the Godot output too, so a dumb bartender is never a mystery.
+	var rep := llm.brain_report()
+	var text := "Bartender brain: %s\n  %s" % [rep.summary, "\n  ".join(PackedStringArray(rep.lines))]
+	if text != _last_report:
+		_last_report = text
+		print(text)
+
+
+var _last_report := ""
 
 
 func _toast(text: String) -> void:
