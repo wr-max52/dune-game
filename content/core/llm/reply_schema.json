@@ -1,23 +1,63 @@
 {
   "type": "object",
   "properties": {
-    "say": { "type": "string", "maxLength": 400 },
-    "mood": { "type": "string", "enum": ["wary", "warm", "amused", "irritated", "scared", "sad"] },
-    "actions": {
+    "say": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "then": {
       "type": "array",
       "maxItems": 3,
       "items": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["share_rumor", "offer_job", "trust", "pour_drink", "hint_secret", "refuse_topic", "end_conversation", "call_guards"] },
-          "id": { "type": "string" },
-          "delta": { "type": "integer" },
-          "why": { "type": "string" },
-          "name": { "type": "string" }
+          "type": {
+            "type": "string",
+            "enum": [
+              "share_rumor",
+              "offer_job",
+              "trust",
+              "pour_drink",
+              "hint_secret",
+              "refuse_topic",
+              "end_conversation",
+              "call_guards"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "integer"
+          },
+          "why": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
         },
-        "required": ["type"]
+        "required": [
+          "type"
+        ]
       }
+    },
+    "tone": {
+      "type": "string",
+      "enum": [
+        "wary",
+        "warm",
+        "amused",
+        "irritated",
+        "scared",
+        "sad"
+      ]
     }
   },
-  "required": ["say", "mood", "actions"]
+  "required": [
+    "say",
+    "then",
+    "tone"
+  ]
 }

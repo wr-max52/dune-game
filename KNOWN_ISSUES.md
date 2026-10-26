@@ -15,11 +15,13 @@ memory across visits and save v2; and the real HTTP streaming path against a moc
 server (`test_results/m12_bar_trace.txt`).
 
 **Not done, honestly:**
-- **No real model has answered her yet.** This sandbox has no GPU and no access to
-  model downloads. The pipe is proven against a mock server that speaks the
-  OpenAI streaming format; quality, voice and latency on a real model are the
-  product owner's first run: `tools/llm/fetch_runtime.sh`, then the gauntlet. The
-  latency targets (first token p50 < 800 ms) are unmeasured.
+- **No real model with real weights has answered her yet.** The full path is now
+  proven against a real llama-server (built from source) with a tiny random-weight
+  model: start, load, grammar, streaming, say-first, validation. Quality, voice and
+  latency on a real model are still the product owner's first run on the Mac
+  (`brew install llama.cpp`, `tools/llm/fetch_runtime.sh`, then the gauntlet).
+- **The M10 dogfight frame-budget test is timing sensitive:** it can read just over
+  50 ms on a loaded CPU (seen once at 54 ms, passing on rerun).
 - **Her confidant secret is a draft** marked "PRODUCT OWNER TO WRITE" in
   `content/core/npcs/bartender_card.json`. The whole card is a first draft.
 - **The visit summary** (2 to 3 facts written by the model when you leave) only runs

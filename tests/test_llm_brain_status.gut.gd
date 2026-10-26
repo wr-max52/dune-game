@@ -6,11 +6,13 @@ extends GutTest
 
 func test_missing_binary_is_reported_plainly() -> void:
 	var s := LLMSidecar.new({ "sidecar": { "bin": "/nope/llama-server", "model_path": "/nope/m.gguf" } })
+	var places := s.candidates()
+	s.search = false              # do not find a real install on this machine
 	assert_false(s.start())
 	assert_eq(s.state, LLMSidecar.State.NO_BINARY)
 	assert_true(s.reason().contains("brew install llama.cpp"))
-	assert_true(s.searched.has("/opt/homebrew/bin/llama-server"), "Apple Silicon Homebrew is searched")
-	assert_true(s.searched.has("/usr/local/bin/llama-server"), "Intel Homebrew is searched")
+	assert_true(places.has("/opt/homebrew/bin/llama-server"), "Apple Silicon Homebrew is searched")
+	assert_true(places.has("/usr/local/bin/llama-server"), "Intel Homebrew is searched")
 
 
 func test_missing_model_is_reported_plainly() -> void:
@@ -56,3 +58,23 @@ func test_second_health_check_waits_instead_of_dropping() -> void:
 	while svc._health_reqs.has("local") and Time.get_ticks_msec() - t0 < 4000:
 		await get_tree().process_frame
 	assert_eq(calls[0], 1, "the queued callback ran")
+
+
+func test_schema_numbers_are_integers_on_the_wire() -> void:
+	# llama-server rejected "maxItems": 3.0 with HTTP 400, so every turn was canned.
+	var b := BartenderBrain.new()
+	var p := OpenAICompatProvider.new("local", { "base_url": "http://x/v1", "grammar": true })
+	var body := str(p.build_request([], { "schema": b.builder.schema }).body)
+	assert_true(body.contains("\"maxItems\":3"), body.substr(0, 300))
+	assert_false(body.contains("3.0"), "no float limits in the schema")
+
+
+func test_say_is_first_in_alphabetical_order() -> void:
+	# llama-server orders grammar keys alphabetically; "say" must still come first
+	# so the subtitle can stream before the rest of the reply.
+	var b := BartenderBrain.new()
+	var keys: Array = b.builder.schema.properties.keys()
+	var sorted := keys.duplicate()
+	sorted.sort()
+	assert_eq(sorted[0], "say")
+	assert_eq(ReplyParser.parse("{\"say\":\"Hi.\",\"then\":[{\"type\":\"trust\",\"delta\":1}],\"tone\":\"warm\"}").mood, "warm")

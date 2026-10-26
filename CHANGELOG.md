@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M12.1 — Oda's brain actually connects (2026-10-26)
+
+Found by running a real llama-server (built from source) through the game's own
+sidecar code, with a tiny random-weight model:
+- **Fixed: every model turn failed with HTTP 400 and fell back to canned lines.**
+  Godot reads `3` in the reply schema as `3.0`; llama-server's grammar builder rejects
+  `"maxItems": 3.0`. Whole-number floats are turned back into integers before sending.
+- **Fixed: llama-server could silently never start.** If a routine health check was
+  in flight, the "start the sidecar" callback was dropped. Callbacks now queue.
+- **Fixed: subtitles could not stream from llama-server.** It orders grammar keys
+  alphabetically, so "say" came last. The reply keys are now `say`, `then` (actions),
+  `tone` (mood), which sort with `say` first. Old names are still read.
+- **The reply must say something** (`minLength: 1`); an empty line used to drop to canned.
+- **She tells you why she is dumb.** While talking, the top right names the brain
+  answering or the exact reason none is (not installed, no model file, loading,
+  Ollama not running, cloud off). Canned replies are marked. The same report prints
+  in the Godot output; F3 shows details and llama-server's last log line.
+- **The sidecar looks harder:** configured path, `$LLAMA_SERVER`, `runtime/bin`, both
+  Homebrew locations, `~/.local/bin`, `~/llama.cpp/build/bin`, and the login shell's
+  PATH; any `.gguf` in `runtime/models/`. It logs the server's output to
+  `user://logs/llama-server.log` and notices when the server dies.
+- **New trace:** `scenes/m12_sidecar_trace.gd` starts a real server and has one turn;
+  `ci.sh` runs it when `LLAMA_SERVER` and `TEST_GGUF` are set.
+
 ## M11 + M12 — A body, hand weapons, and a bartender who actually talks (2026-10-26)
 
 What works now:

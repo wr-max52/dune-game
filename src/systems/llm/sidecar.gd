@@ -28,6 +28,7 @@ var model_found := ""
 var searched: PackedStringArray = []
 var started_ms := 0
 var log_tail: PackedStringArray = []
+var search := true                 ## false: only the configured path (tests)
 
 var _stdio: FileAccess
 var _stderr: FileAccess
@@ -53,6 +54,8 @@ func candidates() -> PackedStringArray:
 	var configured := str(spec().get("bin", ""))
 	if configured != "":
 		out.append(configured)
+	if not search:
+		return out
 	if OS.has_environment("LLAMA_SERVER"):
 		out.append(OS.get_environment("LLAMA_SERVER"))
 	out.append(ProjectSettings.globalize_path("res://").path_join("runtime/bin/" + exe_name()))
@@ -71,7 +74,7 @@ func find_bin() -> String:
 		if p != "" and FileAccess.file_exists(p):
 			bin_found = p
 			return p
-	var via_shell := _shell_lookup()
+	var via_shell := _shell_lookup() if search else ""
 	if via_shell != "":
 		bin_found = via_shell
 		return via_shell
