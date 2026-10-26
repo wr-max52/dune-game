@@ -83,6 +83,18 @@ if [ ! -f test_results/m6_dialogue_trace.txt ]; then
 fi
 echo "CI: m6 trace present ($(wc -l < test_results/m6_dialogue_trace.txt) lines)"
 
+# M7: generate the headless voice-input trace so tests/test_m7_voice.gut.gd can
+# check "typed is the default and dependency-free, a voice request degrades to
+# typed when whisper is down, an allowed tool still applies through the voice
+# path, a disallowed tool is ignored, and a latency is measured per turn."
+echo "CI: generating m7 voice trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m7_voice_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m7_voice_trace.txt ]; then
+  echo "CI: ERROR -- m7 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m7 trace present ($(wc -l < test_results/m7_voice_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
