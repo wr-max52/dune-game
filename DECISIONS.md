@@ -11,6 +11,53 @@ Every significant technical choice, the alternative, and why. Newest on top.
   the same. Alternative: hand-model a coat patch. Rejected: a new generation gave a
   real back for the same effort. The prep step no longer flattens anything; the
   arm-weight fix and the goggle glow still apply.
+## 2026-10-26 — M15 part 1 (guards on foot: body, pathing, senses)
+
+- **Guards are not LLM driven** (product owner). The bartender stays the only LLM
+  NPC; guards get authored barks and choices in part 2.
+- **The fighter pattern on foot.** `NpcBody` extends the player's own
+  `character_body.gd`: the same CharacterController, capsule and move_and_slide.
+  A brain (part 2) writes `command` (go_to, face, sprint, crouch) and the body
+  carries it out, exactly as `FighterBrain` writes a command into the flight model
+  the player flies. Alternative: a separate NPC mover -- rejected, two movement
+  systems drift apart and the AI ends up doing things the player cannot.
+- **Navmesh baked at runtime from the box data**, not baked in the editor. The
+  town is data (TOWN_PLAN D-rules), so a baked file would go stale the moment a box
+  moves. Triangles are generated from the boxes directly (not BoxMesh, which makes
+  Godot read geometry back from the GPU). The bake is ~0.3-0.4 s, so it runs on a
+  worker thread; NPCs wait for `TownNav.is_ready`.
+- **Godot 4.7 quirk: add the region after the async bake.** A NavigationRegion3D
+  added empty and given its mesh later was never picked up by the map. The region
+  is now created holding the finished mesh, and readiness is "the map says a point
+  of our mesh belongs to our region" (the map ticks once for an empty region, so
+  "the iteration changed" lied).
+- **Blocking boxes are bake obstructions.** Recast sees surfaces, not solids, so
+  the floor inside the closed barracks box baked as a walkable island and a
+  "nearest point" query could hand a guard a spot inside a building. Every
+  blocking kind is a projected obstruction, except a box a marker stands on (the
+  watchtower top keeps its floor for the tower post).
+- **Climb 0.1 m, not the usual 0.4.** The capsule (r 0.4, 45 degree floor angle)
+  rolls over ~0.12 m and treats anything taller as a wall. At 0.4 the mesh let a
+  guard step onto the side of the pit ramp near its foot, where it pinned itself
+  for good. The bake must describe what the body can really do.
+- **Stuck means "no progress along the path", not "did not move".** A running
+  guard (6.2 m/s, with the controller's acceleration lag) circled a pit-ramp corner
+  forever: it moved plenty, so a movement check never fired. Corners are now taken
+  earlier at speed (`corner_lead_s`) and a window with no progress skips the corner
+  and repaths.
+- **`map_get_path`, not NavigationAgent3D.** Deterministic and testable, one call
+  per repath. Cost: no agent avoidance yet (two guards can bump on a narrow path).
+  Revisit when squads move together.
+- **Senses as a stealth meter.** Awareness 0..1 rises while seen (x2 close to x0.5
+  at the edge of sight, x1.6 armed) and decays when not; noticed latches at 1 and
+  clears under 0.3 after `forget_s` out of sight. A heard shot raises awareness to
+  0.6 and gives a place to look, never the shooter. Rays only while the target is
+  in the cone, at `ray_hz`. Alternative: instant binary sight -- rejected, it gives
+  the player no window to duck back behind cover.
+- **Noises are a static event list** (`NoiseEvents`) with serial ids, like
+  WorldState: any system reports, any listener reads, nothing heard twice, no
+  wall-clock time in it. Range-practice shots are tagged `shot_range` so a brain
+  can shrug them off.
 
 ## 2026-10-26 — Every Remnant wears the rigged guard model
 

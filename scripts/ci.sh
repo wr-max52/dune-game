@@ -214,6 +214,18 @@ if [ ! -f test_results/m14_flight_trace.txt ]; then
 fi
 echo "CI: m14 trace present ($(wc -l < test_results/m14_flight_trace.txt) lines)"
 
+# NPCs on foot: the navmesh baked from the town data off the main thread, the
+# gate guards walking a patrol, across town, into the pit and back on the
+# player's movement code, their senses (sight cone, line of sight, hearing,
+# forgetting) against the real town, and a real bolt dropping one.
+echo "CI: generating npc trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/npc_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/npc_trace.txt ]; then
+  echo "CI: ERROR -- npc trace was not generated" >&2
+  exit 1
+fi
+echo "CI: npc trace present ($(wc -l < test_results/npc_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

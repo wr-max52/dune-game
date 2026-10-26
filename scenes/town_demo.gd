@@ -23,6 +23,7 @@ const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const BartenderNPC := preload("res://src/systems/npc/bartender_npc.gd")
 const BarScene := preload("res://src/systems/npc/bar_scene.gd")
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const SHOTS_PATH := "res://content/look/town_shots.json"
 
@@ -43,6 +44,8 @@ const ROLE_COLORS := {
 @export var terrain_resolution := 400 ## mesh vertices per side (look only)
 @export var with_landforms := true    ## mesas, hoodoos, boulders (look only)
 @export var with_ship := true         ## M14: the pit's ship is flyable (E boards it instead of quick-launching)
+@export var with_npcs := true         ## NPCs on foot: trooper posts with a "soldier" profile get a body, pathing and senses
+@export var nav_async := true         ## bake the navmesh on a worker thread (traces may bake in place)
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -64,6 +67,8 @@ var terrain: DesertTerrain            ## null when with_desert is off
 var landforms: DesertLandforms
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
+var nav: TownNav                      ## the walkable surface NPCs path on
+var npcs: Array = []                  ## NpcBody, one per soldier marker
 
 
 func _ready() -> void:
@@ -77,6 +82,8 @@ func _ready() -> void:
 		return                  # never build a broken town
 	_build_boxes()
 	_build_markers()
+	if with_npcs and not lookdev_mode:
+		_build_nav()
 	if with_desert:
 		_build_desert()
 	if use_look:
@@ -110,6 +117,8 @@ func _ready() -> void:
 			_build_gear()            # after the bar: the save (and the inventory in it) is loaded
 		if with_ship:
 			_build_ship()
+		if with_npcs:
+			_build_npcs()
 
 
 # ---------------------------------------------------------------- gameplay layer
@@ -139,6 +148,8 @@ func _build_markers() -> void:
 	for m in town.markers():
 		if not ROLE_COLORS.has(m.role):
 			continue           # spawn/waypoint/interact are invisible
+		if _is_live_npc(m):
+			continue           # gets a real body in _build_npcs instead
 		var v := _make_marker_visual(m)
 		v.name = m.id
 		# Capsules are centered; built characters stand on their feet.
@@ -235,6 +246,56 @@ func _add_light_and_sky() -> void:
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
+
+
+# ---------------------------------------------------------------- NPCs on foot
+
+func _is_live_npc(m: Dictionary) -> bool:
+	return with_npcs and not lookdev_mode and m.has("soldier")
+
+
+func _build_nav() -> void:
+	nav = TownNav.new()
+	nav.name = "TownNav"
+	add_child(nav)
+	nav.build(town, nav_async)
+
+
+## One NpcBody per marker that names a soldier profile. Placed and facing the way
+## the statue used to (the gate for a trooper post); senses watch the player.
+func _build_npcs() -> void:
+	var cc := CoreContent.new()
+	cc.load_from()
+	var root := Node3D.new()
+	root.name = "Npcs"
+	add_child(root)
+	for m in town.markers():
+		if not _is_live_npc(m):
+			continue
+		var soldier: Dictionary = cc.get_soldier(str(m.soldier))
+		if soldier.is_empty():
+			push_error("TownDemo: unknown soldier profile " + str(m.soldier))
+			continue
+		var here := town.marker_pos(str(m.id))
+		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
+		var npc := NpcBody.new()
+		npc.post_id = str(m.id)
+		npc.setup(soldier, here, atan2(face.x - here.x, face.z - here.z), _flat_mats() if use_look else null)
+		npc.nav = nav
+		npc.target = _player
+		npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
+		npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+		root.add_child(npc)
+		npcs.append(npc)
+		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
+		built_markers += 1
+
+
+func npc(post_id: String) -> NpcBody:
+	for n in npcs:
+		if n.post_id == post_id:
+			return n
+	return null
 
 
 # ---------------------------------------------------------------- M11 / M12
@@ -433,6 +494,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and not lookdev_mode \
 			and not (bar != null and bar.is_talking()):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_F4:
+		NpcBody.show_debug = not NpcBody.show_debug   # what each guard sees and hears
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_L:
 		# L cycles the lighting (1/2/3 are weapons since M11).
 		var ids := ["golden", "noon", "dusk"]

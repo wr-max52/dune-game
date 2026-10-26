@@ -2,6 +2,42 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M15 part 1 — Guards on foot: body, pathing, senses (2026-10-26)
+
+What works now:
+- **The two gate guards are real bodies, not statues.** They stand on the same
+  movement code as the player (the same controller, capsule and collision), so a
+  guard can never walk faster, climb higher or clip through anything you cannot.
+  They block you, bolts hit them, they flinch, and after 60 hp they drop (a fallen
+  guard no longer blocks shots or sight). Every number is in
+  `content/core/soldiers/gate_guard.json`.
+- **They can walk anywhere in town.** The navmesh is baked when the town loads,
+  from the same box data as the collision (move a wall in the data and the guards
+  path around it), on a worker thread so it never costs a frame. Buildings and
+  crates are cleared (no walkable floor inside a closed box), and the step height
+  matches what the capsule can really climb. In the trace a guard runs a patrol,
+  165 m to the cantina and back, and down into the pit and back up, with no stuck
+  events.
+- **They see and hear.** A 120 degree, 32 m view cone, a line-of-sight ray about
+  five times a second (only while you are in the cone), and an awareness meter that
+  fills faster up close and if you hold a weapon, slower if you crouch (crouched,
+  you vanish past about 19 m). Right behind them inside 2.5 m they feel you. The
+  watchtower and walls block their view. They hear a blaster shot within about
+  45 m and know where it came from, but not who fired. They forget you 8 s after
+  losing sight. Their heads turn to follow what they see.
+- **F4** shows a line over each guard: hp, what it is doing, whether it sees you,
+  its awareness and NOTICED / heard.
+
+What they do not do yet: anything about it. No challenge, no hostility, no
+shooting back. That is part 2 (the guard brain); see `docs/npc/GUARD_PLAN.md`.
+
+How to see it:
+- Run the town, walk to the gate, press F4. Stand in front of a guard, then step
+  behind the watchtower, crouch, draw a gun, fire one off.
+- `./scripts/ci.sh` writes `test_results/npc_trace.txt` (the whole run above with
+  real physics) and runs `test_npc_trace`, `test_perception`, `test_npc_locomotion`
+  and `test_town_nav`. Review stills: `docs/npc/look/`.
+
 ## M14 — Fly your ship from the port to space and back (2026-10-26)
 
 What works now:
