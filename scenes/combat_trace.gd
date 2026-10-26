@@ -28,6 +28,7 @@ var _last_usec := 0
 var _done := false
 var _armed := false
 var _scenario := ""
+var _worst_where := ""
 
 
 func _initialize() -> void:
@@ -39,7 +40,10 @@ func _physics_process(_delta: float) -> bool:
 	frame += 1
 	var now := Time.get_ticks_usec()
 	if _last_usec > 0 and demo != null and demo.nav != null and demo.nav.is_ready:
-		worst_ms = maxf(worst_ms, (now - _last_usec) / 1000.0)
+		var ms := (now - _last_usec) / 1000.0
+		if ms > worst_ms:
+			worst_ms = ms
+			_worst_where = "%s@%d" % [_scenario, frame]
 	_last_usec = now
 	if frame > 60 * 60 * 15 and not _done:
 		fail("watchdog")
@@ -73,7 +77,11 @@ func _until(cond: Callable, timeout_s: float) -> float:
 func _fresh(name: String, standing: int, time: String = "golden", credits: int = 60) -> void:
 	_scenario = name
 	if demo != null:
-		demo.queue_free()
+		# Tearing the old town down is the trace's own cost, not gameplay: stop
+		# timing frames (demo = null) until the new town's navmesh is in.
+		var old = demo
+		demo = null
+		old.queue_free()
 		await _frames(2)
 	WorldState.reset()
 	NoiseEvents.reset()
@@ -234,6 +242,7 @@ func _run() -> void:
 	await _attack_friendly()
 	_scenario = ""
 	kv("WORST_FRAME_MS", snappedf(worst_ms, 0.01))
+	kv("WORST_FRAME_AT", _worst_where)
 	_finish()
 
 
