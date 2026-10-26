@@ -120,6 +120,23 @@ godot --headless --path . -s res://tools/llm/eval_runner.gd -- mode=local suite=
 Review renders: `./tools/m11/shoot_m11.sh` writes body, weapon, range and bar shots
 to `test_results/m11/`.
 
+## The jetpack (M13)
+
+The jetpack is at the top of the pit's north-east ramp, on your way out of the pit
+(look for the glowing ring). The gear trader is at the market stall south-east of the
+pit.
+
+| Action | Key |
+|---|---|
+| Pick it up (it goes on your back) | E near it |
+| Fly | Hold Space in the air (a tap is still a normal jump) |
+| Take it off / put it on | G |
+| Sell it / buy it back | E at the gear trader's stall |
+
+The JET meter at the bottom shows fuel: about 1.8 s of thrust. It refills on the
+ground a moment after you stop. Fly out over the walls and you are put back in
+town when you fall.
+
 ## Flying the dogfight (M10)
 
 ```sh

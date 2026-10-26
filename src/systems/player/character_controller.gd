@@ -20,18 +20,25 @@ var stand_height := 1.8
 var crouch_height := 1.0
 
 # A movement command: direction in the player's local XZ plane (-1..1 each),
-# plus sprint / crouch / jump booleans.
-var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "jump": false }
+# plus sprint / crouch / jump booleans. "jump" is the press (one frame);
+# "jump_held" is whether jump is still down (M13: the jetpack reads it).
+var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "jump": false, "jump_held": false }
+
+# M13: extra upward acceleration this frame (a jetpack's thrust), set by the node
+# before step(). While it is on, upward speed is capped at max_rise (0 = no cap).
+var lift := 0.0
+var max_rise := 0.0
 var pose := Pose.STAND
 var on_ground := true
 var velocity := Vector3.ZERO
 var body_pos := Vector3.ZERO
 
-func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool) -> void:
+func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
 	command.dir = dir
 	command.sprint = sprint
 	command.crouch = crouch
 	command.jump = jump
+	command.jump_held = jump_held or jump
 
 
 func current_speed() -> float:
@@ -69,7 +76,9 @@ func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 		on_ground = false
 		pose = Pose.JUMP
 	elif not on_ground:
-		velocity.y -= gravity * delta
+		velocity.y += (lift - gravity) * delta
+		if lift > 0.0 and max_rise > 0.0:
+			velocity.y = minf(velocity.y, max_rise)
 
 	# Ground contact.
 	if body_pos.y + velocity.y * delta <= ground_y:

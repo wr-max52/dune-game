@@ -32,6 +32,7 @@ const ROLE_COLORS := {
 @export var preset := ""              ## "" = default preset in time_of_day.json
 @export var with_body := true         ## M11: animated body + hand weapons (needs use_look)
 @export var with_bar := true          ## M12: the live bartender (needs use_look)
+@export var with_gear := true         ## M13: pickups, the gear trader, the jetpack (works in greybox too)
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -46,6 +47,7 @@ var player_kit: PlayerKit             ## M11 body + weapons (null in the CI grey
 var training_range: TrainingRange
 var bartender: Node3D                 ## M12 (null in the CI greybox)
 var bar: Node
+var gear: GearController              ## M13
 var characters: Dictionary = {}       ## marker id -> built character
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
@@ -87,6 +89,8 @@ func _ready() -> void:
 			_attach_body()
 		if use_look and with_bar:
 			_build_bar()
+		if with_gear:
+			_build_gear()            # after the bar: the save (and the inventory in it) is loaded
 
 
 # ---------------------------------------------------------------- gameplay layer
@@ -241,6 +245,14 @@ func _build_bar(scripted = null, save_path: String = "user://save.json") -> void
 	add_child(bar)
 	bar.setup(self, scripted)
 	bartender = bar.npc
+
+
+## M13: gear in the town. Pickups and vendors come from content/core; the gear
+## node puts a jetpack on the player while one is attached.
+func _build_gear() -> void:
+	gear = GearController.new()
+	gear.setup(null, town, _player, _rig, "port_town")
+	add_child(gear)
 
 
 func _physics_process(dt: float) -> void:

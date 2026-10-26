@@ -9,5 +9,8 @@
   "ships": ["interceptor", "remnant_fighter", "remnant_heavy"],
   "pilots": ["rookie", "veteran", "ace"],
   "encounters": ["orbital_skirmish"],
+  "items": ["jetpack"],
+  "vendors": ["gear_trader"],
+  "pickups": ["port_town"],
   "notes": "All names and labels live in this layer only. Code references entries by id."
 }

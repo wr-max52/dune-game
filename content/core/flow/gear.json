@@ -1,0 +1,20 @@
+{
+  "note": "Words the gear prompts use (M13). Read by src/systems/items/gear_controller.gd. %s is an item or vendor label, %d a price or a credit balance. Kept here so code stays name-free.",
+  "labels": {
+    "pick_up": "[E]  Pick up %s",
+    "picked_up": "Picked up: %s",
+    "attached": "%s attached.  Hold Space in the air to fly.  [G] takes it off",
+    "detached": "%s off.  [G] puts it back on",
+    "nothing_to_attach": "No gear to put on",
+    "sell": "[E]  Sell %s to the %s  (+%d cr)",
+    "sold": "Sold %s for %d cr",
+    "buy": "[E]  Buy %s from the %s  (%d cr)",
+    "cant_afford": "%s: %d cr  (you have %d)",
+    "bought": "Bought %s for %d cr",
+    "nothing_to_trade": "The %s buys gear",
+    "fuel": "JET",
+    "recovered": "You drifted out over the walls. Back in port.",
+    "event_sold": "Sold a %s at the market",
+    "event_bought": "Bought a %s at the market"
+  }
+}

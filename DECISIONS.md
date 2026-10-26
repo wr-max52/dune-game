@@ -2,6 +2,54 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — M13 (jetpack, issue #5)
+
+- **Same pattern as M1-M12: pure spine, thin node.** `Jetpack` (fuel + thrust) and
+  `Inventory` (own, attach, pick up, sell, buy) are RefCounted and headless;
+  `GearController` only places things, reads E and G, and syncs the player node.
+  The trace calls the same `interact()` / `toggle_gear()` the keys do.
+- **The jetpack is extra lift in the existing controller, not a second movement
+  mode.** `CharacterController` gained `lift` (upward acceleration this frame) and
+  `max_rise` (a climb cap while lifting); `set_command()` gained an optional
+  `jump_held` that defaults to false, so every M1-M12 caller and trace is unchanged.
+  Alternative: a separate flying state with its own physics -- rejected because the
+  pack only changes vertical speed; walking, collision and air control already work.
+- **Tap = jump, hold = fly.** Thrust starts only after jump has been held 0.18 s in
+  the air (`kick_in`), so a tap never burns fuel and an ordinary jump feels the same
+  with or without the pack. The issue asked for "jump really high by holding".
+- **Fuel recharges on the ground only, after a delay.** With an air refill, short
+  feathered bursts could hover indefinitely. `recharge_air` is data (0 today) if a
+  later pack should allow it. An empty pack needs `min_fuel_to_start` before it will
+  relight, so it does not stutter on fumes.
+- **Inventory lives in WorldState and is saved inside the world block.** WorldState
+  is already static (survives town -> flight -> town) and already saved and loaded
+  by the bar. Adding `inventory` to its save means no new save version and no new
+  save call sites; an older save loads with an empty inventory.
+- **Picking up attaches when the slot is free; buying does too.** One less key
+  press for the common case. G is the explicit attach/detach (the issue's
+  "attached"). Detached gear stays owned.
+- **Selling is real: the vendor keeps what it buys and sells it back.** A sale moves
+  the item into the vendor's stock (saved), so selling is not a delete and the item
+  can be bought back at `sell_rate`. Prices are `value x rate` from data. Money stays
+  in `WorldState.credits` (the bartender's drinks and jobs already use it).
+- **Pickups and vendors are placed by town marker + offset.** No coordinates in
+  code, and the town file is untouched (its validator and the M9 walk trace are
+  unchanged). The jetpack sits at the top of the pit ramp, not in the pit, because
+  the ship's launch pad covers the whole pit and also uses E.
+- **A fall guard, because the pack can leave the town.** The walls are 6 m; a full
+  tank climbs ~17 m; the town has ground only inside the walls. Alternatives: a
+  ceiling (kills the point of the pack) or invisible walls (new geometry outside the
+  town data). Chosen: if the player drops 20 m below the lowest floor, put them back
+  where they last stood on the ground, with a toast.
+- **Gameplay and look are separate files, as with ships.** `items/*.json` says how
+  the pack behaves; `content/look/items.json` says what it looks like, keyed by a
+  `look` id, with a `scene` path for a real model and a stand-in fallback. Flames
+  are raked back 20 degrees so the player's long coat does not hide them (found in
+  the first review render).
+- **The worn pack is mounted from outside the avatar.** `GearController` hangs it on
+  the avatar's chest joint and handles first person itself (shadow only, like the
+  body), so `player_avatar.gd` is unchanged; open PR #12 rewrites part of that file.
+
 ## 2026-10-26 — M11 (body + hand weapons) and M12 (live bartender)
 
 - **One PR for both, by product-owner call.** Order inside it: the bartender pipe

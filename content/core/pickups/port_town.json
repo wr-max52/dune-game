@@ -1,0 +1,18 @@
+{
+  "id": "port_town",
+  "location": "port_town",
+  "pickups": [
+    {
+      "id": "pit_jetpack",
+      "item": "jetpack",
+      "marker": "player_spawn",
+      "offset": [
+        19.0,
+        6.0,
+        9.5
+      ],
+      "reach": 2.0
+    }
+  ],
+  "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of the pit's north-east ramp, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved)."
+}
