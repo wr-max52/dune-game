@@ -181,6 +181,15 @@ if [ ! -f test_results/m13_jetpack_trace.txt ]; then
   exit 1
 fi
 echo "CI: m13 trace present ($(wc -l < test_results/m13_jetpack_trace.txt) lines)"
+# M12 (optional): a REAL llama-server through the game's sidecar, when one and a
+# model are available (LLAMA_SERVER=/path/llama-server TEST_GGUF=/path/model.gguf).
+rm -f test_results/m12_sidecar_trace.txt
+if [ -n "${LLAMA_SERVER:-}" ] && [ -n "${TEST_GGUF:-}" ]; then
+  echo "CI: generating m12 sidecar trace with $LLAMA_SERVER ..."
+  "$GODOT_BIN" --headless --path . -s res://scenes/m12_sidecar_trace.gd -- bin="$LLAMA_SERVER" model="$TEST_GGUF" >/dev/null 2>&1 || true
+else
+  echo "CI: m12 sidecar trace skipped (set LLAMA_SERVER and TEST_GGUF to run it)"
+fi
 
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes

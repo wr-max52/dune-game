@@ -38,8 +38,8 @@ def reply_for(body):
     actions.append({"type": "trust", "delta": 1, "why": "polite"})
     return {
         "say": "You said “%s”. Café talk costs extra, friend." % said[:60],
-        "mood": "amused",
-        "actions": actions,
+        "tone": "amused",
+        "then": actions,
     }
 
 

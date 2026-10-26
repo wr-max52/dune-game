@@ -86,7 +86,7 @@ func begin_visit() -> String:
 	rel.mood = baseline_mood()
 	var g: Array = card.get("greetings", {}).get(rel.tier(), ["Yeah?"])
 	var line := str(g[_rng.randi() % g.size()])
-	history.append({ "role": "assistant", "content": JSON.stringify({ "say": line, "mood": rel.mood, "actions": [] }) })
+	history.append({ "role": "assistant", "content": JSON.stringify({ "say": line, "then": [], "tone": rel.mood }) })
 	return line
 
 
@@ -224,7 +224,7 @@ func _finish_turn(result: Dictionary) -> void:
 	var applied := _apply(v.kept)
 	rel.turns_total += 1
 	history.append({ "role": "user", "content": PromptBuilder.wrap_player(_player_text) })
-	history.append({ "role": "assistant", "content": JSON.stringify({ "say": cleaned.say, "mood": rel.mood, "actions": v.kept }) })
+	history.append({ "role": "assistant", "content": JSON.stringify({ "say": cleaned.say, "then": v.kept, "tone": rel.mood }) })
 	var turn := {
 		"player": _player_text, "say": cleaned.say, "mood": rel.mood, "kept": v.kept, "dropped": v.dropped,
 		"applied": applied, "filter": cleaned.flags, "source": source, "repaired": parsed.get("repaired", false),

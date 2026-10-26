@@ -64,6 +64,9 @@ static func _quiet_parse(text: String) -> Variant:
 
 
 ## The whole reply -> { say, mood, actions, ok, repaired }.
+## Keys are "say", "then" (actions) and "tone" (mood): llama-server builds its
+## grammar with keys in alphabetical order, and these names keep "say" first so
+## the subtitle can stream. The older "actions" / "mood" names are still read.
 static func parse(raw: String) -> Dictionary:
 	var text := raw.strip_edges()
 	var d = _quiet_parse(text)
@@ -76,9 +79,9 @@ static func parse(raw: String) -> Dictionary:
 			d = _quiet_parse(s.substr(a, b - a + 1))
 			repaired = true
 	if d is Dictionary and d.get("say") is String:
-		var acts = d.get("actions", [])
+		var acts = d.get("then", d.get("actions", []))
 		return {
-			"say": str(d.say), "mood": str(d.get("mood", "")),
+			"say": str(d.say), "mood": str(d.get("tone", d.get("mood", ""))),
 			"actions": acts if acts is Array else [], "ok": true, "repaired": repaired,
 		}
 	var say := say_partial(text)

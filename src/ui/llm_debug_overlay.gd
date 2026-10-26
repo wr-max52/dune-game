@@ -53,6 +53,12 @@ func refresh() -> void:
 	var L: PackedStringArray = []
 	L.append("[b]mode[/b] %s   [b]trust[/b] %d (%s)   [b]mood[/b] %s" % [llm.mode if llm else "-", brain.rel.trust, brain.rel.tier(), brain.rel.mood])
 	if llm != null:
+		var rep := llm.brain_report()
+		L.append("[b]brain[/b] " + str(rep.summary))
+		for line in rep.lines:
+			L.append("   " + str(line))
+		if llm.sidecar != null and not llm.sidecar.log_tail.is_empty():
+			L.append("[b]llama-server log[/b] " + str(llm.sidecar.log_tail[llm.sidecar.log_tail.size() - 1]).replace("[", "("))
 		var st := llm.status()
 		var ps: PackedStringArray = []
 		for id in st:

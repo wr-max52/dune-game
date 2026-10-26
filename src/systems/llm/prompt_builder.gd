@@ -21,7 +21,23 @@ var schema: Dictionary = {}
 func _init(persona_card: Dictionary = {}, briefing_text: Dictionary = {}, reply_schema: Dictionary = {}) -> void:
 	card = persona_card
 	world_text = briefing_text
-	schema = reply_schema
+	schema = intify(reply_schema)
+
+
+## Godot's JSON parser reads every number as a float, and JSON.stringify writes
+## 3.0 back out. Grammar builders (llama-server, Ollama) reject "maxItems": 3.0,
+## which failed every turn with HTTP 400. Whole floats become ints again here.
+static func intify(v: Variant) -> Variant:
+	if v is Dictionary:
+		var d := {}
+		for k in v:
+			d[k] = intify(v[k])
+		return d
+	if v is Array:
+		return v.map(func(x): return intify(x))
+	if v is float and is_finite(v) and v == floorf(v) and absf(v) < 1e15:
+		return int(v)
+	return v
 
 
 ## The static persona message (identical every turn).
@@ -42,8 +58,8 @@ func persona_message() -> Dictionary:
 func rules_message() -> Dictionary:
 	var r: PackedStringArray = []
 	r.append("RULES:\n- " + "\n- ".join(PackedStringArray(card.get("rules", []))))
-	r.append("""REPLY FORMAT: answer with ONE JSON object and nothing else:
-{"say": "<what you say out loud, at most 3 sentences>", "mood": "wary|warm|amused|irritated|scared|sad", "actions": [ ... at most 3 ... ]}
+	r.append("""REPLY FORMAT: answer with ONE JSON object and nothing else, keys in this order:
+{"say": "<what you say out loud, at most 3 sentences>", "then": [ ... actions, at most 3 ... ], "tone": "wary|warm|amused|irritated|scared|sad"}
 Actions you may take (use ids from YOUR BRIEFING only):
 - {"type": "share_rumor", "id": "<rumor id>"}  when you pass a rumor on
 - {"type": "offer_job", "id": "<job id>"}  when you offer a job from your board
@@ -53,7 +69,7 @@ Actions you may take (use ids from YOUR BRIEFING only):
 - {"type": "refuse_topic"}  when you will not talk about something
 - {"type": "end_conversation"}  when you are done with them
 - {"type": "call_guards"}  only if they threaten you or keep insulting you
-Use "actions": [] when nothing happens. Never put an id you were not given.""")
+Use "then": [] when nothing happens. "tone" is how you feel right now. Never put an id you were not given.""")
 	return { "role": "system", "content": "\n\n".join(r) }
 
 

@@ -51,6 +51,44 @@ What is faked or outstanding:
   airborne pose).
 - No fall damage (the player has no health yet), so a 17 m drop costs nothing.
 - One pack, one trader, one pickup. No drop key: gear leaves you only by selling.
+## M12.1 — Oda's brain actually connects (2026-10-26)
+
+Found by running a real llama-server (built from source) through the game's own
+sidecar code, with a tiny random-weight model:
+- **Fixed: every model turn failed with HTTP 400 and fell back to canned lines.**
+  Godot reads `3` in the reply schema as `3.0`; llama-server's grammar builder rejects
+  `"maxItems": 3.0`. Whole-number floats are turned back into integers before sending.
+- **Fixed: llama-server could silently never start.** If a routine health check was
+  in flight, the "start the sidecar" callback was dropped. Callbacks now queue.
+- **Fixed: subtitles could not stream from llama-server.** It orders grammar keys
+  alphabetically, so "say" came last. The reply keys are now `say`, `then` (actions),
+  `tone` (mood), which sort with `say` first. Old names are still read.
+- **The reply must say something** (`minLength: 1`); an empty line used to drop to canned.
+- **She tells you why she is dumb.** While talking, the top right names the brain
+  answering or the exact reason none is (not installed, no model file, loading,
+  Ollama not running, cloud off). Canned replies are marked. The same report prints
+  in the Godot output; F3 shows details and llama-server's last log line.
+- **The sidecar looks harder:** configured path, `$LLAMA_SERVER`, `runtime/bin`, both
+  Homebrew locations, `~/.local/bin`, `~/llama.cpp/build/bin`, and the login shell's
+  PATH; any `.gguf` in `runtime/models/`. It logs the server's output to
+  `user://logs/llama-server.log` and notices when the server dies.
+- **New trace:** `scenes/m12_sidecar_trace.gd` starts a real server and has one turn;
+  `ci.sh` runs it when `LLAMA_SERVER` and `TEST_GGUF` are set.
+## M11.1 — The guns actually show up (2026-10-26)
+
+- **Fixed: guns did not render on a fresh checkout.** The blaster models were never
+  committed: the `models/` rule in `.gitignore` (meant for downloaded LLM models)
+  matched `assets/.../models/` too. The rule is now `/models/`, the files are in,
+  and `test_weapon_assets` fails CI if a weapon model or sound is ever missing.
+- **Readable guns.** The retint is lighter worn gunmetal with tan or oxblood accents
+  and catches light on its edges; it was near black because the material was too
+  metallic with nothing to reflect.
+- **Hands on the handles.** Grip points re-measured on the models: the right hand
+  holds the rear handle, the left cups it (pistol) or takes the front band (rifle).
+- **Held lower.** Chest height in third person (it used to cover the face); lower
+  right and turned slightly inward in first person, so you see the barrel.
+- **Muzzle.** A glowing emitter ring replaces the orange dot, plus a brief flash,
+  a brighter muzzle light, and a small kick back and up on every shot.
 
 ## M11 + M12 — A body, hand weapons, and a bartender who actually talks (2026-10-26)
 
