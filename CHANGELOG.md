@@ -2,6 +2,56 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M13 — Jetpack (issue #5) (2026-10-26)
+
+What works now:
+- **A jetpack you can find.** It sits glowing at the top of the pit's north-east
+  ramp, on your way out of the pit. Walk up, press E: it is yours, and it goes
+  straight onto your back.
+- **Hold jump to fly.** A tap of Space is still the normal jump. Hold it and, after a
+  fraction of a second in the air, the pack lights: flames out of both nozzles and a
+  climb of about 17 m on a full tank (a normal jump is 0.6 m), with air control the
+  whole way. Let go and you fall.
+- **Fuel that recharges.** A JET meter at the bottom of the screen shows the tank:
+  1.8 seconds of thrust. It refills on the ground, starting 0.8 s after you stop
+  burning (about 3 s from empty). It does not refill in the air, so you cannot
+  hover forever.
+- **Attach, detach.** G takes the pack off (it stays in your inventory; you jump
+  normally) and puts it back on.
+- **Sell it, buy it back.** The gear trader at the market (the stall at `vendor_2`)
+  buys gear at half its value: E sells the jetpack for 60 credits. The trader keeps
+  it and sells it back for 120; if you are short, the prompt says what you have.
+  Sales and purchases go into the world's event log, so the bartender's world knows.
+- **Saved.** What you own, what you wear, which pickups you took and what the trader
+  holds are saved with the world (inside the existing save, no version change). Come
+  back from a dogfight or reload and the pack is still on your back, and the one in
+  the street is still gone.
+- **Flying out of town is caught.** The pack clears the 6 m walls, and there is no
+  ground outside them. Fall 20 m below the lowest floor and you are put back where
+  you last stood.
+- **Any item, any design, from data.** Items, vendors and pickups are new data
+  categories; the look is `content/look/items.json` (a stand-in today, or any
+  `.glb`/`.tscn` through `scene`). `docs/ADDING_ITEMS.md` explains every field.
+
+How to see it:
+- Run the town (`scenes/town_demo.tscn`), walk up the ramp, E, then hold Space.
+  Controls are in `LAUNCH.md`. Review stills are in `docs/m13/`
+  (`./tools/m13/shoot_jetpack.sh` re-renders them).
+- `./scripts/ci.sh` writes `test_results/m13_jetpack_trace.txt`: the bot walks out
+  of the pit to the pack, picks it up, flies 17.3 m, runs the tank dry, recharges,
+  detaches and reattaches, flies out over the north wall and is caught, sells for
+  60, buys back for 120, and reloads with the pickup still taken. Worst frame 6.7 ms.
+- 381 GUT tests pass (was 335), including a test that adds a new pack, vendor and
+  pickup from JSON alone and trades with them.
+
+What is faked or outstanding:
+- The pack is a primitive stand-in (two tanks on a plate); the `scene` hook is
+  ready for a real model.
+- No thruster sound, no dust or heat haze, no flight pose (the body uses its
+  airborne pose).
+- No fall damage (the player has no health yet), so a 17 m drop costs nothing.
+- One pack, one trader, one pickup. No drop key: gear leaves you only by selling.
+
 ## M11 + M12 — A body, hand weapons, and a bartender who actually talks (2026-10-26)
 
 What works now:

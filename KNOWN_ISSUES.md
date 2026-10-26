@@ -2,7 +2,34 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M11 + M12 (2026-10-26)
+## After M13 (2026-10-26)
+
+**What is real and proven by tests:** the jetpack with real physics in the town
+(`test_results/m13_jetpack_trace.txt`): reached from the pit and picked up, attached,
+a tap stays a 0.6 m jump, a hold climbs ~17 m and runs the tank dry, flames only
+while burning, fuel refills on the ground after the delay, detach/reattach, flying
+out over the north wall is caught, sold for 60, bought back for 120, can't-afford
+handled, and a save reload keeps the pickup taken and the pack worn. Plus unit
+tests for the fuel model, the controller hook, the inventory and trade rules, the
+look kit, and gear added from data alone.
+
+**Not done, honestly:**
+- **The pack is a stand-in** (two tanks, a plate, two nozzles). The `scene` hook in
+  `content/look/items.json` takes a real model with no code change.
+- **No sound** for the thruster, no dust kicked up, no heat shimmer, no camera shake.
+- **No flight pose.** The body uses its normal airborne/fall pose under the pack.
+- **No fall damage.** The player has no health yet, so a 17 m drop is free.
+- **Rooftops are reachable** with the pack. Nothing breaks, but nothing was designed
+  for up there either, and the town's routes do not cover it.
+- **The fall guard is a safety net, not a boundary.** You can fly out over the wall;
+  you are put back once you drop 20 m below the lowest floor.
+- **One item, one trader, one pickup.** No drop key, no inventory screen, no
+  shop menu: E acts on the first sellable item, then on the first item in stock.
+- **Fuel is not saved** (a reload refills the tank). Ownership, slot, taken pickups
+  and vendor stock are.
+- **Reviewed in software rendering only** (`docs/m13/`); not yet played on the Mac.
+
+## After M11 + M12 (2026-10-26) -- superseded by the notes above.
 
 **What is real and proven by tests:** the body's gait/jump/land/crouch states, view
 toggle spam, camera wall collision, swap spam, blaster hits on range targets, the

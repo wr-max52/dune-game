@@ -15,6 +15,8 @@ signal pose_changed(pose: int)
 signal hurt(amount: float)          ## something hit the player (bolts, blades)
 signal jumped
 signal landed
+signal jet_started              ## M13: the jetpack lit
+signal jet_stopped              ## M13: the jetpack cut out (released or empty)
 
 ## M11: while true (talking at the bar, a cutscene) the player stands still and
 ## ignores movement input. Gravity and collision still run.
@@ -29,6 +31,11 @@ var _was_on_floor := true
 
 var controller := CharacterController.new()
 var use_external_command := false
+
+## M13: the attached jetpack (src/systems/player/jetpack.gd), or null. Gear
+## (GearController) sets it; this node only feeds it jump-held + grounded and
+## hands its thrust to the controller.
+var jetpack = null
 
 ## Capsule dimensions. The body origin is at the feet (the camera's fpv_offset of
 ## 1.6 assumes that), so the capsule is lifted by half its height.
@@ -58,8 +65,8 @@ func _ready() -> void:
 	controller.body_pos = global_position
 
 
-func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool) -> void:
-	controller.set_command(dir, sprint, crouch, jump)
+func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
+	controller.set_command(dir, sprint, crouch, jump, jump_held)
 	use_external_command = true
 
 
@@ -80,7 +87,8 @@ func _physics_process(delta: float) -> void:
 			dir_in,
 			Input.is_action_pressed(sprint_action),
 			Input.is_action_pressed(crouch_action),  # held, not one frame
-			Input.is_action_just_pressed(jump_action)
+			Input.is_action_just_pressed(jump_action),
+			Input.is_action_pressed(jump_action)     # M13: held, for the jetpack
 		)
 
 	# Physics is the authority on position and ground contact. The pure controller
@@ -92,6 +100,7 @@ func _physics_process(delta: float) -> void:
 	controller.on_ground = grounded
 	if grounded and controller.velocity.y < 0.0:
 		controller.velocity.y = 0.0
+	_step_jetpack(delta, grounded)
 	# A ground height far below the world disables the controller's flat-floor
 	# clamp, so landing is decided by collision instead of a hardcoded y = 0.
 	controller.step(delta, yaw, -INF)
@@ -112,6 +121,22 @@ func _physics_process(delta: float) -> void:
 	elif not on_floor and _was_on_floor and velocity.y > 0.5:
 		jumped.emit()
 	_was_on_floor = on_floor
+
+
+## M13: run the jetpack (if one is attached) and hand its thrust to the controller.
+func _step_jetpack(delta: float, grounded: bool) -> void:
+	if jetpack == null:
+		controller.lift = 0.0
+		controller.max_rise = 0.0
+		return
+	var was: bool = jetpack.thrusting
+	var held: bool = bool(controller.command.jump_held) and not locked
+	controller.lift = jetpack.step(delta, held, grounded)
+	controller.max_rise = jetpack.max_rise()
+	if jetpack.thrusting and not was:
+		jet_started.emit()
+	elif was and not jetpack.thrusting:
+		jet_stopped.emit()
 
 
 ## Bolts and blades call this (see bolt.gd). The slice has no player death yet:

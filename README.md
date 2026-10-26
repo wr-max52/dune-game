@@ -50,16 +50,18 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 ## Plan
 
 `PLAN.md` holds the milestones in build order, with status and the "done means"
-for each. M0-M9 are done; M10 (starfighter flight and dogfights) is on its feature
-branch; M11 (the player's body and hand weapons) and M12 (the live LLM bartender,
-`docs/bartender/BARTENDER_PLAN.md`) are done. `LAUNCH.md` is how to run and record the slice and how to fly the dogfight;
-`docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights from data.
+for each. M0-M12 are done (M10 is starfighter flight and dogfights; M11 the
+player's body and hand weapons; M12 the live LLM bartender,
+`docs/bartender/BARTENDER_PLAN.md`); M13 (the jetpack, issue #5) is on its feature
+branch. `LAUNCH.md` is how to run and record the slice, fly the dogfight and use
+the jetpack. `docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights
+from data; `docs/ADDING_ITEMS.md` is the same for items, vendors and pickups.
 
 ## Layout
 
 ```
 content/core/      the only place names/weapons/dialogue live (swappable)
-content/look/      palettes, ship looks, lighting (what things look like)
+content/look/      palettes, ship and item looks, lighting (what things look like)
 src/systems/       gameplay + support systems (dataloader, player, combat, ai, flight, ...)
 scenes/            boot + level scenes; scenes/flight/ is the playable dogfight
 tests/             GUT tests + (M5) the headless bot playthrough

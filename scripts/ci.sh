@@ -170,6 +170,18 @@ if [ ! -f test_results/m12_bar_trace.txt ]; then
 fi
 echo "CI: m12 trace present ($(wc -l < test_results/m12_bar_trace.txt) lines)"
 
+# M13: the jetpack in the town with real physics: walk to it and pick it up (it
+# attaches), a tap is a jump and a hold is a climb, fuel runs out and recharges,
+# take it off and on, fly out over the wall and get caught, sell it at the market,
+# buy it back, and reload with the pickup still taken.
+echo "CI: generating m13 jetpack trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m13_jetpack_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/m13_jetpack_trace.txt ]; then
+  echo "CI: ERROR -- m13 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m13 trace present ($(wc -l < test_results/m13_jetpack_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

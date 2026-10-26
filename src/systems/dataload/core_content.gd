@@ -22,6 +22,9 @@ var missions: Dictionary = {}      # mission-id -> Dictionary (crate_retrieval, 
 var ships: Dictionary = {}         # ship-id -> Dictionary (interceptor, etc.) (M10)
 var pilots: Dictionary = {}        # pilot-id -> Dictionary (AI flying profiles) (M10)
 var encounters: Dictionary = {}    # encounter-id -> Dictionary (dogfight setups) (M10)
+var items: Dictionary = {}         # item-id -> Dictionary (jetpack, etc.) (M13)
+var vendors: Dictionary = {}       # vendor-id -> Dictionary (who buys and sells items) (M13)
+var pickups: Dictionary = {}       # location-id -> Dictionary (items lying in that place) (M13)
 var _loaded := false
 
 
@@ -37,6 +40,9 @@ func load_from(root: String = ROOT) -> bool:
 	ships = {}
 	pilots = {}
 	encounters = {}
+	items = {}
+	vendors = {}
+	pickups = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -76,6 +82,10 @@ func load_from(root: String = ROOT) -> bool:
 	_load_category(root, "ships", ships)
 	_load_category(root, "pilots", pilots)
 	_load_category(root, "encounters", encounters)
+	# M13: gear and trade, same generic path.
+	_load_category(root, "items", items)
+	_load_category(root, "vendors", vendors)
+	_load_category(root, "pickups", pickups)
 
 	_loaded = true
 	return true
@@ -129,6 +139,28 @@ func get_pilot(id: String) -> Dictionary:
 
 func get_encounter(id: String) -> Dictionary:
 	return encounters.get(id, {})
+
+
+func get_item(id: String) -> Dictionary:
+	return items.get(id, {})
+
+
+func get_vendor(id: String) -> Dictionary:
+	return vendors.get(id, {})
+
+
+## Pickups placed in a location (an empty list when there are none).
+func get_pickups(location_id: String) -> Array:
+	return pickups.get(location_id, {}).get("pickups", [])
+
+
+## Vendors whose stall is in a location.
+func vendors_in(location_id: String) -> Array:
+	var out: Array = []
+	for id in vendors:
+		if str(vendors[id].get("location", "")) == location_id:
+			out.append(vendors[id])
+	return out
 
 
 func get_persona(npc_id: String) -> String:

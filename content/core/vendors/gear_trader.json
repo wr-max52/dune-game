@@ -1,0 +1,14 @@
+{
+  "id": "gear_trader",
+  "label": "Gear Trader",
+  "location": "port_town",
+  "marker": "vendor_2",
+  "reach": 3.5,
+  "buys": [
+    "gear"
+  ],
+  "buy_rate": 0.5,
+  "sell_rate": 1.0,
+  "stock": [],
+  "note": "IP-neutral. Market stall. Pays buy_rate x item value for gear and sells what it holds at sell_rate x value, so a sold jetpack can be bought back."
+}
