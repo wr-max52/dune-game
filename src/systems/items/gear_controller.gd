@@ -37,6 +37,9 @@ var worn_id := ""
 var focus: Dictionary = {}      ## what E would act on: { kind: "pickup"|"vendor", ... }
 var recoveries := 0
 var lowest_floor := 0.0
+## Ground height under (x, z), when the scene has terrain (the town's desert).
+## Unset: the town's lowest floor stands in for the ground everywhere.
+var ground_at := Callable()
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
 var _last_safe := Vector3.ZERO
@@ -76,6 +79,20 @@ func _ready() -> void:
 
 func _l(key: String) -> String:
 	return str(labels.get(key, key))
+
+
+func floor_below(p: Vector3) -> float:
+	if ground_at.is_valid():
+		return minf(float(ground_at.call(p.x, p.z)), lowest_floor if _over_town(p) else INF)
+	return lowest_floor
+
+
+func _over_town(p: Vector3) -> bool:
+	if town == null:
+		return false
+	var b: Dictionary = town.data.get("bounds", {})
+	return not b.is_empty() and p.x >= float(b.min[0]) and p.x <= float(b.max[0]) \
+		and p.z >= float(b.min[1]) and p.z <= float(b.max[1])
 
 
 func _lowest_floor() -> float:
@@ -335,13 +352,15 @@ func _update_worn_view() -> void:
 
 # ------------------------------------------------------------------ safety
 
-## The town has ground only inside its walls. A jetpack can clear them; when the
-## player drops well below the lowest floor, put them back where they last stood.
+## A safety net for falling through the world. With terrain, "the world" is the
+## ground under the player (out in the desert that can be well below the town);
+## without it, the town has ground only inside its walls, so the lowest floor
+## stands in. Drop FALL_MARGIN below that and you are put back where you stood.
 func _guard_fall() -> void:
 	if player.is_on_floor():
 		_last_safe = player.global_position
 		return
-	if player.global_position.y < lowest_floor - FALL_MARGIN:
+	if player.global_position.y < floor_below(player.global_position) - FALL_MARGIN:
 		player.global_position = _last_safe + Vector3(0, 0.1, 0)
 		player.velocity = Vector3.ZERO
 		player.controller.velocity = Vector3.ZERO

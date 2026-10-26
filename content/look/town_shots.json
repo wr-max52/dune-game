@@ -1,9 +1,13 @@
 {
-  "note": "Fixed review cameras for the port town. pos/target in metres, town coordinates (floor y = 0).",
+  "note": "Fixed review cameras for the port town. pos/target in metres, town coordinates (floor y = 0). height_above_ground (optional) puts the camera that high over the desert terrain at pos x, z.",
   "shots": {
-    "gate_approach": { "pos": [130.0, 1.7, 0.0],  "target": [0.0, 3.0, 0.0],   "fov": 62.0 },
-    "plaza":         { "pos": [30.0, 8.0, 30.0],  "target": [0.0, -3.0, 0.0],  "fov": 65.0 },
-    "cantina_bar":   { "pos": [-58.0, 1.7, 0.0],  "target": [-82.0, 1.5, 0.0], "fov": 70.0 },
-    "top_down":      { "pos": [0.0, 260.0, 1.0],  "target": [0.0, 0.0, 0.0],   "fov": 60.0 }
+    "gate_approach":      { "pos": [130.0, 1.7, 0.0], "target": [0.0, 3.0, 0.0], "fov": 62.0 },
+    "plaza":              { "pos": [30.0, 8.0, 30.0], "target": [0.0, -3.0, 0.0], "fov": 65.0 },
+    "cantina_bar":        { "pos": [-58.0, 1.7, 0.0], "target": [-82.0, 1.5, 0.0], "fov": 70.0 },
+    "top_down":           { "pos": [0.0, 260.0, 1.0], "target": [0.0, 0.0, 0.0], "fov": 60.0 },
+    "gate_to_desert":     { "pos": [84.0, 1.7, 3.0], "target": [400.0, 4.0, -20.0], "fov": 66.0 },
+    "desert_look_back":   { "pos": [360.0, 0.0, 70.0], "height_above_ground": 2.0, "target": [0.0, 6.0, 0.0], "fov": 55.0 },
+    "north_wall_outside": { "pos": [30.0, 1.7, 112.0], "target": [-30.0, 3.0, 70.0], "fov": 66.0 },
+    "desert_aerial":      { "pos": [420.0, 140.0, 380.0], "target": [0.0, 0.0, 0.0], "fov": 55.0 }
   }
 }

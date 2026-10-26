@@ -2,6 +2,55 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — Seamless desert
+
+- **Seat the town on the dunes at its own floor level, not on the beauty corner's
+  plinth.** The town's data puts its floor at y = 0 and its gate on open ground;
+  the beauty corner's port stands on a 74 m cliff above a basin with no way down.
+  Putting the town on the plinth would mean roads down the cliff (unplanned) and a
+  rework of every route. So `DesertTerrain` gained a site mode beside the plinth:
+  flat sand at the floor around the town, a faint swell, then the open dunes
+  (lowered 12 m so the town sits among them, not on a ridge). Plinth mode is
+  untouched, so the beauty corner (the art reference) does not change.
+- **The footprint comes from the town data, no coordinates in code.** Floor boxes
+  at floor level (town and aprons) are the flat area; `bounds` is the walled area;
+  floor boxes below it (the pit) are dips. Change the town file and the ground
+  follows.
+- **Inside the walls the ground sits 12 cm under the paving,** inside the 0.5 m
+  floor boxes, so it is never seen and never fights the paving for the same pixels.
+  It rises to the floor at the wall line so the sand outside meets the walls.
+- **Aprons are hidden, not removed.** The two aprons outside the walls keep their
+  boxes and collision (the M9 routes and validator are unchanged) but are not
+  drawn, so the terrain's sand, lying exactly at their top, is what you see.
+  Alternative: give them the sand material. Rejected: two coplanar surfaces with
+  slightly different normals shimmer.
+- **The collider dips further than the mesh under the pit** (one collider cell
+  more), so the 2 m collider grid never interpolates an invisible slope up inside
+  the pit. Tested on every vertex near the pit.
+- **A collider that follows the player, rebuilt over several frames.** 512 m square
+  at 2 m cells, re-centred when the player is 96 m from its centre, filled at most
+  2 ms per frame (about 2.5 s for a full rebuild; the old collider still covers
+  160 m ahead) and swapped in whole. 4 ms was tried first: on a busy 2-core box the
+  M13 trace's worst frame went from about 6 ms to 30 to 60 ms while a rebuild ran. A teleport past its edge (a rescue, a script)
+  rebuilds at once: a one-off hitch beats falling through the world. Alternatives:
+  one huge static collider (a 6 km heightmap is 9 million samples), or Terrain3D
+  (a plugin and a GDExtension binary to pin, for one terrain). Revisit Terrain3D if
+  we start sculpting by hand.
+- **The visible terrain stays one static 6 km mesh** (as in the beauty corner). It
+  costs about 0.6 s to build at load; the greybox (CI) builds only the collider.
+- **Desert on in the greybox too.** It is gameplay (ground), not look. So every
+  trace that builds the town walks on the same ground the game has. Landforms are
+  look only.
+- **The fall guard measures from the ground under the player.** With ground
+  outside the walls, flying out is no longer a fall; the old threshold (20 m under
+  the lowest floor) would have fired in any deep dune trough. Over the town the
+  pit floor still counts.
+- **Landforms are a copy of the beauty corner's recipe, driven by data.** The
+  beauty corner is not edited, so `DesertLandforms` reads
+  `content/look/desert_landforms.json` (same mesas and hoodoos plus two, boulders
+  kept 25 m clear of the town). Mesas and hoodoos are solid; boulders are one
+  MultiMesh without collision, as before.
+
 ## 2026-10-26 — M13 (jetpack, issue #5)
 
 - **Same pattern as M1-M12: pure spine, thin node.** `Jetpack` (fuel + thrust) and

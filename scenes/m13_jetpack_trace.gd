@@ -5,7 +5,7 @@ extends SceneTree
 ##
 ## The bot walks out of the pit and up the ramp to the jetpack, picks it up (it
 ## attaches), flies, lets the fuel recharge, takes it off and puts it back on,
-## flies out over the north wall (and is caught), sells it at the market, buys it
+## flies out over the north wall (and lands on the sand outside), sells it at the market, buys it
 ## back, and reloads the town from a save to show the pickup stays taken. The bot
 ## uses the same calls the keys do (set_command with jump held, interact(),
 ## toggle_gear()).
@@ -203,30 +203,37 @@ func _run() -> void:
 	await frames(2)
 	out("REATTACHED_PLAYER_HAS_JET", player.jetpack != null)
 
-	# ---- fly out over the north wall: the town has no ground there
+	# ---- fly out over the north wall: the town sits on the desert now, so the
+	# pack sets you down on the sand outside (no rescue needed)
 	place(NORTH_STRIP)
 	await frames(20)
 	player.jetpack.refill()
 	var rec0 := gear.recoveries
 	var max_z := -INF
 	var top := -INF
+	var landed := false
 	player.set_command(Vector2(0, 1), false, false, true, true)
 	await physics_frame
 	for i in 60 * 12:
 		player.rotation.y = 0.0
-		player.set_command(Vector2(0, 1), false, false, false, true)
+		var climbing := top < 9.0
+		player.set_command(Vector2(0, 1), false, false, false, climbing)
 		await physics_frame
 		max_z = maxf(max_z, player.global_position.z)
 		top = maxf(top, player.global_position.y)
 		if gear.recoveries > rec0:
+			break
+		if player.is_on_floor() and player.global_position.z > 76.0 and top > 6.5:
+			landed = true
 			break
 	player.set_command(Vector2.ZERO, false, false, false)
 	await frames(30)
 	out("WALL_CLEARED", top > 6.5 and max_z > 75.0)
 	out("FLEW_OUT_MAX_Z", snappedf(max_z, 0.1))
 	out("RECOVERED", gear.recoveries - rec0)
-	var back: Vector3 = player.global_position
-	out("RECOVERED_INSIDE", absf(back.z) < 75.0 and absf(back.x) < 100.0 and player.is_on_floor())
+	var outside: Vector3 = player.global_position
+	out("LANDED_OUTSIDE", landed and outside.z > 75.0 and player.is_on_floor())
+	out("LANDED_Y", snappedf(outside.y, 0.01))
 
 	# ---- sell at the market, then buy it back
 	place(TRADER_APPROACH)
