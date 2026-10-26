@@ -419,8 +419,16 @@
    "id": "ship",
    "zone": "spaceport",
    "kind": "ship",
-   "min": [-4.4, -6, -4.1],
-   "max": [5.0, -3.3, 4.1]
+   "min": [
+    -4.4,
+    -6,
+    -4.1
+   ],
+   "max": [
+    5.0,
+    -3.3,
+    4.1
+   ]
   },
   {
    "id": "dock_booth",
@@ -916,6 +924,38 @@
     1.5,
     16.6
    ]
+  },
+  {
+   "id": "checkpoint_barricade_n",
+   "zone": "main_street",
+   "kind": "cover",
+   "min": [
+    89.5,
+    0,
+    3.2
+   ],
+   "max": [
+    91.0,
+    1.1,
+    6.4
+   ],
+   "note": "Gate checkpoint barricade: waist-high cover for the gate guards, off the gate lane."
+  },
+  {
+   "id": "checkpoint_barricade_s",
+   "zone": "main_street",
+   "kind": "cover",
+   "min": [
+    89.5,
+    0,
+    -6.4
+   ],
+   "max": [
+    91.0,
+    1.1,
+    -3.2
+   ],
+   "note": "Gate checkpoint barricade, south side."
   },
   {
    "id": "watchtower",
@@ -1871,7 +1911,8 @@
     9
    ],
    "role": "trooper_post",
-   "soldier": "gate_guard"
+   "soldier": "gate_guard",
+   "patrol": "patrol_gate_n"
   },
   {
    "id": "trooper_gate_s",
@@ -1881,7 +1922,8 @@
     -9
    ],
    "role": "trooper_post",
-   "soldier": "gate_guard"
+   "soldier": "gate_guard",
+   "patrol": "patrol_gate_s"
   },
   {
    "id": "trooper_tower",
@@ -2100,6 +2142,50 @@
      0
     ]
    ]
+  },
+  {
+   "id": "patrol_gate_n",
+   "points": [
+    [
+     95,
+     9
+    ],
+    [
+     88,
+     9
+    ],
+    [
+     88,
+     11.5
+    ],
+    [
+     95,
+     11.5
+    ]
+   ],
+   "note": "North gate guard's loop, clear of the gate lane (|z| > 6)."
+  },
+  {
+   "id": "patrol_gate_s",
+   "points": [
+    [
+     95,
+     -9
+    ],
+    [
+     86,
+     -9
+    ],
+    [
+     86,
+     -13
+    ],
+    [
+     95,
+     -13
+    ]
+   ],
+   "note": "South gate guard's loop, clear of the gate lane."
   }
  ],
  "chunks": [

@@ -29,6 +29,8 @@ var armed_rise_mult := 1.6
 var hearing_range := 45.0
 var heard_awareness := 0.6
 var ray_hz := 5.0
+var footstep_range := 6.0     ## a moving, standing target is heard inside this (crouch-walking is silent)
+var footstep_awareness := 0.45
 var eye_height := 1.62
 var target_chest := 1.25
 
@@ -53,7 +55,8 @@ var _last_noise_id := 0
 func _init(cfg: Dictionary = {}) -> void:
 	for k in ["sight_range", "fov_deg", "close_range", "reaction_s", "decay_per_s",
 			"forget_s", "notice_at", "lose_at", "crouch_sight_mult", "armed_rise_mult",
-			"hearing_range", "heard_awareness", "ray_hz", "eye_height", "target_chest"]:
+			"hearing_range", "heard_awareness", "ray_hz", "eye_height", "target_chest",
+			"footstep_range", "footstep_awareness"]:
 		if cfg.has(k):
 			set(k, float(cfg[k]))
 	_last_noise_id = NoiseEvents.last_id()   # do not hear what happened before we existed
@@ -123,6 +126,16 @@ func update(dt: float, s: Dictionary) -> void:
 		awareness = maxf(0.0, awareness - decay_per_s * dt)
 
 	heard = false
+	# Footsteps: someone walking or running close by is heard at any angle.
+	var speed := float(s.get("target_speed", 0.0))
+	if has_target and not crouched and speed > 1.5:
+		var fd := Vector3(target_pos.x - self_pos.x, 0.0, target_pos.z - self_pos.z).length()
+		if fd <= footstep_range * clampf(speed / 4.0, 0.5, 1.5):
+			heard = true
+			heard_pos = target_pos
+			heard_kind = "steps"
+			since_heard = 0.0
+			awareness = maxf(awareness, footstep_awareness)
 	var noises: Array = s["noises"] if s.has("noises") else NoiseEvents.after(_last_noise_id)
 	for n in noises:
 		_last_noise_id = maxi(_last_noise_id, int(n.id))

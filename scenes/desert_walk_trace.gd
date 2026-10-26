@@ -26,6 +26,7 @@ var _err_at := Vector3.ZERO
 func _initialize() -> void:
 	WorldState.reset()
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false              # greybox: the collider is the same
 	get_root().add_child(demo)
 	_run()

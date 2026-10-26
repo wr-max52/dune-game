@@ -25,6 +25,18 @@ var locked := false
 ## this node); prompts on foot (the bar, gear) check it so E means "roll" up there.
 var piloting := false
 var hits_taken := 0
+
+## M15: health. Regenerates after regen_delay_s without a hit; `downed` at zero.
+const HealthT := preload("res://src/systems/combat/health.gd")
+signal downed
+@export var max_health := 100
+var regen_delay_s := 4.0
+var regen_per_s := 14.0
+var health = HealthT.new(100)
+var is_downed := false
+var invulnerable_left := 0.0
+var _since_hit := 999.0
+var _regen_carry := 0.0
 var _was_on_floor := true
 
 @export var move_actions := PackedStringArray(["move_forward", "move_back", "move_left", "move_right"])
@@ -63,6 +75,7 @@ func _ready() -> void:
 		col.shape = shape
 		col.position = Vector3(0.0, capsule_height * 0.5, 0.0)
 		add_child(col)
+	health = HealthT.new(max_health)
 	# Start the pure controller where the node actually is (it used to start at the
 	# origin and teleport the player there on frame 1).
 	controller.body_pos = global_position
@@ -78,6 +91,7 @@ func clear_external_command() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_tick_health(delta)
 	var yaw: float = -rotation.y
 	if locked:
 		controller.set_command(Vector2.ZERO, false, false, false)
@@ -142,8 +156,40 @@ func _step_jetpack(delta: float, grounded: bool) -> void:
 		jet_stopped.emit()
 
 
-## Bolts and blades call this (see bolt.gd). The slice has no player death yet:
-## hits are reported so the camera and HUD can react.
+## Bolts and blades call this (see bolt.gd). Hits are reported so the camera and
+## HUD can react, and (M15) they cost health. Health comes back on its own after
+## a few seconds without being hit. At zero the body is "downed": it says so and
+## does nothing else. Whoever owns the scene decides what that means (the gate
+## checkpoint knocks you out and drags you to the pit); with nobody listening, a
+## trace just keeps walking.
 func apply_damage(amount: float) -> void:
 	hits_taken += 1
 	hurt.emit(amount)
+	if invulnerable_left > 0.0 or amount <= 0.0 or is_downed:
+		return
+	_since_hit = 0.0
+	health.apply_damage(amount)
+	if health.hp <= 0:
+		is_downed = true
+		downed.emit()
+
+
+## Back on your feet (after being downed): full health, a short grace period.
+func revive(grace_s: float = 3.0) -> void:
+	health = HealthT.new(max_health)
+	is_downed = false
+	invulnerable_left = grace_s
+	_since_hit = 999.0
+
+
+func _tick_health(dt: float) -> void:
+	invulnerable_left = maxf(0.0, invulnerable_left - dt)
+	if is_downed:
+		return
+	_since_hit += dt
+	if _since_hit >= regen_delay_s and health.hp < health.max_hp:
+		_regen_carry += regen_per_s * dt
+		var whole := int(_regen_carry)
+		if whole > 0:
+			health.heal(whole)
+			_regen_carry -= whole

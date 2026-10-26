@@ -1,0 +1,106 @@
+{
+  "note": "Gate guard barks (authored, not LLM). Keys are what the checkpoint and the guard brain ask for; a line is picked at random per key. Generic, in-world, no franchise terms.",
+  "lines": {
+    "wave": [
+      "Move along.",
+      "Go on through.",
+      "You're clear. Keep your nose clean."
+    ],
+    "papers": [
+      "Papers.",
+      "Hold it. Papers.",
+      "Checkpoint. Papers, now."
+    ],
+    "search": [
+      "Papers. And arms out, you're getting searched.",
+      "Stop there. Search, then you go.",
+      "You. Spread them. Search."
+    ],
+    "night_hostile": [
+      "You've got a face we're looking for. Lucky for you it's dark and I'm bored.",
+      "After curfew, wanted, and at my gate. Make it worth my while."
+    ],
+    "halt_hostile": [
+      "Halt! Hands where I can see them!",
+      "That's the one. Don't move!",
+      "Stop right there, outlander!"
+    ],
+    "warn": [
+      "I said halt!",
+      "Last warning!",
+      "One more step and you're paste."
+    ],
+    "cleared_papers": [
+      "Fine. Through.",
+      "Papers check out. Go."
+    ],
+    "cleared_search": [
+      "Nothing. Get out of my sight.",
+      "Clean. Barely. Go."
+    ],
+    "searching": [
+      "Hold still.",
+      "Don't twitch."
+    ],
+    "bribe_taken": [
+      "Didn't see you.",
+      "Pleasure. Now you were never here.",
+      "Quiet night. Very quiet."
+    ],
+    "no_credits": [
+      "That's not enough to buy a nap.",
+      "Come back when you've got real coin."
+    ],
+    "mouth_off": [
+      "Say that again. Slowly.",
+      "Oh, a comedian. Now it's a search.",
+      "Wrong day for jokes."
+    ],
+    "walk_away": [
+      "Then turn around.",
+      "Wise. Off you go."
+    ],
+    "stay_out": [
+      "And stay out.",
+      "Keep walking."
+    ],
+    "go_on": [
+      "Go on.",
+      "You again. Through."
+    ],
+    "contact": [
+      "Contact!",
+      "Open fire!",
+      "Hostile at the gate!"
+    ],
+    "hit": [
+      "I'm hit!",
+      "Agh!",
+      "Hit!"
+    ],
+    "reload": [
+      "Reloading!",
+      "Cover me!"
+    ],
+    "lost": [
+      "Lost them.",
+      "Where'd they go?",
+      "Spread out, find them."
+    ],
+    "search_area": [
+      "Check behind the crates.",
+      "They went this way."
+    ],
+    "give_up": [
+      "Back to the gate.",
+      "Forget it. Back on post."
+    ],
+    "man_down": [
+      "Man down!",
+      "They got him!"
+    ],
+    "downed": [
+      "Drag that one to the pit. Lighten their pockets first."
+    ]
+  }
+}

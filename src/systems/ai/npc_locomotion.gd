@@ -64,8 +64,8 @@ func update(dt: float, pos: Vector3, ground_speed: float = 0.0) -> Dictionary:
 
 	# Take every corner we are already on (paths often start under our feet).
 	var last := path.size() - 1
-	var reach := maxf(waypoint_reach, ground_speed * corner_lead_s)
-	while index < last and _flat(path[index] - pos).length() <= reach:
+	var lead := maxf(waypoint_reach, ground_speed * corner_lead_s)
+	while index < last and _flat(path[index] - pos).length() <= (lead if _flat_turn(index) else waypoint_reach):
 		index += 1
 	var to_goal := _flat(path[last] - pos).length()
 	if index >= last and to_goal <= arrive_radius:
@@ -85,7 +85,7 @@ func update(dt: float, pos: Vector3, ground_speed: float = 0.0) -> Dictionary:
 		stuck = _best_left - left < stuck_move
 		_stuck_clock = 0.0
 		_best_left = left
-		if stuck and index < last:
+		if stuck and index < last and _flat_turn(index):
 			index += 1
 
 	var to := _flat(path[index] - pos)
@@ -94,6 +94,17 @@ func update(dt: float, pos: Vector3, ground_speed: float = 0.0) -> Dictionary:
 	if index >= last and slow_radius > 0.0:
 		speed = clampf(to_goal / slow_radius, 0.35, 1.0)
 	return { "move": move, "speed": speed, "arrived": false, "stuck": stuck }
+
+
+## True when the legs into and out of corner `i` stay level. Only then may a
+## running body cut the corner (take it early, or skip it when stuck): where the
+## path climbs (the foot of a ramp), cutting the corner walks it into the ramp's
+## side, a ledge the capsule cannot step.
+func _flat_turn(i: int) -> bool:
+	var a: Vector3 = path[maxi(i - 1, 0)]
+	var b: Vector3 = path[i]
+	var c: Vector3 = path[mini(i + 1, path.size() - 1)]
+	return absf(b.y - a.y) < 0.3 and absf(c.y - b.y) < 0.3
 
 
 ## Remaining walking distance along the path from `pos`.

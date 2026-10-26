@@ -18,16 +18,48 @@ the town, and the bartender hears about it.
 
 | # | Step | Status |
 |---|---|---|
-| 1 | NPC body node | **DONE** (`src/systems/npc/npc_body.gd`) |
-| 2 | Navmesh from town data | **DONE** (`src/systems/world/town_nav.gd`) |
-| 3 | Perception | **DONE** (`src/systems/ai/perception.gd`, `noise_events.gd`) |
-| 4 | `guard_brain.gd` state machine | next |
-| 5 | Soldier profile data | started (`content/core/soldiers/gate_guard.json` has body, senses, nav) |
-| 6 | Hostility rule from WorldState | next |
-| 7 | Gate dialogue: barks + choice card | next |
-| 8 | Combat hookup (shoot back, cover, alert) | next |
-| 9 | Outcomes write the world | next |
-| 10 | Headless trace + play test | part 1 trace done (`scenes/npc_trace.gd`) |
+| 1 | NPC body node | **DONE** (part 1, `src/systems/npc/npc_body.gd`) |
+| 2 | Navmesh from town data | **DONE** (part 1, `src/systems/world/town_nav.gd`) |
+| 3 | Perception | **DONE** (part 1, `perception.gd`, `noise_events.gd`; footsteps in part 2) |
+| 4 | Guard brain | **DONE** (part 2, `src/systems/ai/guard_brain.gd`) |
+| 5 | Soldier profile data | **DONE** (`gate_guard.json`: weapon, combat, patrol, checkpoint blocks) |
+| 6 | Hostility from standing | **DONE** (`src/systems/ai/checkpoint.gd`) |
+| 7 | Gate dialogue: barks + choice card | **DONE** (`gate_guard_lines.json`, `src/ui/checkpoint_hud.gd`) |
+| 8 | Combat (shoot back, cover, alert) | **DONE** (`cover_picker.gd`, rifle on `NpcBody`, `gate_checkpoint.gd`) |
+| 9 | Outcomes write the world | **DONE** (`WorldState.on_gate_bribe / on_guard_killed / on_player_downed`, 3 new rumors) |
+| 10 | Headless trace + play test | trace **DONE** (`scenes/combat_trace.gd`); play test is yours |
+
+**Product owner decisions for part 2 (2026-10-26):** the four standing bands as
+drafted; bribes work one band lower after dark; kill the guards and run, and your
+standing drops, but you can win.
+
+## How part 2 is built
+
+```
+GateCheckpoint (node, the director)          one per gate, in town_demo
+  reads bodies + WorldState  ->  Checkpoint (pure)    wave / papers / search / bribe / warn / hostile
+                             ->  GuardBrain x2 (pure) patrol / attend / combat / search / return
+  writes   body.command, aim, fire_at()   card + subtitles (CheckpointHud)   WorldState
+  owns     cover spots (CoverPicker, from the town boxes), the player's knockout
+```
+
+The rules that decide what happens at the gate never touch a node, and the
+brains never decide gate policy. Everything is a number in the profile.
+
+**A fight, step by step:** warning (3 s) -> both guards fire an opening burst ->
+each sprints to its own cover spot (a box between it and you, on its own side of
+the gate) -> crouch 1.2 to 2.4 s -> stand, wind up 0.35 s -> burst of 3 to 5 only
+if it can see you -> back down. No sight for 3 s: find a better spot or push to
+where it last saw you. No cover at all: fight standing, sidestepping. Low health:
+hides longer. A shot that hits: interrupts the burst. Guards never hurt each other.
+
+**You win:** both down. Standing -10 for the fight, -15 per guard. The
+checkpoint is no longer up, and Oda has two new rumors.
+**You run:** out of sight and 70 m away for 12 s. They search near the gate
+(on a 22 m leash), give up, and go back to their loops. Standing -5. They
+remember your face for 5 minutes and open fire if they see you again.
+**You lose:** knocked out, dragged to the pit, 20% of your credits gone
+(5 minimum), full health, 3 s of grace. They stand down but remember.
 
 ## What part 1 gives a brain to work with
 
@@ -48,7 +80,7 @@ placed; a dead body ignores orders; paths to unreachable points are flagged
 (`last_path_ok = false`); a guard that stops making progress along its path skips
 the corner and repaths.
 
-## Part 2: the guard brain (steps 4 to 9)
+## Part 2 as first planned (kept for the record)
 
 ### 4. `src/systems/ai/guard_brain.gd` (pure, RefCounted)
 

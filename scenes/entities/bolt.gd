@@ -52,7 +52,11 @@ func apply_to(target: Object) -> void:
 func handle_hit(target: Object) -> void:
 	if target == null:
 		return
-	if target.has_method("apply_damage"):
+	# A target that cares who shot it (an NPC: no friendly fire, and "the player
+	# shot me" starts a fight) gets the shooter too.
+	if target.has_method("apply_damage_from"):
+		target.apply_damage_from(damage, shooter)
+	elif target.has_method("apply_damage"):
 		target.apply_damage(damage)
 	elif target.get_parent() != null and target.get_parent().has_method("apply_damage"):
 		target.get_parent().apply_damage(damage)

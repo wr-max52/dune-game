@@ -39,6 +39,7 @@ func _initialize() -> void:
 	if FileAccess.file_exists(SAVE):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false
 	get_root().add_child(demo)
 	_run()

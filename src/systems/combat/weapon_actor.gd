@@ -14,6 +14,9 @@ var bolt_scene: PackedScene = BoltScene
 var bolt_parent: Node3D     ## must be set by the scene that owns this actor
 var shots_fired := 0
 var shots_log: Array = []   ## each: {target, damage}
+## M15: called on each new bolt before it enters the tree (owner, look), so
+## settings read in the bolt's _ready (the stretched streak) take effect.
+var configure_bolt: Callable
 
 
 func set_weapon(cfg: Dictionary) -> void:
@@ -28,6 +31,8 @@ func _make_bolt(direction: Vector3, origin: Vector3, damage: float, speed: float
 	bolt.speed = speed
 	bolt.damage = damage
 	bolt.range_m = float(weapon.config.get("range", 60.0))
+	if configure_bolt.is_valid():
+		configure_bolt.call(bolt)
 	# Add to the tree first: setting global_position on a detached node is an error.
 	bolt_parent.add_child(bolt)
 	bolt.global_position = origin

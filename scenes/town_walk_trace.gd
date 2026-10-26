@@ -31,6 +31,7 @@ var _done := false             # guards against writing the file twice
 
 func _initialize() -> void:
 	_demo = load("res://scenes/town_demo.gd").new()
+	_demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	_set_if_present(_demo, "use_look", false)   # keep the trace fast and unchanged
 	get_root().add_child(_demo)
 	_layout = _demo.town

@@ -226,6 +226,16 @@ if [ ! -f test_results/npc_trace.txt ]; then
 fi
 echo "CI: npc trace present ($(wc -l < test_results/npc_trace.txt) lines)"
 
+# Combat NPCs at the gate: patrols, every standing band, night bribes, escalation,
+# and the three ways a fight ends (win, run, knocked out), each in a fresh town.
+echo "CI: generating combat trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/combat_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/combat_trace.txt ]; then
+  echo "CI: ERROR -- combat trace was not generated" >&2
+  exit 1
+fi
+echo "CI: combat trace present ($(wc -l < test_results/combat_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
