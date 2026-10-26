@@ -35,7 +35,7 @@ server (`test_results/m12_bar_trace.txt`).
   death yet). Remote stun bolts do no damage by design.
 - **The trooper posts and locals are static characters now** (were capsules): no AI,
   no collision, so bolts pass through them.
-- **The rifle in first person is big** and partly covers the lower right of the view.
+- **The Kenney blasters are still toy shapes** (rounded blocks), even retinted. Building our own blaster models from parts, like the energy sword, is the planned fix.
 - **No crosshair spread feedback or hit markers.**
 - **The old M6 scaffold** (`bartender_ai.gd`, `ollama_client.gd`) is kept only for the
   M6/M7/M8 traces; the game uses `bartender_brain.gd`.
