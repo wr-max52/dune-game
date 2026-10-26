@@ -38,9 +38,16 @@ var _throttle := 0.6
 var _stick := Vector2.ZERO  ## mouse "virtual stick" (x = yaw, y = pitch)
 var _banner_left := 0.0
 var _space: Dictionary = {}
+var return_left := -1.0     ## >= 0: counting down to the port (launched from a pad)
+var _outcome := ""
+var _payout := 0
 
 
 func _ready() -> void:
+	# Launched from a port pad: fly that pad's encounter. Opened on its own: unchanged.
+	if GameFlow.in_flight and GameFlow.encounter_id != "":
+		encounter_id = GameFlow.encounter_id
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	content = CoreContent.new()
 	content.load_from()
 	df = Dogfight.new(content, encounter_id, rng_seed)
@@ -120,6 +127,25 @@ func _process(frame_dt: float) -> void:
 	if not me.is_empty():
 		camera.global_transform = chase.update(dt, me.flight.transform())
 	_update_hud(dt)
+	_tick_return(dt)
+
+
+## After the fight ends, go back to the port this flight launched from.
+func _tick_return(dt: float) -> void:
+	if return_left < 0.0:
+		return
+	return_left -= dt
+	if return_left <= 0.0:
+		return_left = -1.0
+		GameFlow.finish_flight(get_tree(), _outcome, _payout)
+
+
+func _queue_return(outcome: String, payout: int) -> void:
+	if not GameFlow.in_flight or return_left >= 0.0:
+		return
+	_outcome = outcome
+	_payout = payout
+	return_left = GameFlow.setting("return_delay", 4.0)
 
 
 ## Run the fight forward without drawing (for review renders and tests), then sync.
@@ -181,8 +207,10 @@ func _on_event(e: Dictionary) -> void:
 			_show_banner("Wave %d" % e.index)
 		"complete":
 			_show_banner("Sector clear  +%d credits" % e.payout, 6.0)
+			_queue_return("complete", int(e.payout))
 		"failed":
 			_show_banner("Fighter lost", 6.0)
+			_queue_return("failed", 0)
 
 
 func _spawn_flash(point: Vector3, size: float, life: float, color: Color) -> void:
@@ -367,6 +395,8 @@ func _update_hud(dt: float) -> void:
 		me.loadout.group_ammo("secondary"), " (reloading)" if me.loadout.group_reloading("secondary") else "",
 		int(me.lock.fraction() * 100.0), tline,
 		df.stats.waves, df.waves_total(), df.alive_on(Dogfight.TEAM_HOSTILE).size(), df.state_label()]
+	if return_left >= 0.0:
+		hud_label.text += "\n" + GameFlow.label("returning")
 	hud.queue_redraw()
 
 

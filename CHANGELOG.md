@@ -2,6 +2,33 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M9 — Port town, and one demo (2026-10-26)
+
+What works now:
+- **Press Play and you are in the town.** `scenes/town_demo.tscn` is the main scene:
+  a walled desert port built at runtime from `content/core/locations/port_town.json`
+  (112 boxes, 18 markers, 4 routes): gate, market, barracks with a watchtower, the
+  sunken landing pit with your ship, the cantina (bartender + fixer spots) and two
+  residential districts. You start on the pit floor beside the ship.
+- **Your ship launches the dogfight.** Beside the ship, "[E] Launch" shows; E fades
+  out into the dogfight. When it is won or lost you land back beside the ship with
+  the result on screen. The dogfight scene opened on its own (F6) is unchanged.
+- **It looks like the beauty corner.** A visual-only decor layer gives the town the
+  look-dev sky, sun, fog and materials (plaster with dye bands, paving, hull metal),
+  lamps that come on at dusk, and two torn banners on the watchtower. Keys 1, 2, 3
+  switch golden, noon and dusk.
+- **Proven headless.** The validator checks 8 rules, with a negative test for each.
+  A bot walks every route with real collision: spawn to cantina 1495 frames, cantina
+  to gate 2051, gate to cantina 2052, back gap to cantina 1243; worst frame about
+  3 ms. New suites: `test_town_layout`, `test_town_walk`, `test_town_decor`,
+  `test_flow`.
+- **Review cameras.** `content/look/town_shots.json` and `tools/town/shoot_town.sh`;
+  golden and dusk shots are in `docs/town/look/`.
+- `scenes/m1_demo.gd` now builds its boxes with the shared greybox helper.
+
+Faked or not yet done: see KNOWN_ISSUES.md "After M9" (capsule NPCs, bare stalls,
+box ship, no railings, payout not saved).
+
 ## M10 — Starfighter flight and dogfights (2026-10-26)
 
 What works now:

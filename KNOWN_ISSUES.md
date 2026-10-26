@@ -2,6 +2,32 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After M9 (2026-10-26)
+
+**What is real and proven by tests:** the town is built from data and validated
+(V1 to V8, with a negative test per rule); a headless bot walks all 4 routes with
+real collision (`test_results/town_walk_trace.txt`); the decor layer adds no
+collision; the pit pad launches the dogfight and the player comes back to the pit
+after it (`tests/test_flow.gut.gd`).
+
+**Stubbed / deferred, honestly:**
+- **NPCs are static capsules.** No AI, no collision. The bartender and fixer are not
+  yet wired to their M6/M5 systems inside the town.
+- **No navmesh.** The bot walks authored routes.
+- **Residential is a uniform grid.** The art pass will vary it.
+- **The ramps have no railings,** so you can fall into the pit (no fall damage exists).
+- **Town streamer chunks are data only;** they do not load or unload geometry yet.
+- **The town is not on the beauty corner plinth or terrain.** The roads down the
+  cliff are unplanned. The aprons have no sand shader (flat sand color; at golden
+  hour they read as dark grey from low angles).
+- **The ship is a box** and the market stalls are bare boxes.
+- **The gate lintel keeps its greybox color** (overhead outside the cantina has no
+  decor rule).
+- **Flight payout is shown, not saved.** No early abort from a flight.
+- **Look reviewed in software GL only.** `docs/town/look/` was rendered on a machine
+  without a GPU, where Godot falls back to OpenGL: no volumetric fog, SDFGI or SSIL.
+  Re-shoot on the Mac with `tools/town/shoot_town.sh` for the real look.
+
 ## After M10 (2026-10-26)
 
 **What is real and proven by tests:** everything through M8, plus starfighter flight
@@ -15,9 +41,8 @@ scene, and that a new ship/gun/pilot/fight works from data alone.
   and prisms. Real models plug in through the look's `scene` path; none exist yet.
 - **No ship-to-ship collisions.** Ships pass through each other and through the
   planet. Hit spheres exist for bolts only.
-- **The dogfight is its own scene.** There is no walk-to-the-ship, launch, or landing
-  yet; the port and orbit are not connected, and the encounter is not tied to the
-  fixer's contracts or the save file. (The flight model has `to_dict()`/`from_dict()`
+- **The encounter is not tied to the fixer's contracts or the save file.** (Launch
+  and return from the town pit landed in M9.) (The flight model has `to_dict()`/`from_dict()`
   ready for the save system.)
 - **Not tested on a Mac.** Logic is proven headless; the look was reviewed in Linux
   software rendering (lavapipe), and the scene has not been played with a real GPU,

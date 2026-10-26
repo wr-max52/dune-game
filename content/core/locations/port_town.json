@@ -1,0 +1,2125 @@
+{
+ "id": "port_town",
+ "kind": "town",
+ "units": "meters",
+ "note": "IP-neutral greybox layout. +X is the gate side (toward the desert and outpost). Boxes are axis-aligned min/max corners. Edit numbers here, never in code.",
+ "bounds": {
+  "min": [
+   -100,
+   -75
+  ],
+  "max": [
+   100,
+   75
+  ]
+ },
+ "player_clearance": 0.6,
+ "walk_speed_hint": 4.0,
+ "blocking_kinds": [
+  "wall",
+  "solid",
+  "cover",
+  "counter",
+  "ship"
+ ],
+ "zones": [
+  {
+   "id": "main_street",
+   "min": [
+    30,
+    -8
+   ],
+   "max": [
+    100,
+    8
+   ]
+  },
+  {
+   "id": "market",
+   "min": [
+    35,
+    -70
+   ],
+   "max": [
+    95,
+    -12
+   ]
+  },
+  {
+   "id": "barracks",
+   "min": [
+    35,
+    12
+   ],
+   "max": [
+    95,
+    70
+   ]
+  },
+  {
+   "id": "spaceport",
+   "min": [
+    -25,
+    -30
+   ],
+   "max": [
+    25,
+    30
+   ]
+  },
+  {
+   "id": "cantina",
+   "min": [
+    -90,
+    -16
+   ],
+   "max": [
+    -50,
+    16
+   ]
+  },
+  {
+   "id": "cantina_square",
+   "min": [
+    -50,
+    -16
+   ],
+   "max": [
+    -25,
+    16
+   ]
+  },
+  {
+   "id": "residential_w",
+   "min": [
+    -98,
+    -73
+   ],
+   "max": [
+    28,
+    -36
+   ]
+  },
+  {
+   "id": "residential_e",
+   "min": [
+    -98,
+    36
+   ],
+   "max": [
+    28,
+    73
+   ]
+  }
+ ],
+ "boxes": [
+  {
+   "id": "ground_south",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    -100,
+    -0.5,
+    -75
+   ],
+   "max": [
+    100,
+    0,
+    -22
+   ]
+  },
+  {
+   "id": "ground_north",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    -100,
+    -0.5,
+    22
+   ],
+   "max": [
+    100,
+    0,
+    75
+   ]
+  },
+  {
+   "id": "ground_west",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    -100,
+    -0.5,
+    -22
+   ],
+   "max": [
+    -18,
+    0,
+    22
+   ]
+  },
+  {
+   "id": "ground_east",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    18,
+    -0.5,
+    -22
+   ],
+   "max": [
+    100,
+    0,
+    22
+   ]
+  },
+  {
+   "id": "desert_apron",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    100,
+    -0.5,
+    -75
+   ],
+   "max": [
+    160,
+    0,
+    75
+   ]
+  },
+  {
+   "id": "backgap_apron",
+   "zone": "ground",
+   "kind": "floor",
+   "min": [
+    -130,
+    -0.5,
+    -75
+   ],
+   "max": [
+    -100,
+    0,
+    -40
+   ]
+  },
+  {
+   "id": "wall_east_s",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    98,
+    0,
+    -75
+   ],
+   "max": [
+    100,
+    6,
+    -6
+   ]
+  },
+  {
+   "id": "wall_east_n",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    98,
+    0,
+    6
+   ],
+   "max": [
+    100,
+    6,
+    75
+   ]
+  },
+  {
+   "id": "gate_lintel",
+   "zone": "perimeter",
+   "kind": "overhead",
+   "min": [
+    98,
+    5,
+    -6
+   ],
+   "max": [
+    100,
+    6,
+    6
+   ]
+  },
+  {
+   "id": "wall_west_s",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    -100,
+    0,
+    -75
+   ],
+   "max": [
+    -98,
+    6,
+    -61
+   ]
+  },
+  {
+   "id": "wall_west_n",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    -100,
+    0,
+    -58
+   ],
+   "max": [
+    -98,
+    6,
+    75
+   ]
+  },
+  {
+   "id": "wall_south",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    -98,
+    0,
+    -75
+   ],
+   "max": [
+    98,
+    6,
+    -73
+   ]
+  },
+  {
+   "id": "wall_north",
+   "zone": "perimeter",
+   "kind": "wall",
+   "min": [
+    -98,
+    0,
+    73
+   ],
+   "max": [
+    98,
+    6,
+    75
+   ]
+  },
+  {
+   "id": "pit_floor",
+   "zone": "spaceport",
+   "kind": "floor",
+   "min": [
+    -18,
+    -6.5,
+    -22
+   ],
+   "max": [
+    18,
+    -6,
+    22
+   ]
+  },
+  {
+   "id": "pit_wall_east",
+   "zone": "spaceport",
+   "kind": "wall",
+   "min": [
+    17.5,
+    -6,
+    -21.5
+   ],
+   "max": [
+    18,
+    0,
+    15.5
+   ]
+  },
+  {
+   "id": "pit_wall_west",
+   "zone": "spaceport",
+   "kind": "wall",
+   "min": [
+    -18,
+    -6,
+    -15.5
+   ],
+   "max": [
+    -17.5,
+    0,
+    21.5
+   ]
+  },
+  {
+   "id": "pit_wall_south",
+   "zone": "spaceport",
+   "kind": "wall",
+   "min": [
+    -18,
+    -6,
+    -22
+   ],
+   "max": [
+    18,
+    0,
+    -21.5
+   ]
+  },
+  {
+   "id": "pit_wall_north",
+   "zone": "spaceport",
+   "kind": "wall",
+   "min": [
+    -18,
+    -6,
+    21.5
+   ],
+   "max": [
+    18,
+    0,
+    22
+   ]
+  },
+  {
+   "id": "ramp_ne",
+   "zone": "spaceport",
+   "kind": "ramp",
+   "min": [
+    2,
+    -6,
+    15.5
+   ],
+   "max": [
+    18,
+    0,
+    21.5
+   ],
+   "rise_toward": "+x"
+  },
+  {
+   "id": "ramp_sw",
+   "zone": "spaceport",
+   "kind": "ramp",
+   "min": [
+    -18,
+    -6,
+    -21.5
+   ],
+   "max": [
+    -2,
+    0,
+    -15.5
+   ],
+   "rise_toward": "-x"
+  },
+  {
+   "id": "ship",
+   "zone": "spaceport",
+   "kind": "ship",
+   "min": [
+    -12,
+    -6,
+    -7
+   ],
+   "max": [
+    12,
+    2,
+    7
+   ]
+  },
+  {
+   "id": "dock_booth",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    20,
+    0,
+    -28
+   ],
+   "max": [
+    24,
+    3,
+    -24
+   ]
+  },
+  {
+   "id": "cantina_wall_w",
+   "zone": "cantina",
+   "kind": "wall",
+   "min": [
+    -88,
+    0,
+    -14
+   ],
+   "max": [
+    -87.5,
+    5,
+    14
+   ]
+  },
+  {
+   "id": "cantina_wall_n",
+   "zone": "cantina",
+   "kind": "wall",
+   "min": [
+    -87.5,
+    0,
+    13.5
+   ],
+   "max": [
+    -56.5,
+    5,
+    14
+   ]
+  },
+  {
+   "id": "cantina_wall_s",
+   "zone": "cantina",
+   "kind": "wall",
+   "min": [
+    -87.5,
+    0,
+    -14
+   ],
+   "max": [
+    -56.5,
+    5,
+    -13.5
+   ]
+  },
+  {
+   "id": "cantina_wall_e_s",
+   "zone": "cantina",
+   "kind": "wall",
+   "min": [
+    -56.5,
+    0,
+    -14
+   ],
+   "max": [
+    -56,
+    5,
+    -2
+   ]
+  },
+  {
+   "id": "cantina_wall_e_n",
+   "zone": "cantina",
+   "kind": "wall",
+   "min": [
+    -56.5,
+    0,
+    2
+   ],
+   "max": [
+    -56,
+    5,
+    14
+   ]
+  },
+  {
+   "id": "cantina_door_lintel",
+   "zone": "cantina",
+   "kind": "overhead",
+   "min": [
+    -56.5,
+    3,
+    -2
+   ],
+   "max": [
+    -56,
+    5,
+    2
+   ]
+  },
+  {
+   "id": "cantina_roof",
+   "zone": "cantina",
+   "kind": "roof",
+   "min": [
+    -88,
+    5,
+    -14
+   ],
+   "max": [
+    -56,
+    5.3,
+    14
+   ]
+  },
+  {
+   "id": "bar_counter",
+   "zone": "cantina",
+   "kind": "counter",
+   "min": [
+    -80,
+    0,
+    -8
+   ],
+   "max": [
+    -78,
+    1.1,
+    8
+   ]
+  },
+  {
+   "id": "fixer_table",
+   "zone": "cantina",
+   "kind": "cover",
+   "min": [
+    -66,
+    0,
+    9
+   ],
+   "max": [
+    -64,
+    0.8,
+    11
+   ]
+  },
+  {
+   "id": "cantina_table_1",
+   "zone": "cantina",
+   "kind": "cover",
+   "min": [
+    -70.6,
+    0,
+    -8.6
+   ],
+   "max": [
+    -69.4,
+    0.8,
+    -7.4
+   ]
+  },
+  {
+   "id": "cantina_table_2",
+   "zone": "cantina",
+   "kind": "cover",
+   "min": [
+    -64.6,
+    0,
+    -6.6
+   ],
+   "max": [
+    -63.4,
+    0.8,
+    -5.4
+   ]
+  },
+  {
+   "id": "cantina_table_3",
+   "zone": "cantina",
+   "kind": "cover",
+   "min": [
+    -72.6,
+    0,
+    5.4
+   ],
+   "max": [
+    -71.4,
+    0.8,
+    6.6
+   ]
+  },
+  {
+   "id": "cantina_sq_crates",
+   "zone": "cantina_square",
+   "kind": "cover",
+   "min": [
+    -40,
+    0,
+    -12
+   ],
+   "max": [
+    -38,
+    1.2,
+    -10
+   ]
+  },
+  {
+   "id": "shop_1",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    38,
+    0,
+    -70
+   ],
+   "max": [
+    50,
+    4,
+    -58
+   ]
+  },
+  {
+   "id": "shop_2",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    53,
+    0,
+    -70
+   ],
+   "max": [
+    65,
+    4,
+    -58
+   ]
+  },
+  {
+   "id": "shop_3",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    68,
+    0,
+    -70
+   ],
+   "max": [
+    80,
+    4,
+    -58
+   ]
+  },
+  {
+   "id": "shop_4",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    83,
+    0,
+    -70
+   ],
+   "max": [
+    95,
+    4,
+    -58
+   ]
+  },
+  {
+   "id": "stall_r1_1",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    40,
+    0,
+    -30
+   ],
+   "max": [
+    44,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r1_2",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    48,
+    0,
+    -30
+   ],
+   "max": [
+    52,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r1_3",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    56,
+    0,
+    -30
+   ],
+   "max": [
+    60,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r1_4",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    64,
+    0,
+    -30
+   ],
+   "max": [
+    68,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r1_5",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    72,
+    0,
+    -30
+   ],
+   "max": [
+    76,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r1_6",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    80,
+    0,
+    -30
+   ],
+   "max": [
+    84,
+    1.1,
+    -29
+   ]
+  },
+  {
+   "id": "stall_r2_1",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    40,
+    0,
+    -45
+   ],
+   "max": [
+    44,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "stall_r2_2",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    48,
+    0,
+    -45
+   ],
+   "max": [
+    52,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "stall_r2_3",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    56,
+    0,
+    -45
+   ],
+   "max": [
+    60,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "stall_r2_4",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    64,
+    0,
+    -45
+   ],
+   "max": [
+    68,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "stall_r2_5",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    72,
+    0,
+    -45
+   ],
+   "max": [
+    76,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "stall_r2_6",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    80,
+    0,
+    -45
+   ],
+   "max": [
+    84,
+    1.1,
+    -44
+   ]
+  },
+  {
+   "id": "barracks_hall",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    55,
+    0,
+    45
+   ],
+   "max": [
+    90,
+    6,
+    68
+   ]
+  },
+  {
+   "id": "yard_wall_w",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    40,
+    0,
+    16
+   ],
+   "max": [
+    60,
+    1.5,
+    16.6
+   ]
+  },
+  {
+   "id": "yard_wall_e",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    66,
+    0,
+    16
+   ],
+   "max": [
+    87,
+    1.5,
+    16.6
+   ]
+  },
+  {
+   "id": "watchtower",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    88,
+    0,
+    13
+   ],
+   "max": [
+    94,
+    12,
+    19
+   ]
+  },
+  {
+   "id": "yard_crate_1",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    50,
+    0,
+    25
+   ],
+   "max": [
+    52,
+    1.2,
+    27
+   ]
+  },
+  {
+   "id": "yard_crate_2",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    70,
+    0,
+    30
+   ],
+   "max": [
+    72,
+    1.2,
+    32
+   ]
+  },
+  {
+   "id": "yard_crate_3",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    60,
+    0,
+    36
+   ],
+   "max": [
+    63,
+    1.2,
+    37
+   ]
+  },
+  {
+   "id": "house_w_1_1",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    -70
+   ],
+   "max": [
+    -84,
+    3.5,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_2",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    -70
+   ],
+   "max": [
+    -71,
+    5.0,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_3",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    -70
+   ],
+   "max": [
+    -58,
+    4.5,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_4",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    -70
+   ],
+   "max": [
+    -45,
+    4.0,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_5",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    -70
+   ],
+   "max": [
+    -32,
+    3.5,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_6",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    -70
+   ],
+   "max": [
+    -19,
+    5.0,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_7",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    -70
+   ],
+   "max": [
+    -6,
+    4.5,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_8",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    -70
+   ],
+   "max": [
+    7,
+    4.0,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_1_9",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    -70
+   ],
+   "max": [
+    20,
+    3.5,
+    -62
+   ]
+  },
+  {
+   "id": "house_w_2_1",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    -58
+   ],
+   "max": [
+    -84,
+    5.0,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_2",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    -58
+   ],
+   "max": [
+    -71,
+    4.5,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_3",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    -58
+   ],
+   "max": [
+    -58,
+    4.0,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_4",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    -58
+   ],
+   "max": [
+    -45,
+    3.5,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_5",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    -58
+   ],
+   "max": [
+    -32,
+    5.0,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_6",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    -58
+   ],
+   "max": [
+    -19,
+    4.5,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_7",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    -58
+   ],
+   "max": [
+    -6,
+    4.0,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_8",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    -58
+   ],
+   "max": [
+    7,
+    3.5,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_2_9",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    -58
+   ],
+   "max": [
+    20,
+    5.0,
+    -50
+   ]
+  },
+  {
+   "id": "house_w_3_1",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    -46
+   ],
+   "max": [
+    -84,
+    4.5,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_2",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    -46
+   ],
+   "max": [
+    -71,
+    4.0,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_3",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    -46
+   ],
+   "max": [
+    -58,
+    3.5,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_4",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    -46
+   ],
+   "max": [
+    -45,
+    5.0,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_5",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    -46
+   ],
+   "max": [
+    -32,
+    4.5,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_6",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    -46
+   ],
+   "max": [
+    -19,
+    4.0,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_7",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    -46
+   ],
+   "max": [
+    -6,
+    3.5,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_8",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    -46
+   ],
+   "max": [
+    7,
+    5.0,
+    -38
+   ]
+  },
+  {
+   "id": "house_w_3_9",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    -46
+   ],
+   "max": [
+    20,
+    4.5,
+    -38
+   ]
+  },
+  {
+   "id": "house_e_1_1",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    38
+   ],
+   "max": [
+    -84,
+    4.0,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_2",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    38
+   ],
+   "max": [
+    -71,
+    3.5,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_3",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    38
+   ],
+   "max": [
+    -58,
+    5.0,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_4",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    38
+   ],
+   "max": [
+    -45,
+    4.5,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_5",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    38
+   ],
+   "max": [
+    -32,
+    4.0,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_6",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    38
+   ],
+   "max": [
+    -19,
+    3.5,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_7",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    38
+   ],
+   "max": [
+    -6,
+    5.0,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_8",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    38
+   ],
+   "max": [
+    7,
+    4.5,
+    46
+   ]
+  },
+  {
+   "id": "house_e_1_9",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    38
+   ],
+   "max": [
+    20,
+    4.0,
+    46
+   ]
+  },
+  {
+   "id": "house_e_2_1",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    50
+   ],
+   "max": [
+    -84,
+    3.5,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_2",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    50
+   ],
+   "max": [
+    -71,
+    5.0,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_3",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    50
+   ],
+   "max": [
+    -58,
+    4.5,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_4",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    50
+   ],
+   "max": [
+    -45,
+    4.0,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_5",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    50
+   ],
+   "max": [
+    -32,
+    3.5,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_6",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    50
+   ],
+   "max": [
+    -19,
+    5.0,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_7",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    50
+   ],
+   "max": [
+    -6,
+    4.5,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_8",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    50
+   ],
+   "max": [
+    7,
+    4.0,
+    58
+   ]
+  },
+  {
+   "id": "house_e_2_9",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    50
+   ],
+   "max": [
+    20,
+    3.5,
+    58
+   ]
+  },
+  {
+   "id": "house_e_3_1",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -94,
+    0,
+    62
+   ],
+   "max": [
+    -84,
+    5.0,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_2",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -81,
+    0,
+    62
+   ],
+   "max": [
+    -71,
+    4.5,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_3",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -68,
+    0,
+    62
+   ],
+   "max": [
+    -58,
+    4.0,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_4",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -55,
+    0,
+    62
+   ],
+   "max": [
+    -45,
+    3.5,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_5",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    62
+   ],
+   "max": [
+    -32,
+    5.0,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_6",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -29,
+    0,
+    62
+   ],
+   "max": [
+    -19,
+    4.5,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_7",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -16,
+    0,
+    62
+   ],
+   "max": [
+    -6,
+    4.0,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_8",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -3,
+    0,
+    62
+   ],
+   "max": [
+    7,
+    3.5,
+    70
+   ]
+  },
+  {
+   "id": "house_e_3_9",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    10,
+    0,
+    62
+   ],
+   "max": [
+    20,
+    5.0,
+    70
+   ]
+  }
+ ],
+ "markers": [
+  {
+   "id": "player_spawn",
+   "pos": [
+    6,
+    -6,
+    9
+   ],
+   "role": "spawn"
+  },
+  {
+   "id": "gate",
+   "pos": [
+    99,
+    0,
+    0
+   ],
+   "role": "waypoint"
+  },
+  {
+   "id": "desert_exit",
+   "pos": [
+    106,
+    0,
+    0
+   ],
+   "role": "waypoint"
+  },
+  {
+   "id": "back_gap",
+   "pos": [
+    -99,
+    0,
+    -59.5
+   ],
+   "role": "waypoint"
+  },
+  {
+   "id": "cantina_door",
+   "pos": [
+    -55,
+    0,
+    0
+   ],
+   "role": "waypoint"
+  },
+  {
+   "id": "bar_front",
+   "pos": [
+    -76.5,
+    0,
+    0
+   ],
+   "role": "interact"
+  },
+  {
+   "id": "bartender",
+   "pos": [
+    -82,
+    0,
+    0
+   ],
+   "role": "npc",
+   "npc": "bartender"
+  },
+  {
+   "id": "fixer",
+   "pos": [
+    -65,
+    0,
+    12.3
+   ],
+   "role": "npc",
+   "npc": "fixer"
+  },
+  {
+   "id": "trooper_gate_n",
+   "pos": [
+    95,
+    0,
+    9
+   ],
+   "role": "trooper_post"
+  },
+  {
+   "id": "trooper_gate_s",
+   "pos": [
+    95,
+    0,
+    -9
+   ],
+   "role": "trooper_post"
+  },
+  {
+   "id": "trooper_tower",
+   "pos": [
+    91,
+    12,
+    16
+   ],
+   "role": "trooper_post"
+  },
+  {
+   "id": "trooper_yard_a",
+   "pos": [
+    60,
+    0,
+    30
+   ],
+   "role": "trooper_post"
+  },
+  {
+   "id": "trooper_yard_b",
+   "pos": [
+    78,
+    0,
+    38
+   ],
+   "role": "trooper_post"
+  },
+  {
+   "id": "vendor_1",
+   "pos": [
+    42,
+    0,
+    -31
+   ],
+   "role": "ambient"
+  },
+  {
+   "id": "vendor_2",
+   "pos": [
+    58,
+    0,
+    -31
+   ],
+   "role": "ambient"
+  },
+  {
+   "id": "vendor_3",
+   "pos": [
+    74,
+    0,
+    -46
+   ],
+   "role": "ambient"
+  },
+  {
+   "id": "resident_w",
+   "pos": [
+    -4.5,
+    0,
+    -54
+   ],
+   "role": "ambient"
+  },
+  {
+   "id": "resident_e",
+   "pos": [
+    -4.5,
+    0,
+    54
+   ],
+   "role": "ambient"
+  }
+ ],
+ "routes": [
+  {
+   "id": "gate_to_cantina",
+   "points": [
+    [
+     106,
+     0
+    ],
+    [
+     99,
+     0
+    ],
+    [
+     22,
+     0
+    ],
+    [
+     22,
+     26
+    ],
+    [
+     -22,
+     26
+    ],
+    [
+     -22,
+     0
+    ],
+    [
+     -56,
+     0
+    ],
+    [
+     -76.5,
+     0
+    ]
+   ]
+  },
+  {
+   "id": "spawn_to_cantina",
+   "points": [
+    [
+     6,
+     9
+    ],
+    [
+     2,
+     18.5
+    ],
+    [
+     22,
+     18.5
+    ],
+    [
+     22,
+     26
+    ],
+    [
+     -22,
+     26
+    ],
+    [
+     -22,
+     0
+    ],
+    [
+     -56,
+     0
+    ],
+    [
+     -76.5,
+     0
+    ]
+   ]
+  },
+  {
+   "id": "cantina_to_gate",
+   "points": [
+    [
+     -76.5,
+     0
+    ],
+    [
+     -56,
+     0
+    ],
+    [
+     -22,
+     0
+    ],
+    [
+     -22,
+     26
+    ],
+    [
+     22,
+     26
+    ],
+    [
+     22,
+     0
+    ],
+    [
+     99,
+     0
+    ],
+    [
+     106,
+     0
+    ]
+   ]
+  },
+  {
+   "id": "backgap_to_cantina",
+   "points": [
+    [
+     -104,
+     -59.5
+    ],
+    [
+     -96,
+     -59.5
+    ],
+    [
+     -96,
+     -34
+    ],
+    [
+     -50,
+     -34
+    ],
+    [
+     -50,
+     0
+    ],
+    [
+     -56,
+     0
+    ],
+    [
+     -76.5,
+     0
+    ]
+   ]
+  }
+ ],
+ "chunks": [
+  {
+   "id": "town_back",
+   "center": -50.0,
+   "load_ms": 18.0,
+   "kind": "port"
+  },
+  {
+   "id": "town_front",
+   "center": 50.0,
+   "load_ms": 18.0,
+   "kind": "port"
+  }
+ ]
+}

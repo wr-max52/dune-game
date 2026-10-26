@@ -2,6 +2,40 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — M9 (port town) and the single demo
+
+- **The town is data.** `content/core/locations/port_town.json` holds every box,
+  marker, route and zone; `town_layout.gd` is the only reader and validates it with
+  the same 8 rules as `docs/town/validate_town.py`. Why: the IP rule (names and
+  places live in content only) and tuning without code changes.
+- **+X is toward the gate, the desert and the outpost**, matching the M4 streamer,
+  which already walks along +X.
+- **A sunken landing pit** is the town's landmark and a combat space, and now the
+  launch point for flight. **The back gap** in the west wall gives the smuggler a way
+  out that avoids the gate.
+- **Defaults D6 to D9 kept as planned:** spawn on the pit floor beside the ship;
+  trooper posts placed now as markers; the market is atmosphere only; nothing is
+  built over the pit.
+- **Ramps: no fix needed.** The T5 ramp formula and 0.4 m thickness walked first
+  try; no `floor_snap_length` change.
+- **Town decor is a visual-only layer.** `town_decor.gd` only sets materials and
+  adds lamps and two banners; it never adds collision or touches box data. Market
+  and character art are deferred to their own passes; capsules and plain stalls are
+  intentional. `use_look = false` gives the plain greybox, which the CI walk trace
+  uses so its numbers never depend on art.
+- **One demo, not several scenes to pick from.** F5 opens the town. The pad around
+  the ship in the pit launches the dogfight; when the fight ends, the player lands
+  back beside the ship. Under the hood flight is still its own scene (loaded by
+  `GameFlow`), because the dogfight builds a whole different world (space, planet,
+  sun); the player never picks a scene. Alternative: build the dogfight inside the
+  town scene -- rejected for now: two lighting setups in one tree, and the town would
+  keep simulating during flight. Revisit if a seamless take-off is wanted.
+- **The beauty corner is back to being only the art reference.** The pad briefly
+  lived there; it moved to the town and `beauty_corner.gd` is unchanged from main.
+- **Pads are data, anchored to town boxes.** `content/core/flow/launch_pads.json`
+  names a `town_box` (the ship) and an `arrive_marker` (the spawn); the scene turns
+  those into positions, so no coordinates are typed anywhere.
+
 ## 2026-10-26 — M10 (starfighter flight and dogfights)
 
 - **Arcade flight, not Newtonian.** The ship always moves along its nose and speed

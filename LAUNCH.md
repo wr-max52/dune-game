@@ -13,7 +13,7 @@ proof, per `KNOWN_ISSUES.md`.)
 brew install --cask godot        # Godot 4.7.2 (pinned in scripts/pin.txt)
 brew install rust ffmpeg         # for the recording + the LLM runtime
 
-# Open the project and run it. The main scene is scenes/main.tscn.
+# Open the project and run it. The main scene is scenes/town_demo.tscn.
 open project.godot               # then press F5 in the editor
 # ...or, without the editor:
 godot --path . res://scenes/main.tscn
@@ -39,6 +39,29 @@ Combat inputs (fire / block / reload) are part of the M2/M3 weapon + blade state
 machines; they are not yet bound to global input actions and are driven in the
 playthrough trace. Binding them to the GUI is the remaining polish before a live
 playtest.
+
+## The demo: the town, and flight from the pit (M9)
+
+```sh
+open project.godot                               # then press F5
+godot --path . res://scenes/town_demo.tscn       # or without the editor
+```
+
+There is one thing to launch. You start on the pit floor beside your ship. Walk with
+WASD, V toggles the camera, Esc frees the mouse, 1/2/3 switch golden, noon and dusk.
+Walk up a ramp to reach the streets; the cantina is west, the gate east.
+
+Next to the ship, "[E] Launch" shows. **Press E** to fade into the dogfight. When the
+fight is won or lost you land back beside the ship with the result on screen.
+
+| Action          | Key |
+|---|---|
+| Launch (by ship) | E  |
+| Lighting preset  | 1 / 2 / 3 |
+
+Review renders: `./tools/town/shoot_town.sh presets=golden,dusk` writes to
+`test_results/town/`. Pads, encounter, delays and labels live in
+`content/core/flow/launch_pads.json`.
 
 ## Flying the dogfight (M10)
 

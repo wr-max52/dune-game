@@ -1,0 +1,24 @@
+{
+  "note": "Launch pads: stand on one and press E to fly the encounter it names. Read by src/systems/flow/game_flow.gd; the owning scene resolves 'town_box' (the pad sits on that box's footprint, at its base) and 'arrive_marker' (where the player lands back on foot, facing the pad) from its own layout data, so no coordinates live here or in code. Labels are here so code stays name-free.",
+  "flight_scene": "res://scenes/flight/dogfight_demo.tscn",
+  "default_port_scene": "res://scenes/town_demo.tscn",
+  "return_delay": 4.0,
+  "fade_time": 0.6,
+  "pads": {
+    "town_pit": {
+      "scene": "res://scenes/town_demo.tscn",
+      "town_box": "ship",
+      "radius": 14.0,
+      "height": 4.0,
+      "encounter": "orbital_skirmish",
+      "arrive_marker": "player_spawn"
+    }
+  },
+  "labels": {
+    "prompt": "[E]  Launch",
+    "launching": "Launching...",
+    "returning": "Returning to port...",
+    "arrive_complete": "Back in port. Sector clear, +%d credits",
+    "arrive_failed": "Back in port. Your fighter limped home."
+  }
+}

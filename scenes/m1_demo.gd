@@ -5,6 +5,7 @@ extends Node3D
 ## .tscn and without a human. A human driving with WASD works the same way because
 ## the player shares the exact movement path.
 
+const Greybox := preload("res://src/systems/world/greybox.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
@@ -36,37 +37,12 @@ func _ready() -> void:
 
 
 func _add_floor() -> void:
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(40, 0.5, 40)
-	var b := MeshInstance3D.new()
-	b.mesh = mesh
-	b.position = Vector3(0, -0.25, 0)
-	add_child(b)
-	var col := StaticBody3D.new()
-	var sa := CollisionShape3D.new()
-	var cs := BoxShape3D.new()
-	cs.size = Vector3(40, 0.5, 40)
-	col.position = Vector3(0, -0.25, 0)
-	sa.shape = cs
-	col.add_child(sa)
-	add_child(col)
+	add_child(Greybox.make_box("Floor", Vector3(0, -0.25, 0), Vector3(40, 0.5, 40),
+		Greybox.KIND_COLORS.floor))
 
 
 func _add_cover(pos: Vector3, size: Vector3) -> void:
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	var b := MeshInstance3D.new()
-	b.mesh = mesh
-	b.position = pos
-	add_child(b)
-	var col := StaticBody3D.new()
-	var sa := CollisionShape3D.new()
-	var cs := BoxShape3D.new()
-	cs.size = size
-	col.position = pos
-	sa.shape = cs
-	col.add_child(sa)
-	add_child(col)
+	add_child(Greybox.make_box("Cover", pos, size, Greybox.KIND_COLORS.cover))
 
 
 func _process(delta: float) -> void:
