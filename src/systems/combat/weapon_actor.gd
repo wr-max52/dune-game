@@ -4,15 +4,20 @@ extends RefCounted
 ## trigger is pulled, in the GUI. For headless CI it also tracks a shot log so a
 ## trace can verify "the blaster damages over time" without rendering.
 
+const Weapon := preload("res://src/systems/combat/weapon.gd")
+const BoltScene := preload("res://scenes/entities/bolt.tscn")
+
 var weapon
-var bolt_scene
-var bolt_parent: Node3D
+## Defaults to the real bolt scene. It used to default to null and was never set
+## anywhere, so _make_bolt() always returned early and no bolt ever spawned.
+var bolt_scene: PackedScene = BoltScene
+var bolt_parent: Node3D     ## must be set by the scene that owns this actor
 var shots_fired := 0
-var shots_log: Array = []   ## each: {time, target, damage}
+var shots_log: Array = []   ## each: {target, damage}
 
 
 func set_weapon(cfg: Dictionary) -> void:
-	weapon = load("res://src/systems/combat/weapon.gd").new(cfg)
+	weapon = Weapon.new(cfg)
 
 
 func _make_bolt(direction: Vector3, origin: Vector3, damage: float, speed: float) -> void:
@@ -23,15 +28,14 @@ func _make_bolt(direction: Vector3, origin: Vector3, damage: float, speed: float
 	bolt.speed = speed
 	bolt.damage = damage
 	bolt.range_m = float(weapon.config.get("range", 60.0))
-	bolt.global_position = origin
+	# Add to the tree first: setting global_position on a detached node is an error.
 	bolt_parent.add_child(bolt)
+	bolt.global_position = origin
 
 
 func fire_at(target_pos: Vector3, origin: Vector3, dt: float, trigger: bool) -> void:
 	var result: int = weapon.start_firing(dt, trigger)
-	# Load the Result enum constants fresh to fire only on a genuine SHOT.
-	var R = load("res://src/systems/combat/weapon.gd").Result
-	if result != int(R.SHOT):
+	if result != Weapon.Result.SHOT:
 		return
 	var dir: Vector3 = (target_pos - origin).normalized()
 	var dmg: float = float(weapon.config.get("damage", 10.0))

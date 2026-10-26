@@ -29,10 +29,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		rig.add_pitch(-event.relative.y * mouse_sensitivity)
 	if event.is_action_pressed(toggle_action):
 		rig.toggle_mode()
-		push_warning("CameraRig: view -> ", "TPV" if not rig.is_first_person() else "FPV")
+		print_verbose("CameraRig: view -> ", "TPV" if not rig.is_first_person() else "FPV")
 
 
 func _process(_delta: float) -> void:
 	if _player != null:
-		_player.rotate_y(rig.yaw)
-		_camera.transform = rig.camera_transform(_player.global_position)
+		# Absolute, not relative. rotate_y() re-added the yaw every frame and spun
+		# the player forever after any mouse movement. The body reads -rotation.y
+		# as its movement yaw, which lines up with the rig's look direction.
+		_player.rotation.y = rig.yaw
+		if _camera.is_inside_tree():
+			_camera.global_transform = rig.camera_transform(_player.global_position)

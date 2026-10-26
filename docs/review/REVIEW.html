@@ -1,0 +1,228 @@
+<div style="font-family:Georgia,serif;max-width:760px;line-height:1.5;color:#222">
+<h1 style="margin-bottom:4px">dune-game: Senior Dev Review</h1>
+<p style="color:#666;margin-top:0">Repo: github.com/wr-max52/dune-game @ 06d6237 (M8 merge) &middot; Reviewed 2026-10-26 &middot; Godot 4.7.2 (pinned version, actually run)</p>
+
+<h2>TL;DR</h2>
+<ul>
+<li><b>I ran it.</b> I cloned it, installed Godot 4.7.2, ran <code>scripts/ci.sh</code> (116/116 tests pass), then wrote my own probe scripts and rendered the demo scene under a virtual display.</li>
+<li><b>The green suite is mostly self-congratulation.</b> Most "proofs" are traces that hardcode their own outcomes and tests that read those traces back. The performance reports in particular measure nothing.</li>
+<li><b>There is no playable game.</b> The main scene prints a data summary to the console. The only visual scene (m1_demo) autopilots a camera across grey boxes, and none of the combat, AI, mission, or bartender systems are wired into any scene.</li>
+<li><b>Several systems are broken in ways the tests can't see:</b> the bolt scene doesn't even parse, the camera renders mirrored, the player spins forever after any mouse movement, the player walks through walls, the S key doesn't move you backward, and the squad AI assigns cover using the wrong index.</li>
+<li><b>My opinion:</b> stop adding milestones. Build one real scene that wires the existing systems together, then replace the trace "proofs" with measured frame times. The architecture (pure logic plus thin nodes, data layer) is a decent idea. The problem is that nothing was ever plugged in.</li>
+</ul>
+
+<h2>How I verified</h2>
+<ul>
+<li><code>./scripts/ci.sh</code> with real Godot 4.7.2 headless: all 8 traces were generated and 116 tests passed.</li>
+<li>A probe script (<code>review_probe.gd</code>, run with <code>godot --headless -s</code>) that exercises each system outside the happy path. Every number below marked <b>[measured]</b> came from it.</li>
+<li><code>xvfb-run</code> plus the OpenGL3 renderer to screenshot m1_demo in FPV and TPV.</li>
+</ul>
+
+<hr>
+<h2>1. Critical: Performance</h2>
+
+<h3>1.1 The performance "proofs" are fabricated, not measured</h3>
+<ul>
+<li><code>scenes/m8_playthrough.gd</code> lines 214 and 234 literally write <code>work += 25.0</code> and <code>work += 30.0</code>. The "worst_ms=30.000, over_budget=0" in <code>m8_perf_report.txt</code> is just the largest constant you typed in. No clock is read anywhere.</li>
+<li><code>m4_frame_trace.gd</code> feeds the streamer made-up <code>load_ms: 18.0</code> values. Nothing actually loads, so the "frame time log" is arithmetic on invented numbers.</li>
+<li><b>The anti-hitch invariant is a tautology.</b> <code>ChunkStreamer.update()</code> caps spending at <code>work_budget_per_frame</code>, then the test asserts that spending never exceeded <code>work_budget_per_frame</code>. [measured] A chunk costing 10 full seconds of load work still reports <code>within_budget=true</code>. It can't fail.</li>
+<li><b>Fix:</b> measure real time with <code>Time.get_ticks_usec()</code> around actual work, plus <code>Performance.get_monitor(Performance.TIME_PROCESS)</code> and <code>TIME_PHYSICS_PROCESS</code> in a rendered run (xvfb works, I did it). Assert on p99 frame time, not on a number you chose.</li>
+</ul>
+
+<h3>1.2 The frame budget is wrong by 3x</h3>
+<ul>
+<li>50 ms is about 20 fps. At 60 fps the whole frame budget is 16.7 ms, and a streaming system should get maybe 2 to 4 ms of it on the main thread.</li>
+<li>As written, the streamer is <i>allowed</i> to burn 50 ms in a single frame. That isn't hitch prevention; that's a guaranteed 3-frame hitch.</li>
+<li><b>Fix:</b> do real loading off-thread with <code>ResourceLoader.load_threaded_request()</code> and only do tree insertion on the main thread, budgeted at a few ms.</li>
+</ul>
+
+<h3>1.3 The chunk streamer thrashes at window edges</h3>
+<ul>
+<li>There's no hysteresis, and unloading throws away partial progress. A player standing near a boundary makes chunks load, unload, and reload again forever.</li>
+<li>[measured] A player jittering ±1.5 m around x=230 while <i>standing still</i> generated <b>5,436 ms of load work over 600 frames</b>. That's about 9 ms every frame, indefinitely.</li>
+<li><b>Fix:</b> use separate load and unload radii (for example, load at 130 m and unload at 160 m), and keep a small LRU cache of recently unloaded chunks.</li>
+</ul>
+
+<h3>1.4 LLM, STT, and TTS will freeze the game once they're actually wired</h3>
+<ul>
+<li><code>OllamaClient._post()</code> is a stub, and the bartender's interface is a synchronous <code>pop_next()</code>. If someone wires real HTTP or whisper.cpp into that shape, the main thread blocks for 0.5 to 5 seconds per turn.</li>
+<li>Local inference also competes with the renderer for the same GPU and unified memory. Nobody has measured it (KNOWN_ISSUES admits "not yet measured").</li>
+<li><b>Fix:</b> make the client async now, before anything depends on it. Use an <code>HTTPRequest</code> node with a signal, or a <code>Thread</code>/<code>WorkerThreadPool</code>, and give the bartender a "thinking" state with a timeout.</li>
+</ul>
+
+<h3>1.5 Frame-rate-dependent gameplay</h3>
+<ul>
+<li><b>Weapon fire rate:</b> the cooldown throws away its remainder each frame. [measured] The pistol (0.12 s) should fire 83 shots in 10 s. It actually fires 80 at 144 fps and 75 at 60 or 30 fps, so it's about 10% slower on most machines. Fix: <code>_fire_cd_left += fire_cooldown()</code> instead of <code>=</code>.</li>
+<li><b>Camera vs body:</b> the camera updates in <code>_process</code> while the body moves in <code>_physics_process</code>, so you get visible jitter on high-refresh monitors. Turn on physics interpolation (<code>physics/common/physics_interpolation</code>) or drive the camera from interpolated transforms.</li>
+<li><b>Player rotation:</b> <code>rotate_y(rig.yaw)</code> runs every <i>render</i> frame (see 2.3), so the spin speed also scales with fps.</li>
+</ul>
+
+<h3>1.6 Smaller performance smells (fine at slice scale, bad habits)</h3>
+<ul>
+<li><code>desired_active()</code> allocates an array and a lambda and sorts every frame. <code>_in_want()</code> is O(n&times;m), and <code>is_covered()</code> is a linear scan. Use a dict or a spatial index.</li>
+<li><code>WeaponActor.fire_at()</code> calls <code>load("weapon.gd")</code> on every shot just to read an enum. Use a <code>preload</code> const.</li>
+<li><code>SquadCoordinator</code> uses <code>Array.has()</code> inside a loop (O(n&sup2;)).</li>
+<li>Every trace builds its log with <code>log += ...</code> per frame, which is quadratic string growth. Use a <code>PackedStringArray</code> and <code>"\n".join()</code>, or write directly to the file.</li>
+</ul>
+
+<hr>
+<h2>2. Experience: Bugs and Player-Facing Problems</h2>
+
+<h3>2.1 There is no game to play</h3>
+<ul>
+<li>The <code>run/main_scene</code> is <code>main.tscn</code>, which only prints data-layer counts. A player who presses F5 gets a grey window and console text.</li>
+<li><code>m1_demo</code> defaults to <code>_auto = true</code> and calls <code>set_command()</code> every frame, so human input is permanently ignored. <code>use_external_command</code> never resets.</li>
+<li>Fire, block, reload, attack, interact, push-to-talk, and pause have <b>no input actions at all</b>. LAUNCH.md concedes this, yet PLAN says M0 through M8 are "done".</li>
+<li><code>Input.mouse_mode</code> is never set to captured, so mouse look runs into the screen edge.</li>
+<li>The README claims a <code>nobodywho</code> addon was "added at M6". It isn't in the repo.</li>
+<li><b>My opinion:</b> this is the single biggest problem. "Done" was defined as "a headless trace prints the right words", and the trace scripts write those words themselves.</li>
+</ul>
+
+<h3>2.2 Camera renders mirrored</h3>
+<ul>
+<li><code>camera_rig.gd</code> line 45 computes <code>right = fwd.cross(UP)</code> with <code>fwd = -look</code>, which flips the right vector. [measured] The basis determinant is <b>-1.0</b>, a reflection rather than a rotation.</li>
+<li>Result: the world renders left-right mirrored, and mouse look feels inverted.</li>
+<li><b>Fix:</b> <code>right = look.cross(Vector3.UP).normalized()</code>, <code>up = right.cross(look)</code>, <code>Basis(right, up, -look)</code>. Or just use <code>Transform3D().looking_at()</code>.</li>
+<li>Add a test asserting <code>is_equal_approx(basis.determinant(), 1.0)</code>.</li>
+</ul>
+
+<h3>2.3 The player spins forever after any mouse movement</h3>
+<ul>
+<li><code>camera_rig_node.gd</code> line 37 calls <code>_player.rotate_y(rig.yaw)</code> every frame. <code>rotate_y</code> is <i>relative</i>, so any non-zero yaw keeps adding up.</li>
+<li>[measured] A single 0.05 rad nudge left the body rotating continuously, about 0.97 rad later on.</li>
+<li>Movement direction comes from <code>-rotation.y</code>, so WASD direction spins too.</li>
+<li><b>Fix:</b> <code>_player.rotation.y = rig.yaw</code>, and pick one sign convention (it's currently negated in one place and not the other).</li>
+</ul>
+
+<h3>2.4 Input map bugs</h3>
+<ul>
+<li><b>Added after the first review: no keyboard binding works at all.</b> Every key event in <code>project.godot</code> uses <code>"key_code"</code>, but Godot's property is <code>"keycode"</code>. [measured] All eight actions load with <code>keycode=0 (unset)</code>, so WASD, arrows, Space, V, Shift and C do nothing in-game. This is fixed on the <code>review/senior-dev-fixes</code> branch, with a regression test.</li>
+<li><code>move_forward</code> includes key code 83, which is <b>S</b>. Holding S triggers forward and back at once, which cancels out, so <b>S does nothing</b>. Only the Down arrow moves you backward.</li>
+<li><code>toggle_view</code> binds mouse <code>button_index: 52</code>, which doesn't exist. Middle mouse is 3, so LAUNCH.md's "or mouse middle button" is wrong.</li>
+<li>Crouch uses <code>is_action_just_pressed</code>, so it lasts exactly one physics frame. It should be held or toggled.</li>
+</ul>
+
+<h3>2.5 Player movement ignores physics</h3>
+<ul>
+<li>The player <code>CharacterBody3D</code> has <b>no CollisionShape3D</b>, so <code>move_and_slide()</code> collides with nothing.</li>
+<li>Even with a shape it wouldn't help: every frame starts with <code>global_position = controller.body_pos</code>, which throws away whatever <code>move_and_slide</code> resolved. The pure controller is the authority and it knows nothing about the world.</li>
+<li>[measured] Walking into a wall at z=3 for 1 s left the player at z=3.53, straight through it.</li>
+<li>Ground is hardcoded to y=0 (<code>ground_y</code> is always passed as 0.0), so you can't stand on cover boxes, ramps, or terrain.</li>
+<li>The spawn position <code>y=0.9</code> is overwritten on frame 1 because <code>body_pos</code> starts at the origin.</li>
+<li>The player has no mesh. In my TPV screenshot there's no character on screen at all, just a grey floor.</li>
+<li>There's no WorldEnvironment, so faces facing away from the light render pure black (visible in my FPV screenshot).</li>
+<li><b>Fix:</b> let the controller compute only <i>velocity</i>, set <code>velocity</code>, call <code>move_and_slide()</code>, then read back <code>is_on_floor()</code> and <code>global_position</code>.</li>
+</ul>
+
+<h3>2.6 Blasters cannot hit anything</h3>
+<ul>
+<li><code>bolt.tscn</code> <b>doesn't parse</b>. [measured] Godot reports "Parse Error: Unknown tag 'sub_resource'" because the sub_resource is declared after a node, so <code>load()</code> returns null.</li>
+<li>Even if it parsed, the Area3D has <b>no CollisionShape3D</b>, so <code>body_entered</code> can never fire. The comment's collision layers are never set either.</li>
+<li><code>WeaponActor.bolt_scene</code> and <code>bolt_parent</code> are never assigned anywhere in the codebase, so <code>_make_bolt()</code> always returns early.</li>
+<li><code>bolt.global_position</code> is set <i>before</i> <code>add_child</code>, which Godot warns about.</li>
+<li>Tests load <code>bolt.gd</code> directly, never the <code>.tscn</code>, which is exactly why none of this was caught.</li>
+<li>At 48 m/s with no shape cast, fast bolts will also tunnel through thin geometry once they do have a shape. Use a raycast per step.</li>
+</ul>
+
+<h3>2.7 Melee and duelist: there's no skill in "timed deflection"</h3>
+<ul>
+<li>The duelist calls <code>start_block()</code> then <code>intercept_bolt()</code> in the same frame, so its deflection is instant and perfect whenever it's off cooldown. That isn't timing; it's a coin with one side.</li>
+<li>It <b>never calls <code>end_block()</code></b>. After the first parry the blade stays in BLOCK forever, and <code>_block_elapsed</code> grows past the deflect window. [measured] It parried only 4 of 20 swings, and the blade sat in BLOCK draining to 7 stamina.</li>
+<li>The M3 trace's "blows land so the duelist is killable" only happens <i>because of</i> that bug.</li>
+<li>The trace applies full damage on any non-PARRY result, so a <i>blocked</i> blow still does 16 damage. Blocking is cosmetic.</li>
+<li>A deflection refunds stamina, so a skilled player can block forever. That might be intended, but make it deliberate.</li>
+<li><code>PARRY_CD := PARRY_WINDOW</code> means two names for one 0.2 s value. Tune them separately.</li>
+<li>The data field <code>duelist_deflect_fraction: 0.34</code> in the mission JSON is never read.</li>
+</ul>
+
+<h3>2.8 AI bugs</h3>
+<ul>
+<li><b>The squad coordinator measures distance from cover node <i>i</i> to member <i>i</i></b> (<code>_member_pos(i)</code> uses the cover index), not from the member being assigned. Assignment ends up in index order regardless of position.</li>
+<li>[measured] With member 0 next to node 1 and member 1 next to node 0, it returns <code>[0, 1]</code> instead of <code>[1, 0]</code>, so both troopers run 100 m across the map.</li>
+<li>The tests never caught it because every fixture puts member <i>i</i> exactly on node <i>i</i>.</li>
+<li>Even fixed, greedy nearest-free assignment is order-dependent. Fine for 4 troopers, but know that it isn't optimal.</li>
+<li>Cover is chosen by distance only, ignoring where the player is. A "cover" node on the player's side is just standing in the open.</li>
+<li><code>TrooperBrain.update()</code> overwrites <code>target_position</code> (the player) with the cover position, so the trooper forgets who it's shooting at.</li>
+<li>Nothing ever calls <code>TrooperBrain.fire()</code>. The M2 trace's "return fire" is a separate hardcoded timer doing 5 damage, not the brain.</li>
+<li>Nothing moves the trooper in-game. <code>self_position</code> is only advanced by the trace script.</li>
+</ul>
+
+<h3>2.9 The LLM bartender doesn't hear the player</h3>
+<ul>
+<li><code>respond(text_request, ...)</code> <b>never uses <code>text_request</code></b>. [measured] "where is the crate?" and "I hate you" get the identical reply. The "guardrail" holds because the input is discarded, which is like securing a door by removing the building.</li>
+<li><code>OllamaClient</code> has no <code>pop_next()</code>, so it doesn't implement the interface the bartender calls. <code>build_request()</code> sends only the system prompt with no user message and no history. <code>_post()</code> returns "".</li>
+<li>It defaults to <code>llama3</code>, but KNOWN_ISSUES says the planned model is Qwen3 4B.</li>
+<li><code>parse_response()</code> crashes if the JSON is an Array or <code>content</code> is null. It also returns <code>text: ""</code> on error, which the bartender would display as an empty reply instead of falling back.</li>
+<li>The fallback cycle has an off-by-one. [measured] The sequence is A, B, C, <b>A, A</b>, B, C, so the first line repeats.</li>
+<li><code>bartender.json</code> lists fallback lines under <code>fallback_lines</code>, which the loader never reads (it only reads <code>dialogue</code>). Every trace hardcodes the tools and fallback lines in GDScript, breaking the project's own "nothing outside content/core" rule.</li>
+<li><code>memory = memory_in</code> aliases the caller's dict and mutates it in place, while the API pretends to return a new one.</li>
+<li><code>give_rumor</code> stores whatever text the model said as "the rumor", so a prompt-injected reply becomes persistent memory that gets saved to disk.</li>
+<li><code>call_guards</code> is an allowed tool that any persuasive player can trigger. An allowlist is not a guardrail for intent; you need rate limits and disposition gating.</li>
+<li><code>KokoroVoice.synthesize()</code> always returns null, and <code>signature()</code> is <code>hash()</code>, which isn't stable across engine versions. Calling M6 "Kokoro voice" is generous.</li>
+</ul>
+
+<h3>2.10 Voice input</h3>
+<ul>
+<li>When whisper is unavailable, <code>capture()</code> "falls back to typed" by stringifying the <i>audio sample</i>. [measured] A <code>PackedByteArray</code> becomes the literal text <code>'[1, 2, 3, 4]'</code> and gets sent to the bartender as if the player typed it.</li>
+<li><code>now_ms</code> is never advanced, so the real <code>press()</code>/<code>release()</code> path always reports 0 ms latency. Every latency number in the M7 trace is a hardcoded argument.</li>
+<li>Whisper "transcription" is a dictionary lookup of canned strings, and <code>forceload()</code> succeeds as long as the model filename is non-empty.</li>
+</ul>
+
+<h3>2.11 Save, mission, and health</h3>
+<ul>
+<li><b>Save:</b> Godot's JSON parser returns every number as a float, so <code>credits</code> and the mission's int fields come back as floats and only survive because of scattered <code>int()</code> casts. Nothing is type-checked or validated on load.</li>
+<li><code>remember_in_bartender()</code> crashes if <code>new_game()</code> wasn't called first, and a short <code>player_position</code> array crashes <code>get_player_position()</code>.</li>
+<li>Writes aren't atomic, so a crash mid-save corrupts the only save. Write to <code>.tmp</code> and then rename.</li>
+<li><code>version: 1</code> is written but never checked, and there's no migration path.</li>
+<li><b>Mission:</b> <code>started</code> is never set true. <code>Phase.ACCEPT</code> and <code>Event.ACCEPT</code> share a name. <code>from_save()</code> trusts <code>enemies_total</code> from the save over the config, so edited data won't apply to old saves.</li>
+<li><code>trooper_hp</code> and <code>duelist_hp</code> in the mission data are never used.</li>
+<li><b>Health:</b> <code>int()</code> truncation drops fractional damage. [measured] Ten hits of 0.9 damage do <b>0 total</b>.</li>
+<li><code>heal()</code> works on dead entities (hp goes up while <code>_alive</code> stays false), and <code>on_death</code> is never connected anywhere.</li>
+</ul>
+
+<h3>2.12 Tests and CI give false confidence</h3>
+<ul>
+<li>Trace scripts decide the outcome, write it to a file, and then a test greps the file for it. That's circular. When a test "proves" something its own fixture asserted, it proves nothing.</li>
+<li><code>ci.sh</code> prints the pinned and actual versions but <b>never compares them</b>, so the "pin check" can't fail.</li>
+<li><code>test_results/</code> is never cleaned before a run, so a stale trace from yesterday satisfies the "file exists" gate even if today's script crashed. Trace output goes to <code>/dev/null</code>, so script errors are invisible, and Godot usually exits 0 on GDScript errors anyway.</li>
+<li>There's no <code>.github/workflows</code>, so "CI" is a local script you have to remember to run.</li>
+<li><code>record.sh</code> calls <code>/usr/sbin/avfoundation</code>, which doesn't exist. The device listing should be <code>ffmpeg -f avfoundation -list_devices true -i ""</code>, and the script grabs the first <i>video</i> device, which is often the webcam, not the screen.</li>
+</ul>
+
+<h3>2.13 IP exposure (opinion, but take it seriously)</h3>
+<ul>
+<li>The banned-term list checks for "mandalorian" and "jar jar". Meanwhile the data ships a faction literally named <b>"Imperial Remnant"</b>, which is a canonical Star Wars faction name, alongside blasters, troopers, an energy-blade duelist, and a desert spaceport cantina. The repo is named "dune-game".</li>
+<li>Individually these are generic. Together, in a public repo, the scan is a fig leaf. Rename the faction, add "imperial", "jedi", "sith", "lightsaber", "stormtrooper", "dune", "arrakis", and "spice" to the scan, and consider making the repo private until the skin layer exists.</li>
+<li>I'm not a lawyer; this is a risk flag, not legal advice.</li>
+</ul>
+
+<hr>
+<h2>3. Style and Maintainability</h2>
+<ul>
+<li><b>Milestone tags in code comments</b> ("M2", "M5, deferred from M4", "the M7 decision") are already stale and will rot. That history belongs in git and the CHANGELOG, not in docstrings.</li>
+<li><b>Docs outweigh code.</b> There are about 840 lines of CHANGELOG, DECISIONS, and KNOWN_ISSUES narrative against about 1,500 lines of game logic, and the docs contradict reality: README still says "No gameplay yet (M0)" next to "M0-M8 are done".</li>
+<li><b>Eight copy-pasted trace harnesses</b> share identical <code>_build</code>/<code>_process</code>/file boilerplate, and <code>ci.sh</code> has eight copy-pasted blocks. One generic runner would replace them.</li>
+<li><b>A var named <code>log</code></b> in every trace shadows the built-in <code>log()</code>. It works, but it's a trap.</li>
+<li><b>Weak typing:</b> <code>var weapon</code>, <code>var client</code>, <code>var blade</code>, and <code>var brain</code> have no types and no <code>class_name</code>, so nothing gets editor autocomplete or static checks. Add <code>class_name</code> to each system and type everything.</li>
+<li><b>Mixed <code>load()</code> and <code>preload()</code>:</b> several classes <code>load()</code> scripts at runtime inside functions. Prefer <code>preload</code> consts.</li>
+<li><b>Magic numbers:</b> stamina regen 18.0, recovery 0.15 and 0.4, jump height 0.6, and the 0.5 s regen delay should be config or named consts, especially since you built a data layer for exactly this.</li>
+<li><b>core_content.gd</b> has two near-duplicate JSON readers. <code>_read_text</code> bypasses <code>root_path()</code>, the persona path relies on a fragile <code>.replace("dialogue/", "")</code>, and weapons and factions are stored even when empty, unlike locations and missions.</li>
+<li><b>Logging:</b> <code>push_warning</code> on every camera toggle spams the warning log for a normal action. Use <code>print_verbose</code> or nothing.</li>
+<li><b>Doc comments</b> (<code>##</code>) are used inside function bodies, where they don't attach to anything. Use <code>#</code> there.</li>
+<li><b>Raw key codes</b> like 4194320 in project.godot make bugs like the S binding invisible. Edit the input map in the editor, or comment each code.</li>
+<li><code>camera_rig.gd</code> types <code>cos(pitch)</code> as <code>Variant</code>. It should be <code>float</code>.</li>
+</ul>
+
+<hr>
+<h2>Recommended order of fixes</h2>
+<ol>
+<li>Fix <code>bolt.tscn</code>, the camera basis, <code>rotate_y</code>, the S binding, and player collision. These are about an hour of work and unblock everything else.</li>
+<li>Build <b>one</b> real level scene: player, two troopers, a duelist, the bartender, and the fixer, with all inputs bound. Make it the main scene.</li>
+<li>Replace the hardcoded perf numbers with measured frame times in an xvfb run, and fail CI on a p99 above 16.7 ms.</li>
+<li>Make the LLM path async and actually pass the player's text and conversation history.</li>
+<li>Fix the squad index bug and duelist <code>end_block</code>, and write tests where fixtures <i>don't</i> line up perfectly.</li>
+<li>Harden CI: a real pin comparison, a clean <code>test_results/</code>, no output to <code>/dev/null</code>, and a GitHub Actions workflow.</li>
+<li>Then do the style cleanup.</li>
+</ol>
+<p style="color:#666">Review produced by Claude. Probe outputs are reproducible with Godot 4.7.2 headless.</p>
+</div>
