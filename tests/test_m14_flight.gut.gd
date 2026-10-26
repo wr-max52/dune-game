@@ -69,9 +69,9 @@ func test_liftoff_out_of_the_pit() -> void:
 	_true("HOVERS_AT_ZERO_THROTTLE")
 
 
-func test_takeoff_to_space_takes_30_to_40_seconds() -> void:
-	assert_between(float(t.get("SPACE_SECONDS", 0)), 30.0, 40.0, "the brief: 30-40 s from takeoff to space")
-	assert_eq(int(t.get("SPACE_ALTITUDE", 0)), 8000)
+func test_takeoff_to_space_takes_15_to_22_seconds() -> void:
+	assert_between(float(t.get("SPACE_SECONDS", 0)), 15.0, 22.0, "half-height atmosphere: about 15-22 s from takeoff to space")
+	assert_eq(int(t.get("SPACE_ALTITUDE", 0)), 4000)
 	assert_gt(int(t.get("TOP_SPEED_IN_CLIMB", 0)), 300, "thin air: much faster near the top")
 
 
@@ -88,7 +88,7 @@ func test_diving_at_the_planet_comes_back_flying() -> void:
 	assert_eq(t.get("ARRIVAL_OUTCOME"), "left", "left before the fight was won: no payout")
 	_true("REENTRY_PILOTING", "you arrive in the cockpit")
 	assert_eq(t.get("REENTRY_STATE"), "FLYING")
-	assert_gt(int(t.get("REENTRY_ALTITUDE", 0)), 4000)
+	assert_gt(int(t.get("REENTRY_ALTITUDE", 0)), 2000)
 	assert_between(float(t.get("DIVE_TO_PORT_SECONDS", 0)), 5.0, 90.0)
 
 
