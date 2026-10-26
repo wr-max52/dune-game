@@ -2,6 +2,68 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M10 — Starfighter flight and dogfights (2026-10-26)
+
+What works now:
+- **Ships are data.** Three starfighters in `content/core/ships/`: the player's
+  interceptor (shielded, two cannons, a seeker rack), the remnant fighter (fast,
+  unshielded) and the remnant heavy (slow, armoured, one seeker rack). Hull, shield,
+  speeds, turn rates, boost and gun mounts are all JSON. Two ship guns join
+  `content/core/weapons/`: the ship cannon and the seeker missile.
+- **AI pilots are data.** `content/core/pilots/` holds three personalities (rookie,
+  veteran, ace): how wide they shoot, when they break, whether they use seekers.
+- **Fights are data.** `content/core/encounters/orbital_skirmish.json`: the player and
+  a wingman hold off two raid waves above the port.
+- **A flight model.** `src/systems/flight/flight_model.gd`: arcade flight along the
+  nose, throttle between min and max speed, pitch/yaw/roll rates, a boost meter that
+  trades turn rate for speed. Pure, so the AI, a human and the headless bot all fly it.
+- **Guns and damage.** Each hardpoint runs the M2 weapon state machine, so ship guns
+  share the blasters' ammo/fire-rate/reload rules (an empty cannon "cools", a seeker
+  rack reloads). Bolts inherit the ship's speed and are swept against ship hit
+  spheres so they cannot pass through a fighter between frames. Seekers need a lock
+  (keep the target in the cone), then home with a limited turn rate. A regenerating
+  shield sits in front of the M2 hull.
+- **Fighter AI.** `src/systems/ai/fighter_brain.gd`: patrol, pursue, attack (fly the
+  lead point, fire inside the aim cone), break (hard turn away when too close, when
+  hit, or when a seeker is launched at it), extend, and return to the arena.
+- **The dogfight director.** `src/systems/flight/dogfight.gd` runs an encounter:
+  ships, targeting, projectiles, waves, hits, kills, and the COMPLETE/FAILED outcome.
+- **Playable.** `scenes/flight/dogfight_demo.tscn` (F6): fly with the keyboard (or
+  mouse), V toggles chase/cockpit view, T cycles targets, HUD with speed, shield,
+  hull, ammo, lock meter, target box and lead marker. Set `autopilot` to watch the AI
+  fly your ship.
+- **Any design later.** Looks live in `content/look/ships.json`. Today they are
+  stand-ins built by `src/systems/look/ship_kit.gd`; setting a look's `scene` to a
+  `.glb`/`.tscn` swaps in a real model with no code change. `docs/ADDING_SHIPS.md`
+  explains every field.
+- **Review stills.** `tools/lookdev/shoot_dogfight.sh` renders a lineup of every look
+  and chase-camera shots of the fight; current stills are in `docs/lookdev/flight/`.
+
+How to see it:
+- `./scripts/ci.sh` now writes `test_results/m10_dogfight_trace.txt`: the AI flies the
+  player through orbital_skirmish to COMPLETE (both waves, 7 kills, seekers launched,
+  some evaded, the player hit along the way) with every AI action used and no frame
+  near the 50ms budget.
+- 198 GUT tests pass (was 132), including a test that adds a brand-new ship, gun,
+  pilot and fight from JSON alone and flies it.
+- Play it: `godot --path . res://scenes/flight/dogfight_demo.tscn` (controls in
+  `LAUNCH.md`).
+
+Fixed along the way:
+- **The IP-neutrality scan skipped every top-level file** in the folders it scans
+  (`scenes/*.gd`, `content/core/manifest.json`, `scripts/*`, `tests/*`): it joined
+  the folder and file names without a slash. Fixed; the guard file itself is the one
+  exclusion. Added "x-wing", "tie fighter" and "millennium falcon" to the list.
+- **CI on a fresh checkout ran no tests but still passed.** Without an import step GUT
+  could not load, printed an error, and `ci.sh` exited 0. `ci.sh` now imports first.
+
+What is faked or outstanding:
+- Ships are primitive stand-ins until real models are made (the `scene` hook is ready).
+- No ship-to-ship collisions; ships fly through each other.
+- No flight on-ramp from the port yet: the dogfight is its own scene, not reached by
+  walking to a ship.
+- Untested on the Mac; review stills are from Linux software rendering.
+
 ## Look-dev: art direction, beauty corner, character kit (2026-10-26)
 
 What works now:

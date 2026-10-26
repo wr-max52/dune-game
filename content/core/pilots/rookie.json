@@ -1,0 +1,17 @@
+{
+  "id": "rookie",
+  "label": "Rookie",
+  "steer_gain": 2.6,
+  "aim_cone_deg": 8.0,
+  "aim_error": 0.05,
+  "engage_range": 600.0,
+  "break_distance": 80.0,
+  "break_time": 1.8,
+  "break_on_hit": 0.25,
+  "extend_distance": 360.0,
+  "evade_missile": 0.3,
+  "attack_throttle": 0.75,
+  "retarget_interval": 2.0,
+  "missile_use": false,
+  "note": "Shoots early and wide, breaks late."
+}

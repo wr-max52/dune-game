@@ -1,0 +1,15 @@
+{
+  "id": "ship_cannon",
+  "class": "ship_cannon",
+  "label": "Ship Cannon",
+  "fire_group": "primary",
+  "damage": 9,
+  "bolt_speed": 300.0,
+  "rate": 0.16,
+  "recoil": 0.0,
+  "range": 900.0,
+  "mag": 40,
+  "reload_time": 2.0,
+  "visible_bolt": true,
+  "note": "IP-neutral. Fixed forward ship gun; 'mag' + 'reload_time' act as a heat limit."
+}

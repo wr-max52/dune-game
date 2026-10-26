@@ -141,6 +141,27 @@ Sources: [80.lv on shape language and readability](https://80.lv/articles/charac
 [DigiPen on RDR2's clothing system](https://www.digipen.edu/showcase/news/digipen-grad-andy-kibler-puts-clothes-on-the-cowboy-in-red-dead-redemption-2),
 [GamesBeat on Dishonored's art](https://gamesbeat.com/how-dishonoreds-artists-created-an-oppressive-world-from-scratch/).
 
+## Ships
+
+The two sides read apart as black shapes against the sky, the same way the cast does
+on the ground:
+
+- **Smuggler side (the player's interceptor):** a long forward arrow. Pale worn hull,
+  saffron trim, teal glass, blue-white engines. Swept wings with tip guns.
+- **Remnant side:** dark plate, oxblood trim, amber glass, orange engines, the
+  trooper's colours. The fighter is a hunched pod with forward-swept, drooping blade
+  wings and a tall spine. The heavy is a wide armoured block with a wedge prow and
+  two nacelles.
+- **Bolts:** cyan for the player's side, red-orange for the remnant, warm white for
+  seekers. Colour says whose fire it is before shape does.
+- **Backdrop:** high orbit over the desert world, near-black space, a warm sun low on
+  one side. Values in `content/look/space.json`.
+
+`src/systems/look/ship_kit.gd` builds stand-ins from primitives; colours and sizes are
+in `content/look/ships.json`. A real model replaces a stand-in by setting the look's
+`scene` path, with no code change (see `docs/ADDING_SHIPS.md`). Review stills:
+`./tools/lookdev/shoot_dogfight.sh`; the current ones are in `docs/lookdev/flight/`.
+
 ## Camera and post
 
 - Default field of view: 70 (TPV), 80 (FPV). Keep the horizon low, so the sky does

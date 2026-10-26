@@ -14,7 +14,13 @@ const BANNED := [
 	"mandalorian",
 	"jarjar",
 	"starwars",
+	"x-wing",
+	"tie fighter",
+	"millennium falcon",
 ]
+
+## This file is the list itself, so it is the one file not scanned.
+const SELF := "res://tests/test_ip_neutral.gut.gd"
 
 const SCAN_DIRS := [
 	"res://content",
@@ -30,7 +36,9 @@ var _files := PackedStringArray()
 func before_each() -> void:
 	_files.clear()
 	for root in SCAN_DIRS:
-		_walk(root, _files)
+		# A trailing slash matters: "res://scenes" + "main.gd" is not a path, which
+		# silently skipped every file at the top of each scanned folder.
+		_walk(root.trim_suffix("/") + "/", _files)
 
 
 func _walk(dir: String, out: PackedStringArray) -> void:
@@ -57,7 +65,7 @@ func test_no_franchise_names_in_any_source_file() -> void:
 			not path.ends_with(".txt") and not path.ends_with(".tscn") and \
 			not path.ends_with(".cfg"):
 			continue
-		if not FileAccess.file_exists(path):
+		if path == SELF or not FileAccess.file_exists(path):
 			continue
 		var text: String = FileAccess.get_file_as_string(path).to_lower()
 		for banned in BANNED:

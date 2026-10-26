@@ -18,6 +18,12 @@ PIN="$(cat scripts/pin.txt)"
 GODOT_VER="$("$GODOT_BIN" --version 2>/dev/null || true)"
 echo "CI: pinned=$PIN  actual=$GODOT_VER"
 
+# Register class_names (and import assets) first. On a fresh checkout without
+# .godot/, GUT and the class_name scripts are unknown until this runs, and the
+# suite would not start at all.
+echo "CI: importing project..."
+"$GODOT_BIN" --headless --path . --import >/dev/null 2>&1 || true
+
 # M1: generate a headless bot-driven trace of the demo (movement + FPV/TPV toggle)
 # before the test run so tests/test_m1_trace.gut.gd has something to check.
 echo "CI: generating m1 bot trace..."
@@ -107,6 +113,17 @@ if [ ! -f test_results/m8_playthrough.txt ] || [ ! -f test_results/m8_perf_repor
   exit 1
 fi
 echo "CI: m8 trace present (playthrough: $(wc -l < test_results/m8_playthrough.txt) lines, perf: $(wc -l < test_results/m8_perf_report.txt) lines)"
+
+# M10: generate the headless dogfight trace so tests/test_m10_dogfight.gut.gd can
+# check "the starfighter flies and fights, the encounter's waves are beaten, the
+# enemy pilots fight back, and the AI pursues, attacks, breaks and extends."
+echo "CI: generating m10 dogfight trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m10_dogfight_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m10_dogfight_trace.txt ]; then
+  echo "CI: ERROR -- m10 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m10 trace present ($(wc -l < test_results/m10_dogfight_trace.txt) lines)"
 
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes

@@ -1,0 +1,17 @@
+{
+  "id": "veteran",
+  "label": "Veteran",
+  "steer_gain": 3.2,
+  "aim_cone_deg": 5.0,
+  "aim_error": 0.025,
+  "engage_range": 700.0,
+  "break_distance": 110.0,
+  "break_time": 1.6,
+  "break_on_hit": 0.45,
+  "extend_distance": 420.0,
+  "evade_missile": 0.6,
+  "attack_throttle": 0.7,
+  "retarget_interval": 1.5,
+  "missile_use": true,
+  "note": "Patient. Uses seekers when it has them."
+}

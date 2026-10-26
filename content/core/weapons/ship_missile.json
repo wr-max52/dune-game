@@ -1,0 +1,20 @@
+{
+  "id": "ship_missile",
+  "class": "ship_missile",
+  "label": "Seeker Missile",
+  "fire_group": "secondary",
+  "homing": true,
+  "damage": 55,
+  "bolt_speed": 130.0,
+  "turn_rate": 2.2,
+  "rate": 1.0,
+  "recoil": 0.0,
+  "range": 1500.0,
+  "mag": 2,
+  "reload_time": 12.0,
+  "lock_time": 1.4,
+  "lock_cone_deg": 20.0,
+  "lock_range": 1100.0,
+  "visible_bolt": true,
+  "note": "IP-neutral. Needs a lock: keep the target in the cone for lock_time seconds."
+}
