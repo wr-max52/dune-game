@@ -27,6 +27,7 @@ the town, and the bartender hears about it.
 | 7 | Gate dialogue: barks + choice card | **DONE** (`gate_guard_lines.json`, `src/ui/checkpoint_hud.gd`) |
 | 8 | Combat (shoot back, cover, alert) | **DONE** (`cover_picker.gd`, rifle on `NpcBody`, `gate_checkpoint.gd`) |
 | 9 | Outcomes write the world | **DONE** (`WorldState.on_gate_bribe / on_guard_killed / on_player_downed`, 3 new rumors) |
+| 11 | Whole garrison + town alarm, sound, crouch, smuggling | **DONE** (part 3: `town_alarm.gd`, `garrison.gd`, `npc_sounds.json`, `garrison_trace.gd`) |
 | 10 | Headless trace + play test | trace **DONE** (`scenes/combat_trace.gd`); play test is yours |
 
 **Product owner decisions for part 2 (2026-10-26):** the four standing bands as

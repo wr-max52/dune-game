@@ -2,7 +2,34 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M15 part 2, combat NPCs (2026-10-26)
+## After M15 part 3, garrison, sound, crouching, smuggling (2026-10-26)
+
+**What is real and proven by tests:** with real physics (`test_results/garrison_trace.txt`):
+hurting a barracks trooper raises the town alarm, the klaxon sounds, all five
+troopers fight and the far one closes in; the tower sentry spots a wanted player in
+the street, warns, raises the alarm, shoots, and stays on the tower; rifles,
+footsteps, radio chatter, hurt and the klaxon play; crouching shrinks the capsule to
+1.05 m and the eye to 1 m, a crouched player behind a barricade is not seen, and you
+stay down under a low lid; a search finds contraband and every answer works (hand
+over, pay to keep, run, bribe first); papers can become a spot search; the whole
+smuggling loop runs (cache, checkpoint, fence, 90 cr). The combat trace's fights now
+involve all five troopers and the bot still wins, runs and gets knocked out.
+
+**Not done, honestly:**
+- **Not played or listened to by a human.** The chatter and klaxon are synthesized
+  and have only been checked as files that load and play; they may want a real
+  sound pass. Volumes and distances are first guesses.
+- **The search only knows the `contraband` flag.** Your blasters are never
+  confiscated (everyone is armed out here), and nothing is "suspicious but legal".
+- **One cache, once.** The drop does not refill; there is one fence and one good.
+- **Dead troopers come back** when the scene reloads, as before.
+- **Troopers do not climb the tower** or replace the sentry; nobody calls
+  reinforcements from outside town.
+- **The alarm has one stage.** No "investigate" stage between calm and war.
+- **The barricades are still greybox crates** in the look.
+- **No ragdolls**, and the death sound is the hurt sound pitched down.
+
+## After M15 part 2, combat NPCs (2026-10-26) -- still current except "Only the gate", "No sounds", the crouch hitbox and "Search is a 3 s freeze", which part 3 did.
 
 **What is real and proven by tests:** with real physics and a fresh town per
 scenario (`test_results/combat_trace.txt`): both guards walk their loops and come

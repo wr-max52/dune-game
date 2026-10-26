@@ -88,7 +88,7 @@ func test_soldier_markers_name_real_profiles() -> void:
 			var s: Dictionary = cc.get_soldier(str(m.soldier))
 			assert_false(s.is_empty(), "%s names soldier %s" % [m.id, m.soldier])
 			assert_true(s.has("perception") and s.has("nav"), "%s's profile has senses and pathing" % m.id)
-	assert_eq(live, 2, "the two gate guards are live")
+	assert_eq(live, 5, "the gate guards, the tower sentry and the barracks pair are live")
 
 
 func test_noise_events() -> void:

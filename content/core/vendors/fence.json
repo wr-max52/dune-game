@@ -1,0 +1,15 @@
+{
+  "id": "fence",
+  "label": "Fence",
+  "location": "port_town",
+  "marker": "vendor_3",
+  "reach": 3.5,
+  "buys": [
+    "contraband"
+  ],
+  "buy_rate": 1.0,
+  "sell_rate": 1.6,
+  "stock": [],
+  "pitch": "The %s pays well for things with no serial numbers",
+  "note": "IP-neutral. A market stall that buys contraband at full value and asks no questions. Smuggling: pick it up outside the gate, get it past the checkpoint, sell it here."
+}

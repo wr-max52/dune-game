@@ -70,7 +70,7 @@ var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 var nav: TownNav                      ## the walkable surface NPCs path on
 var npcs: Array = []                  ## NpcBody, one per soldier marker
-var checkpoint: GateCheckpoint        ## M15: runs the gate guards (null with npc_brains off)
+var garrison: Garrison                ## M15: runs every trooper in town (null with npc_brains off)
 var town_name := ""                   ## issue #15: this town's generated name ("" when its world names none)
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
@@ -331,11 +331,11 @@ func _build_npcs() -> void:
 		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
 		built_markers += 1
 	if npc_brains and not npcs.is_empty():
-		checkpoint = GateCheckpoint.new()
-		checkpoint.name = "GateCheckpoint"
-		add_child(checkpoint)
-		checkpoint.setup(self, npcs)
-		checkpoint.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+		garrison = Garrison.new()
+		garrison.name = "Garrison"
+		add_child(garrison)
+		garrison.setup(self, npcs)
+		garrison.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
 
 
 func npc(post_id: String) -> NpcBody:

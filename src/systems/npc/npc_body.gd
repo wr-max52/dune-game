@@ -55,8 +55,15 @@ var bolt_parent: Node3D        ## where bolts live (the scene root)
 var aim_point := Vector3.INF   ## where the rifle points (INF = at ease)
 var shots_fired := 0
 var _speech: Label3D
+
+## M15: what it sounds like (content/look/npc_sounds.json). Counts are for traces.
+const SOUNDS_PATH := "res://content/look/npc_sounds.json"
+static var _sound_cfg: Dictionary = {}
+var sounds_played: Dictionary = {}     ## "rifle" | "voice" | "hurt" | "death" -> count
+var steps_playing := false
+var _sfx: Dictionary = {}              ## key -> AudioStreamPlayer3D
+var _rng_sfx := RandomNumberGenerator.new()
 var _speech_left := 0.0
-var _crouched_shape := false
 var facing := 0.0              ## radians, rotation.y the body is turning toward
 var post_pos := Vector3.ZERO
 var post_facing := 0.0
@@ -157,6 +164,7 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_speech.modulate = Color(1.0, 0.93, 0.78)
 	_speech.visible = false
 	add_child(_speech)
+	_build_sounds()
 	_nameplate = Label3D.new()
 	_nameplate.name = "Nameplate"
 	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -166,6 +174,80 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_nameplate.modulate = Color(0.96, 0.92, 0.84)
 	_nameplate.visible = false
 	add_child(_nameplate)
+
+
+static func sound_cfg() -> Dictionary:
+	if _sound_cfg.is_empty():
+		_sound_cfg = CharacterKit._read_json(SOUNDS_PATH)
+	return _sound_cfg
+
+
+func _player3d(key: String, stream_path: String, c: Dictionary) -> AudioStreamPlayer3D:
+	var a := AudioStreamPlayer3D.new()
+	a.name = "Sfx_" + key
+	if stream_path != "" and ResourceLoader.exists(stream_path):
+		a.stream = load(stream_path)
+	a.volume_db = float(c.get("volume_db", 0.0))
+	a.unit_size = float(c.get("unit_size", 6.0))
+	a.max_distance = float(c.get("max_distance", 60.0))
+	a.position.y = 1.4
+	add_child(a)
+	_sfx[key] = a
+	return a
+
+
+func _build_sounds() -> void:
+	_rng_sfx.seed = hash(name)
+	var cfg := sound_cfg()
+	for key in ["rifle", "hurt", "death"]:
+		var c: Dictionary = cfg.get(key, {})
+		_player3d(key, str(c.get("stream", "")), c)
+	var st: Dictionary = cfg.get("steps", {})
+	var steps := _player3d("steps", "", st)
+	steps.position.y = 0.1
+	var sp := str(st.get("stream", ""))
+	if sp != "" and ResourceLoader.exists(sp):
+		var stream = (load(sp) as AudioStream).duplicate()
+		if stream is AudioStreamOggVorbis:
+			stream.loop = true
+		steps.stream = stream
+	_player3d("voice", "", cfg.get("voice", {}))
+
+
+## Play a one-shot: the stream is set, a pitch picked from the config's range.
+func play_sfx(key: String, stream: AudioStream = null, volume_db := INF) -> void:
+	var a: AudioStreamPlayer3D = _sfx.get(key)
+	if a == null:
+		return
+	if stream != null:
+		a.stream = stream
+	if a.stream == null:
+		return
+	var c: Dictionary = sound_cfg().get(key, {})
+	var pr: Array = c.get("pitch", [1.0, 1.0])
+	a.pitch_scale = _rng_sfx.randf_range(float(pr[0]), float(pr[1]))
+	if volume_db != INF:
+		a.volume_db = volume_db
+	if a.is_inside_tree():
+		a.play()
+	sounds_played[key] = int(sounds_played.get(key, 0)) + 1
+
+
+## Footsteps loop while walking or running on the ground; quieter crouched.
+func _tick_steps() -> void:
+	var a: AudioStreamPlayer3D = _sfx.get("steps")
+	if a == null or a.stream == null:
+		return
+	var speed := Vector2(velocity.x, velocity.z).length()
+	var on := not dead and is_on_floor() and speed > 0.6
+	var c: Dictionary = sound_cfg().get("steps", {})
+	a.volume_db = float(c.get("crouch_db", -18.0)) if bool(command.crouch) else float(c.get("volume_db", -8.0))
+	a.pitch_scale = clampf(speed / 3.2, 0.8, 1.5)
+	if on and not a.playing and a.is_inside_tree():
+		a.play()
+	elif not on and a.playing:
+		a.stop()
+	steps_playing = on
 
 
 ## The profile's weapon block over the base weapon's data (content/core/weapons).
@@ -273,6 +355,7 @@ func fire_at(point: Vector3, dt: float) -> bool:
 	if weapon_actor.shots_fired == before:
 		return false
 	shots_fired += 1
+	play_sfx("rifle")
 	NoiseEvents.emit(origin, float(weapon_cfg.get("noise_radius", 50.0)), "shot_guard")
 	return true
 
@@ -288,12 +371,22 @@ func reloading() -> bool:
 
 
 ## A line over the guard's head for a few seconds (barks; the HUD may also show it).
-func say(text: String, seconds: float = 2.6) -> void:
+func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	if _speech == null:
 		return
 	_speech.text = text
 	_speech.visible = text != ""
 	_speech_left = seconds
+	if text == "":
+		return
+	# Under the words, helmet-radio chatter (no speech engine: the line is on screen).
+	var v: Dictionary = sound_cfg().get("voice", {})
+	var list: Array = v.get("shout" if shout else "calm", [])
+	if list.is_empty():
+		return
+	var path := str(list[_rng_sfx.randi() % list.size()])
+	if ResourceLoader.exists(path):
+		play_sfx("voice", load(path), float(v.get("shout_db" if shout else "volume_db", -4.0)))
 
 
 func speaking() -> String:
@@ -307,7 +400,6 @@ func _physics_process(delta: float) -> void:
 		_fall(delta)
 		return
 	_sense(delta)
-	_set_crouch_shape(bool(command.crouch))
 	if _speech_left > 0.0:
 		_speech_left -= delta
 		if _speech_left <= 0.0:
@@ -321,6 +413,7 @@ func _physics_process(delta: float) -> void:
 		walked_m += NpcLocomotion._flat(global_position - _last_pos).length()
 	_last_pos = global_position
 	_animate(delta, move)
+	_tick_steps()
 	_debug_line()
 	_update_nameplate()
 
@@ -424,19 +517,6 @@ func target_chest_height() -> float:
 	return perception.target_chest
 
 
-## Crouching shrinks the capsule (the player's does not, yet), so a guard ducked
-## behind a 1.1 m barricade is really behind it.
-func _set_crouch_shape(on: bool) -> void:
-	if _shape == null or not (_shape.shape is CapsuleShape3D) or on == _crouched_shape:
-		return
-	_crouched_shape = on
-	var h := controller.crouch_height + 0.05 if on else capsule_height
-	var cap := (_shape.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
-	cap.height = maxf(h, capsule_radius * 2.0)
-	_shape.shape = cap
-	_shape.position.y = cap.height * 0.5
-
-
 # ------------------------------------------------------------------ damage
 
 ## Bolts call this when they know who fired them. Same-faction bolts do nothing
@@ -459,6 +539,8 @@ func apply_damage(amount: float) -> void:
 	_flinch = 1.0
 	hurt.emit(amount)
 	health.apply_damage(amount)
+	if not dead:
+		play_sfx("hurt")
 
 
 func _on_death() -> void:
@@ -470,6 +552,10 @@ func _on_death() -> void:
 	collision_mask = 1          # still rests on the floor
 	if _shape != null:
 		_shape.set_deferred("disabled", true)
+	play_sfx("death")
+	var st: AudioStreamPlayer3D = _sfx.get("steps")
+	if st != null:
+		st.stop()
 	died.emit()
 
 

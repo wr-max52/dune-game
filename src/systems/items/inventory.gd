@@ -91,7 +91,7 @@ func pick_up(pickup: Dictionary) -> bool:
 	if pid == "" or is_taken(pid):
 		return false
 	taken[pid] = true
-	add(str(pickup.get("item", "")))
+	add(str(pickup.get("item", "")), maxi(1, int(pickup.get("count", 1))))
 	return true
 
 

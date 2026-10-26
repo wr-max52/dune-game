@@ -207,17 +207,112 @@ func test_shooting_a_guard_starts_a_fight_from_anywhere() -> void:
 	assert_true(_types(ev).has("hostile"))
 
 
-func test_running_away_ends_it_and_they_remember() -> void:
+func test_a_fight_ends_only_when_the_alarm_says_so() -> void:
+	# Since the garrison: fleeing is the town alarm's call (test_town_alarm).
 	var c := _cp()
 	_tick(c, DT, { "attacked": true })
 	assert_eq(c.state, Checkpoint.State.HOSTILE)
-	var ev := _tick(c, c.n("disengage_unseen_s", 12.0) + 0.5,
-		{ "player_pos": Vector3(200, 0, 0), "unseen_s": 30.0, "noticed": false })
-	assert_true(_types(ev).has("calm"))
-	assert_true(ev.filter(func(e): return e.type == "flag" and e.name == "fled_gate_fight").size() == 1)
+	var ev := _tick(c, 20.0, { "player_pos": Vector3(200, 0, 0), "noticed": false })
+	assert_eq(c.state, Checkpoint.State.HOSTILE, "no running out the clock on the gate alone")
+	assert_false(_types(ev).has("calm"))
+	c.set_alarm(false)
 	assert_eq(c.state, Checkpoint.State.IDLE)
+	assert_gt(c.memory_left, 0.0, "and they remember")
 	ev = _tick(c, DT, { "player_pos": Vector3(110, 0, 0) })
 	assert_true(_types(ev).has("hostile"), "seen again within memory_s: straight to a fight")
+
+
+func test_alarm_puts_the_gate_on_a_war_footing_quietly() -> void:
+	var c := _cp()
+	_tick(c, DT)
+	assert_true(c.card_open)
+	c.set_alarm(true)
+	var ev := c.drain()
+	assert_eq(c.state, Checkpoint.State.HOSTILE)
+	assert_false(c.card_open, "the card closes")
+	assert_false(_types(ev).has("standing"), "no second standing hit for the same fight")
+
+
+const CELLS := [{ "id": "unmarked_cells", "label": "Unmarked power cells", "count": 3, "value": 30 }]
+
+
+func _searched(contraband: Array, credits: int = 100) -> Checkpoint:
+	var c := _cp()
+	_tick(c, DT, { "standing": -10, "credits": credits, "contraband": contraband })
+	c.answer("search")
+	c.drain()
+	_tick(c, c.n("search_s", 3.0) + 0.1, { "standing": -10, "credits": credits, "contraband": contraband })
+	return c
+
+
+func test_a_clean_search_is_through() -> void:
+	var c := _searched([])
+	assert_eq(c.state, Checkpoint.State.CLEARED)
+
+
+func test_a_search_finds_contraband() -> void:
+	var c := _searched(CELLS)
+	assert_eq(c.state, Checkpoint.State.FOUND)
+	assert_true(c.card_open)
+	assert_eq(c.choices.map(func(x): return str(x.id)), ["hand_over", "bribe_keep", "run"])
+
+
+func test_handing_it_over() -> void:
+	var c := _searched(CELLS)
+	assert_true(c.answer("hand_over"))
+	var ev := c.drain()
+	var conf: Array = ev.filter(func(e): return e.type == "confiscate")
+	assert_eq(conf.size(), 1)
+	assert_eq(conf[0].items, ["unmarked_cells"])
+	assert_eq(c.state, Checkpoint.State.CLEARED)
+	assert_true(ev.filter(func(e): return e.type == "standing").size() == 1, "a small standing hit")
+
+
+func test_paying_to_keep_it() -> void:
+	var c := _searched(CELLS)
+	var price := c.keep_price(CELLS)
+	assert_eq(price, maxi(int(cfg.found_bribe_min), int(round(90 * float(cfg.found_bribe_mult)))), "a share of what it is worth")
+	assert_true(c.answer("bribe_keep"))
+	var ev := c.drain()
+	assert_eq(int(ev.filter(func(e): return e.type == "bribe")[0].price), price)
+	assert_true(ev.filter(func(e): return e.type == "confiscate").is_empty(), "you keep it")
+	assert_eq(c.state, Checkpoint.State.CLEARED)
+	var broke := _searched(CELLS, 5)
+	assert_false(bool(broke.choices[1].enabled))
+	assert_false(broke.answer("bribe_keep"))
+
+
+func test_running_with_it() -> void:
+	var c := _searched(CELLS)
+	assert_true(c.answer("run"))
+	assert_true(_types(c.drain()).has("hostile"))
+	var c2 := _searched(CELLS)
+	var ev := _tick(c2, 0.2, { "standing": -10, "player_pos": INSIDE + Vector3(-6, 0, 0), "contraband": CELLS })
+	assert_true(_types(ev).has("hostile"), "walking off with the card open is running")
+
+
+func test_bribing_first_skips_the_search() -> void:
+	var c := _cp()
+	_tick(c, DT, { "standing": -10, "credits": 100, "contraband": CELLS })
+	assert_true(c.answer("bribe"))
+	assert_eq(c.state, Checkpoint.State.CLEARED, "nobody looked in your pockets")
+
+
+func test_papers_can_turn_into_a_spot_search() -> void:
+	var c := _cp()
+	c.cfg = c.cfg.duplicate(true)
+	c.cfg["spot_check_chance"] = 1.0
+	_tick(c, DT)
+	c.answer("papers")
+	var ev := c.drain()
+	assert_true(_barks(ev).has("spot_check"))
+	assert_eq(c.state, Checkpoint.State.SEARCHING)
+	var never := _cp()
+	never.cfg = never.cfg.duplicate(true)
+	never.cfg["spot_check_chance"] = 0.0
+	_tick(never, DT)
+	never.answer("papers")
+	assert_eq(never.state, Checkpoint.State.CLEARED)
 
 
 func test_all_guards_down_ends_it() -> void:

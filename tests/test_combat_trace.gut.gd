@@ -96,18 +96,19 @@ func test_escalation() -> void:
 func test_the_fight() -> void:
 	assert_true(_b("FIGHT_WARN_FIRST"), "hostile standing warns first")
 	assert_between(_f("FIGHT_HOSTILE_AFTER_S"), 2.0, 4.0)
-	assert_eq(_f("FIGHT_COVER_SPOTS"), 2.0, "both guards took cover")
+	assert_gte(_f("FIGHT_COVER_SPOTS"), 2.0, "the gate guards (at least) took cover")
 	assert_true(_b("FIGHT_COVER_DISTINCT"), "different spots")
 	assert_true(_b("FIGHT_COVER_HIDES_FROM_PLAYER"), "that really hide them")
 	assert_true(_b("FIGHT_COVER_STAYS_INSIDE"), "on their side of the gate")
-	assert_eq(_f("FIGHT_CROUCHED_BEHIND_COVER"), 2.0)
+	assert_gte(_f("FIGHT_CROUCHED_BEHIND_COVER"), 2.0)
 	assert_gt(_f("FIGHT_GUARD_SHOTS"), 6.0, "they shoot")
 	assert_gt(_f("FIGHT_PLAYER_HITS"), 1.0, "and hit a player standing in the open")
 
 
 func test_you_can_win() -> void:
 	assert_true(_b("FIGHT_WON"), "both guards down")
-	assert_eq(_f("FIGHT_KILLED"), 2.0)
+	assert_eq(_f("FIGHT_KILLED"), _f("FIGHT_TROOPERS"), "the alarm brings the whole garrison: all of them down")
+	assert_eq(_f("FIGHT_TROOPERS"), 5.0)
 	assert_eq(_s("FIGHT_STATE_AFTER"), "IDLE")
 	assert_lte(_f("FIGHT_STANDING_DELTA"), -30.0, "standing drops hard")
 	assert_true(_b("FIGHT_FLAG_FIGHT"))

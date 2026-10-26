@@ -1,0 +1,32 @@
+{
+  "id": "tower_sentry",
+  "base": "gate_guard",
+  "label": "Tower sentry",
+  "role": "sentry",
+  "note": "The watchtower post. A gate guard with longer eyes who never leaves the tower: it watches the gate and the street, shouts the alarm, and shoots from up there. Only the blocks below differ from gate_guard.json.",
+  "hp": 50,
+  "perception": {
+    "sight_range": 60.0,
+    "fov_deg": 150.0,
+    "reaction_s": 1.2,
+    "footstep_range": 0.0
+  },
+  "combat": {
+    "hold_ground": true,
+    "aim_error_deg": 2.6,
+    "burst_min": 2,
+    "burst_max": 4,
+    "hide_min_s": 1.6,
+    "hide_max_s": 3.0,
+    "cover_search_radius": 0.0,
+    "hold_radius": 2.3
+  },
+  "patrol": {
+    "pause_s": 6.0,
+    "look_around_deg": 70.0,
+    "look_every_s": 3.0
+  },
+  "alarm": {
+    "raise_on_hostile_sight": true
+  }
+}

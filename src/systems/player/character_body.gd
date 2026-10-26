@@ -108,6 +108,13 @@ func _physics_process(delta: float) -> void:
 			Input.is_action_pressed(jump_action)     # M13: held, for the jetpack
 		)
 
+	# M15: crouching shrinks the capsule, so cover really covers you (and the
+	# guards, who use this same body). You stay down while there is no room to
+	# stand (under a low overhang), whatever the key says.
+	if not bool(controller.command.crouch) and crouched_shape and not can_stand():
+		controller.command.crouch = true
+	_set_crouch_shape(bool(controller.command.crouch))
+
 	# Physics is the authority on position and ground contact. The pure controller
 	# only decides velocity and pose. Previously the node overwrote global_position
 	# with the controller's own integration every frame, which threw away whatever
@@ -138,6 +145,54 @@ func _physics_process(delta: float) -> void:
 	elif not on_floor and _was_on_floor and velocity.y > 0.5:
 		jumped.emit()
 	_was_on_floor = on_floor
+
+
+## True while the capsule is the short crouched one.
+var crouched_shape := false
+var _shape_node: CollisionShape3D
+
+
+func _capsule() -> CollisionShape3D:
+	if _shape_node == null or not is_instance_valid(_shape_node):
+		for c in get_children():
+			if c is CollisionShape3D and c.shape is CapsuleShape3D:
+				_shape_node = c
+				break
+	return _shape_node
+
+
+## Crouched: a capsule as tall as the crouch pose; standing: the full one.
+func _set_crouch_shape(on: bool) -> void:
+	var col := _capsule()
+	if col == null or on == crouched_shape:
+		return
+	crouched_shape = on
+	var h := controller.crouch_height + 0.05 if on else capsule_height
+	var cap := (col.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
+	cap.height = maxf(h, capsule_radius * 2.0)
+	col.shape = cap
+	col.position.y = cap.height * 0.5
+
+
+## Room to stand up here: a full-height capsule would not hit anything.
+func can_stand() -> bool:
+	if not is_inside_tree():
+		return true
+	var cap := CapsuleShape3D.new()
+	cap.radius = capsule_radius * 0.95
+	cap.height = capsule_height
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = cap
+	q.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, capsule_height * 0.5 + 0.06, 0))
+	q.exclude = [get_rid()]
+	q.collide_with_areas = false
+	return get_world_3d().direct_space_state.intersect_shape(q, 1).is_empty()
+
+
+## Collision height right now (crouched or standing).
+func current_height() -> float:
+	var col := _capsule()
+	return (col.shape as CapsuleShape3D).height if col != null else capsule_height
 
 
 ## M13: run the jetpack (if one is attached) and hand its thrust to the controller.

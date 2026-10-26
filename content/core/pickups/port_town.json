@@ -12,6 +12,19 @@
         9.5
       ],
       "reach": 2.0
+    },
+    {
+      "id": "desert_cache",
+      "item": "unmarked_cells",
+      "count": 3,
+      "marker": "desert_exit",
+      "offset": [
+        22.0,
+        0.0,
+        16.0
+      ],
+      "reach": 2.0,
+      "note": "A smuggler's drop outside the east gate: three cases of unmarked cells. Worth 90 cr to the fence, if you can get them past the checkpoint."
     }
   ],
   "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of the pit's north-east ramp, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved)."
