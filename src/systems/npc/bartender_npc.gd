@@ -58,6 +58,9 @@ func _process(dt: float) -> void:
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]
 	(joints.pelvis as Node3D).position.y = out.pelvis_y
 	_upper(dt)
+	# The rigged model (characters.json "model") follows the joints after the IK.
+	if body.has_meta("skin"):
+		(body.get_meta("skin") as SkinnedBody).sync(body)
 
 
 func _upper(_dt: float) -> void:

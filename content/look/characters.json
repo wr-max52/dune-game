@@ -45,7 +45,17 @@
       "height": 1.74, "bulk": 1.0,
       "vest": "#4a2e22", "shirt": "#b9a98a", "apron": "#2e2620", "wrap": "#7a3b1e", "trousers": "#3a302a",
       "towel": "#c9b896", "prosthetic": "#6b6660", "prosthetic_glow": "#7fd0c8", "lens": "#e0a050", "mask": "#3c3a36",
-      "boots": "#2a2220", "gloves": "#2a2220", "under": "#3a302a"
+      "boots": "#2a2220", "gloves": "#2a2220", "under": "#3a302a",
+      "model": {
+        "scene": "res://assets/characters/oda/oda.glb",
+        "bones": {
+          "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
+          "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
+          "r_shoulder": "RightArm", "r_elbow": "RightForeArm", "r_wrist": "RightHand",
+          "l_hip": "LeftUpLeg", "l_knee": "LeftLeg", "l_ankle": "LeftFoot",
+          "r_hip": "RightUpLeg", "r_knee": "RightLeg", "r_ankle": "RightFoot"
+        }
+      }
     },
     "player_smuggler": {
       "height": 1.8, "bulk": 1.0,

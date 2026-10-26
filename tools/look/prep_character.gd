@@ -16,6 +16,13 @@ extends SceneTree
 ## - cut: drop every triangle whose centroid falls in a box (mesh space, metres).
 ## - drop the small loose islands a cut leaves behind.
 ## - emission: attach the separate glow texture (goggles, wrist lights).
+## - attach: weld a separately generated prop (Oda's gas mask) onto one bone. The prop
+##   is scaled by `scale` and moved to `at` (mesh space, metres), every vertex goes
+##   100% to `bone`, and `cut` boxes (prop space) drop triangles, only light-coloured
+##   ones when `light` is set (the mannequin bust the generator put inside the mask).
+##   `tint` multiplies its albedo; `discs` add flat glowing lenses (prop space centre
+##   and radius, facing +Z).
+## - decimate: cut a surface (or an attached prop) down to about this many triangles.
 
 const CFG_PATH := "res://content/look/character_models.json"
 
@@ -73,6 +80,8 @@ func _prep_mesh(mi: MeshInstance3D, cfg: Dictionary) -> void:
 			_reweight(arr, mi, cfg.reweight)
 		var before := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 		arr[Mesh.ARRAY_INDEX] = _cut(arr, cfg.get("cut", []), int(cfg.get("min_island_tris", 0)))
+		if cfg.has("decimate"):
+			arr = _decimate(arr, int(cfg.decimate))
 		var after := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 		print("prep: surface %d  %d -> %d triangles" % [s, before, after])
 		var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if (arr[Mesh.ARRAY_BONES] as PackedInt32Array).size() == (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() * 8 else 0
@@ -87,7 +96,178 @@ func _prep_mesh(mi: MeshInstance3D, cfg: Dictionary) -> void:
 			m.emission_energy_multiplier = float(e.get("energy", 1.0))
 			mat = m
 		out.surface_set_material(s, mat)
+	if mi.skin != null:
+		for a in cfg.get("attach", []):
+			_attach(out, mi, a)
 	mi.mesh = out
+
+
+func _attach(out: ArrayMesh, mi: MeshInstance3D, a: Dictionary) -> void:
+	var bone := _bind_index(mi, str(a.bone))
+	if bone < 0:
+		push_warning("prep: attach bone '%s' missing" % a.bone)
+		return
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(ProjectSettings.globalize_path(str(a.source)), state) != OK:
+		push_error("prep: cannot read " + str(a.source))
+		return
+	var prop := doc.generate_scene(state)
+	var k := float(a.scale)
+	var at := Vector3(a.at[0], a.at[1], a.at[2])
+	var per := (out.surface_get_arrays(0)[Mesh.ARRAY_BONES] as PackedInt32Array).size() / (out.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if per == 8 else 0
+	for pm in prop.find_children("*", "MeshInstance3D", true, false):
+		var src := (pm as MeshInstance3D).mesh
+		for s in src.get_surface_count():
+			var arr := src.surface_get_arrays(s)
+			var mat := src.surface_get_material(s)
+			var albedo: Image = null
+			if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
+				albedo = (mat as BaseMaterial3D).albedo_texture.get_image()
+				albedo.decompress()
+			var before := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+			arr[Mesh.ARRAY_INDEX] = _cut_prop(arr, a.get("cut", []), albedo)
+			if a.has("decimate"):
+				arr = _decimate(arr, int(a.decimate))
+			print("prep: attach %s  %d -> %d triangles" % [a.get("what", ""), before, (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3])
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			for i in v.size():
+				v[i] = at + v[i] * k
+			arr[Mesh.ARRAY_VERTEX] = v
+			_skin_to(arr, v.size(), bone, per)
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, flags)
+			if mat is BaseMaterial3D and a.has("tint"):
+				mat = (mat as BaseMaterial3D).duplicate()
+				(mat as BaseMaterial3D).albedo_color = Color(str(a.tint))
+			out.surface_set_material(out.get_surface_count() - 1, mat)
+	prop.free()
+	for d in a.get("discs", []):
+		var c := at + Vector3(d.center[0], d.center[1], d.center[2]) * k
+		var r := float(d.radius) * k
+		var verts := PackedVector3Array([c])
+		var idx := PackedInt32Array()
+		var n := 24
+		for i in n:
+			var t := TAU * i / n
+			verts.append(c + Vector3(cos(t) * r, sin(t) * r, 0.0))
+			idx.append_array([0, 1 + (i + 1) % n, 1 + i])   # clockwise from the front (Godot culls CCW)
+		var norms := PackedVector3Array()
+		norms.resize(verts.size())
+		norms.fill(Vector3(0, 0, 1))
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = verts
+		arr[Mesh.ARRAY_NORMAL] = norms
+		arr[Mesh.ARRAY_INDEX] = idx
+		_skin_to(arr, verts.size(), bone, per)
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, flags)
+		var glow := StandardMaterial3D.new()
+		glow.albedo_color = Color(str(d.color))
+		glow.emission_enabled = true
+		glow.emission = Color(str(d.color))
+		glow.emission_energy_multiplier = float(d.get("energy", 2.0))
+		out.surface_set_material(out.get_surface_count() - 1, glow)
+	print("prep: attached %s to %s" % [a.get("what", ""), a.bone])
+
+
+## The coarsest LOD meshoptimizer makes that still has `target` triangles or more,
+## with the unused vertices dropped. Rodin's high tier is ~500k triangles; the game
+## wants tens of thousands.
+static func _decimate(arr: Array, target: int) -> Array:
+	var tris := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+	if tris <= target:
+		return arr
+	var im := ImporterMesh.new()
+	im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr)
+	im.generate_lods(25.0, 60.0, [])
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	for lod in im.get_surface_lod_count(0):
+		var li := im.get_surface_lod_indices(0, lod)
+		if li.size() / 3 < target:
+			break
+		idx = li
+	# Compact: keep only the vertices the chosen indices use.
+	var remap := PackedInt32Array()
+	remap.resize((arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+	remap.fill(-1)
+	var keep := PackedInt32Array()
+	var out_idx := PackedInt32Array()
+	out_idx.resize(idx.size())
+	for i in idx.size():
+		var vi := idx[i]
+		if remap[vi] < 0:
+			remap[vi] = keep.size()
+			keep.append(vi)
+		out_idx[i] = remap[vi]
+	var out := []
+	out.resize(Mesh.ARRAY_MAX)
+	for k in Mesh.ARRAY_MAX:
+		var src = arr[k]
+		if src == null or k == Mesh.ARRAY_INDEX:
+			continue
+		var per: int = src.size() / remap.size()
+		var dst = src.duplicate()
+		dst.resize(keep.size() * per)
+		for i in keep.size():
+			for j in per:
+				dst[i * per + j] = src[keep[i] * per + j]
+		out[k] = dst
+	out[Mesh.ARRAY_INDEX] = out_idx
+	return out
+
+
+static func _skin_to(arr: Array, count: int, bone: int, per: int) -> void:
+	var bones := PackedInt32Array()
+	var weights := PackedFloat32Array()
+	bones.resize(count * per)
+	weights.resize(count * per)
+	for i in count:
+		bones[i * per] = bone
+		weights[i * per] = 1.0
+	arr[Mesh.ARRAY_BONES] = bones
+	arr[Mesh.ARRAY_WEIGHTS] = weights
+
+
+## Triangles of a prop that survive its cut boxes. With `light` [min_value, max_sat]
+## only triangles whose three texels are that light and grey go.
+func _cut_prop(arr: Array, boxes: Array, albedo: Image) -> PackedInt32Array:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var kept := PackedInt32Array()
+	for t in range(0, idx.size(), 3):
+		var c := (v[idx[t]] + v[idx[t + 1]] + v[idx[t + 2]]) / 3.0
+		var drop := false
+		for b in boxes:
+			var box := AABB(Vector3(b.min[0], b.min[1], b.min[2]), Vector3(b.max[0], b.max[1], b.max[2]) - Vector3(b.min[0], b.min[1], b.min[2]))
+			if not box.has_point(c):
+				continue
+			if not b.has("light") or albedo == null:
+				drop = true
+			else:
+				drop = true
+				for j in 3:
+					var px := Vector2i((uv[idx[t + j]] * Vector2(albedo.get_size())).clamp(Vector2.ZERO, Vector2(albedo.get_size() - Vector2i.ONE)))
+					var col := albedo.get_pixelv(px)
+					if col.v < float(b.light[0]) or col.s > float(b.light[1]):
+						drop = false
+			if drop:
+				break
+		if not drop:
+			kept.append_array([idx[t], idx[t + 1], idx[t + 2]])
+	return kept
+
+
+static func _bind_index(mi: MeshInstance3D, bone_name: String) -> int:
+	var skel := mi.get_node_or_null(mi.skeleton) as Skeleton3D
+	for b in mi.skin.get_bind_count():
+		var n := String(mi.skin.get_bind_name(b))
+		if n == "" and skel != null and mi.skin.get_bind_bone(b) >= 0:
+			n = skel.get_bone_name(mi.skin.get_bind_bone(b))
+		if n == bone_name:
+			return b
+	return -1
 
 
 ## `skip_hue` [lo, hi] (optional): leave vertices whose texel has that hue and some

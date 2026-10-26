@@ -26,5 +26,143 @@
     },
     "cut": [],
     "min_island_tris": 0
+  },
+  "oda": {
+    "note": "Hyper3D Rodin Gen-2.5 from the back view of the Oda concept sheet plus a prompt (generation 956d7578-f9a6-4ea1-a8eb-6444d7533ab9), rigged with the human template (3e7b6945-662f-4547-8b95-5a7e74d47c2c). The concept has no gas mask, and given the front view Rodin copied its cloth face wrap, so the mask is a separate Rodin prop (670e4d6c-4112-46fc-aa69-553a19e740a5) welded onto the head; its mannequin bust is cut and its lenses are covered by glowing yellow discs.",
+    "source": "res://assets/characters/oda/source/oda_rigged.glb",
+    "out": "res://assets/characters/oda/oda.glb",
+    "flatten": [],
+    "reweight": {
+      "to": "Hips",
+      "radius": 0.11
+    },
+    "cut": [],
+    "min_island_tris": 0,
+    "decimate": 90000,
+    "attach": [
+      {
+        "what": "gas mask",
+        "source": "res://assets/characters/oda/source/gas_mask.glb",
+        "bone": "Head",
+        "scale": 0.2,
+        "at": [
+          0.015,
+          0.702,
+          0.09
+        ],
+        "cut": [
+          {
+            "what": "mannequin neck",
+            "min": [
+              -0.5,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              0.5,
+              -0.3,
+              1.0
+            ],
+            "light": [
+              0.62,
+              0.32
+            ]
+          },
+          {
+            "what": "mannequin skull",
+            "min": [
+              -0.8,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              0.8,
+              1.0,
+              0.0
+            ],
+            "light": [
+              0.62,
+              0.32
+            ]
+          },
+          {
+            "what": "stand ring, left",
+            "min": [
+              -0.8,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              -0.12,
+              -0.65,
+              1.0
+            ]
+          },
+          {
+            "what": "stand ring, right",
+            "min": [
+              0.12,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              0.8,
+              -0.65,
+              1.0
+            ]
+          },
+          {
+            "what": "stand ring, back",
+            "min": [
+              -0.12,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              0.12,
+              -0.65,
+              0.2
+            ]
+          },
+          {
+            "what": "head straps (they poke through the hood)",
+            "min": [
+              -0.9,
+              -1.0,
+              -1.0
+            ],
+            "max": [
+              0.9,
+              1.0,
+              0.12
+            ]
+          }
+        ],
+        "discs": [
+          {
+            "center": [
+              -0.22,
+              0.44,
+              0.61
+            ],
+            "radius": 0.19,
+            "color": "#ffa010",
+            "energy": 1.4
+          },
+          {
+            "center": [
+              0.22,
+              0.44,
+              0.62
+            ],
+            "radius": 0.19,
+            "color": "#ffa010",
+            "energy": 1.4
+          }
+        ],
+        "tint": "#8c7f70",
+        "decimate": 12000
+      }
+    ]
   }
 }
