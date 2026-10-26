@@ -60,6 +60,17 @@ if [ ! -f test_results/m4_frame_time.txt ]; then
 fi
 echo "CI: m4 frame-time trace present ($(wc -l < test_results/m4_frame_time.txt) lines)"
 
+# M5: generate the headless bot playthrough trace so tests/test_bot_playthrough
+# can check "fixer -> contract -> fight -> crate -> payout -> save/load close the
+# loop end to end," and the squad coordinator keeps 4 troopers off the open.
+echo "CI: generating m5 mission trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m5_mission_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m5_mission_trace.txt ]; then
+  echo "CI: ERROR -- m5 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m5 trace present ($(wc -l < test_results/m5_mission_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

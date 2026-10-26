@@ -45,6 +45,11 @@ No franchise names in code, file names, class names, commit messages, or the dat
 layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "trooper",
 "smuggler". `tests/test_ip_neutral.gut.gd` fails the build if a banned term appears.
 
+## Plan
+
+`PLAN.md` holds the 8 milestones (M0-M8) in build order, with status and the
+"done means" for each. M0-M4 are done; M5 is in progress.
+
 ## Layout
 
 ```

@@ -1,0 +1,16 @@
+{
+  "id": "crate_retrieval",
+  "label": "Crate Retrieval",
+  "fixer": "fixer",
+  "payout": 150,
+  "objective_location": "outpost",
+  "objective_item": "crate_objective",
+  "enemies": {
+    "troopers": 4,
+    "duelist": 1,
+    "trooper_hp": 100,
+    "duelist_hp": 100,
+    "duelist_deflect_fraction": 0.34
+  },
+  "note": "IP-neutral mission data. Steps: talk to fixer -> accept -> desert -> take crate -> return -> paid."
+}

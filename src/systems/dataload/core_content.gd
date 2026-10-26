@@ -18,6 +18,7 @@ var factions: Dictionary = {}
 var dialogues: Dictionary = {}   # list-id -> Array of Dictionary
 var persona_prompts: Dictionary = {}  # npc-id -> String
 var locations: Dictionary = {}    # location-id -> Dictionary (outpost, etc.)
+var missions: Dictionary = {}      # mission-id -> Dictionary (crate_retrieval, etc.)
 var _loaded := false
 
 
@@ -29,6 +30,7 @@ func load_from(root: String = ROOT) -> bool:
 	dialogues = {}
 	persona_prompts = {}
 	locations = {}
+	missions = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -39,6 +41,7 @@ func load_from(root: String = ROOT) -> bool:
 	var weapon_ids: Array = manifest.get("weapons", [])
 	var faction_ids: Array = manifest.get("factions", [])
 	var location_ids: Array = manifest.get("locations", [])
+	var mission_ids: Array = manifest.get("missions", [])
 
 	for npc_id in npc_ids:
 		var d: Dictionary = _read_dir_entry(root, "npcs", npc_id)
@@ -58,6 +61,10 @@ func load_from(root: String = ROOT) -> bool:
 		var ld: Dictionary = _read_dir_entry(root, "locations", location_id)
 		if not ld.is_empty():
 			locations[location_id] = ld
+	for mission_id in mission_ids:
+		var md: Dictionary = _read_dir_entry(root, "missions", mission_id)
+		if not md.is_empty():
+			missions[mission_id] = md
 
 	_loaded = true
 	return true
@@ -95,6 +102,10 @@ func get_faction(id: String) -> Dictionary:
 
 func get_location(id: String) -> Dictionary:
 	return locations.get(id, {})
+
+
+func get_mission(id: String) -> Dictionary:
+	return missions.get(id, {})
 
 
 func get_persona(npc_id: String) -> String:
