@@ -52,8 +52,8 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 `PLAN.md` holds the milestones in build order, with status and the "done means"
 for each. M0-M12 are done (M10 is starfighter flight and dogfights; M11 the
 player's body and hand weapons; M12 the live LLM bartender,
-`docs/bartender/BARTENDER_PLAN.md`); M13 (the jetpack, issue #5) is on its feature
-branch. `LAUNCH.md` is how to run and record the slice, fly the dogfight and use
+`docs/bartender/BARTENDER_PLAN.md`; M13 the jetpack). M14 (fly the ship from the
+port to space and back) is on its feature `LAUNCH.md` is how to run and record the slice, fly the ship, fight in space and use
 the jetpack. `docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights
 from data; `docs/ADDING_ITEMS.md` is the same for items, vendors and pickups.
 

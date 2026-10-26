@@ -19,6 +19,10 @@ var throttle := 0.5
 var boost_left := 0.0
 var boosting := false
 var command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.5, "boost": false }
+## M14: multipliers the atmosphere sets each frame (thin air is faster, climbing
+## is slower). 1.0 in space, so the dogfight flies exactly as before.
+var speed_scale := 1.0
+var accel_scale := 1.0
 
 
 func _init(flight_cfg: Dictionary = {}) -> void:
@@ -30,19 +34,19 @@ func _init(flight_cfg: Dictionary = {}) -> void:
 # ---- tuning (data-driven, with safe defaults) ------------------------------
 
 func min_speed() -> float:
-	return float(cfg.get("min_speed", 10.0))
+	return float(cfg.get("min_speed", 10.0)) * speed_scale
 
 
 func max_speed() -> float:
-	return float(cfg.get("max_speed", 40.0))
+	return float(cfg.get("max_speed", 40.0)) * speed_scale
 
 
 func boost_speed() -> float:
-	return float(cfg.get("boost_speed", max_speed() * 1.5))
+	return float(cfg.get("boost_speed", float(cfg.get("max_speed", 40.0)) * 1.5)) * speed_scale
 
 
 func accel() -> float:
-	return float(cfg.get("accel", 25.0))
+	return float(cfg.get("accel", 25.0)) * accel_scale
 
 
 func pitch_rate() -> float:

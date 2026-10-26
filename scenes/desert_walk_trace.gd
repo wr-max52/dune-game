@@ -106,6 +106,13 @@ func _run() -> void:
 	out("REACHED_GATE", ok)
 	var exit: Vector3 = demo.town.marker_pos("desert_exit")
 	out("REACHED_DESERT_EXIT", await walk_to(exit) >= 0)
+	# A collider re-centre that lands just before this can hop the player a few cm
+	# (KNOWN_ISSUES); let them settle before asking, and record how long it took.
+	var settle := 0
+	while not player.is_on_floor() and settle < 30:
+		await physics_frame
+		settle += 1
+	out("EXIT_SETTLE_FRAMES", settle)
 	out("EXIT_ON_FLOOR", player.is_on_floor())
 
 	# ---- 700 m out into the dunes and back, never falling, never stuck

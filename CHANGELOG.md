@@ -2,6 +2,65 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M14 — Fly your ship from the port to space and back (2026-10-26)
+
+What works now:
+- **The ship in the pit is yours to fly.** Walk up to it and press **E** to climb
+  in (the old "[E] Launch" straight to space is gone). **Space** lifts it straight up
+  out of the pit; it hovers until you throttle up with **R**. Fly with the dogfight
+  keys (W/S pitch, A/D turn, Q/E roll, R/F throttle, Shift boost, mouse to steer, V
+  for the cockpit view).
+- **The desert is the sky's floor.** The ship flies over the seamless desert (the
+  same sand you walk on), and its mesas and hoodoos are solid: land on a mesa top or
+  fly into one. The M5 outpost's buildings stand 3 km out as placeholders. Past the
+  desert's 6 km edge the planet's surface carries on and curves away below you. Fly
+  low over the dunes or high over the town, like a plane in an open-world game.
+- **Land anywhere, get out anywhere.** Below 150 m, **C** lands on whatever is
+  under you (street, roof, mesa top or dune) inside the desert. Once down, **E** gets
+  you out beside the ship onto ground that was built under you while you came in. The parked ship is solid; walk up and **E** to get back in.
+- **Crashes.** Hit the ground or a building fast and the ship crashes; it is towed
+  back to its pad and you stand beside it.
+- **Up through the atmosphere.** The air thins as you climb: the ship gets faster
+  (up to 4x at the top), the sky darkens to black, the clouds and haze go, stars come
+  out, and the planet curves away below. A bar on the right fills toward the
+  **edge of space at 8,000 m**. Nose up at full throttle it takes **about 33 s with
+  boost, 39 s without**, from lift-off.
+- **Into the space battle.** Crossing the edge fades into the pad's encounter (the
+  M10 orbital skirmish).
+- **And back down.** In space, dive at the planet whenever you like and you come out
+  in the port's sky at 5 km, still flying, pointed at the town. Win the fight and you
+  get 25 s to dive yourself before re-entry happens anyway. Lose your fighter and
+  you limp home to the pad on foot, as before.
+- **A flight HUD:** speed (m/s and km/h), throttle, boost, altitude, height above
+  ground, climb rate, state, and the space bar.
+
+How to see it:
+- Run the town, walk to the ship, E, Space, R, then pull back. Controls are in
+  `LAUNCH.md`. Review stills are in `docs/m14/` (`./tools/m14/shoot_flight.sh`).
+- `./scripts/ci.sh` writes `test_results/m14_flight_trace.txt`: the whole loop with
+  real physics and the real scenes. Board, lift off (3.6 s), reach space in
+  33.3 s, hand off to the space scene, dive back, arrive flying at 5.2 km, reach the
+  port in 32 s, fly a 2.8 km circuit past the outpost and over the hoodoos, land in
+  the dunes 840 m out, get out with no hitch (the walkable ground was ready), walk
+  19 m on the sand, crash into a mesa, get towed home, land on the pad. Worst frame
+  39 ms (one frame, the physics step as you step out; budget 50).
+- 438 GUT tests (436 pass, 2 need a local model and skip, as before).
+
+What is faked or outstanding:
+- Built on the seamless desert (PR #17): its `DesertTerrain` gained `prefetch()`, so
+  the walkable collider can be built ahead of a landing ship. Its collider stops
+  following you while you fly. Main's desert-walk trace now lets you settle for a
+  moment at the gate before checking you are on the floor (a collider re-centre can
+  hop you a few cm; see KNOWN_ISSUES).
+- The ship is still the stand-in model; no landing gear, no engine sound, no
+  contrails or heat on the climb.
+- Landmarks are placeholder shapes (cylinders and boxes); the outpost has no
+  enemies or mission hooked up yet; no other ships or traffic in the sky.
+- No ship weapons in the atmosphere (they fire in space only).
+- Ships rest level wherever they land, even on a slope.
+- The ship's position is not saved: a new session starts with it on the pad.
+- The world is one desert around one port. Going to space and back always uses the
+  same encounter and the same re-entry point.
 ## Seamless desert: the town sits on the dunes (2026-10-26)
 
 What works now:

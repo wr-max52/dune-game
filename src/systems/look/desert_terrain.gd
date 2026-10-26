@@ -312,25 +312,48 @@ func is_rebuilding() -> bool:
 	return _pending
 
 
+## M14: start building the collider around `pos` in the background, with the same
+## per-frame budget as a re-centre, before anything stands there: a ship coming
+## down to land. Whoever follow() points at next finds ground already there.
+## Does nothing if the collider (or the build in progress) is already close.
+func prefetch(pos: Vector3) -> void:
+	if collider_body == null:
+		return
+	if Vector2(pos.x - collider_center.x, pos.z - collider_center.z).length() < recenter_distance:
+		return
+	if _pending and Vector2(pos.x - _pending_center.x, pos.z - _pending_center.z).length() < recenter_distance:
+		return
+	_pending = true
+	_pending_center = snapped_center(pos)
+	_pending_row = 0
+	_pending_data = PackedFloat32Array()
+	_pending_data.resize((collider_cells + 1) * (collider_cells + 1))
+	set_physics_process(true)
+
+
 func _physics_process(_dt: float) -> void:
-	if _target == null or not is_instance_valid(_target) or collider_body == null:
+	if collider_body == null:
 		return
-	var p := _target.global_position
-	# Teleported (a respawn, a scripted move) past the edge: rebuild now. A one-off
-	# hitch beats falling through the world.
-	if not collider_covers(p.x, p.z, 8.0):
-		snap_to(p)
-		return
-	if _pending and Vector2(p.x - _pending_center.x, p.z - _pending_center.z).length() >= recenter_distance:
-		_pending = false             # the target left the area being built; start over
-	if not _pending:
-		if Vector2(p.x - collider_center.x, p.z - collider_center.z).length() < recenter_distance:
+	var following := _target != null and is_instance_valid(_target)
+	if not following and not _pending:
+		return                       # nothing to follow and nothing prefetching
+	if following:
+		var p := _target.global_position
+		# Teleported (a respawn, a scripted move) past the edge: rebuild now. A one-off
+		# hitch beats falling through the world.
+		if not collider_covers(p.x, p.z, 8.0):
+			snap_to(p)
 			return
-		_pending = true
-		_pending_center = snapped_center(p)
-		_pending_row = 0
-		_pending_data = PackedFloat32Array()
-		_pending_data.resize((collider_cells + 1) * (collider_cells + 1))
+		if _pending and Vector2(p.x - _pending_center.x, p.z - _pending_center.z).length() >= recenter_distance:
+			_pending = false             # the target left the area being built; start over
+		if not _pending:
+			if Vector2(p.x - collider_center.x, p.z - collider_center.z).length() < recenter_distance:
+				return
+			_pending = true
+			_pending_center = snapped_center(p)
+			_pending_row = 0
+			_pending_data = PackedFloat32Array()
+			_pending_data.resize((collider_cells + 1) * (collider_cells + 1))
 	var t0 := Time.get_ticks_usec()
 	var budget_us := int(rebuild_budget_ms * 1000.0)
 	while _pending_row <= collider_cells:

@@ -33,6 +33,7 @@ func test_out_of_the_gate_onto_sand() -> void:
 	assert_eq(t.get("REACHED_GATE"), "true")
 	assert_eq(t.get("REACHED_DESERT_EXIT"), "true")
 	assert_eq(t.get("EXIT_ON_FLOOR"), "true")
+	assert_lt(int(t.get("EXIT_SETTLE_FRAMES", 99)), 30, "at most a brief hop when the collider re-centres")
 
 
 func test_into_the_dunes_and_back() -> void:

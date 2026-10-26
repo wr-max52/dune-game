@@ -2,6 +2,71 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — M14 (fly the ship from the port to space and back)
+
+- **The atmosphere is the town scene, space is the dogfight scene.** The town got a
+  world around it and a flyable ship; space stays the M10 scene. The hand-off is at
+  the edge of space (8 km), through GameFlow, like the old pad launch. Alternative:
+  one continuous scene from the ground to orbit -- rejected for now: two very
+  different scales (a 200 m town, 20 km of desert, a 6 km planet sphere in space)
+  and large-world precision. Fading at the edge of space hides the cut, and each
+  scene keeps what it is good at.
+- **Fly over the seamless desert, do not ship a second one.** M14 was first built
+  with its own desert (terrain mesh, walkable patch, mesas); the seamless desert
+  (PR #17) landed first. M14 now reads it: the ship's ground is
+  `DesertTerrain.height_at`, its mesas and hoodoos (from
+  `content/look/desert_landforms.json`, same skip rule) are columns the ship hits,
+  and the walkable ground is its collider. M14 only adds what it lacks: the planet
+  past its 6 km edge, the outpost, and `prefetch()`.
+- **The walkable collider follows feet, not ships.** A ship at 300 m/s would drag
+  it into a rebuild every frame and a synchronous snap at every edge. So it stops
+  following while you are seated, `prefetch()` builds it under a landing ship (or
+  at the pad before a tow) with the same per-frame budget, and it follows you
+  again when you get out. Landing is allowed only inside the desert (beyond it
+  there is nothing to stand on).
+- **Same pattern: pure spine, thin node.** `WorldTerrain` (height), `WorldGround`
+  (ground under a point, obstacles) and `AtmoFlight` (the ship's states and
+  physics) are RefCounted and headless; `ShipPilot`, `WorldScenery` and
+  `AltitudeSky` only read keys and draw. The trace flies the ship with the M10
+  fighter brain's steering through `set_external_command()`.
+- **AtmoFlight wraps the M10 flight model, it does not fork it.** The flight model
+  gained `speed_scale` and `accel_scale` (1.0 in space, so the dogfight is
+  unchanged). The atmosphere sets them each frame: thin air is faster, nose-up is
+  slower. Its own tuning is the ship's new `atmosphere` block.
+- **A VTOL fighter, not a plane.** Zero throttle hovers, lift-off is vertical, and
+  landing (C) brakes, levels and settles straight down. Alternative: runway landings
+  and stalls -- rejected: the pit is the spaceport, and a keyboard plane is hard to
+  land. GTA-style flying is the cruise, not the landing.
+- **30-40 s to space, tuned and measured.** Space at 8 km; 170 m/s top speed near the
+  ground rising to 4x at the edge; 30% speed lost straight up; 8 s of boost. Nose up
+  at full throttle: 33 s with boost, 39 s without (measured in the trace and a unit
+  test, not just computed). A 45-60 degree climb takes 41-47 s.
+- **Ship collision is pure, not physics.** The ship asks `WorldGround` for the ground
+  under it and for obstacles (town boxes, landmark cylinders and boxes) every frame.
+  That keeps the whole flight headless-provable and cheap. Floors and ramps are
+  ground, not obstacles; the town's "ship" box is skipped (it is the parked ship).
+- **The parked ship carries its own collision.** A box from the model's bounds rides
+  on the ship, solid while parked, off in flight. The pad's static box is retired
+  (it would stay behind as an invisible wall when the ship leaves). The town walk
+  traces still route around it at the pad.
+- **The planet curves past the desert's edge.** From the desert's 6 km edge the
+  surface falls away on a 120 km sphere (flat until then, so the sand and the ship's
+  ground agree), and a skirt continues it to 100 km. The ship's ground and "altitude" use the same
+  curve, so at 7 km you see a curved horizon below black sky. Altitude is measured
+  above that curved sea level.
+- **The sky is the preset, darkened by altitude.** `AltitudeSky` reads the current
+  time-of-day preset and blends its sky colours, cloud cover, fog and volumetric fog
+  toward the space values in `content/look/world.json`, and fades in a star field.
+  Cycling the lighting still works at any height.
+- **Re-entry is player-driven.** Diving at the planet in space comes back any time
+  (outcome "left", no payout, if the fight was not won). After a win you get
+  `reentry_delay` (25 s) to do it yourself. A lost fighter still returns you on foot
+  to the pad (arrival mode "pad"), as in M9.
+- **Keys reuse what exists.** E boards and (when landed) gets out; Space takes off
+  (it is fire in space); C lands (crouch: "go down"); flight keys are M10's. E is also
+  roll right in flight, so it only means "get out" once landed.
+- **A jetpack over the wall lands in the dunes**, in the M14 trace too (the fall
+  guard itself is the seamless desert's, measured from the ground under you).
 ## 2026-10-26 — Seamless desert
 
 - **Seat the town on the dunes at its own floor level, not on the beauty corner's

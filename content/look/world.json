@@ -1,0 +1,25 @@
+{
+  "note": "Colours for the world around the port (M14): the planet skirt beyond the desert, the outpost placeholder, and the sky in space. Read by src/systems/world/world_scenery.gd and src/systems/world/altitude_sky.gd.",
+  "terrain": {
+    "skirt_color": "#b8916a"
+  },
+  "outpost": {
+    "color": "#b9a48a",
+    "trim": "#6b1e1e"
+  },
+  "space": {
+    "zenith": "#02030a",
+    "horizon": "#1a2140",
+    "ground": "#3a2a24",
+    "cloud_cover": 0.0,
+    "sky_energy": 0.35,
+    "planet_visibility": 1.0,
+    "fog_density_scale": 0.15,
+    "stars": {
+      "count": 1200,
+      "size": 40.0,
+      "distance": 60000.0,
+      "color": "#e9e6f2"
+    }
+  }
+}
