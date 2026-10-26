@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Desert Spaceport Slice"
-run/main_scene="res://scenes/lookdev/beauty_corner.tscn"
+run/main_scene="res://scenes/town_demo.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 ; Left at defaults; UI is greybox for the slice.

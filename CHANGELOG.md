@@ -2,26 +2,32 @@
 
 Plain English, newest on top. One entry per milestone.
 
-## Flow — port to flight (2026-10-26)
+## M9 — Port town, and one demo (2026-10-26)
 
 What works now:
-- **Play starts in the port.** `run/main_scene` is the beauty corner, so F5 puts you
-  on foot in the port instead of the M0 data-layer boot scene.
-- **The landing bay launches the dogfight.** A launch pad on the bay shows
-  "[E] Launch" when you are on it; E fades out and loads the dogfight with the pad's
-  encounter. An interceptor is parked on the bay (in review shots too).
-- **And brings you back.** When the fight is won or lost, the dogfight waits
-  `return_delay` seconds, then loads the port and spawns you beside the bay facing it,
-  with the outcome and payout shown.
-- All of it is data: `content/core/flow/launch_pads.json`. Adding a pad elsewhere
-  (the M9 town's spaceport pit, later) is a new entry, not new code.
-- `tests/test_flow.gut.gd`: 10 tests, including a real-collision walk from the
-  arrive point onto the pad. Scene changes are recorded, never performed, in tests.
+- **Press Play and you are in the town.** `scenes/town_demo.tscn` is the main scene:
+  a walled desert port built at runtime from `content/core/locations/port_town.json`
+  (112 boxes, 18 markers, 4 routes): gate, market, barracks with a watchtower, the
+  sunken landing pit with your ship, the cantina (bartender + fixer spots) and two
+  residential districts. You start on the pit floor beside the ship.
+- **Your ship launches the dogfight.** Beside the ship, "[E] Launch" shows; E fades
+  out into the dogfight. When it is won or lost you land back beside the ship with
+  the result on screen. The dogfight scene opened on its own (F6) is unchanged.
+- **It looks like the beauty corner.** A visual-only decor layer gives the town the
+  look-dev sky, sun, fog and materials (plaster with dye bands, paving, hull metal),
+  lamps that come on at dusk, and two torn banners on the watchtower. Keys 1, 2, 3
+  switch golden, noon and dusk.
+- **Proven headless.** The validator checks 8 rules, with a negative test for each.
+  A bot walks every route with real collision: spawn to cantina 1495 frames, cantina
+  to gate 2051, gate to cantina 2052, back gap to cantina 1243; worst frame about
+  3 ms. New suites: `test_town_layout`, `test_town_walk`, `test_town_decor`,
+  `test_flow`.
+- **Review cameras.** `content/look/town_shots.json` and `tools/town/shoot_town.sh`;
+  golden and dusk shots are in `docs/town/look/`.
+- `scenes/m1_demo.gd` now builds its boxes with the shared greybox helper.
 
-Faked or not yet done:
-- The payout is shown on return but not added to the save's credits.
-- No way to abort a flight early; you return when the fight ends.
-- `scenes/main.tscn` (M0 boot print) is kept but no longer the main scene.
+Faked or not yet done: see KNOWN_ISSUES.md "After M9" (capsule NPCs, bare stalls,
+box ship, no railings, payout not saved).
 
 ## M10 — Starfighter flight and dogfights (2026-10-26)
 

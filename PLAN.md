@@ -21,12 +21,14 @@ Status:
 | M6 | LLM bartender (text) | Typed conversation, memory, 4 tools, guardrails, fallback, Kokoro voice | DONE |
 | M7 | Voice input | whisper.cpp push-to-talk with the bartender; latency measured | DONE |
 | M8 | Polish pass | Bug list cleared, performance report, 3 minute gameplay recording | DONE |
+| M9 | Port town greybox | Town built from data, validated, 4 routes walked headless with real collision, worst frame < 50ms; light art dressing (decor layer); the town is the one demo and its pit launches the dogfight | DONE |
 | M10 | Starfighter flight and dogfights | Data-driven ships, guns, pilots and encounters; flight model; shields + hull; fixed guns + lock-on seekers; fighter AI (pursue, attack, break, extend, evade); playable dogfight scene with HUD; any ship design swaps in from data; headless dogfight trace won end to end | WIP |
 
 ## Notes
 
-- M9 is the port town greybox, planned in `docs/town/TOWN_PLAN.md`; its row is
-  added by that milestone's branch. M10 was numbered after it.
+- M9 is the port town, planned in `docs/town/TOWN_PLAN.md` (plus the decor
+  addendum). M10 was numbered after it. Since M9 the town is the single demo:
+  `run/main_scene` is `scenes/town_demo.tscn`, and flight is entered from the pit.
 
 - One feature per branch, off the latest main; merge only when tests pass.
 - Each gameplay system ships a headless trace/log plus GUT assertions; that trace

@@ -13,7 +13,7 @@ proof, per `KNOWN_ISSUES.md`.)
 brew install --cask godot        # Godot 4.7.2 (pinned in scripts/pin.txt)
 brew install rust ffmpeg         # for the recording + the LLM runtime
 
-# Open the project and run it. The main scene is scenes/main.tscn.
+# Open the project and run it. The main scene is scenes/town_demo.tscn.
 open project.godot               # then press F5 in the editor
 # ...or, without the editor:
 godot --path . res://scenes/main.tscn
@@ -40,21 +40,28 @@ machines; they are not yet bound to global input actions and are driven in the
 playthrough trace. Binding them to the GUI is the remaining polish before a live
 playtest.
 
-## Port to flight (the two demos, connected)
+## The demo: the town, and flight from the pit (M9)
 
-Press **F5**. The main scene is now the port (`scenes/lookdev/beauty_corner.tscn`),
-so you start on foot. Walk to the landing bay (the round pad with the parked
-interceptor, east of the lane) and **press E** at the prompt. The screen fades and
-you are in the dogfight. When the fight ends (won or lost), you are flown back after
-a few seconds and land beside the bay, with the result on screen.
+```sh
+open project.godot                               # then press F5
+godot --path . res://scenes/town_demo.tscn       # or without the editor
+```
 
-Opening `dogfight_demo.tscn` on its own (F6) still works exactly as before and never
-jumps back to the port. Pads, their encounter, the return delay and every label live
-in `content/core/flow/launch_pads.json`; the hand-off is `src/systems/flow/game_flow.gd`.
+There is one thing to launch. You start on the pit floor beside your ship. Walk with
+WASD, V toggles the camera, Esc frees the mouse, 1/2/3 switch golden, noon and dusk.
+Walk up a ramp to reach the streets; the cantina is west, the gate east.
+
+Next to the ship, "[E] Launch" shows. **Press E** to fade into the dogfight. When the
+fight is won or lost you land back beside the ship with the result on screen.
 
 | Action          | Key |
 |---|---|
-| Launch (on pad) | E   |
+| Launch (by ship) | E  |
+| Lighting preset  | 1 / 2 / 3 |
+
+Review renders: `./tools/town/shoot_town.sh presets=golden,dusk` writes to
+`test_results/town/`. Pads, encounter, delays and labels live in
+`content/core/flow/launch_pads.json`.
 
 ## Flying the dogfight (M10)
 

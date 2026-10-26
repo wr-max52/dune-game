@@ -9,8 +9,6 @@ extends Node3D
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const SHOTS_PATH := "res://content/look/shots.json"
-const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
-const SCENE_PATH := "res://scenes/lookdev/beauty_corner.tscn"
 
 @export var preset := ""                ## "" = the default preset in time_of_day.json
 @export var lookdev_mode := false       ## true: fixed review cameras, no player
@@ -27,8 +25,6 @@ var _smoke_mats: Array[StandardMaterial3D] = []
 var _rng := RandomNumberGenerator.new()
 var _player: Node3D
 var _rig: Node
-var pads: Array = []          ## LaunchPad nodes (play mode only)
-var parked_ships: Array = []  ## ship visuals parked on launch pads
 
 
 func _ready() -> void:
@@ -47,7 +43,6 @@ func _ready() -> void:
 	_build_landforms()
 	_build_smoke()
 	_build_characters()
-	_build_parked_ships()
 
 	shots = _load_shots()
 	set_preset(preset)
@@ -61,7 +56,6 @@ func _ready() -> void:
 		show_shot("hero_vista")
 	else:
 		_spawn_player()
-		_build_launch_pads()
 
 
 # ---------------------------------------------------------------- presets + shots
@@ -822,62 +816,17 @@ func _build_smoke() -> void:
 
 # ---------------------------------------------------------------- play mode
 
-var _arrival: Dictionary = {}
-
-
 func _spawn_player() -> void:
 	_player = CharacterBody.new()
 	_player.position = Vector3(4.0, FLOOR_Y + 0.05, -128.0)
-	var yaw := PI   # face out over the wall, toward the wreck
-	# Coming back from a flight: stand beside the pad we left from, facing it.
-	_arrival = GameFlow.take_arrival()
-	var from_pad := GameFlow.pad(str(_arrival.get("pad", "")))
-	if not from_pad.is_empty() and str(from_pad.get("scene", "")) == SCENE_PATH:
-		var at := GameFlow.vec(from_pad.get("arrive", from_pad.get("center")))
-		var c := GameFlow.vec(from_pad.get("center"))
-		_player.position = at
-		yaw = atan2(c.x - at.x, c.z - at.z)
 	add_child(_player)
 	_rig = CameraRigNode.new()
 	add_child(_rig)
 	_rig.set_player(_player)
-	_rig.rig.yaw = yaw
+	_rig.rig.yaw = PI   # face out over the wall, toward the wreck
 	if _rig._camera is Camera3D:
 		_rig._camera.far = 12000.0
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-
-
-# ---------------------------------------------------------------- launch pads
-
-## Ships parked on this scene's pads. Built in both modes so review shots match play.
-func _build_parked_ships() -> void:
-	var kit: ShipKit = null
-	for p in GameFlow.pads_for_scene(SCENE_PATH):
-		var look_id := str(p.get("parked_ship", ""))
-		if look_id == "":
-			continue
-		if kit == null:
-			kit = ShipKit.new()
-		var ship := kit.build(look_id)
-		ship.name = "Parked_" + str(p.id)
-		var lp: Dictionary = kit.looks.get(look_id, {})
-		var c := GameFlow.vec(p.center)
-		# Sit on the pad: belly a little above the paving, nose along parked_yaw_deg.
-		ship.position = c + Vector3(0, float(lp.get("height", 1.6)) * 0.5 + 0.9, 0)
-		ship.rotation.y = deg_to_rad(float(p.get("parked_yaw_deg", 0.0)))
-		add_child(ship)
-		parked_ships.append(ship)
-
-
-## Play mode: a trigger on every pad. Walk onto one and press E to fly.
-func _build_launch_pads() -> void:
-	for p in GameFlow.pads_for_scene(SCENE_PATH):
-		var pad := LaunchPad.new()
-		pad.configure(p, _player)
-		add_child(pad)
-		pads.append(pad)
-	if not _arrival.is_empty() and not pads.is_empty():
-		pads[0].toast(GameFlow.arrival_text(_arrival), 5.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -1,23 +1,43 @@
 extends Node3D
-## M9 town demo. Builds port_town from content/core at runtime (greybox), places
-## placeholder capsules at npc/trooper/ambient markers, and spawns the player at
-## the spawn marker with the camera rig. No coordinates live in this file.
+## The demo. Builds port_town from content/core at runtime, dresses it with the
+## look-dev lighting and materials, places placeholder capsules at the npc /
+## trooper / ambient markers, and spawns the player beside the ship in the pit.
+## The ship's pad launches the dogfight (GameFlow); after the fight the player
+## lands back here. No coordinates live in this file.
+##
+## Layers: the gameplay layer (boxes + collision, from TownLayout) is built first
+## and never changes; TownDecor only adds visuals on top. `use_look = false` gives
+## the plain greybox the CI walk trace uses.
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const Greybox := preload("res://src/systems/world/greybox.gd")
+const TownDecor := preload("res://src/systems/world/town_decor.gd")
+const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
+const SCENE_PATH := "res://scenes/town_demo.tscn"
+const SHOTS_PATH := "res://content/look/town_shots.json"
 
-## Placeholder colors per marker role.
+## Placeholder colors per marker role (greybox).
 const ROLE_COLORS := {
 	"npc":          Color(0.20, 0.70, 0.60),
 	"trooper_post": Color(0.90, 0.90, 0.90),
 	"ambient":      Color(0.70, 0.55, 0.80),
 }
 
+@export var use_look := true          ## false: plain sun + sky, no decor (CI trace)
+@export var lookdev_mode := false     ## true: fixed review cameras, no player
+@export var preset := ""              ## "" = default preset in time_of_day.json
+
 var town := TownLayout.new()
+var look: LookEnvironment
+var decor
+var camera: Camera3D
+var shots: Dictionary = {}
+var pads: Array = []
 var _player: Node
 var _rig: Node
+var _arrival: Dictionary = {}
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 
@@ -33,9 +53,29 @@ func _ready() -> void:
 		return                  # never build a broken town
 	_build_boxes()
 	_build_markers()
-	_spawn_player()
-	_add_light_and_sky()
+	if use_look:
+		look = LookEnvironment.new()
+		add_child(look)
+		set_preset(preset)
+		decor = TownDecor.new()
+		add_child(decor)
+		decor.dress(town, look)
+	else:
+		_add_light_and_sky()
+	if lookdev_mode:
+		shots = _load_shots()
+		camera = Camera3D.new()
+		camera.name = "ShotCamera"
+		camera.far = 4000.0
+		add_child(camera)
+		camera.current = true
+		show_shot("gate_approach")
+	else:
+		_spawn_player()
+		_build_launch_pads()
 
+
+# ---------------------------------------------------------------- gameplay layer
 
 func _build_boxes() -> void:
 	var root := Node3D.new()
@@ -55,34 +95,68 @@ func _build_boxes() -> void:
 
 
 func _build_markers() -> void:
-	## Static capsules: no AI, no collision (so they never block the bot in M9).
+	## Static capsules: no AI, no collision (so they never block the bot).
 	var root := Node3D.new()
 	root.name = "Markers"
 	add_child(root)
 	for m in town.markers():
 		if not ROLE_COLORS.has(m.role):
 			continue           # spawn/waypoint/interact are invisible
-		var mesh := CapsuleMesh.new()
-		mesh.radius = 0.35
-		mesh.height = 1.8
+		var v := _make_marker_visual(m)
+		v.name = m.id
+		v.position = town.marker_pos(m.id) + Vector3(0, 0.9, 0)  # capsule centered
+		root.add_child(v)
+		built_markers += 1
+
+
+## The one seam the character art pass replaces. Today: a capsule per marker.
+func _make_marker_visual(m: Dictionary) -> Node3D:
+	var mesh := CapsuleMesh.new()
+	mesh.radius = 0.35
+	mesh.height = 1.8
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	if use_look:
+		var role_look := {
+			"npc": LookMaterials.CLOTH_TEAL,
+			"trooper_post": LookMaterials.REMNANT_OXBLOOD,
+			"ambient": LookMaterials.CLOTH_SAND,
+		}
+		mi.material_override = _flat_mats().flat(role_look[m.role])
+	else:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = ROLE_COLORS[m.role]
 		mesh.material = mat
-		var mi := MeshInstance3D.new()
-		mi.name = m.id
-		mi.mesh = mesh
-		mi.position = town.marker_pos(m.id) + Vector3(0, 0.9, 0)  # capsule centered
-		root.add_child(mi)
-		built_markers += 1
+	return mi
+
+
+var _mats: LookMaterials
+func _flat_mats() -> LookMaterials:
+	if _mats == null:
+		_mats = LookMaterials.new()
+	return _mats
 
 
 func _spawn_player() -> void:
 	_player = CharacterBody.new()
 	_player.position = town.spawn_pos() + Vector3(0, 0.05, 0)  # origin is at the feet
+	var yaw := 0.0
+	# Back from a flight: stand at the pad's arrive marker, facing the ship.
+	_arrival = GameFlow.take_arrival()
+	var from_pad := resolve_pad(GameFlow.pad(str(_arrival.get("pad", ""))))
+	if not from_pad.is_empty():
+		_player.position = from_pad.arrive
+		var c: Vector3 = from_pad.center
+		yaw = atan2(c.x - from_pad.arrive.x, c.z - from_pad.arrive.z)
 	add_child(_player)
 	_rig = CameraRigNode.new()
 	add_child(_rig)
 	_rig.set_player(_player as Node3D)
+	_rig.rig.yaw = yaw
+	if _rig._camera is Camera3D:
+		_rig._camera.far = 4000.0
+	if not lookdev_mode and DisplayServer.get_name() != "headless":
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _add_light_and_sky() -> void:
@@ -98,3 +172,81 @@ func _add_light_and_sky() -> void:
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
+
+
+# ---------------------------------------------------------------- launch pads
+
+## A pad anchored to a town box sits on that box's footprint center at its base,
+## and returns the player to its arrive marker. Coordinates come from town data.
+func resolve_pad(p: Dictionary) -> Dictionary:
+	if p.is_empty() or str(p.get("scene", "")) != SCENE_PATH:
+		return {}
+	var out := p.duplicate(true)
+	var box: Dictionary = town.get_box(str(p.get("town_box", "")))
+	if box.is_empty():
+		return {}
+	var cs := Greybox.center_size(box)
+	var c: Vector3 = cs[0]
+	out.center = Vector3(c.x, float(box.min[1]), c.z)
+	var am := str(p.get("arrive_marker", ""))
+	out.arrive = (town.marker_pos(am) if not town.get_marker(am).is_empty() else town.spawn_pos()) + Vector3(0, 0.05, 0)
+	return out
+
+
+func _build_launch_pads() -> void:
+	for p in GameFlow.pads_for_scene(SCENE_PATH):
+		var r := resolve_pad(p)
+		if r.is_empty():
+			push_warning("TownDemo: launch pad %s has no town_box" % str(p.get("id", "")))
+			continue
+		var c: Vector3 = r.center
+		r.center = [c.x, c.y, c.z]
+		var pad := LaunchPad.new()
+		pad.configure(r, _player)
+		add_child(pad)
+		pads.append(pad)
+	if not _arrival.is_empty() and not pads.is_empty():
+		pads[0].toast(GameFlow.arrival_text(_arrival), 5.0)
+
+
+# ---------------------------------------------------------------- look + review
+
+func set_preset(id: String) -> void:
+	if look == null:
+		return
+	look.apply(id)
+	preset = look.current
+
+
+func _load_shots() -> Dictionary:
+	var f := FileAccess.open(SHOTS_PATH, FileAccess.READ)
+	if f == null:
+		return {}
+	var data = JSON.parse_string(f.get_as_text())
+	return data.get("shots", {}) if data is Dictionary else {}
+
+
+func shot_ids() -> Array:
+	return shots.keys()
+
+
+func show_shot(id: String) -> bool:
+	if camera == null or not shots.has(id):
+		return false
+	var s: Dictionary = shots[id]
+	var pos := Vector3(s["pos"][0], s["pos"][1], s["pos"][2])
+	var target := Vector3(s["target"][0], s["target"][1], s["target"][2])
+	camera.fov = float(s.get("fov", 65.0))
+	camera.global_position = pos
+	camera.look_at(target, Vector3.UP)
+	return true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	elif event is InputEventMouseButton and event.pressed and not lookdev_mode:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif event is InputEventKey and event.pressed and event.keycode >= KEY_1 and event.keycode <= KEY_3:
+		var ids := ["golden", "noon", "dusk"]
+		set_preset(ids[event.keycode - KEY_1])
