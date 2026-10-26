@@ -129,3 +129,20 @@ func test_weapon_actor_spawns_bolts_that_hit() -> void:
 	assert_eq(actor.shots_fired, 1)
 	await wait_physics_frames(30)
 	assert_eq(target.hits, 1, "the bolt should travel and hit the target once")
+
+
+func test_strafe_right_moves_toward_camera_right() -> void:
+	# D used to move the player left: the controller's strafe term had the wrong sign.
+	var Controller := preload("res://src/systems/player/character_controller.gd")
+	var Rig := preload("res://src/systems/camera/camera_rig.gd")
+	for rig_yaw in [0.0, 1.1, PI, -2.3]:
+		var c = Controller.new()
+		c.set_command(Vector2(1, 0), false, false, false)
+		for i in 30:
+			c.step(1.0 / 60.0, -rig_yaw, -INF)
+		var rig = Rig.new()
+		rig.yaw = rig_yaw
+		var look: Vector3 = rig.look_direction()
+		var right := Vector3(look.x, 0, look.z).normalized().cross(Vector3.UP)
+		var v := Vector3(c.velocity.x, 0, c.velocity.z).normalized()
+		assert_gt(v.dot(right), 0.99, "strafe right follows camera right at yaw %s" % rig_yaw)

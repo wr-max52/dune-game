@@ -48,13 +48,15 @@ func current_speed() -> float:
 ## (ground at y=0), which the scene layer overrides via a "ground_y" hint.
 func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 	var want := current_speed()
-	# Map local input (x = strafe, y = forward) into world XZ using the yaw.
+	# Map local input (x = strafe right, y = forward) into world XZ using the yaw.
+	# Forward is (-sin, cos) and right is forward x up = (-cos, -sin). The strafe term
+	# used to be (+cos, +sin), which made D move left once the camera basis was fixed.
 	var sin_y := sin(yaw)
 	var cos_y := cos(yaw)
 	var world_dir := Vector3(
-		command.dir.x * cos_y - command.dir.y * sin_y,
+		-command.dir.x * cos_y - command.dir.y * sin_y,
 		0.0,
-		command.dir.x * sin_y + command.dir.y * cos_y
+		-command.dir.x * sin_y + command.dir.y * cos_y
 	)
 	var target_vel := world_dir * want
 	# Move current horizontal velocity toward the target (accel, not instant snap).

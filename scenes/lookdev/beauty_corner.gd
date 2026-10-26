@@ -25,6 +25,7 @@ var _smoke_mats: Array[StandardMaterial3D] = []
 var _rng := RandomNumberGenerator.new()
 var _player: Node3D
 var _rig: Node
+var _player_model: Node3D
 
 
 func _ready() -> void:
@@ -739,7 +740,8 @@ func _build_characters() -> void:
 	var story := Node3D.new()
 	story.name = "Story"
 	add_child(story)
-	_place(chars.build("smuggler"), Vector3(2.6, FLOOR_Y, -134.6), 192.0, story)
+	if lookdev_mode:   # in play mode, you are the smuggler
+		_place(chars.build("smuggler"), Vector3(2.6, FLOOR_Y, -134.6), 192.0, story)
 	_place(chars.build("duelist"), Vector3(7.4, FLOOR_Y + 0.15, -145.0), -8.0, story)
 	_place(chars.build("local"), Vector3(-3.5, FLOOR_Y, -141.5), 140.0, story)
 
@@ -824,9 +826,21 @@ func _spawn_player() -> void:
 	add_child(_rig)
 	_rig.set_player(_player)
 	_rig.rig.yaw = PI   # face out over the wall, toward the wreck
+	_rig.rig.toggle_mode()   # start in third person so you can see your character
+	# The player is the smuggler (one of the two player options). The body faces +Z,
+	# which is the player's forward at rotation.y = 0, so it turns with the camera.
+	_player_model = chars.build("smuggler")
+	_player_model.name = "Model"
+	_player.add_child(_player_model)
 	if _rig._camera is Camera3D:
 		_rig._camera.far = 12000.0
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _process(_delta: float) -> void:
+	# Hide your own body in first person (the camera would sit inside the hat).
+	if _player_model != null and _rig != null:
+		_player_model.visible = not _rig.rig.is_first_person()
 
 
 func _unhandled_input(event: InputEvent) -> void:
