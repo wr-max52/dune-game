@@ -4,6 +4,7 @@ extends GutTest
 ## of market and character art.
 
 const TownDemo := preload("res://scenes/town_demo.gd")
+const TownDecor := preload("res://src/systems/world/town_decor.gd")
 
 ## Boxes the addendum's table deliberately leaves greybox (gate lintel: overhead
 ## in the perimeter zone has no row).
@@ -98,3 +99,30 @@ func test_town_shots_load() -> void:
 	var d = _demo(true)
 	for id in ["gate_approach", "plaza", "cantina_bar", "top_down"]:
 		assert_true(d.show_shot(id), "shot %s exists" % id)
+
+
+func test_port_ship_is_the_flight_ship_and_fits_its_box() -> void:
+	var d = _demo(true)
+	assert_eq(d.decor.parked_ships.size(), 1, "one ship parked in the pit")
+	var ship: Node3D = d.decor.parked_ships[0]
+	# Same model as the dogfight: the player ship's look from the pad's encounter.
+	var content = preload("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var enc: Dictionary = content.encounters[str(GameFlow.pad("town_pit").encounter)]
+	var look_id := str(content.ships[str(enc.player.ship)].look)
+	assert_eq(str(ship.get_meta("look_id")), look_id, "port ship uses the flight look")
+	# The collision box matches the model, so there are no invisible walls.
+	var box: Dictionary = d.town.get_box("ship")
+	var bmin := Vector3(float(box.min[0]), float(box.min[1]), float(box.min[2]))
+	var bmax := Vector3(float(box.max[0]), float(box.max[1]), float(box.max[2]))
+	var a: AABB = TownDecor.visual_aabb(ship)
+	for k in 3:
+		assert_almost_eq(a.position[k], bmin[k], 0.4, "model min %d fits the box" % k)
+		assert_almost_eq(a.end[k], bmax[k], 0.4, "model max %d fits the box" % k)
+	var mi: MeshInstance3D = d.get_node("Town/ship/Mesh")
+	assert_false(mi.visible, "the greybox stand-in is hidden")
+	var has_shape := false
+	for c in d.get_node("Town/ship").get_children():
+		if c is CollisionShape3D and (c as CollisionShape3D).shape is BoxShape3D:
+			has_shape = true
+	assert_true(has_shape, "collision stays")

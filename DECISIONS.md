@@ -32,6 +32,12 @@ Every significant technical choice, the alternative, and why. Newest on top.
   keep simulating during flight. Revisit if a seamless take-off is wanted.
 - **The beauty corner is back to being only the art reference.** The pad briefly
   lived there; it moved to the town and `beauty_corner.gd` is unchanged from main.
+- **The parked ship is the flight model, and its box was resized to fit it.** The
+  decor layer builds the pit ship with the same ShipKit and look id the dogfight
+  uses (pad encounter, then player ship, then look), so one data change restyles
+  both. The planned 24 x 14 x 8 m ship box would have left invisible walls around a
+  9 m fighter, so `ship` in `port_town.json` (and the docs copy) is now
+  9.4 x 2.7 x 8.2 m. Validator: 0 errors; routes and walk frames unchanged.
 - **Pads are data, anchored to town boxes.** `content/core/flow/launch_pads.json`
   names a `town_box` (the ship) and an `arrive_marker` (the spawn); the scene turns
   those into positions, so no coordinates are typed anywhere.

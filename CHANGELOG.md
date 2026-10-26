@@ -25,6 +25,8 @@ What works now:
 - **Review cameras.** `content/look/town_shots.json` and `tools/town/shoot_town.sh`;
   golden and dusk shots are in `docs/town/look/`.
 - `scenes/m1_demo.gd` now builds its boxes with the shared greybox helper.
+- **The ship in the pit is the ship you fly.** Same model, same colors, built from the
+  same data as the dogfight. Its collision box now matches the model.
 
 Faked or not yet done: see KNOWN_ISSUES.md "After M9" (capsule NPCs, bare stalls,
 box ship, no railings, payout not saved).

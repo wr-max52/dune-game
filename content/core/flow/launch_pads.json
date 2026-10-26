@@ -11,7 +11,8 @@
       "radius": 14.0,
       "height": 4.0,
       "encounter": "orbital_skirmish",
-      "arrive_marker": "player_spawn"
+      "arrive_marker": "player_spawn",
+      "parked_yaw_deg": -90.0
     }
   },
   "labels": {
