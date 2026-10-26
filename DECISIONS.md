@@ -2,6 +2,45 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-25 — M7 (voice input: typed default, whisper fallback)
+
+- **Typed is the DEFAULT speech source; whisper is the optional, dependency-bearing
+  upgrade.** This deliberately supersedes the M0 assumption that whisper/VAD was the
+  primary voice-in pipeline. The product owner's M7 direction: type the speech by
+  default (zero dependency, easy) and only wire whisper as a fallback. A speech source
+  is dependency-aware (`dependency()` says "none" for typed, "whisper runtime" for
+  whisper), and the controller prefers the typed source unless voice is both preferred
+  AND the whisper runtime is actually loaded. Alternative: keep whisper primary —
+  rejected because it forces an STT model + mic into the default path for no gameplay
+  gain and makes the slice harder to ship.
+
+- **One door, the same brain.** The push-to-talk routes every captured request to the
+  M6 `bartender.respond()`, so the "text is read but never executed as a command, only
+  an allowed model tool may act" guardrail is unchanged. No new code path can move
+  world state except through the M6 guardrail.
+
+- **A degraded voice turn is a typed turn, never nothing.** When voice is preferred
+  but whisper is absent (the CI case, and any build without the model) or a sample
+  transcribes to empty, the controller serves the request through the typed source, so a
+  conversation never dead-ends on a missing model. This is the same "graceful null,
+  not a crash" posture as M6's Kokoro and Ollama.
+
+- **The whisper runtime is a stand-in that loads only when a model is present**,
+  mirroring M6's Ollama client (pure parts tested, I/O part a documented stub). This
+  keeps "does the voice path work when wired?" answerable headless while the real
+  whisper.cpp + mic capture stays the manual + recorded path.
+
+- **Latency is measured from an injected clock.** The press/release core takes
+  start/end ms, so a headless trace records a deterministic per-turn latency — the M7
+  "latency measured" requirement — without a mic. Real wall-time timing is the manual
+  wiring.
+
+- **GUT/GDScript-4.7 gotchas (carried from M6):** GUT 9.7.1 uses snake-case asserts
+  (`assert_true`/`assert_eq`/`assert_gt`/`assert_false`), not Java-style; and
+  `Object.has("field")` does not exist in this engine -- use `has_method(...)` for a
+  presence guard. Both surfaced in M7 and are noted here so a future test does not redo
+  the work.
+
 ## 2026-10-25 — M6 (LLM bartender, text + Kokoro voice)
 
 - **The bartender talks to the model through a client interface, not a hardcoded

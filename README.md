@@ -48,7 +48,7 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 ## Plan
 
 `PLAN.md` holds the 8 milestones (M0-M8) in build order, with status and the
-"done means" for each. M0-M6 are done; M7 is next.
+"done means" for each. M0-M7 are done; M8 is next.
 
 ## Layout
 

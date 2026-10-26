@@ -2,6 +2,57 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M7 — Voice input: push-to-talk, typed default, whisper fallback (2026-10-25)
+
+What works now:
+- The bartender now also takes voice input through a push-to-talk, and the design
+  is the reverse of the M0 assumption: **typed is the default and the only path with
+  no dependency; whisper is an optional, dependency-bearing upgrade.** A voice turn
+  that cannot be served degrades to typed, so a request is never dropped and the slice
+  ships voice input without shipping an STT model.
+- A single door, the `push_to_talk`, routes every captured request to the **same
+  `bartender.respond()` from M6**, so the guardrail "the player's text is read but
+  never executed as a command" is unchanged: only a model tool proposal, validated
+  against the npc's allowed set, may move the world.
+- The voice path is wired end to end but optional: a `whisper_runtime` stands in for
+  whisper.cpp + a model; it loads only when a model is present, exactly like M6's
+  Ollama HTTP post. With the runtime loaded, a sample is transcribed and answers the
+  bartender; without it, the controller falls back to typed.
+- Every turn records a **latency** (ms from press to release), the M7 "latency
+  measured" requirement, measured from an injected clock so it is deterministic.
+- The headless voice trace (scenes/m7_voice_trace.gd) writes
+  test_results/m7_voice_trace.txt with, in order: a typed default capture applying an
+  allowed tool, a voice request that degrades to typed, a wired whisper capture that
+  transcribes, a command-looking request that moves nothing, and a fallback; a GUT test
+  reads it. ci.sh generates the trace before the suite.
+
+How to see it:
+- `./scripts/ci.sh` writes test_results/m7_voice_trace.txt and the GUT test reads it.
+  The trace shows MODE=TYPE/SOURCE=typed, a FALLBACK=yes row (voice -> typed), a
+  SOURCE=whisper row (the wired path), no TOOL=cut_power (a disallowed tool ignored),
+  and a LAT on every row.
+- 109 GUT tests pass (was 97); the merge gate is green.
+
+What is faked or stubbed:
+- whisper.cpp + the STT model are **not wired in CI**: the `whisper_runtime` is a
+  stand-in that "loads" only when a model is set. Transcription in CI is a canned map.
+  The real whisper run is the manual + recorded path (scripts/record.sh), not a
+  headless CI step, per DECISIONS.
+- Latency is measured from an injected clock, not the real mic->transcribe wall time;
+  the wiring for real timing is the manual path.
+- The push-to-talk `press()/release()` is the literal PTT over the same core; the mic
+  capture that feeds it is a manual wiring step.
+
+What broke / fixed:
+- None at build level. Two GUT/GDScript-4.7 gotchas surfaced and were fixed: the test
+  used Java-style asserts (`assertTrue`) and the trace's `Object.has("field")` does not
+  exist in this engine -- switched to snake-case asserts and a presence guard via
+  `has_method`.
+
+What was needed from the user:
+- None in this pass. Wiring the live whisper runtime + mic capture is the manual step
+  (see M8 and KNOWN_ISSUES).
+
 ## M6 — LLM bartender (text + Kokoro voice) (2026-10-25)
 
 What works now:

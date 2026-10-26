@@ -2,7 +2,46 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M6 (2026-10-25)
+## After M7 (2026-10-25)
+
+**What is real and proven by tests:** everything in M1-M6, plus voice input on top of
+the M6 bartender (M7). A push-to-talk routes a captured request to the same
+`bartender.respond()`; **typed is the default and dependency-free path**, whisper is an
+optional upgrade that degrades to typed when its runtime/model is absent; a captured
+request is read but never executed as a command (no `TOOL=cut_power` in the trace); an
+allowed tool still applies; and each turn records a latency.
+
+**Stubbed / deferred, honestly:**
+- **whisper.cpp + the STT model are not wired in CI.** The `whisper_runtime` is a
+  stand-in that "loads" only when a model is set (mirroring M6's Ollama HTTP post);
+  transcription in CI is a canned map. The real whisper run + mic capture is the manual
+  + recorded path (scripts/record.sh), not a headless CI step, per DECISIONS.
+- **Voice latency is measured from an injected clock**, not the real mic->transcribe
+  wall time; real timing is the manual path.
+- **Kokoro voice is a signature + graceful null in CI** (M6); a real recorded voice is
+  M8.
+- **World streaming is still a load-cost model, not a rendered 3D walk** (M8).
+- **Combat/movement are logic + traces, not rendered fights** (M8).
+- **Take-cover-against-marked-surfaces (movement)** remains deferred.
+- **Cloud LLM fallback** is an interface + stub only; no API key ever enters the client.
+
+**Known non-failing artifact:** GUT reports "1 orphan" at process exit (a detached
+test bolt). It is a warning, not a test failure -- `ci.sh` exits 0 and "All tests
+passed" shows. Tracked for M8 cleanup.
+
+**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
+that supports tool calls. Documented, not yet measured.
+
+**Disk:** ~12 GB free at M0 start. A single 4B Q4 model is ~2.5 GB; M0 is fine; the
+full windows export + model cache later will be watched.
+
+**Headless proof limitation:** I can run the engine and capture logs/frames, but I
+cannot open the GUI editor and "watch it on screen." The primary proof for each
+milestone is the headless CI run + JUnit XML + a machine trace; a screen recording
+(scripts/record.sh) is the secondary proof where the spec asks for one.
+
+## After M6 (2026-10-25) -- superseded by the notes above.
 
 **What is real and proven by tests:** movement + FPV/TPV toggle (M1), two blasters +
 a covering trooper with health/death (M2), the energy blade with stamina, timed
