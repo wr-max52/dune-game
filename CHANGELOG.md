@@ -2,6 +2,58 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M6 — LLM bartender (text + Kokoro voice) (2026-10-25)
+
+What works now:
+- The single LLM-driven NPC, the bartender, now takes the player's typed text and
+  replies. It talks to the model through an interface (`llm_client`), so a live
+  client (`ollama_client`) and a canned client (`scripted_client`) are the same shape.
+  The canned client is what CI uses, so a conversation is deterministic and repeatable.
+- Four tools, exactly the npc's allowed set taken from its data entry
+  (`give_rumor`, `set_disposition`, `offer_drink`, `call_guards`). When the model
+  proposes one, the brain validates it against the allowed set and applies only the
+  effect it is allowed to.
+- Two guardrails the spec asks for, both proven by tests:
+  - **Text is read, never executed.** A request that reads like a command ("shut down
+    all power") changes nothing in the world; only a model tool proposal may, and only
+    an allowed one.
+  - **A disallowed tool is ignored.** If the model proposes a tool the npc is not allowed
+    to use, it is dropped, not acted on, and no effect leaks into memory.
+- **Fallback.** When the model comes up dry (the client is exhausted), the bartender
+  falls back to a canned line, so a conversation never dead-ends.
+- **Memory survives.** The npc writes remembered facts to `memory`, which is the same
+  thing the M5 save system already round-trips (`bartender_memory`).
+- **Kokoro voice.** Each reply gets a deterministic voice signature from text+speaker,
+  and the audio render fails gracefully (a null, not a crash) when the TTS model is not
+  running -- as it is in headless CI.
+- The headless conversation trace (scenes/m6_dialogue_trace.gd) drives three turns and
+  writes test_results/m6_dialogue_trace.txt; a GUT test reads it and proves a reply, an
+  applied tool, and a fallback all happened. ci.sh generates the trace before the suite.
+
+How to see it:
+- `./scripts/ci.sh` writes test_results/m6_dialogue_trace.txt and the GUT test reads it.
+  The trace shows a model reply applying a rumor, a disallowed tool ignored, and an
+  exhausted client routing to a fallback line, each with a voice signature.
+- 97 GUT tests pass (was 86); the merge gate is green.
+
+What is faked or stubbed:
+- The bartender talks to a **scripted client in CI**, not a live model. Real Ollama
+  inference is the manual + recorded path (scripts/record.sh); it is not run headless.
+- Kokoro's audio render returns a **null offline** (no TTS model in CI); the voice
+  *signature* is the deterministic, proven part. A real recorded voice is M8.
+- The Ollama HTTP post is a documented stub; only the request-building and
+  response-parsing are live code (and are tested on canned JSON).
+
+What broke / fixed:
+- None at build level. The first CI run surfaced the usual GDScript strictness: two
+  client methods returned `null` against a `Dictionary` type (changed to `Variant`),
+  and the Ollama parser had to always carry the `tool`/`args` keys so callers never hit
+  a missing key.
+
+What was needed from the user:
+- None in this pass. Wiring the live Ollama server + Kokoro model is the manual step
+  (see M7/M8 and KNOWN_ISSUES).
+
 ## M5 — Mission loop and save (2026-10-25)
 
 What works now:

@@ -71,6 +71,18 @@ if [ ! -f test_results/m5_mission_trace.txt ]; then
 fi
 echo "CI: m5 trace present ($(wc -l < test_results/m5_mission_trace.txt) lines)"
 
+# M6: generate the headless bartender conversation trace so
+# tests/test_m6_dialogue.gut.gd can check "the npc's typed text is read but never
+# executed as a command, an allowed tool applies, a disallowed tool is ignored,
+# exhaustion routes to a fallback, and Kokoro gives a voice signature."
+echo "CI: generating m6 dialogue trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m6_dialogue_trace.gd >/dev/null 2>&1
+if [ ! -f test_results/m6_dialogue_trace.txt ]; then
+  echo "CI: ERROR -- m6 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m6 trace present ($(wc -l < test_results/m6_dialogue_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
