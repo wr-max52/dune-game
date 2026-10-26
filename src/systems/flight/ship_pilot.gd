@@ -385,6 +385,10 @@ func _seated(dt: float) -> void:
 	var st := atmo.state
 	if _external.is_empty():
 		_read_keys(dt)
+		# E just got you out: stop here, or the rest of this frame puts the chase
+		# camera override back on and snaps you into the ship again.
+		if not piloting:
+			return
 	else:
 		_throttle = float(_external.get("throttle", _throttle))
 		_boost = bool(_external.get("boost", false))

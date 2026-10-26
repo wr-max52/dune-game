@@ -13,8 +13,8 @@
       "encounter": "orbital_skirmish",
       "arrive_marker": "player_spawn",
       "parked_yaw_deg": -90.0,
-      "reentry_altitude": 5200.0,
-      "reentry_distance": 6500.0,
+      "reentry_altitude": 2600.0,
+      "reentry_distance": 3250.0,
       "reentry_bearing_deg": 200.0,
       "reentry_pitch_deg": -18.0,
       "board_reach": 12.0
