@@ -21,6 +21,7 @@ var locations: Dictionary = {}    # location-id -> Dictionary (outpost, etc.)
 var missions: Dictionary = {}      # mission-id -> Dictionary (crate_retrieval, etc.)
 var ships: Dictionary = {}         # ship-id -> Dictionary (interceptor, etc.) (M10)
 var pilots: Dictionary = {}        # pilot-id -> Dictionary (AI flying profiles) (M10)
+var soldiers: Dictionary = {}      # soldier-id -> Dictionary (ground AI profiles: body, senses, pathing)
 var encounters: Dictionary = {}    # encounter-id -> Dictionary (dogfight setups) (M10)
 var items: Dictionary = {}         # item-id -> Dictionary (jetpack, etc.) (M13)
 var vendors: Dictionary = {}       # vendor-id -> Dictionary (who buys and sells items) (M13)
@@ -40,6 +41,7 @@ func load_from(root: String = ROOT) -> bool:
 	missions = {}
 	ships = {}
 	pilots = {}
+	soldiers = {}
 	encounters = {}
 	items = {}
 	vendors = {}
@@ -83,6 +85,8 @@ func load_from(root: String = ROOT) -> bool:
 	# is a JSON file plus a manifest entry, with no code change.
 	_load_category(root, "ships", ships)
 	_load_category(root, "pilots", pilots)
+	# Ground AI profiles, the on-foot twin of the pilot profiles.
+	_load_category(root, "soldiers", soldiers)
 	_load_category(root, "encounters", encounters)
 	# M13: gear and trade, same generic path.
 	_load_category(root, "items", items)
@@ -139,6 +143,10 @@ func get_ship(id: String) -> Dictionary:
 
 func get_pilot(id: String) -> Dictionary:
 	return pilots.get(id, {})
+
+
+func get_soldier(id: String) -> Dictionary:
+	return soldiers.get(id, {})
 
 
 func get_encounter(id: String) -> Dictionary:

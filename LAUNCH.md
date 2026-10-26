@@ -106,6 +106,7 @@ Review renders: `./tools/m14/shoot_flight.sh` writes to `test_results/m14/`.
 | Talk to the bartender | E at the bar |
 | Leave the conversation | Esc |
 | Bartender debug | F3 (at the bar) |
+| Guard senses debug (hp, sees you, awareness, heard) | F4 |
 | Bartender brain settings | F10; Shift+F10 cycles auto / local / cloud |
 
 The practice range is in the pit, west of the ship: five targets and a sparring
