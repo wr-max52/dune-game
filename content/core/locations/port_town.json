@@ -1870,7 +1870,8 @@
     0,
     9
    ],
-   "role": "trooper_post"
+   "role": "trooper_post",
+   "soldier": "gate_guard"
   },
   {
    "id": "trooper_gate_s",
@@ -1879,7 +1880,8 @@
     0,
     -9
    ],
-   "role": "trooper_post"
+   "role": "trooper_post",
+   "soldier": "gate_guard"
   },
   {
    "id": "trooper_tower",

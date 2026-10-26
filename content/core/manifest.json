@@ -8,6 +8,7 @@
   "missions": ["crate_retrieval"],
   "ships": ["interceptor", "remnant_fighter", "remnant_heavy"],
   "pilots": ["rookie", "veteran", "ace"],
+  "soldiers": ["gate_guard"],
   "encounters": ["orbital_skirmish"],
   "items": ["jetpack"],
   "vendors": ["gear_trader"],

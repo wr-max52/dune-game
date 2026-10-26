@@ -1,0 +1,37 @@
+{
+  "id": "gate_guard",
+  "label": "Gate guard",
+  "archetype": "remnant_trooper",
+  "faction": "imperial_remnant",
+  "hp": 60,
+  "walk_speed": 3.2,
+  "sprint_speed": 6.2,
+  "turn_rate_deg": 260.0,
+  "perception": {
+    "sight_range": 32.0,
+    "fov_deg": 120.0,
+    "close_range": 2.5,
+    "reaction_s": 0.9,
+    "decay_per_s": 0.25,
+    "forget_s": 8.0,
+    "notice_at": 1.0,
+    "lose_at": 0.3,
+    "crouch_sight_mult": 0.6,
+    "armed_rise_mult": 1.6,
+    "hearing_range": 45.0,
+    "heard_awareness": 0.6,
+    "ray_hz": 5.0,
+    "eye_height": 1.62,
+    "target_chest": 1.25
+  },
+  "nav": {
+    "waypoint_reach": 0.5,
+    "arrive_radius": 0.6,
+    "slow_radius": 2.0,
+    "repath_s": 1.5,
+    "repath_move": 1.5,
+    "stuck_s": 2.0,
+    "stuck_move": 0.35
+  },
+  "note": "Every gate guard number lives here, like the pilot profiles. Behavior (post, challenge, fight) is the next push; this profile already drives the body, pathing and senses."
+}
