@@ -15,7 +15,8 @@ func _ready() -> void:
 	print("DataLayer: npcs=", _content.npcs.size(),
 		" weapons=", _content.weapons.size(),
 		" factions=", _content.factions.size(),
-		" dialogues=", _content.dialogues.size())
+		" dialogues=", _content.dialogues.size(),
+		" missions=", _content.missions.size())
 
 	var bartender: Dictionary = _content.get_npc("bartender")
 	print("DataLayer: bartender kind=", str(bartender.get("kind", "MISSING")),

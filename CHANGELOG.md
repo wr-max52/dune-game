@@ -2,6 +2,53 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M5 — Mission loop and save (2026-10-25)
+
+What works now:
+- The single slice mission "Crate Retrieval" runs end to end: talk to the fixer,
+  accept the contract, travel to the desert outpost, defeat 4 troopers + 1 duelist,
+  take the crate, return, and get paid. It is a pure state machine (IDLE -> ACCEPT
+  -> TRAVEL -> FIGHT -> TAKE_CRATE -> RETURN -> COMPLETE) driven by world events, so
+  the loop is the same spine a bot plays and a human plays.
+- The mission is data in content/core/missions (crate_retrieval.json) and is now
+  loaded through the same IP-neutral data layer as everything else. The data layer
+  learned a new category, `missions`; the manifest lists it; the loader loads it the
+  same generic way it loads locations. A new mission needs zero code change.
+- A save system writes and reads the four things the spec names: player position,
+  credits, mission state, and bartender memory. The trace proves all four survive a
+  save/load round-trip.
+- The 4-trooper squad coordinator (deferred from M4) now spreads the squad: each
+  member is assigned a DISTINCT cover node, so 4 troopers do not all stand in the
+  open. With 4 members and 4 nodes, none is left in the open.
+- The headless bot playthrough (scenes/m5_mission_trace.gd) walks the whole loop and
+  writes test_results/m5_mission_trace.txt; a GUT test reads it and proves the loop
+  closed (COMPLETE, 5 kills, payout 150) and that save/load preserved the four named
+  things. ci.sh generates the trace, then runs the suite.
+
+How to see it:
+- `./scripts/ci.sh` writes test_results/m5_mission_trace.txt and the GUT test reads
+  it. The log ends in phase=COMPLETE, kills=5, credits=150, with RELOAD_* lines
+  showing the save/load round-trip.
+- 86 GUT tests pass (was 74); the merge gate is green.
+
+What is faked or stubbed:
+- The bot drives the loop by feeding the state machine a fixed event sequence; it is
+  not an AI agent choosing actions. The bartender conversation is a deterministic
+  stub, not real LLM inference (that is M6). Real inference stays a manual +
+  recorded check.
+- The fight is the same headless-simulation proof as M2/M3: a 1-D/numeric loop, not a
+  rendered combat. The visible fight and the 3-minute recording are M8.
+- The save writes to user://; a fresh save path or extra fields is a data-only change.
+
+What broke / fixed:
+- Two parse bugs in the pre-built mission state machine were found and fixed: a
+  function returned null against a String type, and the enum was called as a
+  function during save restore. Both were blocking the build; the loop now compiles
+  and closes.
+
+What was needed from the user:
+- None.
+
 ## M4 — World streaming: port to desert, no hitch, outpost (2026-10-25)
 
 What works now:

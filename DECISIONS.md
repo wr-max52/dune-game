@@ -2,6 +2,32 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-25 — M5 (mission loop + save)
+
+- **Missions are a generic data category, like `locations` was at M4.** The slice
+  mission lives in content/core/missions/crate_retrieval.json and the loader loads it
+  from the manifest with the same code path as every other category. Alternative: a
+  hand-wired mission table — rejected because it would hardcode the one mission and
+  break the "zero code change to add content" rule. New missions extend the manifest
+  only.
+
+- **The mission is a pure RefCounted state machine driven by events, not a Node3D
+  scene.** This mirrors M1-M4: the gameplay spine (IDLE -> ... -> COMPLETE) is proven
+  by GUT headless, and the live game wraps it. The same spine is what the bot bot
+  plays and what a human plays, so the bot playthrough is a faithful proof.
+
+- **The squad coordinator assigns each trooper a DISTINCT cover node.** With N nodes
+  and N troopers, every trooper gets one node and none is left in the open; with
+  fewer nodes than troopers the surplus is honestly left open. This is the "4
+  troopers do not all stand in the open" the spec asks, on top of the single-unit
+  M2 cover logic.
+
+- **The save round-trip is a file test, not an LLM test.** The four named things
+  (player position, credits, mission state, bartender memory) are written to user://
+  and read back into a fresh instance; the trace asserts each survives. This is what
+  "save/load all working end to end" means here, and it stays honest because it is a
+  deterministic file round-trip, not inference.
+
 ## 2026-10-25 — M0
 
 - **Engine pinned to Godot 4.7.2.** Latest stable at M0 start. Alternative: 4.6.x.
@@ -33,7 +59,7 @@ Every significant technical choice, the alternative, and why. Newest on top.
   not a separately-built whisper.cpp / Kokoro. The product owner approved this at
   M0 planning as a deliberate deviation from the literal spec wording, because it
   removes a second C++ build and a second license surface for no gameplay gain.
-  This was logged as a deviation in the planning record; revisited at M7 only if
+   This was logged as a deviation in the plan (PLAN.md); revisited at M7 only if
   quality demands.
 
 - **LLM model: Qwen3 4B Q4 for the bartender.** Fits comfortably in 64 GB, strong

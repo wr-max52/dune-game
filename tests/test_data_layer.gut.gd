@@ -60,6 +60,20 @@ func test_fixer_has_authored_dialogue() -> void:
 	assert_true(first.has("speaker"), "dialogue line has speaker")
 
 
+func test_mission_loaded_by_id() -> void:
+	content.load_from()
+	var m: Dictionary = content.get_mission("crate_retrieval")
+	assert_gt(m.size(), 0, "crate_retrieval mission is loaded")
+	assert_eq(m.get("id"), "crate_retrieval", "mission id")
+	assert_eq(m.get("fixer"), "fixer", "mission fixer id")
+	assert_eq(m.get("objective_location"), "outpost", "mission objective location id")
+	assert_eq(m.get("payout"), 150, "mission payout")
+	var enemies: Dictionary = m.get("enemies", {})
+	assert_eq(enemies.get("troopers"), 4, "4 troopers in the mission")
+	assert_eq(enemies.get("duelist"), 1, "1 duelist in the mission")
+
+
+
 func test_loader_tolerates_missing_root() -> void:
 	var ok: bool = content.load_from("res://this/path/does/not/exist")
 	assert_false(ok, "missing root returns false, not crash")
