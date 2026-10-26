@@ -109,6 +109,7 @@ func test_parse_url() -> void:
 
 func test_sidecar_args() -> void:
 	var s := LLMSidecar.new({ "sidecar": { "bin": "/x/llama-server", "model_path": "/m/b.gguf", "port": 9000, "ctx_size": 4096, "extra_args": ["-ngl", "99"] } })
+	s.search = false
 	var a := " ".join(s.args())
 	assert_true(a.contains("--model /m/b.gguf"))
 	assert_true(a.contains("--port 9000"))

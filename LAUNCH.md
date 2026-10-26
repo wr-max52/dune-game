@@ -89,7 +89,24 @@ brew install llama.cpp                 # /opt/homebrew/bin/llama-server
 ```
 
 The bar starts llama-server on 127.0.0.1:8088 when you enter the town (and reuses
-one that is already running), warms the model, and stops it on quit. No model? Set
+one that is already running), warms the model, and stops it on quit. It looks for
+the binary in your config path, `$LLAMA_SERVER`, `runtime/bin/`, `/opt/homebrew/bin`,
+`/usr/local/bin`, `~/.local/bin`, `~/llama.cpp/build/bin`, then your shell's PATH,
+and uses any `.gguf` in `runtime/models/` if the configured one is missing.
+
+**Is she thinking or reading canned lines?** While you talk, the top right says
+which brain is answering, or exactly why none is ("llama-server not installed",
+"no model file", "loading bartender.gguf (14 s)", "ollama: not running", "cloud: off").
+A canned reply also shows "(canned: no brain answered)" next to her mood. The same
+report prints in the Godot output when the town loads, F3 shows it in detail, and
+llama-server's own output is saved to `user://logs/llama-server.log`.
+
+Prove the whole chain without playing (starts the real server, loads the model,
+has one turn through it):
+
+```sh
+godot --headless --path . -s res://scenes/m12_sidecar_trace.gd -- model=runtime/models/bartender.gguf
+``` No model? Set
 a cloud profile in F10 (any OpenAI-compatible URL + key, or Anthropic), or run
 Ollama; with nothing at all she answers from canned lines. Keys are stored in
 `user://llm/keys.cfg` or read from `DUNE_LLM_KEY`, never in the project.
