@@ -25,6 +25,7 @@ static var time_of_day := "golden"
 static var jobs_taken: Dictionary = {}     ## job id -> "active" | "done"
 static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
+static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -44,6 +45,7 @@ static func reset() -> void:
 	clock = 0.0
 	_cooldowns = {}
 	inventory = Inventory.new()
+	names = NameBook.new()
 
 
 # ------------------------------------------------------------------ writes
@@ -105,6 +107,36 @@ static func on_player_fired(in_range: bool) -> void:
 	if cooldown_ok("street_shots", 45.0):
 		change_standing("imperial_remnant", -3, "Somebody fired a blaster in the street.")
 		change_standing("locals", -1)
+
+
+## M15: the gate checkpoint. Every outcome lands here so the bartender (and any
+## later system) reads it from one place.
+static func on_gate_bribe(price: int) -> void:
+	credits = maxi(0, credits - price)
+	bump("gate_bribes")
+	set_flag("bribed_gate")
+	log_event("Paid off the east gate (%d cr)." % price)
+
+
+## A Remnant guard died. `all_down`: that was the last one at the gate.
+static func on_guard_killed(delta: int, all_down: bool) -> void:
+	bump("guards_killed")
+	change_standing("imperial_remnant", delta, "A Remnant gate guard was killed.")
+	change_standing("locals", 1)
+	if all_down:
+		set_flag("gate_guards_down")
+		set_flag("gate_checkpoint_up", false)
+		log_event("The east gate checkpoint is down. Nobody is on it.")
+
+
+## Knocked out at the gate and dragged to the pit: they help themselves to a
+## share of your credits. Returns what was taken.
+static func on_player_downed(share: float = 0.2, minimum: int = 5) -> int:
+	var take := mini(credits, maxi(minimum, int(credits * share)))
+	credits -= take
+	bump("times_downed")
+	log_event("Woke up in the pit, %d cr lighter." % take)
+	return take
 
 
 static func on_flight_returned(arrival: Dictionary) -> void:
@@ -262,6 +294,7 @@ static func to_save() -> Dictionary:
 		"events": events.duplicate(true), "credits": credits, "time_of_day": time_of_day,
 		"jobs_taken": jobs_taken.duplicate(), "clock": clock,
 		"inventory": inventory.to_save(),
+		"names": names.to_save(),
 	}
 
 
@@ -277,6 +310,8 @@ static func from_save(d: Dictionary) -> void:
 	clock = float(d.get("clock", 0.0))
 	inventory = Inventory.new()
 	inventory.from_save(d.get("inventory", {}))
+	names = NameBook.new()
+	names.from_save(d.get("names", {}))
 
 
 static func _read_json(path: String) -> Variant:

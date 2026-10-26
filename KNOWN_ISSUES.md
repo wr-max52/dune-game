@@ -2,6 +2,67 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After M15 part 2, combat NPCs (2026-10-26)
+
+**What is real and proven by tests:** with real physics and a fresh town per
+scenario (`test_results/combat_trace.txt`): both guards walk their loops and come
+back; standing 55 is waved through, 10 shows papers (+1), -10 is searched (held
+still) or bribed (-25 cr); -60 at dusk buys its way through; a drawn weapon or a
+recent shot makes papers a search; mouthing off twice and pushing through both end
+in a fight; at -60 by day they warn, go hostile after 3 s, take two distinct cover
+spots that really hide them, crouch, and hit a player standing in the open (about 7
+hits in 6 s); a good shooter wins in about 12 s (standing -40, checkpoint down,
+rumors live); running gets you away, they search on a leash and go home, and
+remember you; standing in the open gets you knocked out in about 8 s and you wake in
+the pit lighter. Unit tests cover every checkpoint rule, the brain's states, the
+cover picker and player health.
+
+**Not done, honestly:**
+- **Not played by a human.** Everything above is bots. Aim error, burst length,
+  hide times, the 3 s warning, prices and standing deltas are first guesses. With F4
+  on, it is a tuning session on the Mac.
+- **Only the gate.** The tower and yard troopers are still statues, and the
+  checkpoint is the only place guards think. No town-wide patrols or alarm.
+- **Dead guards come back** when the scene reloads (after a flight, or a restart):
+  bodies and "the checkpoint is down" are not saved, though the standing, flags and
+  rumors are.
+- **No ragdolls, no hit reactions** beyond a chest flinch and the tip-over; no
+  sounds for their rifles, barks or footsteps (the barks are text only).
+- **The player's capsule does not shrink when crouched.** Guards aim lower at a
+  crouched player, so cover works, but a bolt aimed high would still hit you.
+- **Search is a 3 s freeze.** Nobody looks at your inventory, so contraband means
+  nothing yet.
+- **The barricades are greybox crates** in the look (the decor pass does not know
+  them).
+- **Guards do not use the tower, flank, or throw anything**, and only the two gate
+  guards fight; no reinforcements.
+- **Only three ways a fight ends.** No surrender, no talking your way out mid-fight.
+
+## After M15 part 1, guards on foot (2026-10-26) -- still current except "No brain" and "They do not shoot", which part 2 did.
+## After N1, the naming system (2026-10-26)
+
+**What is real and proven by tests:**
+- The engine, the name book and its save, determinism, and uniqueness, including
+  5,000 names with no repeats and 1,500 callsigns with re-rolls.
+- Every grammar reference resolves.
+- No franchise name in the library, and franchise and rude words are rejected.
+- Names in the real scenes: guards, nameplates, the town and planet, your ship,
+  the jetpack, pilots each sortie, and the bartender's briefing
+  (`test_results/names_trace.txt`).
+
+**Not done, honestly:**
+- **Not everything is hooked in yet.** The fixer (old M6 scene), weapons, the
+  outpost and the mission's crate are not named on screen. The engine can name
+  them: each is one data block and one NameHooks call.
+- **Names are generated at about 0.3 ms each** (5,000 in 1.6 s headless). That is
+  fine at spawn time, but a crowd of hundreds spawned in one frame would hitch.
+- **One world seed for everyone** (`config.world_seed`). A new game does not roll
+  a new seed yet, so every player's port is Quartzspring on Namlunyn.
+- **Taste is unreviewed.** Some planet words read oddly ("Gaexaegiki"). The
+  rude-word and franchise lists are short, so an unlucky combination could still
+  slip through.
+- **English only**, three human cultures, no alien naming.
+
 ## After M15 part 1, guards on foot (2026-10-26)
 
 **What is real and proven by tests:** the two gate guards are NpcBody nodes on the

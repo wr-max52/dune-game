@@ -2,6 +2,83 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M15 part 2 — Combat NPCs at the gate (2026-10-26)
+
+What works now:
+- **The gate guards walk.** Each has a loop by its post (in the town data). They
+  pause, glance around, turn toward footsteps or a shot, and come back.
+- **The checkpoint reads your standing with the Remnant.** 40 and up: "Move
+  along." 0 to 39: papers, or a 10 cr bribe. Below 0: papers and a search (you are
+  held still for 3 s), or a 25 cr bribe. -40 and below: "Halt!", then they open
+  fire. After dark, bribes work one band lower: a wanted face can buy its way
+  through for 40 cr, and the search bribe drops to 10. A drawn weapon close by, or
+  gunfire in the street, makes it one band worse.
+- **A choice card** (keys 1-4 or the mouse): show papers, submit to a search,
+  bribe (greyed out if you cannot pay), mouth off (papers becomes a search; twice is
+  a fight), or walk away (fine, but walking through the gate anyway gets one
+  warning, then shots). What the guard says shows over its head and as a subtitle.
+- **They fight like soldiers.** When the warning runs out, they fire an opening
+  burst, then each sprints to its own cover (the two new barricades inside the
+  gate, the walls, the tower, the stalls), crouches, stands, fires 3 to 5 bolts,
+  and ducks again. They only shoot what they can see, miss more at range and at a
+  moving target, hide longer when hurt, and never hit each other. Shoot one, even
+  after being waved through, and both are on you.
+- **You can be hurt now.** 100 health, back on its own after 4 s without a hit, a
+  bar bottom left while hurt. At zero you are knocked out and wake up in the pit,
+  20% lighter in credits, and the guards stand down.
+- **Three ways out of a fight.** Win (both down: standing drops 40, the checkpoint
+  is gone, Oda talks about it). Run (out of sight and 70 m off: they search near the
+  gate, give up, and remember your face for 5 minutes). Or lose (the pit).
+- **The world remembers.** Bribes, fights, dead guards and flights all land in
+  WorldState, with three new rumors for the bartender.
+
+How to see it:
+- Run the town and walk to the gate (default standing is -10: you get searched).
+  F4 still shows each guard's senses. Pull a gun near them, or fire one off first.
+- `./scripts/ci.sh` writes `test_results/combat_trace.txt` (15 scenarios, each in a
+  fresh town) and runs `test_combat_trace`, `test_checkpoint` and `test_guard_brain`.
+  Review stills: `docs/npc/look/`.
+## N1 — Sci-fi naming system, issue #15 (2026-10-26)
+
+What works now:
+- **Everything that spawns gets a name.** The gate guards ("Corporal L. Raske"),
+  the space fight's pilots with callsigns ('"Wasp" Lieutenant Selma Sakete'), your
+  ship ("Woeful Refrain"), the jetpack's make and model ("Embry XR-76 Skylark"), the
+  town ("Quartzspring") and its planet ("Namlunyn").
+- **One engine, no LLM.** A library of about 2,300 original terms, four "tongues"
+  that build new words syllable by syllable, and a small template grammar per kind
+  of name (people by culture, callsigns, ships, equipment, makers, towns, planets,
+  moons, stars). Same world seed, same names, every time.
+- **Unique across the game.** Every new name is checked against all the names
+  already given out, and the authored ones, before it is saved. The bartender's own
+  name is reserved. The book is saved with the game.
+- **You see them.** A guard's name floats over them when you walk up. A place card
+  shows the town and planet when you arrive. The flight HUD and board prompt name
+  your ship, and "Leaving Namlunyn..." shows at the edge of space. The space
+  banner names the planet below, a kill calls out who you shot down, and the trade
+  prompts show the jetpack's model.
+- **The bartender knows them.** Her briefing names the town, the planet and the
+  people in town, so she uses the same names.
+
+How to see it:
+- Run the town: the place card is the first thing on screen. Walk up to a gate
+  guard, or press E at the ship.
+- `./scripts/ci.sh` writes `test_results/names_trace.txt`. It covers:
+  - names in the real scenes;
+  - a save and reload keeping them;
+  - a new game with the same seed giving the same names, and another seed
+    different ones;
+  - two sorties of named pilots;
+  - 5,000 people named with no repeats.
+- `docs/names/NAMING.md`: how it works and how to add words, cultures and kinds.
+- 498 GUT tests (496 pass, 2 need a local model and skip, as before).
+
+What is faked or outstanding:
+- Only the gate guards, the pilots, your ship, the jetpack, the town and the
+  planet are hooked in. The fixer has a naming block, but its scene has no place
+  to show it yet. Weapons are not named.
+- English-only library, three human cultures. No aliens yet.
+
 ## M15 part 1 — Guards on foot: body, pathing, senses (2026-10-26)
 
 What works now:

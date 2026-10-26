@@ -14,5 +14,28 @@
     "x-wing",
     "tie fighter",
     "millennium falcon"
+  ],
+  "name_terms_note": "Whole words a generated name (src/systems/names/) may never be or contain: franchise characters, places and terms too short or too common to scan for as substrings above. Matched against whole words of a name and its squashed form, never as substrings, so Han is out but Hanna is fine.",
+  "name_terms": [
+    "ackbar", "ahsoka", "alderaan", "alia", "amidala", "anakin", "andor", "antilles", "arrakis", "asajj",
+    "atreides", "bane", "bantha", "bastila", "baze", "bespin", "biggs", "boba", "bodhi", "bossk",
+    "bothan", "caladan", "calamari", "calrissian", "cassian", "chani", "chewbacca", "chewie", "chirrut", "chopper",
+    "cody", "corellia", "corellian", "corrino", "coruscant", "crait", "crysknife", "dagobah", "dameron", "dengar",
+    "dewback", "din", "djarin", "dodonna", "dooku", "droideka", "endor", "erso", "ewok", "exogorth",
+    "ezra", "felucia", "fett", "feyd", "finn", "fremen", "gamorrean", "geonosis", "gerrera", "gesserit",
+    "giedi", "greedo", "grievous", "grogu", "gunray", "gurney", "haderach", "halleck", "han", "harkonnen",
+    "hawat", "hera", "holocron", "hoth", "hutt", "hux", "idaho", "iden", "irulan", "ithorian",
+    "ixian", "jabba", "jakku", "jango", "jawa", "jedha", "jedi", "jerjerrod", "jinn", "jyn",
+    "kallus", "kamino", "kaminoan", "kanan", "kanly", "kashyyyk", "kenobi", "kessel", "kreia", "krennic",
+    "kwisatz", "kyber", "kylo", "kynes", "lando", "landsraad", "leia", "leto", "liet", "lightsaber",
+    "lobot", "lothal", "luke", "mace", "malak", "mandalore", "mandalorian", "maul", "meeko", "melange",
+    "mentat", "midichlorian", "mothma", "motti", "muaddib", "mustafar", "mygeeto", "mynock", "naboo", "nihilus",
+    "obiwan", "opress", "organa", "ornithopter", "ozzel", "padawan", "padme", "palpatine", "phasma", "piett",
+    "plagueis", "poe", "porg", "porkins", "pryce", "quigon", "rancor", "rautha", "revan", "rex",
+    "rey", "rieekan", "rodian", "sabine", "sardaukar", "sarlacc", "scarif", "sebulba", "shaddam", "shaihulud",
+    "shmi", "sidious", "sietch", "sith", "skywalker", "sloane", "snoke", "solo", "starkiller", "stilgar",
+    "stormtrooper", "sullust", "sullustan", "tano", "tarkin", "tatooine", "tauntaun", "thopter", "thrawn", "thufir",
+    "tleilaxu", "tusken", "twilek", "utapau", "vader", "veers", "ventress", "versio", "wampa", "watto",
+    "wedge", "wicket", "windu", "wookie", "wookiee", "yavin", "yoda", "youngling", "yueh", "zeb"
   ]
 }

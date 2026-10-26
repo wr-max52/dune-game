@@ -26,5 +26,6 @@
     { "weapon": "ship_cannon", "mount": [2.6, 0.0, -2.0] },
     { "weapon": "ship_missile", "mount": [0.0, -1.0, -2.4] }
   ],
-  "note": "IP-neutral. Slow, armoured, carries one seeker rack."
+  "note": "IP-neutral. Slow, armoured, carries one seeker rack.",
+  "naming": { "kind": "person_remnant", "titles": "remnant_pilot_rank", "callsign": true }
 }

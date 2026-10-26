@@ -16,6 +16,9 @@
     { "id": "r_remnant_angry", "text": "The Remnant have your description. Not a good one.", "requires": { "standing": { "imperial_remnant": [-100, -40] } }, "weight": 4 },
     { "id": "r_locals_like", "text": "The locals have started saying your name without spitting first. That's practically a parade.", "requires": { "standing": { "locals": [20, 100] } }, "weight": 2 },
     { "id": "r_fixer", "text": "The fixer by the tables has a crate job out at the old outpost. Pays well. Pays well because people don't come back.", "requires": { "tier": "regular" }, "weight": 1 },
+    { "id": "r_gate_fight", "text": "There was shooting at the east gate. The Remnant are walking around like someone stepped on their boots.", "requires": { "flags": ["gate_fight"] }, "weight": 5 },
+    { "id": "r_gate_dead", "text": "Two gate guards came back from their shift on stretchers. Somebody's going to get blamed, and it's not going to be the stretchers.", "requires": { "flags": ["gate_guards_down"] }, "weight": 5 },
+    { "id": "r_gate_bribed", "text": "Word is the gate took someone's coin last night and forgot their face. Happens more than they admit.", "requires": { "flags": ["bribed_gate"], "tier": "regular" }, "weight": 3 },
     { "id": "r_noon", "text": "Nobody sane walks the market at noon. The sun out there has a grudge.", "requires": { "time": ["noon"] }, "weight": 1 }
   ]
 }

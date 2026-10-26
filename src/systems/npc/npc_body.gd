@@ -18,10 +18,10 @@ extends "res://src/systems/player/character_body.gd"
 ## Every number comes from a soldier profile (content/core/soldiers/*.json).
 
 const NpcLocomotion := preload("res://src/systems/ai/npc_locomotion.gd")
-const HealthT := preload("res://src/systems/combat/health.gd")
 const BodyAnimatorT := preload("res://src/systems/anim/body_animator.gd")
 
 signal died
+signal hit_by(shooter: Node, amount: float)   ## after the damage lands (not for friendly fire)
 signal noticed_target          ## awareness crossed the notice line
 signal lost_target             ## noticed cleared again
 
@@ -31,9 +31,10 @@ static var show_debug := false
 var profile: Dictionary = {}
 var soldier_id := ""
 var post_id := ""              ## the marker this NPC was placed at
+var display_name := ""         ## issue #15: "Corporal Varo Kesh" (assign_name); "" until named
+var nameplate_range := 0.0     ## metres: the name floats over them when the target is this close
 var command := { "go_to": Vector3.INF, "face": Vector3.INF, "sprint": false, "crouch": false }
 
-var health
 var perception: Perception
 var locomotion
 var nav: TownNav               ## where paths come from (null = cannot walk anywhere)
@@ -42,6 +43,20 @@ var target_armed: Callable     ## -> bool; is the target holding a weapon out
 var target_crouched: Callable  ## -> bool
 
 var dead := false
+var faction := ""              ## from the profile; bolts from the same faction do no harm
+var last_hit_by: Node          ## who shot us last (null = unknown)
+
+## M15: the rifle. A brain sets aim_point and calls fire_at(); the body owns the
+## weapon state (ammo, rate, reload) and spawns real bolts.
+const WeaponActorT := preload("res://src/systems/combat/weapon_actor.gd")
+var weapon_actor
+var weapon_cfg: Dictionary = {}
+var bolt_parent: Node3D        ## where bolts live (the scene root)
+var aim_point := Vector3.INF   ## where the rifle points (INF = at ease)
+var shots_fired := 0
+var _speech: Label3D
+var _speech_left := 0.0
+var _crouched_shape := false
 var facing := 0.0              ## radians, rotation.y the body is turning toward
 var post_pos := Vector3.ZERO
 var post_facing := 0.0
@@ -71,6 +86,7 @@ var _was_noticed := false
 var _flinch := 0.0
 var _fall_t := 0.0
 var _label: Label3D
+var _nameplate: Label3D
 var _shape: CollisionShape3D
 
 
@@ -87,8 +103,19 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	controller.walk_speed = float(soldier.get("walk_speed", 3.2))
 	controller.sprint_speed = float(soldier.get("sprint_speed", 6.2))
 	turn_rate = deg_to_rad(float(soldier.get("turn_rate_deg", 260.0)))
-	health = HealthT.new(int(soldier.get("hp", 60)))
-	health.on_death.connect(_on_death)
+	faction = str(soldier.get("faction", ""))
+	# Health is the player body's (character_body.gd); guards do not regenerate.
+	max_health = int(soldier.get("hp", 60))
+	health = HealthT.new(max_health)
+	regen_per_s = 0.0
+	weapon_cfg = _weapon_config(soldier.get("weapon", {}))
+	weapon_actor = WeaponActorT.new()
+	weapon_actor.set_weapon(weapon_cfg)
+	weapon_actor.configure_bolt = func(b):
+		b.shooter = self
+		b.sweep = true
+		b.stylize = true
+		b.color = Color.html(str(weapon_cfg.get("bolt_color", "#ff3a24")))
 	perception = Perception.new(soldier.get("perception", {}))
 	var navc: Dictionary = soldier.get("nav", {})
 	locomotion = NpcLocomotion.new(navc)
@@ -115,19 +142,72 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_label = Label3D.new()
 	_label.name = "Debug"
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.position.y = 2.25
+	_label.position.y = 2.65        # the F4 line, above the speech
 	_label.pixel_size = 0.004
 	_label.no_depth_test = true
 	_label.visible = false
 	add_child(_label)
+	_speech = Label3D.new()
+	_speech.name = "Speech"
+	_speech.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_speech.position.y = 2.35       # above the nameplate (2.05)
+	_speech.pixel_size = 0.005
+	_speech.font_size = 40
+	_speech.outline_size = 10
+	_speech.modulate = Color(1.0, 0.93, 0.78)
+	_speech.visible = false
+	add_child(_speech)
+	_nameplate = Label3D.new()
+	_nameplate.name = "Nameplate"
+	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_nameplate.position.y = 2.05
+	_nameplate.pixel_size = 0.0028
+	_nameplate.outline_size = 8
+	_nameplate.modulate = Color(0.96, 0.92, 0.84)
+	_nameplate.visible = false
+	add_child(_nameplate)
+
+
+## The profile's weapon block over the base weapon's data (content/core/weapons).
+static func _weapon_config(w: Dictionary) -> Dictionary:
+	var cfg: Dictionary = {}
+	var base := str(w.get("base", ""))
+	if base != "":
+		var cc := preload("res://src/systems/dataload/core_content.gd").new()
+		cc.load_from()
+		cfg = cc.get_weapon(base).duplicate()
+	for k in w:
+		cfg[k] = w[k]
+	return cfg
+
+
+## Give this NPC its name, from the soldier profile's "naming" block (NameHooks,
+## issue #15). `key` is stable for this NPC ("npc:port_town/trooper_gate_n"), so
+## the same post always has the same person, across scenes and saves. Call after
+## setup(), as soon as it spawns.
+func assign_name(key: String) -> String:
+	var naming: Dictionary = profile.get("naming", {})
+	display_name = NameHooks.person(naming, key)
+	nameplate_range = float(naming.get("nameplate_range", 0.0))
+	if _nameplate != null:
+		_nameplate.text = display_name
+	return display_name
+
+
+## True when the floating name is up: named, alive, and the target within range.
+func nameplate_shown() -> bool:
+	return _nameplate != null and _nameplate.visible
 
 
 func _ready() -> void:
-	super._ready()
+	super._ready()          # builds the capsule and a fresh Health(max_health)
+	health.on_death.connect(_on_death)
 	for c in get_children():
 		if c is CollisionShape3D:
 			_shape = c
 	_last_pos = global_position
+	if weapon_actor != null:
+		weapon_actor.bolt_parent = bolt_parent if bolt_parent != null else get_parent() as Node3D
 
 
 # ------------------------------------------------------------------ orders
@@ -165,7 +245,59 @@ func forward() -> Vector3:
 
 
 func eye_position() -> Vector3:
-	return global_position + Vector3(0, perception.eye_height, 0)
+	var h: float = perception.eye_height
+	if bool(command.crouch):
+		h = float(profile.get("perception", {}).get("eye_height_crouched", 0.95))
+	return global_position + Vector3(0, h, 0)
+
+
+## Where a bolt leaves the rifle: forward of the chest, toward the aim.
+func muzzle_position() -> Vector3:
+	var chest := eye_position() - Vector3(0, 0.25, 0)
+	var to := (aim_point - chest) if aim_point != Vector3.INF else forward()
+	to.y = clampf(to.y, -2.0, 2.0)
+	return chest + to.normalized() * 0.75 + Vector3(0, 0.0, 0)
+
+
+## Pull the trigger this frame at `point` (the brain calls it while firing). The
+## weapon decides whether a bolt actually leaves (rate, ammo, reload). True on a shot.
+func fire_at(point: Vector3, dt: float) -> bool:
+	if dead or weapon_actor == null:
+		return false
+	aim_point = point
+	var before: int = weapon_actor.shots_fired
+	var origin := muzzle_position()
+	if weapon_actor.bolt_parent == null:
+		weapon_actor.bolt_parent = get_parent() as Node3D
+	weapon_actor.fire_at(point, origin, dt, true)
+	if weapon_actor.shots_fired == before:
+		return false
+	shots_fired += 1
+	NoiseEvents.emit(origin, float(weapon_cfg.get("noise_radius", 50.0)), "shot_guard")
+	return true
+
+
+## Advance the weapon without firing (cooldowns, reloads).
+func hold_fire(dt: float) -> void:
+	if weapon_actor != null and weapon_actor.weapon != null:
+		weapon_actor.weapon.start_firing(dt, false)
+
+
+func reloading() -> bool:
+	return weapon_actor != null and weapon_actor.weapon != null and weapon_actor.weapon.get("_reloading") == true
+
+
+## A line over the guard's head for a few seconds (barks; the HUD may also show it).
+func say(text: String, seconds: float = 2.6) -> void:
+	if _speech == null:
+		return
+	_speech.text = text
+	_speech.visible = text != ""
+	_speech_left = seconds
+
+
+func speaking() -> String:
+	return _speech.text if _speech != null and _speech.visible else ""
 
 
 # ------------------------------------------------------------------ per frame
@@ -175,6 +307,11 @@ func _physics_process(delta: float) -> void:
 		_fall(delta)
 		return
 	_sense(delta)
+	_set_crouch_shape(bool(command.crouch))
+	if _speech_left > 0.0:
+		_speech_left -= delta
+		if _speech_left <= 0.0:
+			_speech.visible = false
 	var move := _walk(delta)
 	_turn(delta, move)
 	var dir := NpcLocomotion.world_to_command(move, -rotation.y)
@@ -185,6 +322,7 @@ func _physics_process(delta: float) -> void:
 	_last_pos = global_position
 	_animate(delta, move)
 	_debug_line()
+	_update_nameplate()
 
 
 func _walk(dt: float) -> Vector3:
@@ -250,6 +388,7 @@ func _sense(dt: float) -> void:
 	perception.update(dt, {
 		"self_pos": global_position, "forward": forward(), "target_pos": tpos,
 		"crouched": crouched, "armed": armed, "los_clear": _los_clear,
+		"target_speed": Vector2(target.velocity.x, target.velocity.z).length() if tpos != Vector3.INF and "velocity" in target else 0.0,
 	})
 	if perception.noticed and not _was_noticed:
 		noticed_target.emit()
@@ -259,10 +398,11 @@ func _sense(dt: float) -> void:
 
 
 ## Eye to the target's chest. Clear if nothing but the target is in the way.
+## A crouched target's chest is lower, so waist-high cover really hides it.
 func _ray_clear(tpos: Vector3) -> bool:
 	if tpos == Vector3.INF or not is_inside_tree():
 		return false
-	var to := tpos + Vector3(0, perception.target_chest, 0)
+	var to := tpos + Vector3(0, target_chest_height(), 0)
 	var q := PhysicsRayQueryParameters3D.create(eye_position(), to)
 	q.exclude = [get_rid()]
 	q.collide_with_areas = false
@@ -277,7 +417,39 @@ func _ray_clear(tpos: Vector3) -> bool:
 	return false
 
 
+func target_chest_height() -> float:
+	var crouched: bool = target_crouched.call() if target_crouched.is_valid() else false
+	if crouched:
+		return float(profile.get("perception", {}).get("target_chest_crouched", 0.75))
+	return perception.target_chest
+
+
+## Crouching shrinks the capsule (the player's does not, yet), so a guard ducked
+## behind a 1.1 m barricade is really behind it.
+func _set_crouch_shape(on: bool) -> void:
+	if _shape == null or not (_shape.shape is CapsuleShape3D) or on == _crouched_shape:
+		return
+	_crouched_shape = on
+	var h := controller.crouch_height + 0.05 if on else capsule_height
+	var cap := (_shape.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
+	cap.height = maxf(h, capsule_radius * 2.0)
+	_shape.shape = cap
+	_shape.position.y = cap.height * 0.5
+
+
 # ------------------------------------------------------------------ damage
+
+## Bolts call this when they know who fired them. Same-faction bolts do nothing
+## (guards do not shoot each other); anything else is a real hit.
+func apply_damage_from(amount: float, shooter: Node) -> void:
+	if dead:
+		return
+	if shooter is NpcBody and (shooter as NpcBody).faction == faction and faction != "":
+		return
+	last_hit_by = shooter
+	apply_damage(amount)
+	hit_by.emit(shooter, amount)
+
 
 ## Bolts and blades call this (bolt.gd looks for apply_damage).
 func apply_damage(amount: float) -> void:
@@ -309,6 +481,7 @@ func _fall(dt: float) -> void:
 		look.rotation.x = -PI * 0.5 * k
 		look.position.y = (0.9 if kit == null else 0.0) * (1.0 - k) + 0.25 * k
 	_debug_line()
+	_update_nameplate()
 
 
 # ------------------------------------------------------------------ look
@@ -324,6 +497,7 @@ func _animate(dt: float, move: Vector3) -> void:
 	var out: Dictionary = anim.step(dt, {
 		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": velocity.y,
 		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": BodyAnimatorT.UPPER_RIFLE,
+		"aim_pitch": _aim_pitch(),
 	})
 	for jn in out.joints:
 		if joints.has(jn):
@@ -357,13 +531,29 @@ func _animate(dt: float, move: Vector3) -> void:
 		(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
 
 
+## Radians up (+) or down toward the aim point, for the chest bend.
+func _aim_pitch() -> float:
+	if aim_point == Vector3.INF:
+		return -0.25
+	var to := aim_point - eye_position()
+	return atan2(to.y, Vector2(to.x, to.z).length())
+func _update_nameplate() -> void:
+	if _nameplate == null:
+		return
+	var show := display_name != "" and not dead and not show_debug and target != null \
+		and nameplate_range > 0.0 and is_instance_valid(target) \
+		and global_position.distance_to(target.global_position) <= nameplate_range
+	_nameplate.visible = show
+
+
 func debug_text() -> String:
+	var who := ("%s (%s)" % [display_name, post_id]) if display_name != "" else post_id
 	if dead:
-		return "%s  DEAD" % post_id
+		return "%s  DEAD" % who
 	var p := perception
 	var goal := "post" if command.go_to == Vector3.INF else ("walk" if is_moving() else "there")
 	return "%s  hp %d  %s\nsee %s  aware %.2f%s%s" % [
-		post_id, health.hp, goal, "yes" if p.visible else ("cone" if p.in_cone else "no"),
+		who, health.hp, goal, "yes" if p.visible else ("cone" if p.in_cone else "no"),
 		p.awareness, "  NOTICED" if p.noticed else "", "  heard " + p.heard_kind if p.since_heard < 2.0 else ""]
 
 

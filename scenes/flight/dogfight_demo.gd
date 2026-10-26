@@ -45,6 +45,7 @@ var _return_how := "pad"    ## M14: "pad" (on foot at the pad) or "reentry" (bac
 var reentry_margin := 600.0 ## M14: metres above the planet's surface where a dive re-enters
 var planet_center := Vector3.ZERO
 var planet_radius := 0.0
+var planet_name := ""       ## issue #15: the world below, named (the encounter's "world")
 
 
 func _ready() -> void:
@@ -55,6 +56,9 @@ func _ready() -> void:
 	content = CoreContent.new()
 	content.load_from()
 	df = Dogfight.new(content, encounter_id, rng_seed)
+	# Issue #15: everyone who spawns gets a name; each sortie brings new pilots.
+	df.names = WorldState.names
+	df.name_scope = "pilot:%s/%d" % [encounter_id, WorldState.bump("sorties_" + encounter_id)]
 	df.start()
 	df.set_player_autopilot(autopilot)
 	kit = ShipKit.new()
@@ -72,7 +76,11 @@ func _ready() -> void:
 		chase.fit_to(float(look.get("length", 9.0)))
 	_build_hud()
 	_sync_ships()
-	_show_banner(str(df.encounter.get("label", "Dogfight")))
+	var title := str(df.encounter.get("label", "Dogfight"))
+	planet_name = NameHooks.planet(content.get_world(str(df.encounter.get("world", ""))))
+	if planet_name != "":
+		title += "  ·  above " + planet_name
+	_show_banner(title)
 	if GameFlow.in_flight and GameFlow.mode == "ascent":
 		_show_banner(GameFlow.label("dive_to_land"), 5.0)
 
@@ -230,7 +238,7 @@ func _on_event(e: Dictionary) -> void:
 			_spawn_flash(e.point, 6.0, 0.9, Color("#ff9a4a"))
 			_spawn_flash(e.point, 3.0, 0.4, Color("#fff4dc"))
 			if e.by == df.player_id:
-				_show_banner("Kill")
+				_show_banner("Kill  ·  " + str(e.who) if str(e.get("who", "")) != "" else "Kill")
 		"wave":
 			_show_banner("Wave %d" % e.index)
 		"complete":

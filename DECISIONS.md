@@ -2,6 +2,63 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — N1, the naming system (issue #15)
+
+- **One engine, many kinds, all data.** A kind is a weighted list of templates
+  over word lists, shared rules and made-up words. People, callsigns, ships,
+  equipment, makers, towns, planets, moons and stars are all just kinds in
+  `content/core/names/kinds.json`. Alternative: a generator per thing -- rejected,
+  because the issue asked for one engine, and a new kind of name is a JSON entry.
+- **Deterministic, keyed, then checked.** The seed is a hash of (world seed, kind,
+  the thing's stable key, attempt), using FNV-1a, which is stable on every machine,
+  unlike String.hash(). The same thing gets the same name across scenes and new
+  games. A clash re-rolls with the next attempt, so even the re-roll is
+  repeatable. Alternative: random names saved once -- rejected, because the issue
+  asked for a deterministic process, and a seed is something a save can carry.
+- **"Elegant yet complicated but not complex."** The grammar has seven tokens and
+  no conditions. The variety comes from the library's size and from tongues:
+  per-culture sound tables that build words syllable by syllable, with a
+  vowel-run cap and banned clusters to keep them pronounceable.
+- **Original words, not another game's.** The issue suggested training on a
+  shooter's NPC names. That is franchise IP, and the repo must stay IP-neutral.
+  The library is written in that spirit instead. Franchise names are blocked as
+  whole words (`name_terms` in the IP blocklist, beside the substring `terms`), so
+  "Han" is out but "Hanna" is fine.
+- **Data says how a thing is named.** A `naming` block on a soldier, ship, item or
+  world picks the kind, the title list and the callsign. `NameHooks` is the one
+  place spawners call. Titles are picked deterministically from the key, not
+  generated, so they never use up a name.
+- **The book lives in WorldState and is saved.** Names, the labels as shown and
+  the world seed go into the save. Authored names (the bartender's) are reserved up
+  front.
+- **The library has a source script.** `tools/names/lexicon_source.py` holds the
+  word lists as plain space-separated text, which is easier to grow than JSON
+  arrays. It writes the JSON the game reads. Both are committed.
+
+## 2026-10-26 — Oda wears a rigged model with a gas mask and glowing goggles
+
+- **The body comes from the concept's back view only.** Given the front and side
+  views, Rodin copied the concept's cloth face wrap and ignored the prompt's gas
+  mask. A text-only run made a good mask on the wrong outfit (khaki hazmat). The
+  back view plus a prompt kept the outfit (hood, long scarf tail, dark jacket, belt
+  and pouches) and left the face free.
+- **The gas mask is a separate Rodin prop welded on in prep.** A new `attach` step
+  in `tools/look/prep_character.gd` scales and places the prop, skins it all to
+  `Head`, and cuts the parts we don't want: the mannequin bust the generator put
+  inside the mask and the straps that poked through the hood. It stays one .glb, so
+  the game code doesn't change. Alternative: hang the mask on the head joint at
+  runtime. That would put a second model on every scene that builds her.
+- **The goggles glow from flat emissive discs over the lenses.** The prop's lenses
+  were clear glass with a face behind them; the discs hide that face and give the
+  yellow cyborg eyes.
+- **Decimated in prep.** These were Rodin's high tier (500k triangles each; the
+  first export was 110 MB, over GitHub's file limit). A `decimate` step keeps
+  meshoptimizer's coarsest LOD above a target: body 125k, mask 44k, 35 MB. The next
+  body LOD (~42k) collapsed the top of the hood, so she stays heavier than the
+  smuggler (26k). She is one NPC behind a counter.
+- **BartenderNPC syncs the skin every frame** after its IK, as the player does.
+- **Known gap: the apron.** The model wears a long split coat; the concept's
+  bib apron didn't come through. Left as is for review.
 ## 2026-10-26 — The smuggler is regenerated without a jetpack
 
 - **Flattening the concept's jetpack did not hold up in game.** The pressed-flat
@@ -11,6 +68,48 @@ Every significant technical choice, the alternative, and why. Newest on top.
   the same. Alternative: hand-model a coat patch. Rejected: a new generation gave a
   real back for the same effort. The prep step no longer flattens anything; the
   arm-weight fix and the goggle glow still apply.
+## 2026-10-26 — M15 part 2 (combat NPCs at the gate)
+
+- **Two brains, two jobs.** `Checkpoint` (pure) decides what the gate does for
+  everyone (wave, papers, search, bribe, warn, fight, disengage, remember).
+  `GuardBrain` (pure, one per guard) decides how a guard does it. `GateCheckpoint`
+  is the director: it reads the bodies and WorldState in, writes commands, the card
+  and WorldState out. Alternative: one brain per guard that also owns the gate
+  rules -- rejected, two guards would disagree about whether you are cleared.
+- **Standing bands, night bribes and fight outcomes are the product owner's**
+  (40 / 0 / -1 / -40; one band lower after dark; kill and run costs standing, but
+  you can win). The numbers (prices, deltas, timers) are first guesses in the
+  profile.
+- **The player can be downed.** Without it "you can win" means nothing. Health on
+  the player body (`character_body.gd`) with regen, and a `downed` signal that does
+  nothing on its own; the checkpoint turns it into a knockout to the pit. Traces
+  that are not about guards switch the brains off (`npc_brains = false`), so the
+  older traces keep walking through the gate unbothered.
+- **Opening burst, then cover.** A warned target gets shot at once, not after the
+  guards have jogged to a crate; the cover dance starts after the first burst.
+- **Cover comes from the town's boxes** (`CoverPicker`): spots around every box
+  tall enough to hide a crouched body, kept only if the box sits between the spot
+  and the threat, on the guard's side of the gate, reachable on the navmesh, and
+  not claimed by the other guard. `squad_coordinator.gd` is not used: it looks up
+  member positions by cover index and never asks whether a spot hides anyone.
+- **Two barricades added inside the gate** (`checkpoint_barricade_n/s`, 1.1 m).
+  The gate had no cover a guard could use against the desert side, so every fight
+  was two guards standing in the open.
+- **Crouching shrinks the guard's capsule**, so a bolt aimed over a barricade
+  really misses. The player's capsule does not shrink yet (guards aim at a crouched
+  player's lower chest instead, which the barricade blocks).
+- **No friendly fire.** Bolts now tell the target who fired them
+  (`apply_damage_from`); a guard ignores its own faction's bolts.
+- **Corners are only cut on level ground.** With combat sprinting, a guard took
+  the pit-ramp foot early and walked into the ramp's side ledge (the part 1 bug
+  again, by another route). Taking a corner early, or skipping it when stuck, is
+  now only allowed where the path stays level.
+- **Footsteps.** A guard facing the gate never noticed a player standing behind it
+  in the checkpoint. A moving, standing target within ~6 m is now heard
+  (crouch-walking is silent), and a calm guard turns to look at what it heard.
+- **Barks are de-duplicated on game time**, not wall time (traces run faster than
+  real time), so two guards never shout the same line together.
+
 ## 2026-10-26 — M15 part 1 (guards on foot: body, pathing, senses)
 
 - **Guards are not LLM driven** (product owner). The bartender stays the only LLM

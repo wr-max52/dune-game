@@ -68,6 +68,23 @@ func test_trooper_keeps_its_rifle_in_hand() -> void:
 	c.free()
 
 
+func test_oda_wears_her_model_and_it_follows_the_wipe() -> void:
+	var oda := BartenderNPC.new()
+	add_child_autofree(oda)
+	assert_true(oda.body.has_meta("skin"), "the bartender wears a rigged model")
+	if not oda.body.has_meta("skin"):
+		return
+	var skin: SkinnedBody = oda.body.get_meta("skin")
+	assert_string_contains(skin.model.scene_file_path, "oda", "Oda's model")
+	var elbow: int = skin.bone_of.r_elbow
+	oda._process(0.0)
+	var before := skin.skeleton.get_bone_pose_rotation(elbow)
+	for i in 10:
+		oda._process(0.1)
+	assert_gt(before.angle_to(skin.skeleton.get_bone_pose_rotation(elbow)), 0.01, "the wiping arm moves the skin")
+	assert_true(oda.glass.visible, "the glass is a prop; it stays")
+
+
 func test_joint_rotation_turns_its_bone_by_the_same_amount() -> void:
 	var skel := avatar.skin.skeleton
 	var knee: int = avatar.skin.bone_of.r_knee

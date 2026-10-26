@@ -43,6 +43,12 @@ var arena_radius := 1500.0
 var wave_index := -1
 var _wave_timer := 0.0
 var _next_id := 1
+## Issue #15: when set, every pilot is named as they spawn (NameHooks, from the
+## ship's "naming" block) and the player's ship gets its own name. `name_scope`
+## keeps a sortie's pilots apart from the last one's ("pilot:<encounter>/<n>").
+## Null (the default, and in the pure tests) = nobody is named.
+var names: NameBook
+var name_scope := "pilot"
 
 ## Running totals for traces and the HUD.
 var stats := { "shots": 0, "missiles": 0, "hits": 0, "missile_hits": 0, "kills": 0,
@@ -118,7 +124,18 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 		"retarget_left": 0.0,
 		"radius": float(cfg.get("hit_radius", 3.0)),
 		"kills": 0,
+		"pilot_name": "",
+		"callsign": "",
+		"vessel_name": "",
 	}
+	if names != null:
+		var naming: Dictionary = cfg.get("naming", {})
+		if is_player:
+			ship.vessel_name = NameHooks.vessel(cfg, "vessel:player/" + ship_id, names)
+		else:
+			var key := "%s/%d" % [name_scope, id]
+			ship.pilot_name = NameHooks.person(naming, key, names)
+			ship.callsign = NameHooks.callsign(naming, key, names)
 	if not is_player:
 		ship.brain = _make_brain(pid, flight, id)
 	ships.append(ship)
@@ -369,7 +386,18 @@ func _resolve_hits(hits: Array) -> void:
 				if killer.is_player:
 					stats.player_kills += 1
 			events.append({ "type": "kill", "id": victim.id, "ship_id": victim.ship_id,
-				"by": h.owner, "team": victim.team, "point": victim.flight.position })
+				"by": h.owner, "team": victim.team, "point": victim.flight.position,
+				"who": who(victim) })
+
+
+## How a ship's pilot is called out: '"Cinder" Lieutenant Varo Kesh', or just the
+## name or the callsign, or "" when nobody named them.
+static func who(ship: Dictionary) -> String:
+	var cs := str(ship.get("callsign", ""))
+	var pn := str(ship.get("pilot_name", ""))
+	if cs != "" and pn != "":
+		return "\"%s\" %s" % [cs, pn]
+	return cs if cs != "" else pn
 
 
 func _check_outcome() -> void:
