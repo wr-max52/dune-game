@@ -17,6 +17,7 @@ const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const SHOTS_PATH := "res://content/look/town_shots.json"
+const CAST_PATH := "res://content/look/town_cast.json"
 
 ## Placeholder colors per marker role (greybox).
 const ROLE_COLORS := {
@@ -34,6 +35,8 @@ var look: LookEnvironment
 var decor
 var camera: Camera3D
 var shots: Dictionary = {}
+var cast: Dictionary = {}
+var _kits := {}
 var pads: Array = []
 var _player: Node
 var _rig: Node
@@ -52,7 +55,6 @@ func _ready() -> void:
 			push_error("TownDemo: " + str(e))
 		return                  # never build a broken town
 	_build_boxes()
-	_build_markers()
 	if use_look:
 		look = LookEnvironment.new()
 		add_child(look)
@@ -62,6 +64,7 @@ func _ready() -> void:
 		decor.dress(town, look)
 	else:
 		_add_light_and_sky()
+	_build_markers()
 	if lookdev_mode:
 		shots = _load_shots()
 		camera = Camera3D.new()
@@ -95,7 +98,7 @@ func _build_boxes() -> void:
 
 
 func _build_markers() -> void:
-	## Static capsules: no AI, no collision (so they never block the bot).
+	## Static figures: no AI, no collision (so they never block the bot).
 	var root := Node3D.new()
 	root.name = "Markers"
 	add_child(root)
@@ -104,37 +107,73 @@ func _build_markers() -> void:
 			continue           # spawn/waypoint/interact are invisible
 		var v := _make_marker_visual(m)
 		v.name = m.id
-		v.position = town.marker_pos(m.id) + Vector3(0, 0.9, 0)  # capsule centered
+		v.position = town.marker_pos(m.id)       # origin is at the feet
 		root.add_child(v)
 		built_markers += 1
 
 
-## The one seam the character art pass replaces. Today: a capsule per marker.
+## The one seam the character art pass replaces. With the look layer on it is a
+## character from the beauty corner's kit; the plain greybox (CI) keeps capsules.
 func _make_marker_visual(m: Dictionary) -> Node3D:
+	return _make_character(m) if use_look else _make_capsule(m)
+
+
+func _make_capsule(m: Dictionary) -> Node3D:
 	var mesh := CapsuleMesh.new()
 	mesh.radius = 0.35
 	mesh.height = 1.8
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = ROLE_COLORS[m.role]
+	mesh.material = mat
 	var mi := MeshInstance3D.new()
+	mi.name = "Capsule"
 	mi.mesh = mesh
-	if use_look:
-		var role_look := {
-			"npc": LookMaterials.CLOTH_TEAL,
-			"trooper_post": LookMaterials.REMNANT_OXBLOOD,
-			"ambient": LookMaterials.CLOTH_SAND,
-		}
-		mi.material_override = _flat_mats().flat(role_look[m.role])
-	else:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = ROLE_COLORS[m.role]
-		mesh.material = mat
-	return mi
+	mi.position = Vector3(0, 0.9, 0)             # capsule is centered, feet at the origin
+	var root := Node3D.new()
+	root.add_child(mi)
+	return root
 
 
-var _mats: LookMaterials
-func _flat_mats() -> LookMaterials:
-	if _mats == null:
-		_mats = LookMaterials.new()
-	return _mats
+## Who stands here comes from content/look/town_cast.json: role default, then the
+## marker's own entry. Characters face +Z, so yaw = atan2(dir.x, dir.z).
+func _make_character(m: Dictionary) -> Node3D:
+	if cast.is_empty():
+		cast = _read_json(CAST_PATH)
+	var pick: Dictionary = cast.get("roles", {}).get(str(m.role), {}).duplicate()
+	pick.merge(cast.get("markers", {}).get(str(m.id), {}), true)
+	var archetype := str(pick.get("archetype", "local"))
+	var pos := town.marker_pos(m.id)
+	var c := _kit(pos.y).build(archetype, str(pick.get("pose", "")))
+	c.set_meta("archetype", archetype)
+	var target := town.marker_pos(str(pick.face)) if pick.has("face") and not town.get_marker(str(pick.face)).is_empty() \
+		else _bounds_center()
+	var dir := Vector3(target.x - pos.x, 0.0, target.z - pos.z)
+	if dir.length() > 0.01:
+		c.rotation.y = atan2(dir.x, dir.z)
+	return c
+
+
+## One kit per ground height: the kit's dirt gradients are measured from its floor_y.
+func _kit(ground_y: float) -> CharacterKit:
+	var key := snappedf(ground_y, 0.01)
+	if not _kits.has(key):
+		_kits[key] = CharacterKit.new(decor.mats, ground_y)
+	return _kits[key]
+
+
+func _bounds_center() -> Vector3:
+	var b: Dictionary = town.data.get("bounds", {})
+	if b.is_empty():
+		return Vector3.ZERO
+	return Vector3((float(b.min[0]) + float(b.max[0])) * 0.5, 0.0, (float(b.min[1]) + float(b.max[1])) * 0.5)
+
+
+static func _read_json(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	return d if d is Dictionary else {}
 
 
 func _spawn_player() -> void:

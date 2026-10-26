@@ -32,6 +32,14 @@ Every significant technical choice, the alternative, and why. Newest on top.
   keep simulating during flight. Revisit if a seamless take-off is wanted.
 - **The beauty corner is back to being only the art reference.** The pad briefly
   lived there; it moved to the town and `beauty_corner.gd` is unchanged from main.
+- **Characters replace the capsules in the town (rule 4 overridden).** The addendum said
+  capsules only; Will chose to bring in the beauty corner's characters the cheapest way.
+  It was one function: `_make_marker_visual` in `town_demo.gd` now builds a
+  `CharacterKit` figure. Who stands where is data in `content/look/town_cast.json`
+  (role defaults plus per-marker overrides; gate posts face the gate). Figures are
+  static: no AI, no collision, no dialogue. `use_look = false` keeps the capsules so
+  the CI walk trace is unchanged. One kit per ground height, so the 12 m watchtower
+  post is measured from its own floor.
 - **The parked ship is the flight model, and its box was resized to fit it.** The
   decor layer builds the pit ship with the same ShipKit and look id the dogfight
   uses (pad encounter, then player ship, then look), so one data change restyles
