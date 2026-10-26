@@ -2,6 +2,7 @@
   "id": "fixer",
   "kind": "authored",
   "label": "Fixer",
+  "naming": { "kind": "person_drift" },
   "loc": "port/cantina/fixer",
   "dialogue": ["dialogue/fixer_lines"],
   "note": "Fixer is authored (data-driven), not LLM. The only LLM npc is the bartender."

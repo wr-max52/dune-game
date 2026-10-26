@@ -39,6 +39,31 @@ cover picker and player health.
 - **Only three ways a fight ends.** No surrender, no talking your way out mid-fight.
 
 ## After M15 part 1, guards on foot (2026-10-26) -- still current except "No brain" and "They do not shoot", which part 2 did.
+## After N1, the naming system (2026-10-26)
+
+**What is real and proven by tests:**
+- The engine, the name book and its save, determinism, and uniqueness, including
+  5,000 names with no repeats and 1,500 callsigns with re-rolls.
+- Every grammar reference resolves.
+- No franchise name in the library, and franchise and rude words are rejected.
+- Names in the real scenes: guards, nameplates, the town and planet, your ship,
+  the jetpack, pilots each sortie, and the bartender's briefing
+  (`test_results/names_trace.txt`).
+
+**Not done, honestly:**
+- **Not everything is hooked in yet.** The fixer (old M6 scene), weapons, the
+  outpost and the mission's crate are not named on screen. The engine can name
+  them: each is one data block and one NameHooks call.
+- **Names are generated at about 0.3 ms each** (5,000 in 1.6 s headless). That is
+  fine at spawn time, but a crowd of hundreds spawned in one frame would hitch.
+- **One world seed for everyone** (`config.world_seed`). A new game does not roll
+  a new seed yet, so every player's port is Quartzspring on Namlunyn.
+- **Taste is unreviewed.** Some planet words read oddly ("Gaexaegiki"). The
+  rude-word and franchise lists are short, so an unlucky combination could still
+  slip through.
+- **English only**, three human cultures, no alien naming.
+
+## After M15 part 1, guards on foot (2026-10-26)
 
 **What is real and proven by tests:** the two gate guards are NpcBody nodes on the
 player's movement code, with Health, flinch and death; the town navmesh bakes from

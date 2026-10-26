@@ -71,6 +71,9 @@ var built_markers := 0
 var nav: TownNav                      ## the walkable surface NPCs path on
 var npcs: Array = []                  ## NpcBody, one per soldier marker
 var checkpoint: GateCheckpoint        ## M15: runs the gate guards (null with npc_brains off)
+var town_name := ""                   ## issue #15: this town's generated name ("" when its world names none)
+var planet_name := ""                 ## and the planet it is on
+var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
 
 
 func _ready() -> void:
@@ -121,6 +124,40 @@ func _ready() -> void:
 			_build_ship()
 		if with_npcs:
 			_build_npcs()
+		_name_places()          # after the bar: a loaded save keeps the names it had
+
+
+# ---------------------------------------------------------------- names (issue #15)
+
+## The town and its planet get their names from the world's "naming" block
+## (NameHooks); a card shows them when you arrive, like entering a region.
+func _name_places() -> void:
+	var cc := CoreContent.new()
+	cc.load_from()
+	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
+	town_name = NameHooks.town(world)
+	planet_name = NameHooks.planet(world)
+	if town_name == "":
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "PlaceCard"
+	layer.layer = 6
+	add_child(layer)
+	place_card = Label.new()
+	place_card.text = town_name + ("  ·  " + planet_name if planet_name != "" else "")
+	place_card.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	place_card.position = Vector2(-360, 64)
+	place_card.size = Vector2(720, 40)
+	place_card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	place_card.add_theme_font_size_override("font_size", 28)
+	place_card.add_theme_color_override("font_color", Color(0.97, 0.92, 0.82))
+	place_card.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	place_card.add_theme_constant_override("outline_size", 6)
+	place_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(place_card)
+	var tw := create_tween()
+	tw.tween_interval(4.0)
+	tw.tween_property(place_card, "modulate:a", 0.0, 1.5)
 
 
 # ---------------------------------------------------------------- gameplay layer
@@ -286,6 +323,7 @@ func _build_npcs() -> void:
 		npc.nav = nav
 		npc.bolt_parent = self
 		npc.target = _player
+		npc.assign_name("npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
 		npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
 		npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
 		root.add_child(npc)

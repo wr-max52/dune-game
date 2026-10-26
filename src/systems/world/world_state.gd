@@ -25,6 +25,7 @@ static var time_of_day := "golden"
 static var jobs_taken: Dictionary = {}     ## job id -> "active" | "done"
 static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
+static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -44,6 +45,7 @@ static func reset() -> void:
 	clock = 0.0
 	_cooldowns = {}
 	inventory = Inventory.new()
+	names = NameBook.new()
 
 
 # ------------------------------------------------------------------ writes
@@ -292,6 +294,7 @@ static func to_save() -> Dictionary:
 		"events": events.duplicate(true), "credits": credits, "time_of_day": time_of_day,
 		"jobs_taken": jobs_taken.duplicate(), "clock": clock,
 		"inventory": inventory.to_save(),
+		"names": names.to_save(),
 	}
 
 
@@ -307,6 +310,8 @@ static func from_save(d: Dictionary) -> void:
 	clock = float(d.get("clock", 0.0))
 	inventory = Inventory.new()
 	inventory.from_save(d.get("inventory", {}))
+	names = NameBook.new()
+	names.from_save(d.get("names", {}))
 
 
 static func _read_json(path: String) -> Variant:

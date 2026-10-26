@@ -63,6 +63,8 @@ var _rig_was_fp := false
 var _boost := false
 var _foot_prompt: Label          ## "[E] Board" while standing at the ship
 var hull: StaticBody3D           ## the ship's own collision: solid while parked, off in flight
+var vessel_name := ""            ## issue #15: the ship's own name (same key as in space)
+var planet_name := ""
 
 
 func setup(town_scene) -> void:
@@ -122,7 +124,10 @@ func _ready() -> void:
 	_foot_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_foot_prompt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_foot_prompt.add_theme_constant_override("outline_size", 4)
-	_foot_prompt.text = GameFlow.label("board")
+	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
+	planet_name = NameHooks.planet(world)
+	_foot_prompt.text = GameFlow.label("board") + ("  " + vessel_name if vessel_name != "" else "")
+	hud.vessel_name = vessel_name
 	_foot_prompt.visible = false
 	layer.add_child(_foot_prompt)
 	var look: Dictionary = ShipKit.new().looks.get(str(ship_cfg.get("look", "")), {})
@@ -450,7 +455,7 @@ func _leave_atmosphere() -> void:
 	if ascending:
 		return
 	ascending = true
-	hud.toast(GameFlow.label("leaving_atmosphere"), 3.0)
+	hud.toast(GameFlow.label("leaving_planet") % planet_name if planet_name != "" else GameFlow.label("leaving_atmosphere"), 3.0)
 	left_atmosphere.emit()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if not is_inside_tree():

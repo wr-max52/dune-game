@@ -15,5 +15,6 @@
     "recharge_ground": 0.6,
     "recharge_air": 0.0
   },
-  "note": "IP-neutral. Worn on the back. Hold jump in the air to fly while fuel lasts; fuel (seconds of thrust) refills after recharge_delay, on the ground. thrust and max_rise are m/s^2 and m/s; gravity is 20."
+  "note": "IP-neutral. Worn on the back. Hold jump in the air to fly while fuel lasts; fuel (seconds of thrust) refills after recharge_delay, on the ground. thrust and max_rise are m/s^2 and m/s; gravity is 20.",
+  "naming": { "kind": "equipment", "class": "jetpack" }
 }

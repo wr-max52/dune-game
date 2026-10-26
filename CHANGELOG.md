@@ -38,6 +38,46 @@ How to see it:
 - `./scripts/ci.sh` writes `test_results/combat_trace.txt` (15 scenarios, each in a
   fresh town) and runs `test_combat_trace`, `test_checkpoint` and `test_guard_brain`.
   Review stills: `docs/npc/look/`.
+## N1 — Sci-fi naming system, issue #15 (2026-10-26)
+
+What works now:
+- **Everything that spawns gets a name.** The gate guards ("Corporal L. Raske"),
+  the space fight's pilots with callsigns ('"Wasp" Lieutenant Selma Sakete'), your
+  ship ("Woeful Refrain"), the jetpack's make and model ("Embry XR-76 Skylark"), the
+  town ("Quartzspring") and its planet ("Namlunyn").
+- **One engine, no LLM.** A library of about 2,300 original terms, four "tongues"
+  that build new words syllable by syllable, and a small template grammar per kind
+  of name (people by culture, callsigns, ships, equipment, makers, towns, planets,
+  moons, stars). Same world seed, same names, every time.
+- **Unique across the game.** Every new name is checked against all the names
+  already given out, and the authored ones, before it is saved. The bartender's own
+  name is reserved. The book is saved with the game.
+- **You see them.** A guard's name floats over them when you walk up. A place card
+  shows the town and planet when you arrive. The flight HUD and board prompt name
+  your ship, and "Leaving Namlunyn..." shows at the edge of space. The space
+  banner names the planet below, a kill calls out who you shot down, and the trade
+  prompts show the jetpack's model.
+- **The bartender knows them.** Her briefing names the town, the planet and the
+  people in town, so she uses the same names.
+
+How to see it:
+- Run the town: the place card is the first thing on screen. Walk up to a gate
+  guard, or press E at the ship.
+- `./scripts/ci.sh` writes `test_results/names_trace.txt`. It covers:
+  - names in the real scenes;
+  - a save and reload keeping them;
+  - a new game with the same seed giving the same names, and another seed
+    different ones;
+  - two sorties of named pilots;
+  - 5,000 people named with no repeats.
+- `docs/names/NAMING.md`: how it works and how to add words, cultures and kinds.
+- 498 GUT tests (496 pass, 2 need a local model and skip, as before).
+
+What is faked or outstanding:
+- Only the gate guards, the pilots, your ship, the jetpack, the town and the
+  planet are hooked in. The fixer has a naming block, but its scene has no place
+  to show it yet. Weapons are not named.
+- English-only library, three human cultures. No aliens yet.
 
 ## M15 part 1 — Guards on foot: body, pathing, senses (2026-10-26)
 

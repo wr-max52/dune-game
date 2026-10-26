@@ -73,5 +73,6 @@
     "body_radius": 2.0,
     "clearance": 1.0
   },
-  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack. 'atmosphere' (M14) is how it flies inside the planet's air: hover at zero throttle, faster as the air thins (edge_speed_mult at the edge of space), slower nose-up (climb_drag), vertical liftoff and auto-landing, and the impact speed that crashes it."
+  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack. 'atmosphere' (M14) is how it flies inside the planet's air: hover at zero throttle, faster as the air thins (edge_speed_mult at the edge of space), slower nose-up (climb_drag), vertical liftoff and auto-landing, and the impact speed that crashes it.",
+  "naming": { "kind": "person_drift", "callsign": true, "vessel": "vessel" }
 }

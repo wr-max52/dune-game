@@ -235,6 +235,16 @@ if [ ! -f test_results/combat_trace.txt ]; then
   exit 1
 fi
 echo "CI: combat trace present ($(wc -l < test_results/combat_trace.txt) lines)"
+# Issue #15: names. The town's guards, the town, its planet, your ship and the
+# jetpack named as they spawn; the same names after a save and for the same world
+# seed; the space fight's pilots named each sortie; a crowd of 5,000 all unique.
+echo "CI: generating names trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/names_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/names_trace.txt ]; then
+  echo "CI: ERROR -- names trace was not generated" >&2
+  exit 1
+fi
+echo "CI: names trace present ($(wc -l < test_results/names_trace.txt) lines)"
 
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes

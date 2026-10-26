@@ -31,6 +31,13 @@ Copy `content/core/items/jetpack.json`:
   be held before it lights (so taps stay jumps); `min_fuel_to_start`;
   `recharge_delay`, `recharge_ground`, `recharge_air` (fuel per second).
 
+### Its make and model (issue #15)
+
+`"naming": { "kind": "equipment", "class": "jetpack" }` gives the item a generated
+make and model, shown in its prompts ("Jetpack (Embry XR-76 Skylark)"). `class`
+picks the product words: jetpack, blaster, blade, ship, armor or tool. See
+`docs/names/NAMING.md`.
+
 ## A new look (any design)
 
 Add an entry under `looks` in `content/look/items.json`:

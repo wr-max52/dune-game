@@ -2,6 +2,39 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — N1, the naming system (issue #15)
+
+- **One engine, many kinds, all data.** A kind is a weighted list of templates
+  over word lists, shared rules and made-up words. People, callsigns, ships,
+  equipment, makers, towns, planets, moons and stars are all just kinds in
+  `content/core/names/kinds.json`. Alternative: a generator per thing -- rejected,
+  because the issue asked for one engine, and a new kind of name is a JSON entry.
+- **Deterministic, keyed, then checked.** The seed is a hash of (world seed, kind,
+  the thing's stable key, attempt), using FNV-1a, which is stable on every machine,
+  unlike String.hash(). The same thing gets the same name across scenes and new
+  games. A clash re-rolls with the next attempt, so even the re-roll is
+  repeatable. Alternative: random names saved once -- rejected, because the issue
+  asked for a deterministic process, and a seed is something a save can carry.
+- **"Elegant yet complicated but not complex."** The grammar has seven tokens and
+  no conditions. The variety comes from the library's size and from tongues:
+  per-culture sound tables that build words syllable by syllable, with a
+  vowel-run cap and banned clusters to keep them pronounceable.
+- **Original words, not another game's.** The issue suggested training on a
+  shooter's NPC names. That is franchise IP, and the repo must stay IP-neutral.
+  The library is written in that spirit instead. Franchise names are blocked as
+  whole words (`name_terms` in the IP blocklist, beside the substring `terms`), so
+  "Han" is out but "Hanna" is fine.
+- **Data says how a thing is named.** A `naming` block on a soldier, ship, item or
+  world picks the kind, the title list and the callsign. `NameHooks` is the one
+  place spawners call. Titles are picked deterministically from the key, not
+  generated, so they never use up a name.
+- **The book lives in WorldState and is saved.** Names, the labels as shown and
+  the world seed go into the save. Authored names (the bartender's) are reserved up
+  front.
+- **The library has a source script.** `tools/names/lexicon_source.py` holds the
+  word lists as plain space-separated text, which is easier to grow than JSON
+  arrays. It writes the JSON the game reads. Both are committed.
+
 ## 2026-10-26 — Oda wears a rigged model with a gas mask and glowing goggles
 
 - **The body comes from the concept's back view only.** Given the front and side

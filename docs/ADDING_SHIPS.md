@@ -43,6 +43,13 @@ straight up); `liftoff_height` / `liftoff_speed`; `land_max_agl`, `land_descent`
 hitting things) and `clearance` (origin to belly; taken from the model when there
 is one). Turn rates come from `flight`.
 
+### Naming its pilots and itself (issue #15)
+
+Add a `naming` block: `kind` (e.g. `person_remnant`) and `titles` (a rank list)
+name the AI pilots who fly it; `"callsign": true` gives each one a callsign;
+`vessel` (e.g. `"vessel"`) gives the player's ship its own name. A world's
+`naming` names its town and planet. See `docs/names/NAMING.md`.
+
 ## A new world around a town (M14)
 
 `content/core/worlds/<id>.json` (listed under `worlds` in the manifest) names the
