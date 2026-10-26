@@ -2,6 +2,60 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — M11 (body + hand weapons) and M12 (live bartender)
+
+- **One PR for both, by product-owner call.** Order inside it: the bartender pipe
+  and brain first (her own stated first priority), body second, weapons third.
+- **Procedural animation, not imported clips.** CharacterKit characters are jointed
+  (no skinned mesh), and the free CC0 clip libraries (Quaternius UAL 1/2) ship for a
+  humanoid skeleton we do not have; retargeting them means a skinned rebuild of
+  every character. `BodyAnimator` drives the existing joints with a gait cycle,
+  jump/fall/land and crouch, and the kit's two-bone IK puts hands on weapons. Every
+  number is tunable in one file and the state machine is unit tested. Alternative
+  kept open: if a skinned body arrives, UAL clips drop in behind the same inputs.
+- **One body for both cameras.** First person keeps the full body (real feet, real
+  shadow) and renders everything except forearms, hands and the weapon as shadow
+  only; the chest follows the camera pitch. Alternative was a separate viewmodel
+  rig: two things to animate and keep in sync.
+- **Free assets: Kenney (CC0 models, in the MIT Starter Kit FPS).** The kit repo is
+  reachable from CI-like sandboxes (GitHub); kenney.nl and itch.io are not. Its
+  blaster and repeater are retinted at runtime by `weapon_retint.gdshader` (palette
+  atlas -> gunmetal ramp + accent) so they read as worn, not toys. Sounds from the
+  same kit. The energy sword's sounds are synthesized from scratch
+  (`tools/audio/make_blade_sfx.py`), so there is nothing to license.
+- **The sword is the duelist's sword.** `CharacterKit.make_energy_sword()` is shared;
+  yellow by default, from `energy_blade.json`.
+- **Ammo + reload kept (not heat).** M2's tested Weapon state machine already does
+  magazines and reloads; switching to heat was churn without a player-facing win.
+- **Swap = holster then draw (0.18 s + 0.17 s), retargetable mid-swap.** Pressing the
+  weapon already out holsters it. `WeaponHolder` is pure and spam tested.
+- **Deflection uses M3's EnergyBlade unchanged.** A block started within 0.18 s of a
+  bolt reaching the blade sends it back at its shooter; later blocks absorb it; a live
+  swing also deflects. Bolts gained opt-in `shooter`, `sweep` (ray test per step, no
+  tunnelling) and `stylize` (glowing streak); the M2 trooper bolts are unchanged.
+- **A sanctioned range in the pit.** Shooting there is practice; shooting in the
+  street sets `shots_in_street` and costs Remnant standing (once per 45 s). The
+  sparring remote only fires stun bolts while your blade is out.
+- **Keys 1/2/3 are weapons now;** lighting moved to L (cycle).
+- **WorldState is static, like GameFlow (no autoload).** It survives town -> flight
+  -> town and is saved (save v2). Systems write facts when they happen; the bartender
+  only reads it. Rumors and jobs carry conditions and are shown to her only when true.
+- **Jobs on her board are real.** "Thin the orbital patrol" completes when a flight
+  is won; "the range bet" when the range record is set. No job exists that the game
+  cannot verify.
+- **The LLM service is a Node owned by the bar, not an autoload,** for the same reason
+  as GameFlow: nothing runs unless the bar exists. Providers are pure request
+  builders/parsers; the service streams with HTTPClient polled in `_process`.
+- **Anthropic replies via a forced tool and streamed input_json_delta,** which
+  concatenates to the same JSON every other provider sends, so parsing is shared.
+- **No network retry on malformed JSON.** `ReplyParser` repairs (code fences, chatter,
+  plain text) instead; a second round trip costs more latency than it saves.
+- **The IP blocklist moved to data** (`content/core/llm/ip_blocklist.json`), shared by
+  the CI scan and her runtime output filter. The test reads it.
+- **CI proves the real HTTP path** against `tools/llm/mock_llm_server.py` (standard
+  library only) when python3 exists: SSE cut at awkward byte offsets, UTF-8 split mid
+  character, timeouts, 500s, non-JSON replies, health checks.
+
 ## 2026-10-26 — M9 (port town) and the single demo
 
 - **The town is data.** `content/core/locations/port_town.json` holds every box,

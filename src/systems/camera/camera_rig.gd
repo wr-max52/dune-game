@@ -15,6 +15,9 @@ var fpv_offset := Vector3(0.0, 1.6, 0.0)
 ## Third-person distance / height behind and above the player.
 var tpv_distance := 4.0
 var tpv_height := 1.8
+## M11: over-the-shoulder offset (meters to the camera's right). 0 = centered,
+## which is the M1 behavior the tests pin; the scene sets a shoulder.
+var tpv_shoulder := 0.0
 
 enum Mode { FPV, TPV }
 
@@ -40,6 +43,8 @@ func camera_transform(player_pos: Vector3) -> Transform3D:
 	else:
 		# Sit behind and above the player, along the backward of the look dir.
 		position = player_pos - look * tpv_distance + Vector3(0.0, tpv_height, 0.0)
+		if tpv_shoulder != 0.0:
+			position += look.cross(Vector3.UP).normalized() * tpv_shoulder
 	# Build a right-handed basis whose -Z axis points along the look direction.
 	# right = look x up. (Using -look x up flips right and gives a mirrored,
 	# determinant -1 basis, which rendered the world left-right reversed.)
@@ -58,6 +63,11 @@ func toggle_mode() -> bool:
 
 func set_mode(m: int) -> void:
 	mode = m
+
+
+## Where the third-person camera orbits from (the head), for wall collision.
+func tpv_pivot(player_pos: Vector3) -> Vector3:
+	return player_pos + Vector3(0.0, tpv_height, 0.0)
 
 
 func is_first_person() -> bool:

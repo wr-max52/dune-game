@@ -1,0 +1,46 @@
+{
+  "note": "Shipped LLM defaults (no keys, ever). user://llm_config.json overrides these field by field; the settings panel (F10) writes it. Keys come from the env var named by api_key_env, else user://llm/keys.cfg.",
+  "chain": ["local", "ollama", "cloud"],
+  "profiles": {
+    "local": {
+      "type": "openai_compat",
+      "base_url": "http://127.0.0.1:8088/v1",
+      "model": "bartender",
+      "health_url": "http://127.0.0.1:8088/health",
+      "grammar": true,
+      "sidecar": {
+        "enabled": true,
+        "bin": "/opt/homebrew/bin/llama-server",
+        "model_path": "runtime/models/bartender.gguf",
+        "port": 8088,
+        "ctx_size": 8192,
+        "extra_args": ["-ngl", "99", "--jinja", "--cache-reuse", "256", "--parallel", "1"]
+      }
+    },
+    "ollama": {
+      "type": "openai_compat",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "qwen3:30b-a3b",
+      "health_url": "http://127.0.0.1:11434/api/tags",
+      "grammar": true
+    },
+    "cloud": {
+      "type": "openai_compat",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "anthropic/claude-haiku-4.5",
+      "api_key_env": "DUNE_LLM_KEY",
+      "enabled": false,
+      "grammar": false
+    }
+  },
+  "gen": {
+    "temperature": 0.8,
+    "max_tokens": 220,
+    "first_token_timeout_ms": { "local": 2500, "ollama": 4000, "cloud": 5000 },
+    "stall_ms": 3000,
+    "total_timeout_ms": 20000
+  },
+  "circuit": { "failures": 3, "window_s": 60, "open_s": 120 },
+  "health_recheck_s": 30,
+  "debug": { "log_transcripts": true }
+}

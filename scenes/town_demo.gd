@@ -15,6 +15,8 @@ const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
+const BartenderNPC := preload("res://src/systems/npc/bartender_npc.gd")
+const BarScene := preload("res://src/systems/npc/bar_scene.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const SHOTS_PATH := "res://content/look/town_shots.json"
 
@@ -28,6 +30,8 @@ const ROLE_COLORS := {
 @export var use_look := true          ## false: plain sun + sky, no decor (CI trace)
 @export var lookdev_mode := false     ## true: fixed review cameras, no player
 @export var preset := ""              ## "" = default preset in time_of_day.json
+@export var with_body := true         ## M11: animated body + hand weapons (needs use_look)
+@export var with_bar := true          ## M12: the live bartender (needs use_look)
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -38,6 +42,11 @@ var pads: Array = []
 var _player: Node
 var _rig: Node
 var _arrival: Dictionary = {}
+var player_kit: PlayerKit             ## M11 body + weapons (null in the CI greybox)
+var training_range: TrainingRange
+var bartender: Node3D                 ## M12 (null in the CI greybox)
+var bar: Node
+var characters: Dictionary = {}       ## marker id -> built character
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 
@@ -73,6 +82,11 @@ func _ready() -> void:
 	else:
 		_spawn_player()
 		_build_launch_pads()
+		_world_from_scene()
+		if use_look and with_body:
+			_attach_body()
+		if use_look and with_bar:
+			_build_bar()
 
 
 # ---------------------------------------------------------------- gameplay layer
@@ -104,13 +118,30 @@ func _build_markers() -> void:
 			continue           # spawn/waypoint/interact are invisible
 		var v := _make_marker_visual(m)
 		v.name = m.id
-		v.position = town.marker_pos(m.id) + Vector3(0, 0.9, 0)  # capsule centered
+		# Capsules are centered; built characters stand on their feet.
+		v.position = town.marker_pos(m.id) + (Vector3.ZERO if v.has_meta("feet") else Vector3(0, 0.9, 0))
 		root.add_child(v)
 		built_markers += 1
 
 
-## The one seam the character art pass replaces. Today: a capsule per marker.
+## The one seam the character art pass replaces. M11: with the look on, markers
+## get CharacterKit characters (the bartender is built separately by the bar);
+## the CI greybox keeps the capsules.
+const MARKER_ARCHETYPES := { "npc": "smuggler", "trooper_post": "remnant_trooper", "ambient": "local" }
+
 func _make_marker_visual(m: Dictionary) -> Node3D:
+	if use_look and not lookdev_mode:
+		if str(m.get("npc", "")) == "bartender" and with_bar:
+			var holder := Node3D.new()      # the bar puts her here
+			holder.set_meta("feet", true)
+			return holder
+		var c := _kit().build(MARKER_ARCHETYPES.get(m.role, "local"))
+		c.set_meta("feet", true)
+		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
+		var here := town.marker_pos(str(m.id))
+		c.rotation.y = atan2(face.x - here.x, face.z - here.z)
+		characters[str(m.id)] = c
+		return c
 	var mesh := CapsuleMesh.new()
 	mesh.radius = 0.35
 	mesh.height = 1.8
@@ -128,6 +159,13 @@ func _make_marker_visual(m: Dictionary) -> Node3D:
 		mat.albedo_color = ROLE_COLORS[m.role]
 		mesh.material = mat
 	return mi
+
+
+var _kit_inst: CharacterKit
+func _kit() -> CharacterKit:
+	if _kit_inst == null:
+		_kit_inst = CharacterKit.new(_flat_mats(), 0.0)
+	return _kit_inst
 
 
 var _mats: LookMaterials
@@ -174,6 +212,41 @@ func _add_light_and_sky() -> void:
 	add_child(we)
 
 
+# ---------------------------------------------------------------- M11 / M12
+
+## Facts the scene itself makes true, plus whatever the flight we just came back
+## from did. The bartender reads these (WorldState), so her talk matches the town.
+func _world_from_scene() -> void:
+	WorldState.set_flag("gate_checkpoint_up", not town.markers_with_role("trooper_post").is_empty())
+	WorldState.time_of_day = preset if preset != "" else WorldState.time_of_day
+	WorldState.on_flight_returned(_arrival)
+
+
+func _attach_body() -> void:
+	player_kit = PlayerKit.attach(_player, _rig, self, _flat_mats())
+	training_range = TrainingRange.new()
+	add_child(training_range)
+	training_range.player = _player
+	training_range.blade_out = func(): return player_kit.weapons.holder.current == "energy_blade" and player_kit.weapons.blade_extent > 0.5
+	player_kit.weapons.in_range_zone = training_range.contains
+
+
+## `scripted` = CI providers (no network); `save_path` "" = do not persist.
+func _build_bar(scripted = null, save_path: String = "user://save.json") -> void:
+	bar = BarScene.new()
+	bar.name = "Bar"
+	bar.autosave = save_path != ""
+	if save_path != "":
+		bar.save_path = save_path
+	add_child(bar)
+	bar.setup(self, scripted)
+	bartender = bar.npc
+
+
+func _physics_process(dt: float) -> void:
+	WorldState.tick(dt)
+
+
 # ---------------------------------------------------------------- launch pads
 
 ## A pad anchored to a town box sits on that box's footprint center at its base,
@@ -216,6 +289,7 @@ func set_preset(id: String) -> void:
 		return
 	look.apply(id)
 	preset = look.current
+	WorldState.time_of_day = preset
 
 
 func _load_shots() -> Dictionary:
@@ -244,9 +318,13 @@ func show_shot(id: String) -> bool:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if bar != null and bar.is_talking():
+			return                      # the dialogue panel owns Esc while talking
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	elif event is InputEventMouseButton and event.pressed and not lookdev_mode:
+	elif event is InputEventMouseButton and event.pressed and not lookdev_mode \
+			and not (bar != null and bar.is_talking()):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	elif event is InputEventKey and event.pressed and event.keycode >= KEY_1 and event.keycode <= KEY_3:
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_L:
+		# L cycles the lighting (1/2/3 are weapons since M11).
 		var ids := ["golden", "noon", "dusk"]
-		set_preset(ids[event.keycode - KEY_1])
+		set_preset(ids[(ids.find(preset) + 1) % ids.size()])

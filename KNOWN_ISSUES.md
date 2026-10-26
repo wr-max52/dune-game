@@ -2,6 +2,44 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After M11 + M12 (2026-10-26)
+
+**What is real and proven by tests:** the body's gait/jump/land/crouch states, view
+toggle spam, camera wall collision, swap spam, blaster hits on range targets, the
+3-hit sword chain landing hits, timed deflections sent back into the remote, street
+shots changing WorldState (`test_results/m11_body_trace.txt`). The bartender's whole
+pipe: player text reaches the model fenced, rumors/jobs/secrets only from the
+briefing, trust clamps, menu prices, meta/IP filtering, fallback, circuit breaker,
+first-token timeout with a beat, stalled streams, canned-but-true offline answers,
+memory across visits and save v2; and the real HTTP streaming path against a mock
+server (`test_results/m12_bar_trace.txt`).
+
+**Not done, honestly:**
+- **No real model has answered her yet.** This sandbox has no GPU and no access to
+  model downloads. The pipe is proven against a mock server that speaks the
+  OpenAI streaming format; quality, voice and latency on a real model are the
+  product owner's first run: `tools/llm/fetch_runtime.sh`, then the gauntlet. The
+  latency targets (first token p50 < 800 ms) are unmeasured.
+- **Her confidant secret is a draft** marked "PRODUCT OWNER TO WRITE" in
+  `content/core/npcs/bartender_card.json`. The whole card is a first draft.
+- **The visit summary** (2 to 3 facts written by the model when you leave) only runs
+  when a model is up; offline she remembers only what the game wrote.
+- **Bundling llama-server in an export build** is not done; the sidecar uses the
+  Homebrew binary path from config.
+- **Animation is procedural,** tuned by eye from software-GL renders, not on the Mac.
+  No foot IK on slopes or ramps (feet can float a few cm on the pit ramps), no
+  turn-in-place step, no hit reactions on the player.
+- **Player hits have no consequence** beyond a flash and shake (no player health or
+  death yet). Remote stun bolts do no damage by design.
+- **The trooper posts and locals are static characters now** (were capsules): no AI,
+  no collision, so bolts pass through them.
+- **The rifle in first person is big** and partly covers the lower right of the view.
+- **No crosshair spread feedback or hit markers.**
+- **The old M6 scaffold** (`bartender_ai.gd`, `ollama_client.gd`) is kept only for the
+  M6/M7/M8 traces; the game uses `bartender_brain.gd`.
+- **Reviewed in software GL only** (`docs/m11/`); re-shoot on the Mac with
+  `tools/m11/shoot_m11.sh`.
+
 ## After M9 (2026-10-26)
 
 **What is real and proven by tests:** the town is built from data and validated

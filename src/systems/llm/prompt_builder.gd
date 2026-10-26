@@ -1,0 +1,150 @@
+class_name PromptBuilder
+extends RefCounted
+## Builds the message list for one bartender turn (M12). Pure: same inputs, same
+## messages, so the whole prompt is unit-tested.
+##
+## Layout is cache friendly: the two static system messages (who she is, the
+## rules and reply contract) never change, so llama-server's prompt cache and the
+## cloud providers' prompt caching both hit; the briefing (rebuilt every turn
+## from WorldState + Relationship) and the conversation come after.
+##
+## Secrets are added only for tiers the player has reached, so a jailbreak at low
+## trust has nothing to leak: the text is simply not in the prompt.
+
+const MAX_HISTORY := 8
+
+var card: Dictionary = {}
+var world_text: Dictionary = {}
+var schema: Dictionary = {}
+
+
+func _init(persona_card: Dictionary = {}, briefing_text: Dictionary = {}, reply_schema: Dictionary = {}) -> void:
+	card = persona_card
+	world_text = briefing_text
+	schema = reply_schema
+
+
+## The static persona message (identical every turn).
+func persona_message() -> Dictionary:
+	var lines: PackedStringArray = []
+	lines.append(str(card.get("identity", "")))
+	lines.append("YOUR PAST: " + str(card.get("backstory", "")))
+	lines.append("HOW YOU TALK:\n- " + "\n- ".join(PackedStringArray(card.get("voice", []))))
+	lines.append("THE WAR: " + str(card.get("neutrality", "")))
+	var menu: PackedStringArray = []
+	for d in card.get("drinks", []):
+		menu.append("%s (%s): %d credits, %s" % [d.name, d.id, int(d.price), d.get("note", "")])
+	lines.append("YOUR MENU:\n- " + "\n- ".join(menu))
+	return { "role": "system", "content": "\n\n".join(lines) }
+
+
+## The static rules + reply contract message.
+func rules_message() -> Dictionary:
+	var r: PackedStringArray = []
+	r.append("RULES:\n- " + "\n- ".join(PackedStringArray(card.get("rules", []))))
+	r.append("""REPLY FORMAT: answer with ONE JSON object and nothing else:
+{"say": "<what you say out loud, at most 3 sentences>", "mood": "wary|warm|amused|irritated|scared|sad", "actions": [ ... at most 3 ... ]}
+Actions you may take (use ids from YOUR BRIEFING only):
+- {"type": "share_rumor", "id": "<rumor id>"}  when you pass a rumor on
+- {"type": "offer_job", "id": "<job id>"}  when you offer a job from your board
+- {"type": "hint_secret", "id": "<secret id>"}  when you let a secret slip
+- {"type": "pour_drink", "name": "<drink from the menu>"}  when they order
+- {"type": "trust", "delta": -3..2, "why": "<short reason>"}  how this exchange changed your trust in them
+- {"type": "refuse_topic"}  when you will not talk about something
+- {"type": "end_conversation"}  when you are done with them
+- {"type": "call_guards"}  only if they threaten you or keep insulting you
+Use "actions": [] when nothing happens. Never put an id you were not given.""")
+	return { "role": "system", "content": "\n\n".join(r) }
+
+
+## The per-turn briefing, plus the ids the validator will accept.
+## world: { flags, standing, time, events, credits }   rel: Relationship
+## rumors / jobs: arrays of data entries already filtered for truth and tier.
+func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
+	var L: PackedStringArray = []
+	var ft: Dictionary = world_text.get("flags", {})
+	var now: PackedStringArray = []
+	for f in world.get("flags", {}):
+		if ft.has(f):
+			now.append(str(ft[f]))
+	now.append(str(world_text.get("time", {}).get(str(world.get("time", "")), "")))
+	L.append("TOWN NOW: " + " ".join(now).strip_edges())
+	var names: Dictionary = world_text.get("factions", {})
+	var st: PackedStringArray = []
+	var standing: Dictionary = world.get("standing", {})
+	for fac in standing:
+		st.append("with %s %s (%d)" % [names.get(fac, fac), WorldState.standing_label(int(standing[fac])), int(standing[fac])])
+	L.append("THE PLAYER'S STANDING: " + ", ".join(st) + ".")
+	var ev: Array = world.get("events", [])
+	if not ev.is_empty():
+		var recent: PackedStringArray = []
+		for e in ev.slice(maxi(0, ev.size() - 4)):
+			recent.append(str(e.text))
+		L.append("RECENTLY: " + " ".join(recent))
+	L.append("YOU FEEL: %s. YOUR TRUST IN THE PLAYER: %d/100 (%s). VISITS: %d." % [rel.mood, rel.trust, rel.tier(), rel.visits])
+	L.append("PLAYER'S CREDITS: %d. THEIR TAB: %d." % [int(world.get("credits", 0)), rel.tab])
+	var rumor_ids: Array = []
+	if rumors.is_empty():
+		L.append("YOU KNOW AND MAY SHARE: nothing new worth repeating.")
+	else:
+		var rs: PackedStringArray = []
+		for r in rumors:
+			rumor_ids.append(str(r.id))
+			rs.append("[%s] %s%s" % [r.id, r.text, " (already told them)" if rel.known_rumors.has(r.id) else ""])
+		L.append("YOU KNOW AND MAY SHARE:\n" + "\n".join(rs))
+	var secret_ids: Array = []
+	var ss: PackedStringArray = []
+	var my_tier := Relationship.tier_index(rel.tier())
+	for s in card.get("secrets", []):
+		if Relationship.tier_index(str(s.tier)) <= my_tier:
+			secret_ids.append(str(s.id))
+			ss.append("[%s] %s" % [s.id, s.text])
+	if not ss.is_empty():
+		L.append("SECRETS YOU MAY HINT AT (you trust them enough):\n" + "\n".join(ss))
+	var job_ids: Array = []
+	if jobs.is_empty():
+		L.append("JOBS ON YOUR BOARD: none right now.")
+	else:
+		var js: PackedStringArray = []
+		for j in jobs:
+			job_ids.append(str(j.id))
+			js.append("[%s] %s Pays %d." % [j.id, j.text, int(j.get("pays", 0))])
+		L.append("JOBS ON YOUR BOARD:\n" + "\n".join(js))
+	if not rel.facts.is_empty():
+		L.append("YOU REMEMBER ABOUT THEM: " + "; ".join(PackedStringArray(rel.facts)) + ".")
+	var drinks := {}
+	for d in card.get("drinks", []):
+		drinks[str(d.id)] = { "name": d.name, "price": int(d.price) }
+	return {
+		"message": { "role": "system", "content": "YOUR BRIEFING (true right now):\n" + "\n".join(L) },
+		"ids": { "rumors": rumor_ids, "jobs": job_ids, "secrets": secret_ids, "drinks": drinks },
+	}
+
+
+## Full message list. history: [{ role: "user"|"assistant", content }] (oldest first).
+func build(world: Dictionary, rel, rumors: Array, jobs: Array, history: Array, player_text: String) -> Dictionary:
+	var b := briefing(world, rel, rumors, jobs)
+	var msgs: Array = [persona_message(), rules_message(), b.message]
+	for h in history.slice(maxi(0, history.size() - MAX_HISTORY)):
+		msgs.append(h)
+	msgs.append({ "role": "user", "content": wrap_player(player_text) })
+	return { "messages": msgs, "ids": b.ids }
+
+
+## The player's words, fenced. Tags inside are neutralized so nobody can close
+## the fence early and talk to her as "the system".
+static func wrap_player(text: String) -> String:
+	var t := text.strip_edges().substr(0, 400)
+	t = t.replace("<", "(").replace(">", ")")
+	return "<player_says>" + t + "</player_says>"
+
+
+## The visit summary request (runs off the critical path when the player leaves).
+func summary_messages(rel, history: Array) -> Array:
+	var lines: PackedStringArray = []
+	for h in history:
+		lines.append(("PLAYER: " if h.role == "user" else "YOU: ") + str(h.content))
+	return [
+		{ "role": "system", "content": "You are Oda Vell, a bartender, thinking back on a conversation. Write 2 or 3 short facts worth remembering about the player (what they want, what they did, what they promised), one per line, no numbering, under 12 words each. Facts only; nothing about yourself." },
+		{ "role": "user", "content": "\n".join(lines) },
+	]

@@ -1,0 +1,48 @@
+{
+  "note": "How the player's hand weapons look and sit. Models are CC0 (Kenney, via the MIT starter kit; see assets/third_party/kenney_starter_kit_fps/LICENSE.md) and are retinted at runtime so they read as worn gunmetal, not toys. All transforms are chest space (+Z forward, +X the character's left). Grips and muzzle are in model space, before scale.",
+  "pistol_blaster": {
+    "model": "res://assets/third_party/kenney_starter_kit_fps/models/blaster.glb",
+    "scale": 0.24,
+    "tint": { "dark": "#17171a", "light": "#6b6a68", "accent": "#7a5636", "glow": "#ff7a3a" },
+    "grips": { "r": [0.0, -0.22, 0.05], "l": [0.06, -0.18, 0.3] },
+    "muzzle": [0.0, 0.45, 0.92],
+    "aim": { "pos": [-0.07, 0.15, 0.4], "rot": [0, 0, 0] },
+    "aim_fpv": { "pos": [-0.15, 0.16, 0.6], "rot": [0, 0, 0] },
+    "holster": "holster_grip",
+    "sound": "res://assets/third_party/kenney_starter_kit_fps/sounds/blaster.ogg",
+    "slot": 1
+  },
+  "energy_blade": {
+    "model": "",
+    "scale": 1.0,
+    "holster": "l_hip",
+    "slot": 2
+  },
+  "rifle_blaster": {
+    "model": "res://assets/third_party/kenney_starter_kit_fps/models/blaster-repeater.glb",
+    "scale": 0.32,
+    "tint": { "dark": "#1a1716", "light": "#5d5a55", "accent": "#5a1f1c", "glow": "#ff5a2a" },
+    "grips": { "r": [0.0, -0.2, 0.05], "l": [0.0, -0.1, 0.85] },
+    "muzzle": [0.0, 0.47, 1.18],
+    "aim": { "pos": [-0.08, 0.12, 0.22], "rot": [0, 0, 0] },
+    "aim_fpv": { "pos": [-0.2, 0.08, 0.36], "rot": [0, 0, 0] },
+    "holster": "back",
+    "sound": "res://assets/third_party/kenney_starter_kit_fps/sounds/blaster_repeater.ogg",
+    "slot": 3
+  },
+  "bolt": { "length": 0.9, "radius": 0.035, "energy": 5.0 },
+  "sounds": {
+    "swap": "res://assets/third_party/kenney_starter_kit_fps/sounds/weapon_change.ogg",
+    "step": "res://assets/third_party/kenney_starter_kit_fps/sounds/walking.ogg",
+    "land": "res://assets/third_party/kenney_starter_kit_fps/sounds/land.ogg",
+    "jump": "res://assets/third_party/kenney_starter_kit_fps/sounds/jump_a.ogg",
+    "target_hit": "res://assets/third_party/kenney_starter_kit_fps/sounds/enemy_hurt.ogg",
+    "target_down": "res://assets/third_party/kenney_starter_kit_fps/sounds/enemy_destroy.ogg",
+    "blade_on": "res://assets/audio/blade/on.wav",
+    "blade_off": "res://assets/audio/blade/off.wav",
+    "blade_hum": "res://assets/audio/blade/hum_loop.wav",
+    "blade_swing": "res://assets/audio/blade/swing.wav",
+    "blade_clash": "res://assets/audio/blade/clash.wav",
+    "blade_deflect": "res://assets/audio/blade/deflect.wav"
+  }
+}

@@ -48,7 +48,7 @@ func test_terrain_is_flat_inside_the_port_and_drops_to_the_basin() -> void:
 
 func test_every_archetype_builds_with_a_full_skeleton() -> void:
 	var kit := CharacterKit.new(LookMaterials.new())
-	assert_eq(kit.archetypes().size(), 5)
+	assert_eq(kit.archetypes().size(), 7)
 	for a in kit.archetypes():
 		var c := kit.build(a)
 		var joints: Dictionary = c.get_meta("joints")

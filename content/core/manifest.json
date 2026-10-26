@@ -3,7 +3,7 @@
   "generated": "M0",
   "npcs": ["fixer", "bartender"],
   "weapons": ["pistol_blaster", "rifle_blaster", "energy_blade", "ship_cannon", "ship_missile"],
-  "factions": ["imperial_remnant", "smuggler"],
+  "factions": ["imperial_remnant", "smuggler", "locals"],
   "locations": ["outpost", "port_town"],
   "missions": ["crate_retrieval"],
   "ships": ["interceptor", "remnant_fighter", "remnant_heavy"],

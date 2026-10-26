@@ -2,6 +2,49 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M11 + M12 — A body, hand weapons, and a bartender who actually talks (2026-10-26)
+
+What works now:
+- **You have a body.** Third person shows an animated smuggler (long coat, hat,
+  teal scarf) who walks, jogs, sprints, strafes, jumps, lands and crouches, and
+  faces where it moves. The camera sits over the shoulder and never goes through a
+  wall. V still toggles views; the switch glides in 0.2 s and never moves your aim.
+- **Weapons.** 1 blaster pistol, 2 energy sword, 3 rifle (same key again holsters;
+  Q last weapon; mouse wheel cycles; H holsters). The weapon comes out of the
+  holster (hip, left hip for the sword, back for the rifle) and your hands are on it.
+  LMB fires or swings, RMB aims (blaster) or blocks (sword), R reloads. Bolts are
+  glowing streaks with recoil, shake and muzzle flash. The sword ignites with a
+  sound, hums, chains three swings (forehand, backhand, overhead), and a block timed
+  just before a bolt lands sends it back. First person shows your forearms, hands
+  and the weapon.
+- **A practice range in the pit:** five targets that fall and stand back up, and a
+  sparring remote that fires stun bolts while your blade is out.
+- **The bartender is real.** Oda Vell stands behind the counter (apron, mechanical
+  arm, goggles up), wipes a glass, looks at you, gestures while she talks, pours.
+  Walk to the bar, press E, type anything. Her reply streams onto the screen from a
+  local model (bundled llama-server), Ollama, or any cloud key (OpenAI-compatible or
+  Anthropic), with canned lines that still use true rumors and real jobs when every
+  model is down. She never hangs: no first word in time and she moves to the next
+  brain with a "Mm." beat.
+- **She knows the town.** Rumors are only shown to her when they are true (the
+  checkpoint, the patrol you shot down, the shots you fired in the street, the
+  range record). Trust (0 to 100, four tiers) unlocks secrets that are not even in
+  her prompt before then. Jobs she offers complete on real events and pay. Drinks
+  cost the menu price, from your credits or onto your tab. She remembers you between
+  visits and between sessions (save v2).
+- **Tools to tune her.** F3 shows provider, model, time to first token, tokens,
+  fallbacks, dropped actions and why, the raw reply, and copies the prompt. F10 picks
+  local / Ollama / cloud, sets URLs, models and a key, and has a Test button.
+  Shift+F10 cycles modes. Every turn is logged to `user://logs/bartender/`.
+- **Proven headless.** `scenes/m11_body_trace.gd` (real physics) and
+  `scenes/m12_bar_trace.gd` (scripted providers, then real HTTP against a mock
+  server) feed `test_m11_body_weapons` and `test_m12_bar`; plus unit suites for the
+  animator, swap, sword chain, SSE, providers, config, parser, filter, validator,
+  prompt, relationship, world state and save v2.
+- **The live gauntlet:** `tools/llm/eval_runner.gd` runs 32 cases (jailbreak, meta,
+  franchise names, neutrality, grounding, secrets, barometer, memory) against a real
+  model and writes a readable report to `docs/bartender/evals/`.
+
 ## M9 — Port town, and one demo (2026-10-26)
 
 What works now:

@@ -13,6 +13,7 @@ rec/
 # Local LLM model downloads (downloaded, not committed)
 models/
 *.gguf
+runtime/
 
 # OS
 .DS_Store

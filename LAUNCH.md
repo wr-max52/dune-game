@@ -48,7 +48,7 @@ godot --path . res://scenes/town_demo.tscn       # or without the editor
 ```
 
 There is one thing to launch. You start on the pit floor beside your ship. Walk with
-WASD, V toggles the camera, Esc frees the mouse, 1/2/3 switch golden, noon and dusk.
+WASD, V toggles the camera, Esc frees the mouse, L cycles golden, noon and dusk.
 Walk up a ramp to reach the streets; the cantina is west, the gate east.
 
 Next to the ship, "[E] Launch" shows. **Press E** to fade into the dogfight. When the
@@ -57,11 +57,51 @@ fight is won or lost you land back beside the ship with the result on screen.
 | Action          | Key |
 |---|---|
 | Launch (by ship) | E  |
-| Lighting preset  | 1 / 2 / 3 |
+| Lighting preset  | L (cycle) |
 
 Review renders: `./tools/town/shoot_town.sh presets=golden,dusk` writes to
 `test_results/town/`. Pads, encounter, delays and labels live in
 `content/core/flow/launch_pads.json`.
+
+## Your body, your weapons, and the bartender (M11 + M12)
+
+| Action | Key |
+|---|---|
+| Blaster / energy sword / rifle | 1 / 2 / 3 (same key again holsters) |
+| Last weapon / holster | Q / H |
+| Cycle weapons | mouse wheel |
+| Fire / swing | LMB (press again mid-swing to chain 1-2-3) |
+| Aim (blaster) / block (sword) | RMB (block just before a bolt lands to send it back) |
+| Reload | R |
+| Talk to the bartender | E at the bar |
+| Leave the conversation | Esc |
+| Bartender debug | F3 (at the bar) |
+| Bartender brain settings | F10; Shift+F10 cycles auto / local / cloud |
+
+The practice range is in the pit, west of the ship: five targets and a sparring
+remote (south side) that shoots stun bolts while your blade is out.
+
+### Giving the bartender a brain (macOS)
+
+```sh
+brew install llama.cpp                 # /opt/homebrew/bin/llama-server
+./tools/llm/fetch_runtime.sh           # the model into runtime/models/ (git-ignored)
+```
+
+The bar starts llama-server on 127.0.0.1:8088 when you enter the town (and reuses
+one that is already running), warms the model, and stops it on quit. No model? Set
+a cloud profile in F10 (any OpenAI-compatible URL + key, or Anthropic), or run
+Ollama; with nothing at all she answers from canned lines. Keys are stored in
+`user://llm/keys.cfg` or read from `DUNE_LLM_KEY`, never in the project.
+
+Test her without playing:
+
+```sh
+godot --headless --path . -s res://tools/llm/eval_runner.gd -- mode=local suite=all
+```
+
+Review renders: `./tools/m11/shoot_m11.sh` writes body, weapon, range and bar shots
+to `test_results/m11/`.
 
 ## Flying the dogfight (M10)
 

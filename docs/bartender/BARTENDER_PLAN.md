@@ -1,5 +1,10 @@
 # Bartender Push (M10): make her actually work
 
+> **Status (2026-10-26):** M10.0 to M10.5 shipped as **M12** (M10 was taken by
+> flight), together with M11 (body + weapons). M10.6, the model bake-off and tuning
+> her voice from transcripts, is next and needs the Mac. See CHANGELOG.md and
+> KNOWN_ISSUES.md.
+
 **Goal:** walk into the cantina, press E, type anything, and get a fast, in-character reply from a bartender who knows what is happening in town, stays neutral in the war, remembers you, and slowly lets you in on her secrets. Local model by default, any cloud key as a switch, canned lines as the floor. She never dead-ends and never hangs.
 
 **Product owner decisions (2026-10-26):**
