@@ -183,9 +183,12 @@ static func _rel(root: Node3D, node: Node3D) -> Transform3D:
 
 
 func _hide_primitives(body: Node3D) -> void:
+	# A held prop (the kit's rifle, body meta "weapon") stays: the hands are posed on it.
+	var prop: Node = body.get_meta("weapon") if body.has_meta("weapon") else null
 	for m in _meshes(body):
-		if not model.is_ancestor_of(m):
-			(m as GeometryInstance3D).visible = false
+		if model.is_ancestor_of(m) or (prop != null and (prop == m or prop.is_ancestor_of(m))):
+			continue
+		(m as GeometryInstance3D).visible = false
 
 
 func _meshes(n: Node) -> Array:

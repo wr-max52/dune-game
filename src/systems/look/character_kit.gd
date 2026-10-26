@@ -76,6 +76,12 @@ func build(archetype: String, pose: String = "") -> Node3D:
 			_dress_local(root, p)
 			default_pose = "walker"
 	_pose(root, pose if pose != "" else default_pose)
+	# A rigged model replaces the primitives (characters.json "model"). The joints
+	# keep the pose; animated users call skin.sync() every frame after moving them.
+	var skin := SkinnedBody.dress(root, p.get("model", {}))
+	if skin != null:
+		skin.sync(root)
+		root.set_meta("skin", skin)
 	var s := float(p.get("height", REF_HEIGHT)) / REF_HEIGHT
 	var bulk := float(p.get("bulk", 1.0))
 	root.scale = Vector3(s * bulk, s, s * bulk)
