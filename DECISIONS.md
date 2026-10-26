@@ -2,6 +2,23 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — Every Remnant wears the rigged guard model
+
+- **One model for trooper and commander.** Generated with Hyper3D Rodin from the
+  guard concept sheet (front, side and back views), rigged there, and prepped like
+  the smuggler (arm weights moved off the cloak and tunic). The two archetypes keep
+  their own height, bulk and pose. Alternative: a separate commander model. Not
+  needed yet: the concept is a single design.
+- **Rigged models are dressed in `CharacterKit.build()`.** Any archetype with a
+  `model` in `characters.json` wears it (the player included), and posed NPCs are
+  synced once at build. Alternative: each caller dresses its own body, as the player
+  did. That would mean every scene learning about skins.
+- **The trooper keeps the kit rifle.** The concept's hands are empty, and so is the
+  model; the rifle is the game's prop, and the posed hands hold it.
+- **Known gap: the visor.** The art direction says to avoid T-visors. The concept
+  has one, and the prompt asked for a single slit, but the model still reads as a
+  T. Left as is for review.
+
 ## 2026-10-26 — The player smuggler gets a rigged model
 
 - **Generated with Hyper3D Rodin from the concept art, then rigged there.** The

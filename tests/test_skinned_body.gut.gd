@@ -45,6 +45,29 @@ func test_walking_moves_the_leg_bones() -> void:
 	assert_gt(hi - lo, 15.0, "the thigh swings through the gait")
 
 
+func test_every_remnant_wears_the_guard_model() -> void:
+	var kit := CharacterKit.new(LookMaterials.new())
+	for a in ["remnant_trooper", "remnant_commander"]:
+		var c := kit.build(a)
+		assert_true(c.has_meta("skin"), a + " wears a rigged model")
+		if c.has_meta("skin"):
+			var skin: SkinnedBody = c.get_meta("skin")
+			assert_string_contains(skin.model.scene_file_path, "remnant_guard", a)
+		c.free()
+
+
+func test_trooper_keeps_its_rifle_in_hand() -> void:
+	var kit := CharacterKit.new(LookMaterials.new())
+	var c := kit.build("remnant_trooper")
+	var rifle: Node3D = c.get_meta("weapon")
+	var shown := 0
+	for m in PlayerAvatar._meshes_under(rifle):
+		if (m as GeometryInstance3D).visible:
+			shown += 1
+	assert_gt(shown, 0, "the rifle is a prop the posed hands hold; it stays visible")
+	c.free()
+
+
 func test_joint_rotation_turns_its_bone_by_the_same_amount() -> void:
 	var skel := avatar.skin.skeleton
 	var knee: int = avatar.skin.bone_of.r_knee

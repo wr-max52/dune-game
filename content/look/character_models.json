@@ -57,5 +57,17 @@
       "texture": "res://assets/characters/smuggler/source/texture_emissive.png",
       "energy": 2.0
     }
+  },
+  "remnant_guard": {
+    "note": "Hyper3D Rodin Gen-2.5 from the Remnant guard concept sheet (front, side and back views; generation bb20d76d-1ba1-45d2-b074-815c90d36dbb), rigged with the human template (26696d50-eca2-4dee-a950-4597709af23e). Worn by every Remnant archetype.",
+    "source": "res://assets/characters/remnant_guard/source/remnant_guard_rigged.glb",
+    "out": "res://assets/characters/remnant_guard/remnant_guard.glb",
+    "flatten": [],
+    "reweight": {
+      "to": "Hips",
+      "radius": 0.11
+    },
+    "cut": [],
+    "min_island_tris": 0
   }
 }

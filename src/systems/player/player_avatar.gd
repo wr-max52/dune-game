@@ -54,7 +54,7 @@ func _init(materials: LookMaterials = null) -> void:
 	add_child(body)
 	joints = body.get_meta("joints")
 	look = CharacterKit._read_json(LOOK_PATH)
-	skin = SkinnedBody.dress(body, kit.palettes.get("player_smuggler", {}).get("model", {}))
+	skin = body.get_meta("skin") if body.has_meta("skin") else null
 	_collect_meshes()
 
 
