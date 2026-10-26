@@ -1,0 +1,16 @@
+{
+  "note": "Who stands at each town marker (look layer, visual only). Archetypes and poses are the beauty corner's CharacterKit ones (content/look/characters.json). 'roles' is the default per marker role; 'markers' overrides one marker by id. 'face' is a marker id to look toward; with no 'face', characters look toward the middle of the town bounds. Figures are static: no AI, no collision, no dialogue (that comes later).",
+  "roles": {
+    "trooper_post": { "archetype": "remnant_trooper" },
+    "npc":          { "archetype": "local", "pose": "idle" },
+    "ambient":      { "archetype": "local", "pose": "idle" }
+  },
+  "markers": {
+    "trooper_gate_n": { "face": "gate" },
+    "trooper_gate_s": { "face": "gate" },
+    "trooper_tower":  { "face": "gate" },
+    "trooper_yard_a": { "archetype": "remnant_commander" },
+    "bartender":      { "face": "bar_front" },
+    "fixer":          { "face": "bar_front" }
+  }
+}

@@ -11,8 +11,10 @@ collision; the pit pad launches the dogfight and the player comes back to the pi
 after it (`tests/test_flow.gut.gd`).
 
 **Stubbed / deferred, honestly:**
-- **NPCs are static capsules.** No AI, no collision. The bartender and fixer are not
-  yet wired to their M6/M5 systems inside the town.
+- **NPCs are static figures.** The beauty corner's characters stand at the markers
+  (troopers, a commander, locals); no AI, no collision, no animation. The bartender and
+  fixer are not yet wired to their M6/M5 systems inside the town, so nobody talks yet.
+  Everyone is a generic archetype: no one looks like a specific named character.
 - **No navmesh.** The bot walks authored routes.
 - **Residential is a uniform grid.** The art pass will vary it.
 - **The ramps have no railings,** so you can fall into the pit (no fall damage exists).
