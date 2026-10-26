@@ -30,6 +30,7 @@ var jet_starts := 0
 func _initialize() -> void:
 	WorldState.reset()
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false              # greybox: fast, same collision
 	get_root().add_child(demo)
 	_run()
@@ -280,6 +281,7 @@ func _run() -> void:
 	demo.queue_free()
 	await frames(3)
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false
 	get_root().add_child(demo)
 	await frames(5)

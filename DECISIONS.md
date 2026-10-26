@@ -68,6 +68,48 @@ Every significant technical choice, the alternative, and why. Newest on top.
   the same. Alternative: hand-model a coat patch. Rejected: a new generation gave a
   real back for the same effort. The prep step no longer flattens anything; the
   arm-weight fix and the goggle glow still apply.
+## 2026-10-26 — M15 part 2 (combat NPCs at the gate)
+
+- **Two brains, two jobs.** `Checkpoint` (pure) decides what the gate does for
+  everyone (wave, papers, search, bribe, warn, fight, disengage, remember).
+  `GuardBrain` (pure, one per guard) decides how a guard does it. `GateCheckpoint`
+  is the director: it reads the bodies and WorldState in, writes commands, the card
+  and WorldState out. Alternative: one brain per guard that also owns the gate
+  rules -- rejected, two guards would disagree about whether you are cleared.
+- **Standing bands, night bribes and fight outcomes are the product owner's**
+  (40 / 0 / -1 / -40; one band lower after dark; kill and run costs standing, but
+  you can win). The numbers (prices, deltas, timers) are first guesses in the
+  profile.
+- **The player can be downed.** Without it "you can win" means nothing. Health on
+  the player body (`character_body.gd`) with regen, and a `downed` signal that does
+  nothing on its own; the checkpoint turns it into a knockout to the pit. Traces
+  that are not about guards switch the brains off (`npc_brains = false`), so the
+  older traces keep walking through the gate unbothered.
+- **Opening burst, then cover.** A warned target gets shot at once, not after the
+  guards have jogged to a crate; the cover dance starts after the first burst.
+- **Cover comes from the town's boxes** (`CoverPicker`): spots around every box
+  tall enough to hide a crouched body, kept only if the box sits between the spot
+  and the threat, on the guard's side of the gate, reachable on the navmesh, and
+  not claimed by the other guard. `squad_coordinator.gd` is not used: it looks up
+  member positions by cover index and never asks whether a spot hides anyone.
+- **Two barricades added inside the gate** (`checkpoint_barricade_n/s`, 1.1 m).
+  The gate had no cover a guard could use against the desert side, so every fight
+  was two guards standing in the open.
+- **Crouching shrinks the guard's capsule**, so a bolt aimed over a barricade
+  really misses. The player's capsule does not shrink yet (guards aim at a crouched
+  player's lower chest instead, which the barricade blocks).
+- **No friendly fire.** Bolts now tell the target who fired them
+  (`apply_damage_from`); a guard ignores its own faction's bolts.
+- **Corners are only cut on level ground.** With combat sprinting, a guard took
+  the pit-ramp foot early and walked into the ramp's side ledge (the part 1 bug
+  again, by another route). Taking a corner early, or skipping it when stuck, is
+  now only allowed where the path stays level.
+- **Footsteps.** A guard facing the gate never noticed a player standing behind it
+  in the checkpoint. A moving, standing target within ~6 m is now heard
+  (crouch-walking is silent), and a calm guard turns to look at what it heard.
+- **Barks are de-duplicated on game time**, not wall time (traces run faster than
+  real time), so two guards never shout the same line together.
+
 ## 2026-10-26 — M15 part 1 (guards on foot: body, pathing, senses)
 
 - **Guards are not LLM driven** (product owner). The bartender stays the only LLM

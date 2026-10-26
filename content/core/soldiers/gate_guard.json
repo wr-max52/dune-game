@@ -27,7 +27,11 @@
     "heard_awareness": 0.6,
     "ray_hz": 5.0,
     "eye_height": 1.62,
-    "target_chest": 1.25
+    "target_chest": 1.25,
+    "target_chest_crouched": 0.75,
+    "eye_height_crouched": 0.95,
+    "footstep_range": 6.0,
+    "footstep_awareness": 0.45
   },
   "nav": {
     "waypoint_reach": 0.5,
@@ -38,5 +42,87 @@
     "stuck_s": 2.0,
     "stuck_move": 0.35
   },
-  "note": "Every gate guard number lives here, like the pilot profiles. Behavior (post, challenge, fight) is the next push; this profile already drives the body, pathing and senses."
+  "note": "Every gate guard number lives here, like the pilot profiles: body, senses, pathing, the rifle it carries, how it fights and how it patrols. The checkpoint rules (standing bands, bribes, warnings) are in the checkpoint block.",
+  "weapon": {
+    "base": "rifle_blaster",
+    "damage": 11,
+    "bolt_speed": 44.0,
+    "rate": 0.16,
+    "range": 90.0,
+    "mag": 24,
+    "reload_time": 2.0,
+    "noise_radius": 50.0,
+    "bolt_color": "#ff3a24"
+  },
+  "combat": {
+    "aim_error_deg": 2.2,
+    "aim_error_moving_mult": 1.8,
+    "aim_error_first_burst_mult": 1.6,
+    "burst_min": 3,
+    "burst_max": 5,
+    "windup_s": 0.35,
+    "hide_min_s": 1.2,
+    "hide_max_s": 2.4,
+    "hide_low_hp_mult": 1.8,
+    "low_hp_frac": 0.35,
+    "no_sight_reposition_s": 3.0,
+    "open_fire_strafe_s": 1.5,
+    "cover_search_radius": 28.0,
+    "cover_min_threat_dist": 6.0,
+    "cover_max_threat_dist": 40.0,
+    "alert_radius": 45.0,
+    "search_s": 10.0,
+    "disengage_dist": 70.0,
+    "disengage_unseen_s": 12.0,
+    "search_leash": 22.0
+  },
+  "patrol": {
+    "pause_s": 4.0,
+    "look_around_deg": 55.0,
+    "look_every_s": 2.5
+  },
+  "checkpoint": {
+    "zone_radius": 11.0,
+    "hostile_radius": 26.0,
+    "warn_s": 3.0,
+    "cleared_s": 180.0,
+    "bands": [
+      {
+        "id": "wave",
+        "min": 40
+      },
+      {
+        "id": "papers",
+        "min": 0
+      },
+      {
+        "id": "search",
+        "min": -39
+      },
+      {
+        "id": "hostile",
+        "min": -100
+      }
+    ],
+    "armed_escalate_radius": 10.0,
+    "recent_shot_s": 30.0,
+    "bribe": {
+      "papers": 10,
+      "search": 25,
+      "night_hostile": 40
+    },
+    "night_times": [
+      "dusk"
+    ],
+    "search_s": 3.0,
+    "standing": {
+      "papers": 1,
+      "mouth_off": -2,
+      "fight": -10,
+      "guard_killed": -15,
+      "fled": -5
+    },
+    "standing_cooldown_s": 120.0,
+    "memory_s": 300.0
+  }
 }

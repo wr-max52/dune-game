@@ -226,6 +226,15 @@ if [ ! -f test_results/npc_trace.txt ]; then
 fi
 echo "CI: npc trace present ($(wc -l < test_results/npc_trace.txt) lines)"
 
+# Combat NPCs at the gate: patrols, every standing band, night bribes, escalation,
+# and the three ways a fight ends (win, run, knocked out), each in a fresh town.
+echo "CI: generating combat trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/combat_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/combat_trace.txt ]; then
+  echo "CI: ERROR -- combat trace was not generated" >&2
+  exit 1
+fi
+echo "CI: combat trace present ($(wc -l < test_results/combat_trace.txt) lines)"
 # Issue #15: names. The town's guards, the town, its planet, your ship and the
 # jetpack named as they spawn; the same names after a save and for the same world
 # seed; the space fight's pilots named each sortie; a crowd of 5,000 all unique.

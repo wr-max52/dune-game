@@ -31,6 +31,7 @@ var _phase := "start"
 func _initialize() -> void:
 	NoiseEvents.reset()
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false        # greybox: fast, and no bar or body to wait for
 	demo.with_ship = false
 	demo.nav_async = true        # the live path: bake on a worker thread

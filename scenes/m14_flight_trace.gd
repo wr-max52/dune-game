@@ -68,6 +68,7 @@ func make_town() -> void:
 		demo.queue_free()
 		await frames(2)
 	demo = load("res://scenes/town_demo.gd").new()
+	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
 	demo.use_look = false              # greybox: the same collision, fast
 	get_root().add_child(demo)
 	await frames(5)
