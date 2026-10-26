@@ -32,6 +32,35 @@ Every new id also goes in `content/core/manifest.json` under `ships`, `weapons`,
    - `convergence`: how far ahead the fixed guns cross.
 4. Add the id to `ships` in the manifest.
 
+### Flying it in the atmosphere (M14)
+
+A ship the player flies around the port also needs an `atmosphere` block (copy the
+interceptor's): `max_speed` and `boost_speed` near the ground (m/s), `min_speed`
+(0 = it hovers), `accel`, `boost_time` / `boost_recharge`; `edge_speed_mult` (how
+much faster at the edge of space) and `speed_curve`; `climb_drag` (speed lost
+straight up); `liftoff_height` / `liftoff_speed`; `land_max_agl`, `land_descent`,
+`land_slow`, `land_brake`, `touchdown_speed`; `crash_speed`; `body_radius` (for
+hitting things) and `clearance` (origin to belly; taken from the model when there
+is one). Turn rates come from `flight`.
+
+## A new world around a town (M14)
+
+`content/core/worlds/<id>.json` (listed under `worlds` in the manifest) names the
+`town` it surrounds and holds:
+
+- `terrain`: not the desert's shape (that is the town's `DesertTerrain`, and its
+  rocks are `content/look/desert_landforms.json`, which ships also collide with), but
+  where it ends and the planet begins: `extent` (the desert's own wins when it is
+  built), `skirt_height`, and the curve (`planet_radius`, `curve_from`).
+- `landmarks`: `location` (places a location's buildings, such as the outpost, at a
+  position and yaw) and simple `mesa` / `spire` columns (a position, `radius`,
+  `height`). Solid to ships; the location's buildings are solid to the player too.
+- `atmosphere`: where the sky starts to darken (`upper_start`), is black
+  (`sky_black_at`), and where space begins (`space_altitude`).
+
+Colours are in `content/look/world.json`. Where the ship re-enters after space is the
+pad's `reentry_*` in `content/core/flow/launch_pads.json`.
+
 ## A new look (any design)
 
 Add an entry under `looks` in `content/look/ships.json`, keyed by the ship's `look` id.

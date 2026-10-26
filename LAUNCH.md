@@ -51,17 +51,47 @@ There is one thing to launch. You start on the pit floor beside your ship. Walk 
 WASD, V toggles the camera, Esc frees the mouse, L cycles golden, noon and dusk.
 Walk up a ramp to reach the streets; the cantina is west, the gate east.
 
-Next to the ship, "[E] Launch" shows. **Press E** to fade into the dogfight. When the
-fight is won or lost you land back beside the ship with the result on screen.
+Since M14 you fly the ship yourself (next section): "[E] Board" shows beside it.
+Flying out of the atmosphere is the way into the dogfight.
 
 | Action          | Key |
 |---|---|
-| Launch (by ship) | E  |
+| Board the ship   | E (beside it)  |
 | Lighting preset  | L (cycle) |
 
 Review renders: `./tools/town/shoot_town.sh presets=golden,dusk` writes to
 `test_results/town/`. Pads, encounter, delays and labels live in
 `content/core/flow/launch_pads.json`.
+
+## Flying your ship: the port, the desert, space (M14)
+
+Walk up to the ship in the pit and press **E**. You are in the cockpit, with the
+camera behind the ship.
+
+| Action | Key |
+|---|---|
+| Take off (straight up out of the pit) | Space (or R) when parked |
+| Throttle up / down (zero = hover) | R / F |
+| Pitch (W pushes the nose down) | W / S, or the mouse |
+| Turn | A / D, or the mouse |
+| Roll | Q / E |
+| Boost | Shift |
+| Land on whatever is below (under 150 m) | C |
+| Get out (once landed) | E |
+| Chase / cockpit view | V |
+
+The HUD shows speed, throttle, boost, altitude, height above ground and climb rate.
+The bar on the right fills toward the **edge of space (8,000 m)**: pull the nose up
+to about 80 degrees, full throttle, boost, and you are there in roughly 33 seconds.
+The sky goes black on the way. At the edge the screen fades into the space battle.
+
+In space, **dive at the planet** to come back down: you arrive in the port's sky,
+still flying. Win the fight and, if you do not dive within 25 s, you come back down
+anyway. Lose the fighter and you are back on foot beside the pad.
+
+Hit the ground or a building fast and you crash; the ship is towed back to its pad.
+
+Review renders: `./tools/m14/shoot_flight.sh` writes to `test_results/m14/`.
 
 ## Your body, your weapons, and the bartender (M11 + M12)
 

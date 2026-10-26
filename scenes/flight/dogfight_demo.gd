@@ -41,6 +41,10 @@ var _space: Dictionary = {}
 var return_left := -1.0     ## >= 0: counting down to the port (launched from a pad)
 var _outcome := ""
 var _payout := 0
+var _return_how := "pad"    ## M14: "pad" (on foot at the pad) or "reentry" (back in the port's sky)
+var reentry_margin := 600.0 ## M14: metres above the planet's surface where a dive re-enters
+var planet_center := Vector3.ZERO
+var planet_radius := 0.0
 
 
 func _ready() -> void:
@@ -69,6 +73,8 @@ func _ready() -> void:
 	_build_hud()
 	_sync_ships()
 	_show_banner(str(df.encounter.get("label", "Dogfight")))
+	if GameFlow.in_flight and GameFlow.mode == "ascent":
+		_show_banner(GameFlow.label("dive_to_land"), 5.0)
 
 
 # ------------------------------------------------------------------ input
@@ -128,6 +134,22 @@ func _process(frame_dt: float) -> void:
 		camera.global_transform = chase.update(dt, me.flight.transform())
 	_update_hud(dt)
 	_tick_return(dt)
+	_check_reentry()
+
+
+## M14: flying down at the planet takes you back to the port's sky, whenever you
+## like (only when this flight came from a town; a stand-alone dogfight stays).
+func _check_reentry() -> void:
+	if not GameFlow.in_flight or planet_radius <= 0.0:
+		return
+	var me: Dictionary = df.get_ship(df.player_id)
+	if me.is_empty() or not me.alive:
+		return
+	if me.flight.position.distance_to(planet_center) <= planet_radius + reentry_margin:
+		var done: bool = df.state == Dogfight.State.COMPLETE
+		return_left = -1.0
+		GameFlow.finish_flight(get_tree(), "complete" if done else "left",
+			int(df.encounter.get("payout", 0)) if done else 0, "reentry")
 
 
 ## After the fight ends, go back to the port this flight launched from.
@@ -137,15 +159,21 @@ func _tick_return(dt: float) -> void:
 	return_left -= dt
 	if return_left <= 0.0:
 		return_left = -1.0
-		GameFlow.finish_flight(get_tree(), _outcome, _payout)
+		GameFlow.finish_flight(get_tree(), _outcome, _payout, _return_how)
 
 
+## After a fight: a lost ship limps home to the pad. A won fight flown up from the
+## town (M14) gives you time to dive back down yourself, then re-enters anyway.
 func _queue_return(outcome: String, payout: int) -> void:
 	if not GameFlow.in_flight or return_left >= 0.0:
 		return
 	_outcome = outcome
 	_payout = payout
+	_return_how = "pad"
 	return_left = GameFlow.setting("return_delay", 4.0)
+	if outcome == "complete" and GameFlow.mode == "ascent":
+		_return_how = "reentry"
+		return_left = GameFlow.setting("reentry_delay", 25.0)
 
 
 ## Run the fight forward without drawing (for review renders and tests), then sync.
@@ -208,6 +236,8 @@ func _on_event(e: Dictionary) -> void:
 		"complete":
 			_show_banner("Sector clear  +%d credits" % e.payout, 6.0)
 			_queue_return("complete", int(e.payout))
+			if GameFlow.in_flight and GameFlow.mode == "ascent":
+				_show_banner(GameFlow.label("sector_clear_dive"), 8.0)
 		"failed":
 			_show_banner("Fighter lost", 6.0)
 			_queue_return("failed", 0)
@@ -288,6 +318,8 @@ func _build_space() -> void:
 	sun.look_at_from_position(Vector3.ZERO, -dir, Vector3.UP if absf(dir.y) < 0.99 else Vector3.BACK)
 
 	var pl: Dictionary = _space.get("planet", {})
+	planet_center = Dogfight._vec(pl.get("center", [0, -6400, -2600]))
+	planet_radius = float(pl.get("radius", 5000.0))
 	var planet := MeshInstance3D.new()
 	planet.name = "Planet"
 	var ps := SphereMesh.new()

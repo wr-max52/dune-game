@@ -11,6 +11,9 @@ extends Node3D
 
 signal launch_started(pad: Dictionary)
 
+## M14: false when the scene has a flyable ship. The pad then only marks the
+## ship's home (range, arrival toast); E boards the ship instead.
+@export var quick_launch := true
 @export var auto_launch := false   ## true: launch the moment the player steps on
 @export var fade_time := -1.0      ## < 0: use launch_pads.json; 0: instant (tests)
 
@@ -90,8 +93,8 @@ func _process(dt: float) -> void:
 	if launching:
 		return
 	in_range = is_player_in_range()
-	_prompt.visible = in_range
-	if in_range and (auto_launch or _interact_pressed()):
+	_prompt.visible = in_range and quick_launch
+	if in_range and quick_launch and (auto_launch or _interact_pressed()):
 		launch()
 
 

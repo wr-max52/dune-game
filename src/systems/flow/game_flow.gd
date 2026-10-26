@@ -2,6 +2,12 @@ class_name GameFlow
 extends RefCounted
 ## Scene flow between the port (on foot) and flight.
 ##
+## M14: two ways up. A pad's quick launch (mode "pad") as before, or flying the
+## ship out of the atmosphere (mode "ascent", see ShipPilot). Two ways down: after
+## a fight, or by diving at the planet, the player re-enters still flying, in the
+## sky above the port (arrival mode "reentry"); a lost ship limps home to the pad
+## on foot (arrival mode "pad").
+##
 ## The port and the dogfight are separate scenes. This class is the hand-off
 ## between them: a launch pad in the port calls launch(), the dogfight scene asks
 ## which encounter to fly, and when the fight ends it calls finish_flight(), which
@@ -20,7 +26,8 @@ static var in_flight := false
 static var pad_id := ""
 static var encounter_id := ""
 static var return_scene := ""
-static var arrival: Dictionary = {}       ## { pad, encounter, outcome, payout } until taken
+static var arrival: Dictionary = {}       ## { pad, encounter, outcome, payout, mode } until taken
+static var mode := ""                     ## M14: how this flight started: "pad" or "ascent"
 static var change_scene: Callable = Callable()
 
 static var _data: Dictionary = {}
@@ -72,8 +79,9 @@ static func vec(a) -> Vector3:
 
 
 ## Start a flight from a pad. Loads the flight scene.
-static func launch(tree: SceneTree, from_pad: Dictionary) -> void:
+static func launch(tree: SceneTree, from_pad: Dictionary, how: String = "pad") -> void:
 	in_flight = true
+	mode = how
 	pad_id = str(from_pad.get("id", ""))
 	encounter_id = str(from_pad.get("encounter", ""))
 	return_scene = str(from_pad.get("scene", data().get("default_port_scene", "")))
@@ -81,13 +89,21 @@ static func launch(tree: SceneTree, from_pad: Dictionary) -> void:
 	_go(tree, str(data().get("flight_scene", "res://scenes/flight/dogfight_demo.tscn")))
 
 
+## M14: the ship flew out of the atmosphere from a pad's town. Same hand-off as a
+## launch, so the space scene flies the pad's encounter.
+static func ascend(tree: SceneTree, from_pad: Dictionary) -> void:
+	launch(tree, from_pad, "ascent")
+
+
 ## End the flight and load the port it started from. Safe to call when no flight
 ## is active (does nothing), so a stand-alone dogfight never jumps scenes.
-static func finish_flight(tree: SceneTree, outcome: String, payout: int = 0) -> bool:
+## `how`: "pad" lands you on foot beside the pad; "reentry" (M14) puts you back in
+## the port's sky, still flying.
+static func finish_flight(tree: SceneTree, outcome: String, payout: int = 0, how: String = "pad") -> bool:
 	if not in_flight:
 		return false
 	in_flight = false
-	arrival = { "pad": pad_id, "encounter": encounter_id, "outcome": outcome, "payout": payout }
+	arrival = { "pad": pad_id, "encounter": encounter_id, "outcome": outcome, "payout": payout, "mode": how }
 	var target := return_scene if return_scene != "" else str(data().get("default_port_scene", ""))
 	_go(tree, target)
 	return true
@@ -104,6 +120,8 @@ static func take_arrival() -> Dictionary:
 static func arrival_text(a: Dictionary) -> String:
 	if a.is_empty():
 		return ""
+	if str(a.get("mode", "")) == "reentry" and str(a.get("outcome", "")) != "complete":
+		return label("arrive_reentry")
 	if str(a.get("outcome", "")) == "complete":
 		var t := label("arrive_complete")
 		return t % int(a.get("payout", 0)) if t.contains("%d") else t
@@ -116,6 +134,7 @@ static func reset() -> void:
 	encounter_id = ""
 	return_scene = ""
 	arrival = {}
+	mode = ""
 	change_scene = Callable()
 
 

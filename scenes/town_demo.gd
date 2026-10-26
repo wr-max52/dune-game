@@ -42,6 +42,7 @@ const ROLE_COLORS := {
 @export var with_desert := true       ## the terrain around the town (collider in greybox too)
 @export var terrain_resolution := 400 ## mesh vertices per side (look only)
 @export var with_landforms := true    ## mesas, hoodoos, boulders (look only)
+@export var with_ship := true         ## M14: the pit's ship is flyable (E boards it instead of quick-launching)
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -57,6 +58,7 @@ var training_range: TrainingRange
 var bartender: Node3D                 ## M12 (null in the CI greybox)
 var bar: Node
 var gear: GearController              ## M13
+var pilot: ShipPilot                  ## M14
 var characters: Dictionary = {}       ## marker id -> built character
 var terrain: DesertTerrain            ## null when with_desert is off
 var landforms: DesertLandforms
@@ -106,6 +108,8 @@ func _ready() -> void:
 			_build_bar()
 		if with_gear:
 			_build_gear()            # after the bar: the save (and the inventory in it) is loaded
+		if with_ship:
+			_build_ship()
 
 
 # ---------------------------------------------------------------- gameplay layer
@@ -272,6 +276,17 @@ func _build_gear() -> void:
 	if terrain != null:
 		gear.ground_at = terrain.ground_at
 	add_child(gear)
+
+
+## M14: the pit's ship becomes the one you fly, and the world opens up around the
+## town. The pad stops quick-launching: E boards the ship, and flying out of the
+## atmosphere is the way to space.
+func _build_ship() -> void:
+	for pd in pads:
+		pd.quick_launch = false
+	pilot = ShipPilot.new()
+	pilot.setup(self)
+	add_child(pilot)
 
 
 func _physics_process(dt: float) -> void:

@@ -6,7 +6,11 @@
   "look": "interceptor",
   "pilot": "ace",
   "hull": 120,
-  "shield": { "max": 80, "regen": 12.0, "delay": 2.5 },
+  "shield": {
+    "max": 80,
+    "regen": 12.0,
+    "delay": 2.5
+  },
   "hit_radius": 3.2,
   "convergence": 320.0,
   "flight": {
@@ -22,9 +26,52 @@
     "boost_turn_scale": 0.6
   },
   "hardpoints": [
-    { "weapon": "ship_cannon", "mount": [-3.4, 0.0, -0.8] },
-    { "weapon": "ship_cannon", "mount": [3.4, 0.0, -0.8] },
-    { "weapon": "ship_missile", "mount": [0.0, -0.7, -1.6] }
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -3.4,
+        0.0,
+        -0.8
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        3.4,
+        0.0,
+        -0.8
+      ]
+    },
+    {
+      "weapon": "ship_missile",
+      "mount": [
+        0.0,
+        -0.7,
+        -1.6
+      ]
+    }
   ],
-  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack."
+  "atmosphere": {
+    "min_speed": 0.0,
+    "max_speed": 170.0,
+    "boost_speed": 300.0,
+    "accel": 40.0,
+    "boost_time": 8.0,
+    "boost_recharge": 1.0,
+    "boost_turn_scale": 0.7,
+    "edge_speed_mult": 4.0,
+    "speed_curve": 1.0,
+    "climb_drag": 0.3,
+    "liftoff_height": 18.0,
+    "liftoff_speed": 7.0,
+    "land_max_agl": 150.0,
+    "land_descent": 12.0,
+    "land_slow": 4.0,
+    "land_brake": 45.0,
+    "touchdown_speed": 9.0,
+    "crash_speed": 32.0,
+    "body_radius": 2.0,
+    "clearance": 1.0
+  },
+  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack. 'atmosphere' (M14) is how it flies inside the planet's air: hover at zero throttle, faster as the air thins (edge_speed_mult at the edge of space), slower nose-up (climb_drag), vertical liftoff and auto-landing, and the impact speed that crashes it."
 }

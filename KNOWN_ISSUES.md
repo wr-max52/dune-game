@@ -2,7 +2,50 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After the seamless desert (2026-10-26)
+## After M14 (2026-10-26)
+
+**What is real and proven by tests:** the whole port-to-space loop with real physics
+and the real scenes (`test_results/m14_flight_trace.txt`): boarding, vertical
+lift-off out of the pit, hovering, flight over the town and the desert, landing in
+the dunes, getting out and walking on the sand, a crash into a mesa and the tow
+home, landing on the pad, the climb to the edge of space in 30-40 s, the hand-off
+to the space encounter, re-entry into the port's sky, and a jetpack landing on the
+desert. Unit tests cover the terrain, the ground and obstacle queries, the flight
+states, crash and bump rules, the climb time, and the GameFlow ascent/re-entry
+paths.
+
+**Not done, honestly:**
+- **Not flown by a human yet.** Every flight in the tests is the bot. The feel
+  (turn rates, throttle steps, the mouse stick, the landing speed limit) is
+  first-pass and wants a session on the Mac.
+- **Reviewed in software rendering only** (`docs/m14/`). Terrain shading, the dark
+  sky at altitude and the frame time with the full desert on screen are unmeasured
+  on real hardware.
+- **Placeholder world.** The outpost is plain boxes. Past the desert's 6 km edge the
+  planet is a smooth sand skirt (same sand, no dunes: from high up the desert square shows as a soft edge), and a ship cannot land out there. No
+  wrecks, roads or other settlements yet.
+- **The rocks are cylinders to the ship.** Mesas and hoodoos are solid as simple
+  columns sized from their meshes, not their exact rocky shape: a wing can pass a
+  hair inside a bulge or bump an overhang that is not quite there.
+- **A collider re-centre can hop you a few cm.** When the desert's walkable collider
+  swaps in under a player who is standing still, they can be lifted up to ~0.2 m and
+  drop back over a few frames (seen in the desert-walk trace at the gate; it predates
+  M14, which only shifted its timing). The trace now waits for you to settle.
+- **One heavy frame as you get out** (~39 ms in the headless trace, physics step,
+  not scripts or the collider rebuild). Unmeasured on the Mac.
+- **Nothing else flies.** No traffic, no patrols, no enemies in the atmosphere.
+  The outpost out in the desert has no guards or mission hooked to it.
+- **No weapons in the atmosphere.** The ship's guns fire in space only.
+- **Ships rest level** wherever they land, held up by the highest point under them,
+  so a slope can leave one side hanging.
+- **No landing gear, engine sound, contrails, re-entry glow or camera shake.**
+- **The ship's position is not saved.** A new session starts with it on the pad; a
+  ship left in the desert comes back to the pad.
+- **One way up, one way down.** The same encounter every ascent, and the same
+  re-entry point (5.2 km, south-west of the port, nose down at the town).
+- **The tow after a crash is instant** (2.5 s): no wreck, no repair cost.
+
+## After the seamless desert (2026-10-26) -- superseded by the notes above.
 
 **What is real and proven by tests:** the town sits on the dunes at floor level.
 With real physics (`test_results/desert_walk_trace.txt`), the player walks from the
@@ -30,7 +73,7 @@ teleports, and the landforms staying clear of the town.
 - **Reviewed in software Vulkan only** (lavapipe, `docs/town/look/desert/`);
   re-shoot on the Mac with `tools/town/shoot_town.sh shots=gate_to_desert,desert_look_back,north_wall_outside,desert_aerial`.
 
-## After M13 (2026-10-26)
+## After M13 (2026-10-26) -- superseded by the notes above.
 
 **What is real and proven by tests:** the jetpack with real physics in the town
 (`test_results/m13_jetpack_trace.txt`): reached from the pit and picked up, attached,

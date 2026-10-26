@@ -162,6 +162,17 @@ in `content/look/ships.json`. A real model replaces a stand-in by setting the lo
 `scene` path, with no code change (see `docs/ADDING_SHIPS.md`). Review stills:
 `./tools/lookdev/shoot_dogfight.sh`; the current ones are in `docs/lookdev/flight/`.
 
+## The world beyond the walls (M14)
+
+- **The seamless desert is what you fly over** (`DesertTerrain`, `DesertLandforms`): its dunes,
+  mesas and hoodoos. M14 adds the remnant outpost's plaster buildings with oxblood
+  bands 3 km out (placeholder boxes), and past the desert's 6 km edge a plain sand
+  skirt that curves away with the planet.
+- **Altitude is the time of day's last stop.** The sky darkens from the preset's
+  colours to `space` in `content/look/world.json` between 600 m and 7 km; at the top
+  it is black with stars, the ringed planet sharp, and the desert curving away.
+- Review stills: `./tools/m14/shoot_flight.sh`; the current ones are in `docs/m14/`.
+
 ## Camera and post
 
 - Default field of view: 70 (TPV), 80 (FPV). Keep the horizon low, so the sky does

@@ -1,0 +1,300 @@
+class_name AtmoFlight
+extends RefCounted
+## Flying a ship inside the planet's air (M14). Pure and headless-testable: the M10
+## flight model plus the things that only matter near a planet -- the ground, the
+## town's buildings, taking off, landing, crashing, and the air thinning out until
+## space. The ship node (ShipPilot) reads input and draws; this decides.
+##
+## States:
+##   PARKED   -- sitting on the ground. takeoff() lifts it.
+##   LIFTOFF  -- rising straight up (wings levelled) to `liftoff_height` above the
+##               ground, then FLYING at zero throttle (hovering).
+##   FLYING   -- arcade flight: the ship moves along its nose. Zero throttle hovers
+##               (this is a VTOL fighter, not a plane). The air thins with
+##               altitude, so top speed rises toward `edge_speed_mult` x at the edge
+##               of space; climbing nose-up costs speed (`climb_drag`).
+##               Touching down gently lands it; hitting the ground or a building
+##               faster than `crash_speed` crashes it.
+##   LANDING  -- land() within `land_max_agl` of the ground: brakes to a stop,
+##               levels, and settles straight down onto whatever is below.
+##   CRASHED  -- stopped; the scene decides what happens next.
+##
+## Every number comes from the ship's "atmosphere" block (and its turn rates from
+## "flight") in content/core/ships/*.json; where space starts comes from the world.
+
+const FlightModel := preload("res://src/systems/flight/flight_model.gd")
+
+enum State { PARKED, LIFTOFF, FLYING, LANDING, CRASHED }
+
+var cfg: Dictionary = {}        ## the ship's "atmosphere" block
+var flight                      ## FlightModel (atmosphere speeds)
+var ground: WorldGround
+var state := State.PARKED
+var events: Array = []          ## this step's events: { type, ... }
+var space_altitude := 8000.0
+var upper_start := 600.0
+var clearance := 1.0            ## origin to belly, metres (the scene may set it from the model)
+var body_radius := 2.0
+var reached_space := false
+var last_hit := ""
+var crash_point := Vector3.ZERO
+
+var _liftoff_target := 0.0
+var _command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.0, "boost": false }
+
+
+func setup(ship_cfg: Dictionary, world_ground: WorldGround) -> void:
+	cfg = ship_cfg.get("atmosphere", {})
+	var fc: Dictionary = (ship_cfg.get("flight", {}) as Dictionary).duplicate()
+	for k in ["min_speed", "max_speed", "boost_speed", "accel", "boost_time", "boost_recharge", "boost_turn_scale"]:
+		if cfg.has(k):
+			fc[k] = cfg[k]
+	flight = FlightModel.new(fc)
+	flight.throttle = 0.0
+	flight.speed = 0.0
+	ground = world_ground
+	clearance = float(cfg.get("clearance", clearance))
+	body_radius = float(cfg.get("body_radius", body_radius))
+	if ground != null:
+		var atmo := ground.atmosphere()
+		space_altitude = float(atmo.get("space_altitude", space_altitude))
+		upper_start = float(atmo.get("upper_start", upper_start))
+
+
+func p(key: String, fallback: float) -> float:
+	return float(cfg.get(key, fallback))
+
+
+# ---- queries ----------------------------------------------------------------
+
+func position() -> Vector3:
+	return flight.position
+
+
+func transform() -> Transform3D:
+	return flight.transform()
+
+
+func speed() -> float:
+	return flight.speed
+
+
+## The highest ground under the ship's footprint (centre and four points around
+## it), so a ship set down on a slope rests on it instead of sinking in.
+func ground_below() -> float:
+	if ground == null:
+		return 0.0
+	var pos: Vector3 = flight.position
+	var below := pos.y - clearance
+	var g := ground.ground_at(pos.x, pos.z, below)
+	var b: Basis = flight.basis
+	var fx := Vector3(b.x.x, 0.0, b.x.z).normalized() * body_radius
+	var fz := Vector3(b.z.x, 0.0, b.z.z).normalized() * body_radius
+	for off in [fx, -fx, fz, -fz]:
+		g = maxf(g, ground.ground_at(pos.x + off.x, pos.z + off.z, below))
+	return g
+
+
+## Height of the belly above whatever is under the ship.
+func agl() -> float:
+	return flight.position.y - clearance - ground_below()
+
+
+## Altitude above the planet's curved sea level (what "space" is measured against).
+func altitude() -> float:
+	return ground.altitude(flight.position) if ground != null else flight.position.y
+
+
+## 0 at sea level, 1 at the edge of space.
+func space_fraction() -> float:
+	return clampf(altitude() / maxf(space_altitude, 1.0), 0.0, 1.0)
+
+
+## How much faster thin air lets the ship go here (1 near the ground).
+func air_scale() -> float:
+	var k := clampf((altitude() - upper_start) / maxf(space_altitude - upper_start, 1.0), 0.0, 1.0)
+	return 1.0 + (p("edge_speed_mult", 4.0) - 1.0) * pow(k, p("speed_curve", 1.0))
+
+
+func can_land() -> bool:
+	if state != State.FLYING or agl() > p("land_max_agl", 150.0):
+		return false
+	var at := position()
+	return ground == null or ground.landable(at.x, at.z)
+
+
+func state_label() -> String:
+	return State.keys()[state]
+
+
+# ---- control ------------------------------------------------------------------
+
+## Put the ship down at `at` (its belly on the ground there), facing `yaw` radians.
+func park(at: Vector3, yaw: float) -> void:
+	flight.basis = Basis(Vector3.UP, yaw)
+	flight.position = Vector3(at.x, at.y + 0.5 + clearance, at.z)
+	var g := ground_below() if ground != null else at.y
+	flight.position = Vector3(at.x, g + clearance, at.z)
+	flight.speed = 0.0
+	flight.throttle = 0.0
+	_command.throttle = 0.0
+	state = State.PARKED
+
+
+## Place the ship in the air, flying (a re-entry arrival or a test).
+func place_flying(at: Vector3, facing: Vector3, speed_now: float, throttle: float) -> void:
+	flight.position = at
+	flight.face(facing)
+	flight.speed = speed_now
+	flight.throttle = throttle
+	_command.throttle = throttle
+	state = State.FLYING
+
+
+func set_command(pitch: float, yaw: float, roll: float, throttle: float, boost: bool) -> void:
+	_command = { "pitch": clampf(pitch, -1.0, 1.0), "yaw": clampf(yaw, -1.0, 1.0),
+		"roll": clampf(roll, -1.0, 1.0), "throttle": clampf(throttle, 0.0, 1.0), "boost": boost }
+
+
+func takeoff() -> bool:
+	if state != State.PARKED:
+		return false
+	_liftoff_target = ground_below() + clearance + p("liftoff_height", 18.0)
+	state = State.LIFTOFF
+	events.append({ "type": "liftoff" })
+	return true
+
+
+func land() -> bool:
+	if not can_land():
+		return false
+	state = State.LANDING
+	events.append({ "type": "landing" })
+	return true
+
+
+# ---- frame --------------------------------------------------------------------
+
+## Advance one frame. Returns this step's events.
+func step(dt: float) -> Array:
+	events = []
+	match state:
+		State.LIFTOFF:
+			_step_liftoff(dt)
+		State.FLYING:
+			_step_flying(dt)
+		State.LANDING:
+			_step_landing(dt)
+	return events
+
+
+func _step_liftoff(dt: float) -> void:
+	var pos: Vector3 = flight.position
+	var left := _liftoff_target - pos.y
+	var rise := minf(left, maxf(1.5, minf(p("liftoff_speed", 7.0), left * 1.5)) * dt)
+	flight.position = pos + Vector3(0, rise, 0)
+	flight.basis = _level(flight.basis, dt * 3.0)
+	if left <= 0.05:
+		state = State.FLYING
+		flight.speed = 0.0
+		flight.throttle = 0.0
+		_command.throttle = 0.0
+		events.append({ "type": "airborne" })
+
+
+func _step_flying(dt: float) -> void:
+	var climb: float = flight.forward().y
+	flight.speed_scale = air_scale() * (1.0 - p("climb_drag", 0.3) * maxf(0.0, climb))
+	flight.accel_scale = air_scale()
+	flight.set_command_dict(_command)
+	var before: Vector3 = flight.position
+	flight.step(dt)
+	_check_space()
+	_collide(before, dt)
+
+
+func _step_landing(dt: float) -> void:
+	flight.speed = move_toward(flight.speed, 0.0, p("land_brake", 45.0) * dt)
+	flight.basis = _level(flight.basis, dt * 2.0)
+	var before: Vector3 = flight.position
+	var fwd: Vector3 = flight.forward()
+	var h: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized() * float(flight.speed) * dt
+	var a := agl()
+	var down := p("land_descent", 12.0) if a > 8.0 else p("land_slow", 4.0)
+	flight.position = before + h - Vector3(0, minf(down * dt, maxf(a, 0.0)), 0)
+	if ground.hit(flight.position, body_radius) != "":
+		flight.position = Vector3(before.x, flight.position.y, before.z)
+		flight.speed = 0.0
+	if agl() <= 0.02:
+		_touch_down()
+
+
+func _collide(before: Vector3, dt: float) -> void:
+	if ground == null:
+		return
+	var pos: Vector3 = flight.position
+	var hit_id := ground.hit(pos, body_radius)
+	if hit_id != "":
+		last_hit = hit_id
+		if flight.speed > p("crash_speed", 32.0):
+			_crash(pos, hit_id)
+			return
+		flight.position = before                  # bumped: stop against it
+		flight.speed = 0.0
+		events.append({ "type": "bump", "what": hit_id })
+		return
+	var g := ground.ground_at(pos.x, pos.z, before.y - clearance)
+	if pos.y - clearance <= g:
+		var vertical: float = maxf(0.0, (before.y - pos.y) / maxf(dt, 0.0001))
+		if flight.speed > p("crash_speed", 32.0) and vertical > 4.0:
+			_crash(Vector3(pos.x, g, pos.z), "ground")
+			return
+		flight.position = Vector3(pos.x, g + clearance, pos.z)
+		if flight.speed <= p("touchdown_speed", 9.0):
+			_touch_down()
+		else:
+			flight.speed = move_toward(flight.speed, 0.0, p("land_brake", 45.0) * dt)  # skidding
+			events.append({ "type": "scrape" })
+
+
+func _touch_down() -> void:
+	var pos: Vector3 = flight.position
+	flight.position = Vector3(pos.x, ground_below() + clearance, pos.z)
+	flight.basis = _level(flight.basis, 1.0)
+	flight.speed = 0.0
+	flight.throttle = 0.0
+	_command.throttle = 0.0
+	state = State.PARKED
+	events.append({ "type": "landed", "at": flight.position })
+
+
+func _crash(at: Vector3, what: String) -> void:
+	crash_point = at
+	flight.speed = 0.0
+	state = State.CRASHED
+	events.append({ "type": "crashed", "at": at, "what": what })
+
+
+func _check_space() -> void:
+	if not reached_space and altitude() >= space_altitude:
+		reached_space = true
+		events.append({ "type": "reached_space", "altitude": altitude() })
+
+
+## Ease a basis toward wings-level, keeping its heading.
+static func _level(b: Basis, w: float) -> Basis:
+	var fwd := -b.z
+	var flat := Vector3(fwd.x, 0.0, fwd.z)
+	if flat.length_squared() < 0.0001:
+		flat = Vector3(b.y.x, 0.0, b.y.z) if Vector2(b.y.x, b.y.z).length() > 0.01 else Vector3.FORWARD
+	var want := Basis.looking_at(flat.normalized(), Vector3.UP)
+	var q := b.get_rotation_quaternion().slerp(want.get_rotation_quaternion(), clampf(w, 0.0, 1.0))
+	return Basis(q).orthonormalized()
+
+
+# ---- hand-off ---------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	var d: Dictionary = flight.to_dict()
+	d["state"] = state_label()
+	return d

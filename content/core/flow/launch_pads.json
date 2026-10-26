@@ -1,5 +1,5 @@
 {
-  "note": "Launch pads: stand on one and press E to fly the encounter it names. Read by src/systems/flow/game_flow.gd; the owning scene resolves 'town_box' (the pad sits on that box's footprint, at its base) and 'arrive_marker' (where the player lands back on foot, facing the pad) from its own layout data, so no coordinates live here or in code. Labels are here so code stays name-free.",
+  "note": "Launch pads: stand on one and press E to fly the encounter it names. Read by src/systems/flow/game_flow.gd; the owning scene resolves 'town_box' (the pad sits on that box's footprint, at its base) and 'arrive_marker' (where the player lands back on foot, facing the pad) from its own layout data, so no coordinates live here or in code. Labels are here so code stays name-free. M14: the pit's ship is flown, not quick-launched: E boards it, and flying out of the atmosphere (the world's space_altitude) starts the pad's encounter. reentry_* place the ship back in the port's sky after space (altitude in metres, distance and bearing from the pad, nose pitch); reentry_delay is how long after a won fight before re-entry happens on its own.",
   "flight_scene": "res://scenes/flight/dogfight_demo.tscn",
   "default_port_scene": "res://scenes/town_demo.tscn",
   "return_delay": 4.0,
@@ -12,7 +12,12 @@
       "height": 4.0,
       "encounter": "orbital_skirmish",
       "arrive_marker": "player_spawn",
-      "parked_yaw_deg": -90.0
+      "parked_yaw_deg": -90.0,
+      "reentry_altitude": 5200.0,
+      "reentry_distance": 6500.0,
+      "reentry_bearing_deg": 200.0,
+      "reentry_pitch_deg": -18.0,
+      "board_reach": 12.0
     }
   },
   "labels": {
@@ -20,6 +25,20 @@
     "launching": "Launching...",
     "returning": "Returning to port...",
     "arrive_complete": "Back in port. Sector clear, +%d credits",
-    "arrive_failed": "Back in port. Your fighter limped home."
-  }
+    "arrive_failed": "Back in port. Your fighter limped home.",
+    "arrive_reentry": "Back in the port's sky.",
+    "board": "[E]  Board",
+    "seated": "[Space]  Take off      [E]  Get out",
+    "airborne": "[R / F]  Throttle    [W / S]  Pitch    [A / D]  Turn    [Q / E]  Roll    [Shift]  Boost",
+    "can_land": "[C]  Land",
+    "landing": "Landing...",
+    "landed": "Landed.  [E]  Get out    [Space]  Take off",
+    "crashed": "Crashed. Your ship is being towed back to the pad.",
+    "towed": "Your ship is back on its pad.",
+    "space_edge": "EDGE OF SPACE",
+    "leaving_atmosphere": "Leaving the atmosphere...",
+    "dive_to_land": "Dive toward the planet to go back down.",
+    "sector_clear_dive": "Sector clear. Dive toward the planet to land."
+  },
+  "reentry_delay": 25.0
 }

@@ -1,6 +1,9 @@
 extends GutTest
 ## The demo flow: start in the town beside your ship, press E on the pit pad, fly
 ## the pad's encounter, and land back beside the ship when the fight ends.
+## M14: the pad no longer quick-launches in the town (you fly the ship up; see the
+## tests at the end and tests/test_m14_flight.gut.gd), but the pad's launch path,
+## range and arrival toast are still the hand-off GameFlow uses.
 ## GameFlow.change_scene is swapped for a recorder so no test ever replaces the
 ## GUT scene tree.
 
@@ -147,3 +150,54 @@ func test_walking_from_the_rim_down_the_ramp_reaches_the_pad() -> void:
 			break
 	assert_true(pad.is_player_in_range(), "walking down the ramp reaches the pad (at %s)" % t._player.global_position)
 	assert_gt(t._player.global_position.y, -6.5, "and never fell through")
+
+
+# ---- M14: fly up, fall back ----------------------------------------------------
+
+func test_town_ship_replaces_the_quick_launch() -> void:
+	var t = _town()
+	assert_not_null(t.pilot, "the pit's ship is flyable")
+	assert_false(t.pads[0].quick_launch, "E boards the ship; the pad no longer launches")
+	assert_eq(t.pilot.atmo.state, AtmoFlight.State.PARKED)
+
+
+func test_ascent_hands_the_pad_encounter_to_space() -> void:
+	GameFlow.ascend(null, GameFlow.pad("town_pit"))
+	assert_eq(went, [FLIGHT])
+	assert_eq(GameFlow.mode, "ascent")
+	assert_eq(GameFlow.encounter_id, "orbital_skirmish")
+
+
+func test_a_won_fight_after_an_ascent_reenters_the_sky() -> void:
+	GameFlow.ascend(null, GameFlow.pad("town_pit"))
+	went.clear()
+	var demo = Demo.new()
+	demo.autopilot = true
+	add_child_autofree(demo)
+	demo._on_event({ "type": "complete", "payout": 250 })
+	assert_almost_eq(demo.return_left, GameFlow.setting("reentry_delay", 25.0), 0.001,
+		"time to dive down yourself first")
+	demo._tick_return(GameFlow.setting("reentry_delay", 25.0) + 0.1)
+	assert_eq(went, [TOWN])
+	assert_eq(str(GameFlow.arrival.mode), "reentry")
+	assert_eq(int(GameFlow.arrival.payout), 250)
+
+
+func test_a_lost_ship_after_an_ascent_still_limps_to_the_pad() -> void:
+	GameFlow.ascend(null, GameFlow.pad("town_pit"))
+	var demo = Demo.new()
+	demo.autopilot = true
+	add_child_autofree(demo)
+	demo._on_event({ "type": "failed" })
+	demo._tick_return(GameFlow.setting("return_delay", 4.0) + 0.1)
+	assert_eq(str(GameFlow.arrival.mode), "pad")
+
+
+func test_reentry_arrival_starts_in_the_cockpit() -> void:
+	GameFlow.ascend(null, GameFlow.pad("town_pit"))
+	GameFlow.finish_flight(null, "left", 0, "reentry")
+	var t = _town()
+	assert_true(t.pilot.piloting, "seated")
+	assert_eq(t.pilot.atmo.state, AtmoFlight.State.FLYING)
+	assert_gt(t.pilot.atmo.altitude(), 4000.0, "high above the port")
+	assert_eq(GameFlow.arrival_text({ "mode": "reentry", "outcome": "left" }), GameFlow.label("arrive_reentry"))

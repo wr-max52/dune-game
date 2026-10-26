@@ -145,6 +145,12 @@ func pickup_node(pickup_id: String) -> Node3D:
 func _physics_process(dt: float) -> void:
 	if player == null:
 		return
+	if player.piloting:
+		focus = {}
+		if hud != null:
+			hud.set_prompt("")
+			hud.set_fuel(0.0, false, false)
+		return
 	focus = _find_focus()
 	if hud != null:
 		hud.set_prompt(prompt_text())

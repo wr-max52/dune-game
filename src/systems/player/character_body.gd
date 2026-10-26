@@ -21,6 +21,9 @@ signal jet_stopped              ## M13: the jetpack cut out (released or empty)
 ## M11: while true (talking at the bar, a cutscene) the player stands still and
 ## ignores movement input. Gravity and collision still run.
 var locked := false
+## M14: true while the player is in a ship's seat. ShipPilot sets it (and disables
+## this node); prompts on foot (the bar, gear) check it so E means "roll" up there.
+var piloting := false
 var hits_taken := 0
 var _was_on_floor := true
 

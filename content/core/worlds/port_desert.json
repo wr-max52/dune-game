@@ -1,0 +1,31 @@
+{
+  "id": "port_desert",
+  "label": "The Port Desert",
+  "town": "port_town",
+  "terrain": {
+    "extent": 6000.0,
+    "skirt_height": 4.0,
+    "planet_radius": 120000.0,
+    "curve_from": 6000.0
+  },
+  "landmarks": [
+    {
+      "id": "outpost",
+      "kind": "location",
+      "location": "outpost",
+      "at": [
+        2600,
+        0,
+        -1900
+      ],
+      "yaw_deg": 30
+    }
+  ],
+  "atmosphere": {
+    "upper_start": 600.0,
+    "cloud_deck": 2500.0,
+    "sky_black_at": 7000.0,
+    "space_altitude": 8000.0
+  },
+  "note": "IP-neutral. The world around the port, for flying: where the desert ends and the planet curves away, the landmarks set in it, and the height where the atmosphere ends. The desert's shape is the town's DesertTerrain (src/systems/look/desert_terrain.gd) and its mesas and hoodoos are content/look/desert_landforms.json; this file does not repeat them. terrain.extent = the desert's half-size (its own extent wins when the desert is built); beyond it the ground is skirt_height falling away on a sphere of planet_radius from curve_from. Altitude is measured above that curved surface, so space_altitude is the same everywhere. Colours: content/look/world.json."
+}

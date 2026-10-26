@@ -201,6 +201,19 @@ else
   echo "CI: m12 sidecar trace skipped (set LLAMA_SERVER and TEST_GGUF to run it)"
 fi
 
+# M14: the ship in the port: board in the pit, lift off, climb out of the
+# atmosphere into the space encounter (timed: 30-40 s), dive back into the port's
+# sky, fly a circuit over the town and desert, land in the dunes and walk, crash
+# into a mesa and get towed home, land on the pad. Plus a jetpack over the wall
+# landing on the desert.
+echo "CI: generating m14 flight trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m14_flight_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/m14_flight_trace.txt ]; then
+  echo "CI: ERROR -- m14 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m14 trace present ($(wc -l < test_results/m14_flight_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

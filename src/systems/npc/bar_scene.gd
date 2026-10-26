@@ -119,7 +119,7 @@ func is_talking() -> bool:
 
 func player_in_range() -> bool:
 	var p: Node3D = demo._player
-	if p == null or not is_instance_valid(p):
+	if p == null or not is_instance_valid(p) or bool(p.get("piloting")):
 		return false
 	var d := Vector2(p.global_position.x - bar_front.x, p.global_position.z - bar_front.z).length()
 	return d <= TALK_RADIUS and absf(p.global_position.y - bar_front.y) < 1.5

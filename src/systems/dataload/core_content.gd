@@ -25,6 +25,7 @@ var encounters: Dictionary = {}    # encounter-id -> Dictionary (dogfight setups
 var items: Dictionary = {}         # item-id -> Dictionary (jetpack, etc.) (M13)
 var vendors: Dictionary = {}       # vendor-id -> Dictionary (who buys and sells items) (M13)
 var pickups: Dictionary = {}       # location-id -> Dictionary (items lying in that place) (M13)
+var worlds: Dictionary = {}        # world-id -> Dictionary (terrain, landmarks, atmosphere) (M14)
 var _loaded := false
 
 
@@ -43,6 +44,7 @@ func load_from(root: String = ROOT) -> bool:
 	items = {}
 	vendors = {}
 	pickups = {}
+	worlds = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -86,6 +88,8 @@ func load_from(root: String = ROOT) -> bool:
 	_load_category(root, "items", items)
 	_load_category(root, "vendors", vendors)
 	_load_category(root, "pickups", pickups)
+	# M14: the world around a town (terrain, landmarks, where space starts).
+	_load_category(root, "worlds", worlds)
 
 	_loaded = true
 	return true
@@ -152,6 +156,18 @@ func get_vendor(id: String) -> Dictionary:
 ## Pickups placed in a location (an empty list when there are none).
 func get_pickups(location_id: String) -> Array:
 	return pickups.get(location_id, {}).get("pickups", [])
+
+
+func get_world(id: String) -> Dictionary:
+	return worlds.get(id, {})
+
+
+## The world a town sits in (an empty dictionary when none names it).
+func world_for_town(town_id: String) -> Dictionary:
+	for id in worlds:
+		if str(worlds[id].get("town", "")) == town_id:
+			return worlds[id]
+	return {}
 
 
 ## Vendors whose stall is in a location.
