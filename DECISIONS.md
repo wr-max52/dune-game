@@ -2,6 +2,47 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-25 — M6 (LLM bartender, text + Kokoro voice)
+
+- **The bartender talks to the model through a client interface, not a hardcoded
+  model call.** `llm_client.gd` is the contract (`pop_next() -> response or null`);
+  `scripted_client` (canned, deterministic) and `ollama_client` (real, local) both
+  satisfy it. Alternative: hardcode Ollama into the brain — rejected because it would
+  make the conversation untestable headless and lock the brain to one backend. Same
+  reasoning as the M1-M4 "pure spine, node wraps it" pattern. Real inference stays a
+  manual + recorded check; CI uses the canned client.
+
+- **Text is read but never executed; only a model tool proposal may act on the
+  world, and only one in the npc's allowed set.** This is the guardrail the spec asks
+  for ("the player's typed text is never a command"). It is enforced in one place
+  (`respond()`): the request string is logged/read but no branch acts on it; an
+  effect happens only via `_apply_tool`, which refuses any tool not in `allowed_tools`
+  (loaded from the npc data entry). A disallowed tool is dropped, so no effect leaks
+  into memory.
+
+- **A disallowed tool is ignored, not partially applied.** When the model proposes a
+  tool outside the allowed set, the brain zeroes out `tool`/`args` before applying, so
+  the conversation can never smuggle an out-of-scope action through. This is asserted
+  in `test_disallowed_tool_is_ignored`.
+
+- **Kokoro ships as a deterministic signature + a graceful null render.** The
+  text+speaker -> signature mapping is pure and tested (same input, same signature;
+  different speaker, different signature). The audio render needs the Kokoro/ONNX run,
+  which is not in headless CI, so `synthesize()` returns null instead of crashing --
+  the conversation never dead-ends on sound. A real recorded voice is M8. This follows
+  the M0 decision to use NobodyWho's bundled Kokoro/Whisper/VAD rather than separate
+  builds.
+
+- **Client `pop_next()` returns `Variant`, not `Dictionary`.** GDScript forbids
+  returning `null` against a `Dictionary` return type; the interface needs "a response
+  or null," so `Variant` is correct. Same class of fix as the M5 parse bugs.
+
+- **The Ollama client is pure except for the HTTP post.** Request-building and
+  response-parsing are plain functions tested on canned JSON (the real `/api/chat`
+  shape: `message.content` + `message.tool_calls[].function`); only `_post()` does I/O
+  and is a documented stub. This keeps the "is the response parsed right?" question
+  answerable without a running server.
+
 ## 2026-10-25 — M5 (mission loop + save)
 
 - **Missions are a generic data category, like `locations` was at M4.** The slice
