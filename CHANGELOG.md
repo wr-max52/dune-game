@@ -2,6 +2,22 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M11.1 — The guns actually show up (2026-10-26)
+
+- **Fixed: guns did not render on a fresh checkout.** The blaster models were never
+  committed: the `models/` rule in `.gitignore` (meant for downloaded LLM models)
+  matched `assets/.../models/` too. The rule is now `/models/`, the files are in,
+  and `test_weapon_assets` fails CI if a weapon model or sound is ever missing.
+- **Readable guns.** The retint is lighter worn gunmetal with tan or oxblood accents
+  and catches light on its edges; it was near black because the material was too
+  metallic with nothing to reflect.
+- **Hands on the handles.** Grip points re-measured on the models: the right hand
+  holds the rear handle, the left cups it (pistol) or takes the front band (rifle).
+- **Held lower.** Chest height in third person (it used to cover the face); lower
+  right and turned slightly inward in first person, so you see the barrel.
+- **Muzzle.** A glowing emitter ring replaces the orange dot, plus a brief flash,
+  a brighter muzzle light, and a small kick back and up on every shot.
+
 ## M11 + M12 — A body, hand weapons, and a bartender who actually talks (2026-10-26)
 
 What works now:

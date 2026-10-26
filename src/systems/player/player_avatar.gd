@@ -33,6 +33,8 @@ var first_person := false
 var facing_yaw := 0.0              ## world yaw the body faces
 var turn_rate := 10.0              ## rad/s
 var last_frame: Dictionary = {}
+var _recoil := 0.0                 ## 1 right after a shot, decays to 0
+var _flash_left := 0.0
 
 var _arm_meshes: Array = []
 var _other_meshes: Array = []
@@ -76,20 +78,44 @@ func build_weapons(ids: Array) -> void:
 			muzzle.name = "Muzzle"
 			muzzle.position = _v3(spec.get("muzzle", [0, 0, 1])) * s
 			wrap.add_child(muzzle)
-			var glow := MeshInstance3D.new()
-			var gm := SphereMesh.new()
-			gm.radius = 0.012
-			gm.height = 0.024
-			glow.mesh = gm
 			var tint: Dictionary = spec.get("tint", {})
-			var gmat := StandardMaterial3D.new()
-			gmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			gmat.albedo_color = Color.html(str(tint.get("glow", "#ff7a3a")))
-			gmat.emission_enabled = true
-			gmat.emission = gmat.albedo_color
-			gmat.emission_energy_multiplier = 3.0
-			glow.material_override = gmat
-			muzzle.add_child(glow)
+			var gcol := Color.html(str(tint.get("glow", "#ff7a3a")))
+			# Emitter ring around the barrel tip (faces forward, +Z), a dim core
+			# inside it, and a flash sprite that only shows when firing.
+			var ring := MeshInstance3D.new()
+			ring.name = "EmitterRing"
+			var tor := TorusMesh.new()
+			tor.inner_radius = 0.016
+			tor.outer_radius = 0.024
+			tor.rings = 16
+			tor.ring_segments = 8
+			ring.mesh = tor
+			ring.rotation_degrees = Vector3(90, 0, 0)
+			ring.material_override = _emissive(gcol, 2.5)
+			ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			muzzle.add_child(ring)
+			var core := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.013
+			cm.bottom_radius = 0.013
+			cm.height = 0.004
+			core.mesh = cm
+			core.rotation_degrees = Vector3(90, 0, 0)
+			core.material_override = _emissive(gcol.darkened(0.5), 0.8)
+			core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			muzzle.add_child(core)
+			var flash := MeshInstance3D.new()
+			flash.name = "Flash"
+			var fm := SphereMesh.new()
+			fm.radius = 0.05
+			fm.height = 0.1
+			flash.mesh = fm
+			flash.scale = Vector3(1.0, 1.0, 2.2)
+			flash.position = Vector3(0, 0, 0.06)
+			flash.material_override = _emissive(gcol.lerp(Color.WHITE, 0.4), 8.0)
+			flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			flash.visible = false
+			muzzle.add_child(flash)
 		wrap.visible = false
 		(joints.chest as Node3D).add_child(wrap)
 		weapons[id] = wrap
@@ -117,6 +143,26 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 		mat.set_shader_parameter("accent", Color.html(str(tint.get("accent", "#7a5636"))))
 		mi.material_override = mat
 	return n
+
+
+func _emissive(c: Color, energy: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	return m
+
+
+## A shot: the weapon kicks back and up, and the muzzle flashes for a moment.
+func fire_kick() -> void:
+	_recoil = 1.0
+	var w := weapon_node(current)
+	if w != null and w.has_node("Muzzle/Flash"):
+		_flash_left = 0.05
+		(w.get_node("Muzzle/Flash") as Node3D).visible = true
+		(w.get_node("Muzzle/Flash") as Node3D).rotation.z = randf() * TAU
 
 
 func weapon_node(id: String) -> Node3D:
@@ -231,6 +277,14 @@ func animate(dt: float, inp: Dictionary) -> void:
 		if joints.has(jn):
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]
 	(joints.pelvis as Node3D).position.y = out.pelvis_y
+	var rc: Dictionary = look.get("recoil", {})
+	_recoil = maxf(0.0, _recoil - dt / float(rc.get("recover_s", 0.12)))
+	if _flash_left > 0.0:
+		_flash_left -= dt
+		if _flash_left <= 0.0:
+			var w := weapon_node(current)
+			if w != null and w.has_node("Muzzle/Flash"):
+				(w.get_node("Muzzle/Flash") as Node3D).visible = false
 	_place_weapon(upper, pitch)
 
 
@@ -243,6 +297,11 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var ready := _ready_xf(current, pitch)
 	var holster := _holster_xf(current)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
+	if _recoil > 0.0 and current != "energy_blade":
+		var rc: Dictionary = look.get("recoil", {})
+		var k := _recoil * _recoil
+		ready = Transform3D(ready.basis * Basis(Vector3.RIGHT, -deg_to_rad(float(rc.get("up_deg", 7.0))) * k),
+			ready.origin + Vector3(0, 0.01, -float(rc.get("back", 0.05))) * k)
 	w.transform = holster.interpolate_with(ready, f)
 	var grips: Dictionary = w.get_meta("grips", {})
 	if upper == BodyAnimator.UPPER_FREE:
