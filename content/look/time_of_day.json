@@ -1,0 +1,54 @@
+{
+  "note": "Lighting presets. Tune here and re-shoot with tools/lookdev/shoot.sh; never hardcode these in scripts. Azimuth 0 = looking out from the port into the desert (-Z), positive = to the right.",
+  "default": "golden",
+  "presets": {
+    "golden": {
+      "sun": { "elevation_deg": 8.0, "azimuth_deg": -58.0, "color": "#ffc48a", "energy": 2.9, "angular_size": 0.6, "shadow_distance": 900.0, "fog_energy": 0.8 },
+      "sky": {
+        "zenith": "#4a6894", "horizon": "#f0b985", "ground": "#b88a5c",
+        "sun_glow": "#ffa860", "sun_disk": "#fff0d8", "glow_strength": 1.0, "horizon_falloff": 0.42, "energy": 1.0,
+        "cloud_cover": 0.42, "cloud_color": "#ffd2a8", "cloud_shadow": "#8a7480",
+        "planet_azimuth_deg": 26.0, "planet_elevation_deg": 17.0, "planet_radius": 0.12, "planet_visibility": 0.72,
+        "planet_a": "#d9c4b0", "planet_b": "#8a6f68", "ring": "#e8d6c0"
+      },
+      "ambient": { "energy": 0.6 },
+      "fog": { "density": 0.00016, "aerial": 0.9, "sun_scatter": 0.1, "color": "#e6b58a", "sky_affect": 0.3, "height": -45.0, "height_density": 0.008 },
+      "volumetric": { "enabled": true, "density": 0.003, "albedo": "#f2d3ae", "anisotropy": 0.5, "length": 160.0 },
+      "post": { "exposure": 1.0, "white": 6.0, "glow": 0.55, "glow_bloom": 0.04, "contrast": 1.12, "saturation": 1.1, "brightness": 1.0, "ssao": true, "ssil": true, "sdfgi": true },
+      "lamps": 0.0,
+      "smoke": "#231c19"
+    },
+    "noon": {
+      "sun": { "elevation_deg": 64.0, "azimuth_deg": -20.0, "color": "#fff3e2", "energy": 3.0, "angular_size": 0.5, "shadow_distance": 700.0, "fog_energy": 0.6 },
+      "sky": {
+        "zenith": "#3d74b8", "horizon": "#d9d4c8", "ground": "#c49a6c",
+        "sun_glow": "#fff2dc", "sun_disk": "#ffffff", "glow_strength": 0.6, "horizon_falloff": 0.55, "energy": 1.1,
+        "cloud_cover": 0.3, "cloud_color": "#ffffff", "cloud_shadow": "#b4bccc",
+        "planet_azimuth_deg": 26.0, "planet_elevation_deg": 17.0, "planet_radius": 0.12, "planet_visibility": 0.35,
+        "planet_a": "#e4ddd5", "planet_b": "#b0a5a0", "ring": "#f2ece4"
+      },
+      "ambient": { "energy": 1.0 },
+      "fog": { "density": 0.00012, "aerial": 0.95, "sun_scatter": 0.05, "color": "#e8dccb", "sky_affect": 0.3, "height": -20.0, "height_density": 0.02 },
+      "volumetric": { "enabled": true, "density": 0.002, "albedo": "#f5ece0", "anisotropy": 0.3, "length": 140.0 },
+      "post": { "exposure": 0.8, "white": 6.0, "glow": 0.3, "glow_bloom": 0.02, "contrast": 1.1, "saturation": 0.95, "brightness": 1.0, "ssao": true, "ssil": true, "sdfgi": true },
+      "lamps": 0.0,
+      "smoke": "#3a3532"
+    },
+    "dusk": {
+      "sun": { "elevation_deg": 1.5, "azimuth_deg": -40.0, "color": "#ff8a5c", "energy": 0.9, "angular_size": 1.0, "shadow_distance": 900.0, "fog_energy": 2.0 },
+      "sky": {
+        "zenith": "#1e2848", "horizon": "#d9785a", "ground": "#5a3e3a",
+        "sun_glow": "#ff7a48", "sun_disk": "#ffc090", "glow_strength": 1.2, "horizon_falloff": 0.3, "energy": 0.8,
+        "cloud_cover": 0.45, "cloud_color": "#ff9a78", "cloud_shadow": "#3e3450",
+        "planet_azimuth_deg": 26.0, "planet_elevation_deg": 17.0, "planet_radius": 0.12, "planet_visibility": 1.0,
+        "planet_a": "#e8c8b8", "planet_b": "#6a5068", "ring": "#f0d4c4"
+      },
+      "ambient": { "energy": 0.55 },
+      "fog": { "density": 0.0002, "aerial": 0.9, "sun_scatter": 0.3, "color": "#7a5a6a", "sky_affect": 0.35, "height": -10.0, "height_density": 0.04 },
+      "volumetric": { "enabled": true, "density": 0.008, "albedo": "#c8a0a0", "anisotropy": 0.6, "length": 160.0 },
+      "post": { "exposure": 1.25, "white": 5.0, "glow": 0.8, "glow_bloom": 0.08, "contrast": 1.05, "saturation": 1.1, "brightness": 1.0, "ssao": true, "ssil": true, "sdfgi": true },
+      "lamps": 1.0,
+      "smoke": "#2a2228"
+    }
+  }
+}

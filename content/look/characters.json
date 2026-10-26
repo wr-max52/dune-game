@@ -1,0 +1,29 @@
+{
+  "note": "Character palettes and proportions. Shapes live in src/systems/look/character_kit.gd; colours and sizes live here. See docs/ART_DIRECTION.md, Characters.",
+  "archetypes": {
+    "remnant_trooper": {
+      "height": 1.9, "bulk": 1.12,
+      "armor": "#3d4147", "armor_light": "#5a5e63", "under": "#3a1517", "trim": "#a8844a",
+      "cloth": "#6b1e1e", "visor": "#ffae4a", "boots": "#1e1c1c", "gloves": "#1a1818"
+    },
+    "remnant_commander": {
+      "height": 1.92, "bulk": 1.05,
+      "armor": "#2f3237", "armor_light": "#4b4f55", "under": "#2a1012", "trim": "#c9a058",
+      "cloth": "#5a1718", "visor": "#ffae4a", "boots": "#151414", "coat": "#2e1214", "gloves": "#151414"
+    },
+    "smuggler": {
+      "height": 1.8, "bulk": 1.0,
+      "skin_wrap": "#1f7a78", "shirt": "#c9b896", "trousers": "#4a3c30", "coat": "#7a5636", "gloves": "#4a3020",
+      "hat": "#6a5038", "boots": "#3e2c20", "leather": "#5a3a24", "goggles": "#2a2a2a", "lens": "#7fd0c8"
+    },
+    "duelist": {
+      "height": 1.84, "bulk": 0.92,
+      "wraps": "#26211f", "mantle": "#7a3b1e", "sash": "#a8322a", "bandage": "#cdbb9c",
+      "mask": "#d9ccb4", "mask_line": "#c9a058", "boots": "#1c1817", "gloves": "#2a2220", "under": "#26211f"
+    },
+    "local": {
+      "height": 1.72, "bulk": 1.0,
+      "robe": "#9c8262", "hood": "#86694a", "gloves": "#5a4636", "wrap": "#a8322a", "boots": "#4a3628"
+    }
+  }
+}

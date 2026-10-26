@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Look-dev: art direction, beauty corner, character kit (2026-10-26)
+
+What works now:
+- **Art bible.** `docs/ART_DIRECTION.md`: pillars, palette, lighting presets,
+  materials, the cast, character research notes, and the screenshot review loop.
+- **Beauty corner.** `scenes/lookdev/beauty_corner.tscn`: the port on a cliff above a
+  basin, a crashed capital ship, a broken orbital ring, a ringed planet, a market lane,
+  and staged characters. Walkable (F6), with presets on keys 1-3.
+- **Lighting is data.** `content/look/time_of_day.json` (golden, noon, dusk) and
+  `content/look/shots.json` (five fixed review cameras).
+- **Screenshots, for real.** `tools/lookdev/shoot.sh` renders every shot per preset to
+  `test_results/lookdev/` (Metal on the Mac; software Vulkan under xvfb on Linux).
+  Review renders are in `docs/lookdev/`.
+- **Character kit.** Five original archetypes on a jointed body with two-bone IK:
+  Remnant trooper, Remnant commander, smuggler, duelist and local. The energy sword is
+  yellow by default (`blade_color` in `content/core/weapons/energy_blade.json`).
+- **Tests.** `tests/test_lookdev.gut.gd`: presets, wall normals, terrain, skeletons,
+  IK hands on the rifle and the sword, the yellow default, and a headless scene build.
+
+What is faked or outstanding:
+- Characters are built from primitives (a design stand-in for rigged models).
+- Everything in the stills is static: no wind, dust motes or cloth motion yet.
+- Frame time on the Mac has not been measured for this scene.
+
 ## M8 — Polish pass: cleared bug list, performance report, cross-system playthrough (2026-10-25)
 
 What works now:
