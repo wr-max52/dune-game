@@ -2,6 +2,31 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — Oda wears a rigged model with a gas mask and glowing goggles
+
+- **The body comes from the concept's back view only.** Given the front and side
+  views, Rodin copied the concept's cloth face wrap and ignored the prompt's gas
+  mask. A text-only run made a good mask on the wrong outfit (khaki hazmat). The
+  back view plus a prompt kept the outfit (hood, long scarf tail, dark jacket, belt
+  and pouches) and left the face free.
+- **The gas mask is a separate Rodin prop welded on in prep.** A new `attach` step
+  in `tools/look/prep_character.gd` scales and places the prop, skins it all to
+  `Head`, and cuts the parts we don't want: the mannequin bust the generator put
+  inside the mask and the straps that poked through the hood. It stays one .glb, so
+  the game code doesn't change. Alternative: hang the mask on the head joint at
+  runtime. That would put a second model on every scene that builds her.
+- **The goggles glow from flat emissive discs over the lenses.** The prop's lenses
+  were clear glass with a face behind them; the discs hide that face and give the
+  yellow cyborg eyes.
+- **Decimated in prep.** These were Rodin's high tier (500k triangles each; the
+  first export was 110 MB, over GitHub's file limit). A `decimate` step keeps
+  meshoptimizer's coarsest LOD above a target: body 125k, mask 44k, 35 MB. The next
+  body LOD (~42k) collapsed the top of the hood, so she stays heavier than the
+  smuggler (26k). She is one NPC behind a counter.
+- **BartenderNPC syncs the skin every frame** after its IK, as the player does.
+- **Known gap: the apron.** The model wears a long split coat; the concept's
+  bib apron didn't come through. Left as is for review.
+
 ## 2026-10-26 — Every Remnant wears the rigged guard model
 
 - **One model for trooper and commander.** Generated with Hyper3D Rodin from the
