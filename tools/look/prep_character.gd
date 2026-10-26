@@ -1,0 +1,244 @@
+extends SceneTree
+## Turns a raw rigged character from Hyper3D into the game asset. Raw downloads live
+## in assets/characters/<id>/source/ (ignored by the importer); this writes
+## assets/characters/<id>/<id>.glb.
+##
+##   godot --headless --path . -s res://tools/look/prep_character.gd -- id=smuggler
+##
+## Steps, all from content/look/character_models.json:
+## - flatten: press the vertices inside a box onto a plane (z = plane_z) and give them
+##   the UV of the vertex nearest `uv_from`. Used for gear the game draws itself (the
+##   jetpack is an inventory item): there is no coat modelled under it, so deleting
+##   it leaves a hole, while flattening it leaves a closed patch of coat leather.
+## - reweight: auto-rigging weights some of the long coat to the arms, so raising an
+##   arm drags a plank of coat up with it. Any arm-chain influence on a vertex farther
+##   than `radius` from that bone's segment moves to `to` (the hips).
+## - cut: drop every triangle whose centroid falls in a box (mesh space, metres).
+## - drop the small loose islands a cut leaves behind.
+## - emission: attach the separate glow texture (goggles, wrist lights).
+
+const CFG_PATH := "res://content/look/character_models.json"
+
+
+func _init() -> void:
+	var args := {}
+	for a in OS.get_cmdline_user_args():
+		var kv := a.split("=", true, 1)
+		if kv.size() == 2:
+			args[kv[0]] = kv[1]
+	var id := str(args.get("id", "smuggler"))
+	var all: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CFG_PATH))
+	var cfg: Dictionary = all.get(id, {})
+	if cfg.is_empty():
+		push_error("prep: no config for '%s' in %s" % [id, CFG_PATH])
+		quit(1)
+		return
+	var src := ProjectSettings.globalize_path(str(cfg.source))
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(src, state) != OK:
+		push_error("prep: cannot read " + src)
+		quit(1)
+		return
+	var scene := doc.generate_scene(state)
+	for mi in scene.find_children("*", "MeshInstance3D", true, false):
+		_prep_mesh(mi as MeshInstance3D, cfg)
+	var out_doc := GLTFDocument.new()
+	var out_state := GLTFState.new()
+	out_doc.append_from_scene(scene, out_state)
+	var out := ProjectSettings.globalize_path(str(cfg.out))
+	DirAccess.make_dir_recursive_absolute(out.get_base_dir())
+	if out_doc.write_to_filesystem(out_state, out) != OK:
+		push_error("prep: cannot write " + out)
+		quit(1)
+		return
+	print("prep: wrote ", out)
+	scene.free()
+	quit()
+
+
+func _prep_mesh(mi: MeshInstance3D, cfg: Dictionary) -> void:
+	var src_mesh := mi.mesh as ArrayMesh
+	var out := ArrayMesh.new()
+	for s in src_mesh.get_surface_count():
+		var arr := src_mesh.surface_get_arrays(s)
+		var mat := src_mesh.surface_get_material(s)
+		var albedo: Image = null
+		if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
+			albedo = (mat as BaseMaterial3D).albedo_texture.get_image()
+			albedo.decompress()
+		for f in cfg.get("flatten", []):
+			_flatten(arr, f, albedo)
+		if cfg.has("reweight") and mi.skin != null:
+			_reweight(arr, mi, cfg.reweight)
+		var before := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+		arr[Mesh.ARRAY_INDEX] = _cut(arr, cfg.get("cut", []), int(cfg.get("min_island_tris", 0)))
+		var after := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+		print("prep: surface %d  %d -> %d triangles" % [s, before, after])
+		var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if (arr[Mesh.ARRAY_BONES] as PackedInt32Array).size() == (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() * 8 else 0
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, flags)
+		if mat is BaseMaterial3D and cfg.has("emission"):
+			var e: Dictionary = cfg.emission
+			var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+			var img := Image.load_from_file(ProjectSettings.globalize_path(str(e.texture)))
+			m.emission_enabled = true
+			m.emission_texture = ImageTexture.create_from_image(img)
+			m.emission = Color.WHITE
+			m.emission_energy_multiplier = float(e.get("energy", 1.0))
+			mat = m
+		out.surface_set_material(s, mat)
+	mi.mesh = out
+
+
+## `skip_hue` [lo, hi] (optional): leave vertices whose texel has that hue and some
+## saturation, e.g. the brown hat brim that shares the jetpack's height.
+func _flatten(arr: Array, f: Dictionary, albedo: Image) -> void:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
+	var n: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var lo := Vector3(f.min[0], f.min[1], f.min[2])
+	var hi := Vector3(f.max[0], f.max[1], f.max[2])
+	var box := AABB(lo, hi - lo)
+	var src := Vector3(f.uv_from[0], f.uv_from[1], f.uv_from[2])
+	var best := 0
+	for i in v.size():
+		if v[i].distance_squared_to(src) < v[best].distance_squared_to(src):
+			best = i
+	var patch_uv := uv[best]
+	var skip: Array = f.get("skip_hue", [])
+	var moved := 0
+	for i in v.size():
+		if box.has_point(v[i]):
+			if skip.size() == 2 and albedo != null:
+				var px := Vector2i((uv[i] * Vector2(albedo.get_size())).clamp(Vector2.ZERO, Vector2(albedo.get_size() - Vector2i.ONE)))
+				var c := albedo.get_pixelv(px)
+				if c.s > 0.25 and c.h >= float(skip[0]) and c.h <= float(skip[1]):
+					continue
+			v[i].z = float(f.plane_z)
+			uv[i] = patch_uv
+			n[i] = Vector3(0, 0, -1)
+			moved += 1
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_NORMAL] = n
+	# Tangents were computed for the old shape; drop them so the importer rebuilds them.
+	arr[Mesh.ARRAY_TANGENT] = null
+	print("prep: flattened %d vertices (%s)" % [moved, f.get("what", "")])
+
+
+func _reweight(arr: Array, mi: MeshInstance3D, r: Dictionary) -> void:
+	var skin := mi.skin
+	var skel := mi.get_node_or_null(mi.skeleton) as Skeleton3D
+	var bind_name := func(b: int) -> String:
+		var n := String(skin.get_bind_name(b))
+		if n == "" and skel != null and skin.get_bind_bone(b) >= 0:
+			n = skel.get_bone_name(skin.get_bind_bone(b))
+		return n
+	var head := {}                     ## bind -> head position in mesh space
+	var by_name := {}
+	for b in skin.get_bind_count():
+		head[b] = skin.get_bind_pose(b).affine_inverse().origin
+		by_name[bind_name.call(b)] = b
+	var to := int(by_name.get(str(r.get("to", "Hips")), -1))
+	if to < 0:
+		push_warning("prep: reweight target bone missing")
+		return
+	# One segment per arm-chain bind: arm -> forearm -> hand -> mean of the fingertips.
+	var seg := {}
+	for side in ["Left", "Right"]:
+		var arm: int = by_name.get(side + "Arm", -1)
+		var fore: int = by_name.get(side + "ForeArm", -1)
+		var hand: int = by_name.get(side + "Hand", -1)
+		if arm < 0 or fore < 0 or hand < 0:
+			continue
+		var tips := Vector3.ZERO
+		var nt := 0
+		for nm in by_name:
+			if str(nm).begins_with(side + "Hand") and str(nm).ends_with("3"):
+				tips += head[by_name[nm]]
+				nt += 1
+		var tip: Vector3 = tips / nt if nt > 0 else head[hand] + (head[hand] - head[fore]) * 0.4
+		seg[arm] = [head[arm], head[fore]]
+		seg[fore] = [head[fore], head[hand]]
+		for nm in by_name:
+			if str(nm).begins_with(side + "Hand"):
+				seg[by_name[nm]] = [head[hand], tip]
+	var radius := float(r.get("radius", 0.11))
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var per := bones.size() / v.size()
+	var moved := 0
+	for i in v.size():
+		var hit := false
+		for k in per:
+			var j := i * per + k
+			if weights[j] <= 0.0 or not seg.has(bones[j]):
+				continue
+			var s: Array = seg[bones[j]]
+			var p := Geometry3D.get_closest_point_to_segment(v[i], s[0], s[1])
+			if p.distance_to(v[i]) > radius:
+				bones[j] = to
+				hit = true
+		if hit:
+			moved += 1
+	arr[Mesh.ARRAY_BONES] = bones
+	print("prep: reweighted %d vertices off the arms" % moved)
+
+
+## Indices that survive the cut boxes and the island clean-up.
+func _cut(arr: Array, boxes: Array, min_island: int) -> PackedInt32Array:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var aabbs: Array = []
+	for b in boxes:
+		var lo := Vector3(b.min[0], b.min[1], b.min[2])
+		var hi := Vector3(b.max[0], b.max[1], b.max[2])
+		aabbs.append(AABB(lo, hi - lo))
+	var kept := PackedInt32Array()
+	for t in range(0, idx.size(), 3):
+		var c := (v[idx[t]] + v[idx[t + 1]] + v[idx[t + 2]]) / 3.0
+		var inside := false
+		for box in aabbs:
+			if (box as AABB).has_point(c):
+				inside = true
+				break
+		if not inside:
+			kept.append_array([idx[t], idx[t + 1], idx[t + 2]])
+	if min_island <= 0:
+		return kept
+	# Islands by shared position (vertices are split at UV seams, so weld first).
+	var parent := PackedInt32Array()
+	parent.resize(v.size())
+	for i in v.size():
+		parent[i] = i
+	var weld := {}
+	for i in v.size():
+		var k := Vector3i((v[i] * 10000.0).round())
+		if weld.has(k):
+			_union(parent, i, weld[k])
+		else:
+			weld[k] = i
+	for t in range(0, kept.size(), 3):
+		_union(parent, kept[t], kept[t + 1])
+		_union(parent, kept[t + 1], kept[t + 2])
+	var count := {}
+	for t in range(0, kept.size(), 3):
+		var r := _find(parent, kept[t])
+		count[r] = int(count.get(r, 0)) + 1
+	var out := PackedInt32Array()
+	for t in range(0, kept.size(), 3):
+		if int(count[_find(parent, kept[t])]) >= min_island:
+			out.append_array([kept[t], kept[t + 1], kept[t + 2]])
+	return out
+
+
+static func _find(p: PackedInt32Array, i: int) -> int:
+	while p[i] != i:
+		p[i] = p[p[i]]
+		i = p[i]
+	return i
+
+
+static func _union(p: PackedInt32Array, a: int, b: int) -> void:
+	p[_find(p, a)] = _find(p, b)

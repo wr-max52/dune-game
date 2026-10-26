@@ -2,6 +2,24 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — The player smuggler gets a rigged model
+
+- **Generated with Hyper3D Rodin from the concept art, then rigged there.** The
+  human-template rig is retargeted onto the CharacterKit joints each frame
+  (`src/systems/look/skinned_body.gd`), so BodyAnimator, the hand IK, holsters and
+  weapons are unchanged. Alternative: swap to imported clips on the new skeleton.
+  Rejected for now: the procedural animator and its tests already cover every
+  state, and the NPCs still share it.
+- **Raw downloads stay untouched; a script makes the game asset.**
+  `tools/look/prep_character.gd` reads `content/look/character_models.json`. It
+  flattens the concept's jetpack into coat (the game draws the jetpack as an item,
+  and there is no coat modelled under it, so deleting it leaves a hole). It moves
+  coat weights off the arms (auto-rigging made a raised arm drag a plank of coat),
+  and it attaches the separate goggle-glow texture.
+- **First person shows the kit's primitive forearms.** The skin is one mesh, so it
+  cannot hide everything but the arms; it renders shadow-only instead.
+- **Only the player for now.** The beauty-corner smuggler NPC keeps its primitives.
+
 ## 2026-10-26 — M14 (fly the ship from the port to space and back)
 
 - **The atmosphere is the town scene, space is the dogfight scene.** The town got a

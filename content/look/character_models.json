@@ -1,0 +1,61 @@
+{
+  "smuggler": {
+    "note": "Hyper3D Rodin Gen-2.5 from the smuggler concept art (generation ea3a05da-74fc-446b-b056-631f9b1722ed), rigged with the human template (5755a9db-9338-47ac-b1df-852abf17adc6). The concept's jetpack is flattened into a patch of coat: the game draws the jetpack as an item.",
+    "source": "res://assets/characters/smuggler/source/smuggler_rigged.glb",
+    "out": "res://assets/characters/smuggler/smuggler.glb",
+    "flatten": [
+      {
+        "what": "jetpack",
+        "min": [
+          -0.6,
+          0.03,
+          -0.6
+        ],
+        "max": [
+          0.6,
+          0.74,
+          -0.11
+        ],
+        "plane_z": -0.11,
+        "uv_from": [
+          0.0,
+          -0.3,
+          -0.3
+        ]
+      },
+      {
+        "what": "jetpack top",
+        "min": [
+          -0.35,
+          0.74,
+          -0.6
+        ],
+        "max": [
+          0.35,
+          0.86,
+          -0.11
+        ],
+        "plane_z": -0.11,
+        "uv_from": [
+          0.0,
+          -0.3,
+          -0.3
+        ],
+        "skip_hue": [
+          0.0,
+          0.14
+        ]
+      }
+    ],
+    "reweight": {
+      "to": "Hips",
+      "radius": 0.11
+    },
+    "cut": [],
+    "min_island_tris": 0,
+    "emission": {
+      "texture": "res://assets/characters/smuggler/source/texture_emissive.png",
+      "energy": 2.0
+    }
+  }
+}
