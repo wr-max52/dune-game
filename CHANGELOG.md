@@ -2,6 +2,54 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## M8 — Polish pass: cleared bug list, performance report, cross-system playthrough (2026-10-25)
+
+What works now:
+- **The bug list was cleared.** The one standing artifact -- GUT's "1 orphan" at process
+  exit -- was a detached node in a test that called `queue_free()` instead of `free()`.
+  A detached node is freed by the engine only on the next idle frame, which never comes
+  before GUT tears down, so it left one orphan. Changing it to `free()` clears it; the
+  suite now reports zero orphans.
+- **One playthrough, every system together.** A single headless run
+  (`scenes/m8_playthrough.gd`) threads the whole slice: walk the port + toggle FPV/TPV,
+  a trooper seals to cover, the squad spreads (4 troopers, none in the open), a
+  timed-deflection duel with the duelist reflects a bolt, the mission loop runs to
+  COMPLETE, a typed-default voice turn reaches the LLM bartender, and the game saves and
+  reloads the four named things. This is the "the slice hangs together end to end" proof,
+  beyond the per-milestone traces.
+- **A performance report.** The same run writes `test_results/m8_perf_report.txt`:
+  worst/average frame cost and how many frames exceeded the 50ms budget. Across the whole
+  playthrough the worst frame is under the 50ms ceiling -- the "no hitch over 50ms"
+  property, measured over a full session, not asserted in a vacuum.
+- **How to run and record.** `LAUNCH.md` is the human-facing guide: how to open the
+  game, the input map, what the 3-minute clip should show, and how to record it with
+  `scripts/record.sh` (macOS screen capture; the manual path, not headless CI).
+
+How to see it:
+- `./scripts/ci.sh` generates both `test_results/m8_playthrough.txt` and
+  `test_results/m8_perf_report.txt`; a GUT test reads them and proves every system ran
+  and no frame exceeded the 50ms budget.
+- 116 GUT tests pass (was 109); the merge gate is green with zero orphans.
+- `LAUNCH.md` is how to watch the slice on screen and record the 3-minute clip.
+
+What is faked or stubbed:
+- The 3-minute clip is the manual/recorded path (`scripts/record.sh` needs a display);
+  the headless cross-system trace is its machine equivalent. Same posture as M6/M7.
+- The visible 3D world is greybox; full geometry + rendered bolts/blades and GUI-bound
+  combat inputs are the remaining polish (tracked in KNOWN_ISSUES), and the bartender
+  runs a scripted client in CI.
+
+What broke / fixed:
+- The GUT "1 orphan" was a real, if non-failing, artifact: a detached test node
+  `queue_free`-d instead of `free`-d. Fixed by freeing it immediately. (Also: this build
+  of GUT has no `assert_le`; the helper is `assert_lte`.)
+
+What was needed from the user:
+- Confirmation that the 3-minute clip may stay the manual/recorded path (headless CI
+  cannot render) -- taken, so M8 ships the headless proof + the LAUNCH.md recording guide.
+- The scope call: M8 = clear the bug list + performance report + a cross-system trace,
+  with the rendered 3-min clip documented as the manual step.
+
 ## M7 — Voice input: push-to-talk, typed default, whisper fallback (2026-10-25)
 
 What works now:

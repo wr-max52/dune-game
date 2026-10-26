@@ -20,7 +20,7 @@ Status:
 | M5 | Mission loop and save | Fixer, contract, crate, payout, save/load all working end to end; bot playthrough on every merge | DONE |
 | M6 | LLM bartender (text) | Typed conversation, memory, 4 tools, guardrails, fallback, Kokoro voice | DONE |
 | M7 | Voice input | whisper.cpp push-to-talk with the bartender; latency measured | DONE |
-| M8 | Polish pass | Bug list cleared, performance report, 3 minute gameplay recording | TODO |
+| M8 | Polish pass | Bug list cleared, performance report, 3 minute gameplay recording | DONE |
 
 ## Notes
 

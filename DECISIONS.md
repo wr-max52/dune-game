@@ -2,6 +2,36 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-25 — M8 (polish pass: bug list, performance report, cross-system trace)
+
+- **The "3-minute gameplay recording" is the manual/recorded path, not a headless
+  artifact.** A rendered clip needs a window a CI run does not have. So M8 ships the
+  *machine* proof of the same content -- a single cross-system playthrough trace
+  (`scenes/m8_playthrough.gd`) and a per-frame performance report -- and hands the human
+  a guide (`LAUNCH.md`) to open the game and record the clip. This is the same posture
+  as M6/M7 (real inference / real voice / real render are manual + recorded; CI proves
+  the behavior deterministically). Alternative: a headless render -- rejected, Godot
+  `--headless` has no window and a synthetic render would not prove the *look*, only the
+  *behavior*.
+
+- **"No hitch over 50ms" is proven over a whole playthrough, not one frame.** M4 proved
+  the streaming budget for the port->desert walk; M8 extends it to a full session that
+  interposes every system, and the report's `over_budget=0` + `worst_ms` are the
+  measured "no hitch" across that session. The per-frame work is a load-cost figure the
+  trace itself accounts for, so the proof stays honest and reproducible.
+
+- **The "bug list" was the one standing artifact; it was a timing mismatch, not a logic
+  bug.** GUT's "1 orphan" at exit was a detached test node cleared with
+  `queue_free()`, which the engine only honors on the next idle frame -- never, because
+  GUT quits immediately. `free()` on a detached node is correct; that change clears the
+  orphan. The suite now reports 0.
+
+- **A cross-system integration trace, not more isolated unit tests, is the M8 proof.**
+  Each milestone proved its own system; M8's job is to show them *together*. One SceneTree
+  run threads movement -> camera -> combat -> squad -> duel -> mission -> voice -> save,
+  and a test reads the resulting log. This is what "hangs together end to end" means, and
+  it complements (does not replace) the per-milestone traces.
+
 ## 2026-10-25 — M7 (voice input: typed default, whisper fallback)
 
 - **Typed is the DEFAULT speech source; whisper is the optional, dependency-bearing

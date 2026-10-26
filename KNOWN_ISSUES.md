@@ -2,7 +2,49 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M7 (2026-10-25)
+## After M8 (2026-10-25)
+
+**What is real and proven by tests:** everything in M1-M7, plus the M8 polish pass.
+The vertical slice now hangs together in one playthrough
+(`scenes/m8_playthrough.gd` / `test_results/m8_playthrough.txt`): walk + FPV/TPV toggle,
+a trooper sealing to cover, the 4-trooper squad spreading, a timed-deflection duel with
+the duelist, the mission loop to COMPLETE, a typed-default voice turn to the LLM
+bartender, and a save/load round-trip of the four named things. A performance report
+(`test_results/m8_perf_report.txt`) shows the worst frame under the 50ms budget across
+the whole session. The GUT "1 orphan" artifact has been **cleared** (it was a
+`queue_free` on a detached test node; now `free`). The suite is 0 orphans.
+
+**Stubbed / deferred, honestly (the remaining polish):**
+- **The 3-minute gameplay recording is the manual/recorded path**
+  (`scripts/record.sh`, macOS screen capture; needs a display). The headless
+  cross-system trace is its machine equivalent; this is the same posture as M6/M7.
+- **Combat inputs are not yet bound to global input actions.** Fire / block / reload run
+  the M2/M3 weapon + blade state machines in the playthrough, but they are not wired to
+  on-screen inputs yet. The GUI input layer (and GUI feedback: hit flashes, blade swing,
+  on-screen parry) is the remaining polish.
+- **The visible 3D world is greybox; full geometry + rendered bolts/blades are
+  outstanding.** World streaming is a load-cost model, not a rendered 3D walk (M4), and
+  combat/movement are logic + traces, not rendered fights (M2/M3/M5).
+- **Take-cover-against-marked-surfaces (movement)** remains deferred.
+- **The bartender runs a scripted client in CI; live Ollama inference is the manual +
+  recorded path.** Kokoro voice and the whisper STT are optional runtimes -- typed input
+  is the dependency-free default.
+- **Cloud LLM fallback** is an interface + stub only; no API key ever enters the client.
+
+**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
+that supports tool calls. Documented, not yet measured.
+
+**Disk:** ~12 GB free at M0 start. A single 4B Q4 model is ~2.5 GB; fine; the full
+windows export + model cache later will be watched.
+
+**Headless proof limitation:** I can run the engine and capture logs/frames, but I
+cannot open the GUI editor and "watch it on screen." The primary proof for each
+milestone is the headless CI run + JUnit XML + a machine trace; a screen recording
+(scripts/record.sh) is the secondary proof where the spec asks for one. `LAUNCH.md` is
+the human-facing guide to running and recording the finished slice.
+
+## After M7 (2026-10-25) -- superseded by the notes above.
 
 **What is real and proven by tests:** everything in M1-M6, plus voice input on top of
 the M6 bartender (M7). A push-to-talk routes a captured request to the same
