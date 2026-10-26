@@ -7,5 +7,7 @@
   "block_cost_stamina": 8,
   "deflect_window": 0.18,
   "deflect_refund_stamina": 6,
+  "blade_color": "#ffc93a",
+  "blade_length": 1.05,
   "note": "IP-neutral. Generic label only."
 }
