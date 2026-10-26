@@ -2,6 +2,16 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — The smuggler is regenerated without a jetpack
+
+- **Flattening the concept's jetpack did not hold up in game.** The pressed-flat
+  plate z-fought the coat and showed as blotchy patches on the upper back.
+- **Regenerated from a front render of the first model.** The jetpack cannot be
+  seen from the front, so Hyper3D modelled a plain coat back, and the look stayed
+  the same. Alternative: hand-model a coat patch. Rejected: a new generation gave a
+  real back for the same effort. The prep step no longer flattens anything; the
+  arm-weight fix and the goggle glow still apply.
+
 ## 2026-10-26 — Every Remnant wears the rigged guard model
 
 - **One model for trooper and commander.** Generated with Hyper3D Rodin from the
