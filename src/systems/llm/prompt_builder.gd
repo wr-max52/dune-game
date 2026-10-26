@@ -84,7 +84,13 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 		if ft.has(f):
 			now.append(str(ft[f]))
 	now.append(str(world_text.get("time", {}).get(str(world.get("time", "")), "")))
+	var place: Dictionary = world.get("place", {})
+	if str(place.get("town", "")) != "" and world_text.has("place"):
+		L.append(str(world_text.place) % [place.town, place.get("planet", "")])
 	L.append("TOWN NOW: " + " ".join(now).strip_edges())
+	var people: Array = world.get("people", [])
+	if not people.is_empty() and world_text.has("people"):
+		L.append(str(world_text.people) % ", ".join(PackedStringArray(people)))
 	var names: Dictionary = world_text.get("factions", {})
 	var st: PackedStringArray = []
 	var standing: Dictionary = world.get("standing", {})

@@ -20,6 +20,7 @@ signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal ended(reason: String)
 
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const CARD_PATH := "res://content/core/npcs/bartender_card.json"
 const BRIEF_PATH := "res://content/core/llm/world_briefing.json"
 const SCHEMA_PATH := "res://content/core/llm/reply_schema.json"
@@ -31,6 +32,7 @@ var card: Dictionary
 var builder: PromptBuilder
 var filter: OutputFilter
 var rel := Relationship.new()
+var _world_cache: Dictionary = {}    ## the world this bar is in (issue #15: names its town and planet)
 var history: Array = []              ## this visit: [{ role, content }]
 var insults := 0
 var busy := false
@@ -139,6 +141,7 @@ func say(text: String) -> bool:
 	var world := {
 		"flags": WorldState.flags, "standing": WorldState.standing, "time": WorldState.time_of_day,
 		"events": WorldState.events, "credits": WorldState.credits,
+		"place": _place(), "people": NameHooks.known("npc:"),
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
 	_messages = built.messages
@@ -377,3 +380,16 @@ static func _read(path: String) -> Dictionary:
 		return {}
 	var d = JSON.parse_string(f.get_as_text())
 	return d if d is Dictionary else {}
+
+
+## Issue #15: the town and planet she works in, by name. The world is the one the
+## briefing names ("world" in world_briefing.json); generated once, saved, the same
+## names the place card and the flight HUD show.
+func _place() -> Dictionary:
+	if _world_cache.is_empty():
+		var cc := CoreContent.new()
+		cc.load_from()
+		_world_cache = cc.get_world(str(builder.world_text.get("world", "")))
+	if _world_cache.is_empty():
+		return {}
+	return { "town": NameHooks.town(_world_cache), "planet": NameHooks.planet(_world_cache) }

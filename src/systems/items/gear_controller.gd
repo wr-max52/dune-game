@@ -181,24 +181,32 @@ func _find_focus() -> Dictionary:
 	return {}
 
 
+## An item as a prompt shows it: its label and its make and model, "Jetpack
+## (Redfern BX-14 Wingbeat)" (issue #15; just the label when it has no naming).
+func _shown(item: Dictionary, id: String) -> String:
+	var label := str(item.get("label", id))
+	var model := NameHooks.equipment(item, id)
+	return ("%s (%s)" % [label, model]) if model != "" else label
+
+
 ## What the prompt says right now ("" when nothing is in reach).
 func prompt_text() -> String:
 	if focus.is_empty():
 		return ""
 	if focus.kind == "pickup":
 		var item: Dictionary = content.get_item(str(focus.node.pickup.get("item", "")))
-		return _l("pick_up") % str(item.get("label", "item"))
+		return _l("pick_up") % _shown(item, str(focus.node.pickup.get("item", "")))
 	var v: Dictionary = focus.cfg
 	var sell_id := _sellable(v)
 	if sell_id != "":
 		var it: Dictionary = content.get_item(sell_id)
-		return _l("sell") % [str(it.get("label", sell_id)), str(v.get("label", "vendor")).to_lower(),
+		return _l("sell") % [_shown(it, sell_id), str(v.get("label", "vendor")).to_lower(),
 			Inventory.sell_price(it, v)]
 	for id in inv().vendor_stock(v):
 		var it: Dictionary = content.get_item(str(id))
 		var cost := Inventory.buy_price(it, v)
 		if cost <= WorldState.credits:
-			return _l("buy") % [str(it.get("label", id)), str(v.get("label", "vendor")).to_lower(), cost]
+			return _l("buy") % [_shown(it, str(id)), str(v.get("label", "vendor")).to_lower(), cost]
 		return _l("cant_afford") % [str(it.get("label", id)), cost, WorldState.credits]
 	return _l("nothing_to_trade") % str(v.get("label", "vendor")).to_lower()
 

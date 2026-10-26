@@ -18,6 +18,7 @@ var space_label := "EDGE OF SPACE"
 var space_fraction := 0.0
 var space_altitude := 8000.0
 var boost := 1.0
+var vessel_name := ""            ## issue #15: shown above the read-out
 var _toast_left := 0.0
 var _fade: ColorRect
 
@@ -72,7 +73,7 @@ func show_values(v: Dictionary) -> void:
 	if readout == null:
 		return
 	var spd := float(v.get("speed", 0.0))
-	readout.text = "SPEED  %4d m/s   %5d km/h\nTHR    %3d%%      BOOST %3d%%\nALT    %6d m    AGL %5d m\nCLIMB  %+5d m/s\n%s" % [
+	readout.text = ("%s\n" % vessel_name.to_upper() if vessel_name != "" else "") + "SPEED  %4d m/s   %5d km/h\nTHR    %3d%%      BOOST %3d%%\nALT    %6d m    AGL %5d m\nCLIMB  %+5d m/s\n%s" % [
 		int(spd), int(spd * 3.6), int(float(v.get("throttle", 0.0)) * 100.0), int(float(v.get("boost", 0.0)) * 100.0),
 		int(float(v.get("altitude", 0.0))), int(maxf(0.0, float(v.get("agl", 0.0)))), int(float(v.get("climb", 0.0))),
 		str(v.get("state", ""))]
