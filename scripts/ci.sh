@@ -95,6 +95,19 @@ if [ ! -f test_results/m7_voice_trace.txt ]; then
 fi
 echo "CI: m7 trace present ($(wc -l < test_results/m7_voice_trace.txt) lines)"
 
+# M8: generate the headless polish trace so tests/test_m8_polish.gut.gd can check
+# "the whole slice hangs together in one playthrough with no frame over the 50ms
+# budget": a cross-system run (walk + camera toggle, a trooper sealing, a deflection
+# duel, the mission loop to COMPLETE, a typed voice turn, and a save round-trip) plus
+# a performance report.
+echo "CI: generating m8 playthrough + perf trace..."
+"$GODOT_BIN" --headless --path . -s res://scenes/m8_playthrough.gd >/dev/null 2>&1
+if [ ! -f test_results/m8_playthrough.txt ] || [ ! -f test_results/m8_perf_report.txt ]; then
+  echo "CI: ERROR -- m8 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m8 trace present (playthrough: $(wc -l < test_results/m8_playthrough.txt) lines, perf: $(wc -l < test_results/m8_perf_report.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

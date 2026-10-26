@@ -62,4 +62,4 @@ func test_rig_node_builds_and_toggles() -> void:
 	node.rig.toggle_mode()
 	var t1: Vector3 = node.rig.camera_transform(Vector3(5, 0, 0)).origin
 	assert_ne(t0, t1, "rig node toggle moves the camera")
-	node.queue_free()
+	node.free()  # detached node: free now, so GUT sees no orphan at exit

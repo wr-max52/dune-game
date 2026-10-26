@@ -30,6 +30,8 @@ open project.godot            # in the Godot editor, F5
 `./scripts/ci.sh` runs the full GUT suite and the IP-neutrality scan headless and
 exits non-zero if anything fails. That non-zero exit is the merge gate.
 
+To run the game on screen and record the 3-minute gameplay clip, see `LAUNCH.md`.
+
 ## What exists now (M0)
 
 - IP-neutral **data layer** (`content/core/`) loaded at runtime by `core_content.gd`.
@@ -48,7 +50,8 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 ## Plan
 
 `PLAN.md` holds the 8 milestones (M0-M8) in build order, with status and the
-"done means" for each. M0-M7 are done; M8 is next.
+"done means" for each. M0-M8 are done; `LAUNCH.md` is how to run and record the
+finished slice.
 
 ## Layout
 
