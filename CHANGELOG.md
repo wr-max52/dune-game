@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Flow — port to flight (2026-10-26)
+
+What works now:
+- **Play starts in the port.** `run/main_scene` is the beauty corner, so F5 puts you
+  on foot in the port instead of the M0 data-layer boot scene.
+- **The landing bay launches the dogfight.** A launch pad on the bay shows
+  "[E] Launch" when you are on it; E fades out and loads the dogfight with the pad's
+  encounter. An interceptor is parked on the bay (in review shots too).
+- **And brings you back.** When the fight is won or lost, the dogfight waits
+  `return_delay` seconds, then loads the port and spawns you beside the bay facing it,
+  with the outcome and payout shown.
+- All of it is data: `content/core/flow/launch_pads.json`. Adding a pad elsewhere
+  (the M9 town's spaceport pit, later) is a new entry, not new code.
+- `tests/test_flow.gut.gd`: 10 tests, including a real-collision walk from the
+  arrive point onto the pad. Scene changes are recorded, never performed, in tests.
+
+Faked or not yet done:
+- The payout is shown on return but not added to the save's credits.
+- No way to abort a flight early; you return when the fight ends.
+- `scenes/main.tscn` (M0 boot print) is kept but no longer the main scene.
+
 ## M10 — Starfighter flight and dogfights (2026-10-26)
 
 What works now:

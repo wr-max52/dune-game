@@ -1,0 +1,26 @@
+{
+  "note": "Launch pads: walk onto one in a port scene to fly the encounter it names. Read by src/systems/flow/game_flow.gd. Coordinates are meters in the owning scene. 'arrive' is where the player lands back on foot after the flight; they face the pad. Labels are here so code stays name-free.",
+  "flight_scene": "res://scenes/flight/dogfight_demo.tscn",
+  "default_port_scene": "res://scenes/lookdev/beauty_corner.tscn",
+  "return_delay": 4.0,
+  "fade_time": 0.6,
+  "pads": {
+    "port_landing_bay": {
+      "scene": "res://scenes/lookdev/beauty_corner.tscn",
+      "center": [48.0, 8.0, -40.0],
+      "radius": 31.0,
+      "height": 6.0,
+      "encounter": "orbital_skirmish",
+      "parked_ship": "interceptor",
+      "parked_yaw_deg": 90.0,
+      "arrive": [14.0, 8.05, -40.0]
+    }
+  },
+  "labels": {
+    "prompt": "[E]  Launch",
+    "launching": "Launching...",
+    "returning": "Returning to port...",
+    "arrive_complete": "Back in port. Sector clear, +%d credits",
+    "arrive_failed": "Back in port. Your fighter limped home."
+  }
+}

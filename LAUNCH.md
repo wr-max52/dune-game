@@ -40,6 +40,22 @@ machines; they are not yet bound to global input actions and are driven in the
 playthrough trace. Binding them to the GUI is the remaining polish before a live
 playtest.
 
+## Port to flight (the two demos, connected)
+
+Press **F5**. The main scene is now the port (`scenes/lookdev/beauty_corner.tscn`),
+so you start on foot. Walk to the landing bay (the round pad with the parked
+interceptor, east of the lane) and **press E** at the prompt. The screen fades and
+you are in the dogfight. When the fight ends (won or lost), you are flown back after
+a few seconds and land beside the bay, with the result on screen.
+
+Opening `dogfight_demo.tscn` on its own (F6) still works exactly as before and never
+jumps back to the port. Pads, their encounter, the return delay and every label live
+in `content/core/flow/launch_pads.json`; the hand-off is `src/systems/flow/game_flow.gd`.
+
+| Action          | Key |
+|---|---|
+| Launch (on pad) | E   |
+
 ## Flying the dogfight (M10)
 
 ```sh
