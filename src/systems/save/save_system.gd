@@ -9,6 +9,12 @@ extends RefCounted
 ## It writes one JSON file. A future skin can swap the path or add fields without
 ## other code changes. A deterministic stub path is fine for CI because this is a
 ## file round-trip, not LLM inference.
+##
+## v2 (M12) adds "world" (WorldState: standing, flags, jobs, credits) and
+## "relationships" (npc id -> Relationship). A v1 file migrates on load: its loose
+## bartender_memory becomes facts the bartender remembers.
+
+const VERSION := 2
 
 var save_path := "user://save.json"
 var data: Dictionary = {}
@@ -20,7 +26,9 @@ func new_game() -> void:
 		"credits": 0,
 		"mission": {},
 		"bartender_memory": {},
-		"version": 1,
+		"world": {},
+		"relationships": {},
+		"version": VERSION,
 	}
 
 
@@ -57,6 +65,38 @@ func get_bartender_memory() -> Dictionary:
 	return data.get("bartender_memory", {})
 
 
+func set_world(w: Dictionary) -> void:
+	data["world"] = w
+
+
+func get_world() -> Dictionary:
+	return data.get("world", {})
+
+
+func set_relationship(npc_id: String, r: Dictionary) -> void:
+	if not data.has("relationships"):
+		data["relationships"] = {}
+	data["relationships"][npc_id] = r
+
+
+func get_relationship(npc_id: String) -> Dictionary:
+	return data.get("relationships", {}).get(npc_id, {})
+
+
+## Bring an older save up to VERSION. Idempotent.
+static func migrate(d: Dictionary) -> Dictionary:
+	var v := int(d.get("version", 1))
+	if v < 2:
+		d["world"] = d.get("world", {})
+		var rel := { "facts": [] }
+		var mem: Dictionary = d.get("bartender_memory", {})
+		for k in mem:
+			rel.facts.append("%s: %s" % [str(k).replace("_", " "), str(mem[k])])
+		d["relationships"] = { "bartender": rel }
+		d["version"] = 2
+	return d
+
+
 func save_to(path: String = save_path) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
@@ -78,6 +118,6 @@ func load_from(path: String = save_path) -> bool:
 	f.close()
 	var parsed = JSON.parse_string(raw)
 	if parsed != null and parsed is Dictionary:
-		data = parsed
+		data = migrate(parsed)
 		return true
 	return false

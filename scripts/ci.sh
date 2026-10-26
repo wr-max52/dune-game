@@ -137,6 +137,39 @@ if [ ! -f test_results/m10_dogfight_trace.txt ]; then
 fi
 echo "CI: m10 trace present ($(wc -l < test_results/m10_dogfight_trace.txt) lines)"
 
+# M11: the player's body and hand weapons with real physics: gait states, view
+# toggles, camera wall collision, swap spam, the blaster on the range, the sword
+# combo, timed deflections off the sparring remote, and street shots noticed.
+echo "CI: generating m11 body + weapons trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m11_body_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/m11_body_trace.txt ]; then
+  echo "CI: ERROR -- m11 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m11 trace present ($(wc -l < test_results/m11_body_trace.txt) lines)"
+
+# M12: the live bartender. Scripted providers always; the real HTTP path too when
+# python3 is around to run the mock OpenAI-compatible streaming server.
+MOCK_PORT=8765
+MOCK_PID=""
+if command -v python3 >/dev/null 2>&1; then
+  python3 tools/llm/mock_llm_server.py --port "$MOCK_PORT" >/dev/null 2>&1 &
+  MOCK_PID=$!
+  sleep 1
+fi
+echo "CI: generating m12 bartender trace (mock server: ${MOCK_PID:-none})..."
+if [ -n "$MOCK_PID" ]; then
+  "$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m12_bar_trace.gd -- mock_port=$MOCK_PORT >/dev/null 2>&1 || true
+  kill "$MOCK_PID" 2>/dev/null || true
+else
+  "$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m12_bar_trace.gd >/dev/null 2>&1 || true
+fi
+if [ ! -f test_results/m12_bar_trace.txt ]; then
+  echo "CI: ERROR -- m12 trace was not generated" >&2
+  exit 1
+fi
+echo "CI: m12 trace present ($(wc -l < test_results/m12_bar_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

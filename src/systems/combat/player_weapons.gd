@@ -1,0 +1,484 @@
+class_name PlayerWeapons
+extends Node
+## The player's hand weapons in the port (M11): blaster pistol, energy sword and
+## rifle, the swap between them, firing, the sword's swings and block, and turning
+## enemy bolts around. Owns the HUD bits for weapons (crosshair, ammo, stamina).
+##
+## Controls (project.godot actions):
+##   1 / 2 / 3     blaster / energy sword / rifle   (same key again holsters)
+##   Q             last weapon        mouse wheel   cycle        H   holster
+##   LMB (fire)    shoot / swing (press again mid-swing to chain 1-2-3)
+##   RMB (alt)     blaster: aim down the sights    sword: block (tap it just
+##                 before a bolt lands to deflect it back)
+##   R             reload
+##
+## The pure parts are proven headless: WeaponHolder (swap), SwordCombo (chain,
+## active frames), Weapon (ammo/reload) and EnergyBlade (stamina, deflect window).
+
+const Weapon := preload("res://src/systems/combat/weapon.gd")
+const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
+const WeaponHolder := preload("res://src/systems/combat/weapon_holder.gd")
+const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
+const BoltScene := preload("res://scenes/entities/bolt.tscn")
+const LOOK_PATH := "res://content/look/hand_weapons.json"
+
+signal fired(weapon_id: String)
+signal swung(name: String)
+signal deflected(bolt: Node)
+signal hit_something(target: Node, damage: float)
+
+var player: CharacterBody3D
+var avatar: PlayerAvatar
+var rig_node: Node3D                ## camera_rig_node.gd
+var bolt_parent: Node3D
+var holder := WeaponHolder.new(["pistol_blaster", "energy_blade", "rifle_blaster"])
+var guns: Dictionary = {}           ## id -> Weapon (ammo + timing)
+var combo: SwordCombo
+var look: Dictionary = {}
+var cfg: Dictionary = {}            ## core weapon data by id
+var enabled := true                 ## false while talking at the bar
+var in_range_zone: Callable = Callable()   ## (pos) -> bool: on the sanctioned range?
+
+var blade_extent := 0.0
+var aiming := false
+var shots := 0
+var deflections := 0
+var blocks := 0
+var sword_hits := 0
+
+var _fire_held := false
+var _alt_held := false
+var _hitstop := 0.0
+var _sfx: Dictionary = {}
+var _hum: AudioStreamPlayer
+var _hud: CanvasLayer
+var _cross: Control
+var _ammo: Label
+var _stam: ProgressBar
+var _name: Label
+var _name_left := 0.0
+
+
+func setup(p: CharacterBody3D, a: PlayerAvatar, rig: Node3D, bolts_into: Node3D) -> void:
+	player = p
+	avatar = a
+	rig_node = rig
+	bolt_parent = bolts_into
+	look = CharacterKit._read_json(LOOK_PATH)
+	for id in holder.slots:
+		cfg[id] = CharacterKit._read_json("res://content/core/weapons/%s.json" % id)
+		if id != "energy_blade":
+			guns[id] = Weapon.new(cfg[id])
+	combo = SwordCombo.new(cfg.get("energy_blade", {}))
+	avatar.build_weapons(holder.slots)
+	avatar.set_blade_extent(0.0)
+
+
+func _ready() -> void:
+	name = "Weapons"
+	_build_sfx()
+	_build_hud()
+
+
+# ------------------------------------------------------------------ input
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not enabled:
+		return
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			holder.cycle(-1)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			holder.cycle(1)
+	for n in 3:
+		if event.is_action_pressed("weapon_%d" % (n + 1)):
+			holder.request_slot(n + 1)
+	if event.is_action_pressed("weapon_last"):
+		holder.request_last()
+	if event.is_action_pressed("holster"):
+		holder.request("")
+	if event.is_action_pressed("reload") and guns.has(holder.current):
+		(guns[holder.current] as Weapon).start_reloading()
+	if event.is_action_pressed("fire"):
+		_fire_held = true
+		if holder.current == "energy_blade" and holder.is_ready():
+			if combo.attack():
+				_on_swing_started()
+	elif event.is_action_released("fire"):
+		_fire_held = false
+	if event.is_action_pressed("alt_fire"):
+		_alt_held = true
+	elif event.is_action_released("alt_fire"):
+		_alt_held = false
+
+
+## Bot / test seam: drive the same paths without input events.
+func press_fire() -> void:
+	_fire_held = true
+	if holder.current == "energy_blade" and holder.is_ready() and combo.attack():
+		_on_swing_started()
+
+
+func release_fire() -> void:
+	_fire_held = false
+
+
+func set_alt(on: bool) -> void:
+	_alt_held = on
+
+
+func set_enabled(on: bool) -> void:
+	enabled = on
+	if not on:
+		_fire_held = false
+		_alt_held = false
+		combo.set_block(false)
+		aiming = false
+		if rig_node != null:
+			rig_node.set_zoom(1.0)
+	_hud.visible = on
+
+
+# ------------------------------------------------------------------ frame
+
+func _physics_process(dt: float) -> void:
+	if player == null:
+		return
+	for ev in holder.update(dt):
+		_on_holder_event(str(ev))
+	var cur := holder.current
+	# Blade extent follows the swap: ignite while drawing, retract while holstering.
+	var want := 0.0
+	if cur == "energy_blade":
+		want = 1.0 if holder.phase != WeaponHolder.Phase.HOLSTERING else 0.0
+	blade_extent = move_toward(blade_extent, want, dt / 0.15)
+	avatar.set_blade_extent(blade_extent)
+	if _hum != null:
+		var on := cur == "energy_blade" and blade_extent > 0.5
+		if on and not _hum.playing:
+			_hum.play()
+		elif not on and _hum.playing:
+			_hum.stop()
+
+	# Guns tick every frame (cooldowns, reloads) whether or not the trigger is down.
+	for id in guns:
+		var g: Weapon = guns[id]
+		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held
+		var r: int = g.start_firing(dt, trigger)
+		if r == Weapon.Result.SHOT:
+			_shoot(id)
+	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_held
+	if rig_node != null:
+		rig_node.set_zoom(0.72 if aiming else 1.0)
+
+	# Sword.
+	var sdt := dt * (0.08 if _hitstop > 0.0 else 1.0)
+	_hitstop = maxf(0.0, _hitstop - dt)
+	combo.set_block(enabled and cur == "energy_blade" and holder.is_ready() and _alt_held)
+	for ev in combo.update(sdt):
+		if str(ev).begins_with("swing:"):
+			_on_swing_started()
+	if cur == "energy_blade" and combo.is_active():
+		_sword_hits()
+	if cur == "energy_blade" and blade_extent > 0.5:
+		_intercept_bolts()
+	avatar.sword_pose = combo.pose(avatar.first_person) if cur == "energy_blade" else {}
+	avatar.current = cur
+	avatar.drawn = holder.drawn()
+	_update_hud(dt)
+
+
+func upper_mode() -> String:
+	match holder.current:
+		"pistol_blaster":
+			return BodyAnimator.UPPER_AIM
+		"rifle_blaster":
+			return BodyAnimator.UPPER_RIFLE
+		"energy_blade":
+			return BodyAnimator.UPPER_SWORD
+	return BodyAnimator.UPPER_FREE
+
+
+func _on_holder_event(ev: String) -> void:
+	var parts := ev.split(":")
+	match parts[0]:
+		"drawing":
+			_play("blade_on" if parts[1] == "energy_blade" else "swap")
+			_show_name(str(cfg.get(parts[1], {}).get("label", parts[1])))
+		"holstered":
+			if parts[1] == "energy_blade":
+				_play("blade_off")
+				combo.reset()
+			if holder.pending == "":
+				_show_name("Holstered")
+
+
+# ------------------------------------------------------------------ blasters
+
+## Where the crosshair points: the first thing under the screen center.
+func aim_point() -> Vector3:
+	var cam: Camera3D = rig_node.camera() if rig_node != null else null
+	if cam == null or not cam.is_inside_tree():
+		return avatar.global_position + avatar.global_basis.z * 50.0
+	var from := cam.global_position
+	var dir := -cam.global_basis.z
+	var to := from + dir * 250.0
+	var q := PhysicsRayQueryParameters3D.create(from, to)
+	q.exclude = [player.get_rid()]
+	var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.position if not hit.is_empty() else to
+
+
+func _shoot(id: String) -> void:
+	var c: Dictionary = cfg[id]
+	var origin := avatar.muzzle_position()
+	var target := aim_point()
+	var dir := (target - origin).normalized()
+	# A touch of spread, less when aiming.
+	var spread := deg_to_rad(float(c.get("spread_deg", 1.2)) * (0.35 if aiming else 1.0))
+	dir = dir.rotated(dir.cross(Vector3.UP).normalized(), randf_range(-spread, spread)).rotated(Vector3.UP, randf_range(-spread, spread))
+	var b = BoltScene.instantiate()
+	b.direction = dir
+	b.speed = float(c.get("bolt_speed", 40.0))
+	b.damage = float(c.get("damage", 10.0))
+	b.range_m = float(c.get("range", 80.0))
+	b.shooter = player
+	b.stylize = true
+	b.sweep = true
+	b.color = Color.html(str(c.get("bolt_color", "#ff6a2a")))
+	b.streak_length = float(look.get("bolt", {}).get("length", 0.9))
+	b.on_hit.connect(func(t): hit_something.emit(t, b.damage))
+	if bolt_parent != null:
+		bolt_parent.add_child(b)
+		b.global_position = origin
+	shots += 1
+	if rig_node != null:
+		rig_node.kick(float(c.get("recoil", 2.0)) * (0.5 if aiming else 1.0))
+		rig_node.shake(0.15)
+	_play("shot_" + id)
+	_muzzle_flash(origin, b.color)
+	var in_range: bool = in_range_zone.is_valid() and bool(in_range_zone.call(player.global_position))
+	WorldState.on_player_fired(in_range)
+	fired.emit(id)
+
+
+func _muzzle_flash(at: Vector3, col: Color) -> void:
+	if not is_inside_tree():
+		return
+	var l := OmniLight3D.new()
+	l.light_color = col
+	l.light_energy = 3.0
+	l.omni_range = 3.5
+	l.shadow_enabled = false
+	var host: Node = bolt_parent if bolt_parent != null else self
+	host.add_child(l)
+	l.global_position = at
+	var tw := l.create_tween()
+	tw.tween_property(l, "light_energy", 0.0, 0.06)
+	tw.tween_callback(l.queue_free)
+
+
+# ------------------------------------------------------------------ sword
+
+func _on_swing_started() -> void:
+	_play("blade_swing")
+	swung.emit(str(combo.swing_def().name))
+
+
+func _sword_hits() -> void:
+	var space := player.get_world_3d().direct_space_state
+	var shape := SphereShape3D.new()
+	shape.radius = 0.2
+	for p in avatar.blade_points([0.35, 0.7, 1.0]):
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = shape
+		q.transform = Transform3D(Basis(), p)
+		q.exclude = [player.get_rid()]
+		q.collide_with_areas = false
+		for r in space.intersect_shape(q, 8):
+			var col: Object = r.collider
+			var target := _damage_receiver(col)
+			if target == null:
+				continue
+			var key := target.get_instance_id()
+			if combo.hits_this_swing.has(key):
+				continue
+			combo.hits_this_swing[key] = true
+			var dmg := float(combo.damage())
+			target.apply_damage(dmg)
+			sword_hits += 1
+			_hitstop = 0.06
+			_play("blade_clash")
+			if rig_node != null:
+				rig_node.shake(0.35)
+			hit_something.emit(target, dmg)
+
+
+static func _damage_receiver(o: Object) -> Object:
+	if o == null:
+		return null
+	if o.has_method("apply_damage"):
+		return o
+	if o is Node and (o as Node).get_parent() != null and (o as Node).get_parent().has_method("apply_damage"):
+		return (o as Node).get_parent()
+	return null
+
+
+## Enemy bolts that reach the blade: deflect (timed block or a live swing), block
+## (late), or let through.
+func _intercept_bolts() -> void:
+	var chest: Vector3 = avatar.global_position + Vector3(0, 1.25, 0)
+	for b in get_tree().get_nodes_in_group("bolts"):
+		if not is_instance_valid(b) or b.shooter == player or b.get_meta("intercepted", false):
+			continue
+		var to_me: Vector3 = chest - b.global_position
+		if to_me.length() > 1.5 or b.direction.dot(to_me) <= 0.0:
+			continue
+		var res := intercept(b)
+		if res == "pierced":
+			continue
+		b.set_meta("intercepted", true)
+
+
+## Resolve one incoming bolt. Returns "deflected", "blocked" or "pierced".
+func intercept(b: Node) -> String:
+	var res: int
+	if combo.mode == SwordCombo.Mode.SWING and combo.is_active():
+		res = combo.blade.BoltResult.DEFLECTED
+	else:
+		res = combo.blade.intercept_bolt()
+	match res:
+		combo.blade.BoltResult.DEFLECTED:
+			var back: Vector3
+			if b.shooter is Node3D and is_instance_valid(b.shooter):
+				back = ((b.shooter as Node3D).global_position + Vector3(0, 0.3, 0) - b.global_position).normalized()
+			else:
+				back = (aim_point() - b.global_position).normalized()
+			b.reflect(back, player)
+			deflections += 1
+			WorldState.on_deflection()
+			_play("blade_deflect")
+			deflected.emit(b)
+			return "deflected"
+		combo.blade.BoltResult.BLOCKED:
+			b.apply_to(null)
+			blocks += 1
+			_play("blade_clash")
+			if rig_node != null:
+				rig_node.shake(0.2)
+			return "blocked"
+	return "pierced"
+
+
+# ------------------------------------------------------------------ audio + hud
+
+func _build_sfx() -> void:
+	var sounds: Dictionary = CharacterKit._read_json(LOOK_PATH).get("sounds", {})
+	var map := {
+		"swap": sounds.get("swap", ""), "blade_on": sounds.get("blade_on", ""),
+		"blade_off": sounds.get("blade_off", ""), "blade_swing": sounds.get("blade_swing", ""),
+		"blade_clash": sounds.get("blade_clash", ""), "blade_deflect": sounds.get("blade_deflect", ""),
+	}
+	var lk: Dictionary = CharacterKit._read_json(LOOK_PATH)
+	for id in ["pistol_blaster", "rifle_blaster"]:
+		map["shot_" + id] = lk.get(id, {}).get("sound", "")
+	for k in map:
+		var path := str(map[k])
+		if path == "" or not ResourceLoader.exists(path):
+			continue
+		var p := AudioStreamPlayer.new()
+		p.stream = load(path)
+		p.volume_db = -6.0
+		p.max_polyphony = 4
+		add_child(p)
+		_sfx[k] = p
+	var hum_path := str(sounds.get("blade_hum", ""))
+	if hum_path != "" and ResourceLoader.exists(hum_path):
+		var s = load(hum_path)
+		if s is AudioStreamWAV:
+			s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			s.loop_begin = 0
+			s.loop_end = int(s.get_length() * s.mix_rate)
+		_hum = AudioStreamPlayer.new()
+		_hum.stream = s
+		_hum.volume_db = -16.0
+		add_child(_hum)
+
+
+func _play(key: String) -> void:
+	if _sfx.has(key) and is_inside_tree():
+		var p: AudioStreamPlayer = _sfx[key]
+		p.pitch_scale = randf_range(0.94, 1.06)
+		p.play()
+
+
+func _build_hud() -> void:
+	_hud = CanvasLayer.new()
+	_hud.name = "WeaponHUD"
+	_hud.layer = 4
+	add_child(_hud)
+	_cross = Control.new()
+	_cross.set_anchors_preset(Control.PRESET_CENTER)
+	_cross.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud.add_child(_cross)
+	for r in [Rect2(-12, -1, 7, 2), Rect2(5, -1, 7, 2), Rect2(-1, -12, 2, 7), Rect2(-1, 5, 2, 7), Rect2(-1, -1, 2, 2)]:
+		var c := ColorRect.new()
+		c.position = r.position
+		c.size = r.size
+		c.color = Color(1, 0.92, 0.8, 0.85)
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_cross.add_child(c)
+	_ammo = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -70), 26)
+	_name = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -104), 18)
+	_stam = ProgressBar.new()
+	_stam.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_stam.position = Vector2(-220, -36)
+	_stam.size = Vector2(190, 10)
+	_stam.offset_left = -220
+	_stam.offset_top = -36
+	_stam.offset_right = -30
+	_stam.offset_bottom = -26
+	_stam.show_percentage = false
+	_stam.max_value = 100
+	_stam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud.add_child(_stam)
+
+
+func _label(preset: int, offset: Vector2, size: int) -> Label:
+	var l := Label.new()
+	l.set_anchors_preset(preset)
+	l.offset_left = offset.x
+	l.offset_top = offset.y
+	l.offset_right = offset.x + 190
+	l.offset_bottom = offset.y + 32
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 5)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud.add_child(l)
+	return l
+
+
+func _show_name(text: String) -> void:
+	if _name != null:
+		_name.text = text
+		_name_left = 1.6
+
+
+func _update_hud(dt: float) -> void:
+	if _hud == null:
+		return
+	var cur := holder.current
+	_cross.visible = guns.has(cur) and holder.is_ready() and (rig_node == null or not rig_node.is_overridden())
+	if guns.has(cur):
+		var g: Weapon = guns[cur]
+		_ammo.text = "RELOADING" if g.is_reloading() else "%d / %d" % [g.ammo, int(g.config.get("mag", 0))]
+		_ammo.visible = true
+	else:
+		_ammo.visible = false
+	_stam.visible = cur == "energy_blade"
+	if _stam.visible:
+		_stam.value = combo.blade.stamina
+	_name_left = maxf(0.0, _name_left - dt)
+	_name.visible = _name_left > 0.0

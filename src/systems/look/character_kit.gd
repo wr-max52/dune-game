@@ -66,6 +66,12 @@ func build(archetype: String, pose: String = "") -> Node3D:
 		"duelist":
 			_dress_duelist(root, p)
 			default_pose = "ox_guard"
+		"bartender":
+			_dress_bartender(root, p)
+			default_pose = "idle"
+		"player_smuggler":
+			_dress_smuggler(root, p)
+			default_pose = "idle"
 		_:
 			_dress_local(root, p)
 			default_pose = "walker"
@@ -287,6 +293,16 @@ func _rel(root: Node3D, node: Node3D) -> Transform3D:
 		t = (n as Node3D).transform * t
 		n = n.get_parent()
 	return t
+
+
+## Public IK hook for runtime animators (player_avatar.gd, bartender_npc.gd).
+func reach(body: Node3D, side: String, target: Vector3, pole: Vector3) -> void:
+	_reach(body, side, target, pole)
+
+
+## Transform of `node` in the character's chest space.
+func chest_space(body: Node3D, node: Node3D) -> Transform3D:
+	return _rel(body, _j(body, "chest")).affine_inverse() * _rel(body, node)
 
 
 ## Two-bone IK: put the hand of arm `side` ("l"/"r") at `target` (chest space).
@@ -515,11 +531,22 @@ func _dress_duelist(body: Node3D, p: Dictionary) -> void:
 ## Yellow by default; colour and length come from content/core/weapons/energy_blade.json.
 ## Local +Y runs up the blade from the guard.
 func _energy_sword(body: Node3D) -> Node3D:
+	var sword := make_energy_sword()
+	_j(body, "chest").add_child(sword)
+	body.set_meta("weapon", sword)
+	return sword
+
+
+## A free-standing energy sword (not attached to a body). The player's weapon
+## controller uses this too, so the hero's blade and the duelist's are one design.
+## Children: "Blade" (scale.y 0..1 ignites it) holding "BladeLight".
+func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_override: float = -1.0) -> Node3D:
 	var color := Color.html(blade_cfg.get("blade_color", "#ffc93a"))
-	var length := float(blade_cfg.get("blade_length", 1.05))
+	if color_override.a > 0.0:
+		color = color_override
+	var length := float(blade_cfg.get("blade_length", 1.05)) if length_override <= 0.0 else length_override
 	var sword := Node3D.new()
 	sword.name = "EnergySword"
-	_j(body, "chest").add_child(sword)
 	var metal := _m(Color("#2a2826"), "metal", 0.4)
 	var brass := _m(Color("#b08e50"), "metal", 0.3)
 	_mi(sword, _cyl(0.019, 0.021, 0.25, 10), _m(Color("#3a2a20"), "leather", 0.4), Vector3(0, -0.13, 0))   # grip
@@ -552,8 +579,92 @@ func _energy_sword(body: Node3D) -> Node3D:
 	light.position = Vector3(0, length * 0.5, 0)
 	blade.add_child(light)
 	sword.set_meta("grips", { "r": Vector3(0, -0.05, 0), "l": Vector3(0, -0.18, 0) })
-	body.set_meta("weapon", sword)
+	sword.set_meta("length", length)
+	sword.set_meta("color", color)
 	return sword
+
+
+# ------------------------------------------------------------------ bartender
+
+## The cantina's bartender: a working outfit, not a costume. Rolled sleeves and an
+## apron (she works), a mechanical left forearm (an old injury, a story she sells
+## by the drink), goggles pushed up on a head wrap, a breather mask (faces stay
+## covered), and a bar towel over the right shoulder. Her silhouette is the apron's
+## long straight front against the counter.
+func _dress_bartender(body: Node3D, p: Dictionary) -> void:
+	var vest := _m(_c(p, "vest"), "leather", 0.5)
+	var shirt := _m(_c(p, "shirt"), "cloth", 0.4)
+	var apron := _m(_c(p, "apron"), "leather", 0.7)
+	var wrap := _m(_c(p, "wrap"), "cloth", 0.5)
+	var trousers := _m(_c(p, "trousers"), "cloth", 0.6)
+	var towel := _m(_c(p, "towel"), "cloth", 0.4)
+	var metal := _m(_c(p, "prosthetic", "#6b6660"), "metal", 0.45)
+	var brass := _m(Color("#b08e50"), "metal", 0.3)
+	var dark := _m(Color("#1c1816"), "dark", 0.0)
+	var chest := _j(body, "chest")
+	var pelvis := _j(body, "pelvis")
+	var head := _j(body, "head")
+	for s in ["l", "r"]:
+		_mi(_j(body, s + "_hip"), _cyl(0.066, 0.088, 0.46, 10), trousers, Vector3(0, -0.23, 0))
+		_mi(_j(body, s + "_shoulder"), _cyl(0.056, 0.064, 0.24, 10), shirt, Vector3(0, -0.12, 0))
+		_mi(_j(body, s + "_shoulder"), _cyl(0.064, 0.064, 0.05, 10), shirt, Vector3(0, -0.25, 0))   # rolled cuff
+	_mi(chest, LookMeshKit.frustum(0.3, 0.2, 0.43, -0.26), shirt, Vector3(0, 0.0, 0.002))
+	# Vest: open, cut short; a second colour block over the shirt.
+	_mi(chest, LookMeshKit.shell(0.205, 0.2, 0.2, -0.22, PI * 0.5 + 0.42, PI * 0.5 + TAU - 0.42, 0.016, 20, 2), vest)
+	for sx in [-1.0, 1.0]:
+		_mi(chest, _box(Vector3(0.016, 0.02, 0.02)), brass, Vector3(0.07 * sx, -0.02, 0.125))
+	# Apron: long, straight, to mid-shin. Neck strap and a waist tie.
+	_mi(pelvis, _box(Vector3(0.36, 0.72, 0.012)), apron, Vector3(0, -0.32, 0.135), Vector3(-3, 0, 0))
+	_mi(chest, _box(Vector3(0.24, 0.3, 0.012)), apron, Vector3(0, 0.0, 0.128), Vector3(-6, 0, 0))
+	for sx in [-1.0, 1.0]:
+		_mi(chest, _box(Vector3(0.02, 0.26, 0.01)), apron, Vector3(0.09 * sx, 0.24, 0.07), Vector3(-30, 0, -14 * sx))
+	_mi(pelvis, _cyl(0.18, 0.185, 0.04, 14), apron, Vector3(0, 0.03, 0))
+	_mi(pelvis, _box(Vector3(0.12, 0.08, 0.05)), towel, Vector3(-0.12, -0.08, 0.15))   # pocket rag
+	# Mechanical left forearm: plates, a piston, a glowing joint.
+	var le := _j(body, "l_elbow")
+	_mi(le, _cyl(0.042, 0.05, 0.25, 8), metal, Vector3(0, -0.13, 0))
+	_mi(le, _cyl(0.008, 0.008, 0.22, 6), brass, Vector3(0.04, -0.13, 0.02))
+	_mi(le, _sphere(0.05, 0.08, 10), metal, Vector3(0, 0.0, 0))
+	var core := mats.glow(_c(p, "prosthetic_glow", "#7fd0c8"))
+	core.emission_energy_multiplier = 1.4
+	_mi(le, _cyl(0.02, 0.02, 0.02, 8), core, Vector3(0, -0.02, 0.045), Vector3(90, 0, 0))
+	# Bar towel over the right shoulder.
+	var t1 := _mi(chest, LookMeshKit.cloth(0.11, 0.42, 0.03, 1, 3), towel, Vector3(-0.17, 0.27, 0.02))
+	t1.rotation_degrees = Vector3(0, 0, 8)
+	# Head: wrap, goggles pushed up on the forehead, breather mask over mouth and nose.
+	_mi(head, _sphere(0.104, 0.235, 14), dark)
+	for i in 3:
+		_mi(head, _cyl(0.112 - i * 0.012, 0.118 - i * 0.008, 0.05, 14), wrap,
+			Vector3(0, 0.05 + i * 0.045, -0.012), Vector3(-10 + i * 4, 0, -3 + i * 3))
+	var tail := _mi(head, LookMeshKit.cloth(0.08, 0.3, 0.03, 1, 3), wrap, Vector3(0.04, 0.06, -0.11))
+	tail.rotation_degrees = Vector3(14, 165, 10)
+	var g := _m(Color("#2a2a2a"), "metal", 0.5)
+	var lens := mats.glow(_c(p, "lens", "#e0a050"))
+	lens.emission_energy_multiplier = 0.6
+	for sx in [-1.0, 1.0]:
+		_mi(head, _cyl(0.03, 0.03, 0.03, 10), g, Vector3(0.042 * sx, 0.1, 0.085), Vector3(60, 0, 0))
+		_mi(head, _cyl(0.023, 0.023, 0.01, 10), lens, Vector3(0.042 * sx, 0.11, 0.1), Vector3(60, 0, 0))
+	_mi(head, _box(Vector3(0.22, 0.012, 0.16)), g, Vector3(0, 0.1, 0.0), Vector3(-15, 0, 0))
+	_mi(head, _sphere(0.07, 0.09, 12), _m(_c(p, "mask", "#3c3a36"), "metal", 0.4), Vector3(0, -0.055, 0.075), Vector3.ZERO, Vector3(1.0, 0.8, 0.75))
+	for sx in [-1.0, 1.0]:
+		_mi(head, _cyl(0.022, 0.022, 0.03, 8), g, Vector3(0.05 * sx, -0.07, 0.11), Vector3(90, 0, 0))   # filters
+
+
+## A glass and a rag: the bartender's props (the npc's animator moves her hands).
+func make_bar_glass() -> Node3D:
+	var root := Node3D.new()
+	root.name = "Glass"
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.75, 0.85, 0.85, 0.35)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.roughness = 0.1
+	glass.metallic_specular = 0.8
+	_mi(root, _cyl(0.035, 0.03, 0.11, 12), glass, Vector3(0, 0.055, 0))
+	var drink := StandardMaterial3D.new()
+	drink.albedo_color = Color(0.85, 0.5, 0.15, 0.8)
+	drink.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_mi(root, _cyl(0.031, 0.028, 0.06, 12), drink, Vector3(0, 0.033, 0))
+	return root
 
 
 # ------------------------------------------------------------------ locals

@@ -1,0 +1,13 @@
+{
+  "note": "Plain-language facts for the bartender's world briefing (M12). PromptBuilder turns WorldState flags into these lines.",
+  "flags": {
+    "gate_checkpoint_up": "Remnant checkpoint at the east gate. They search crates.",
+    "remnant_patrol_beaten": "The Remnant patrol in orbit was shot to pieces recently.",
+    "ship_limped_home": "A ship came back into the pit damaged.",
+    "shots_in_street": "Someone has fired a blaster in the street. The Remnant noticed.",
+    "range_record": "Someone cleared the practice range under twenty seconds.",
+    "blade_trained": "The player has been seen deflecting bolts with a blade."
+  },
+  "time": { "golden": "Late afternoon, long shadows.", "noon": "Noon. Brutal heat.", "dusk": "Dusk. The lamps are coming on." },
+  "factions": { "imperial_remnant": "the Remnant", "locals": "the locals", "smuggler": "the smugglers" }
+}

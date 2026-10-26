@@ -3,23 +3,12 @@ extends GutTest
 ## may appear in code, class names, file names, or the data layer. Generic
 ## terms only. This test failing is a hard block on the merge.
 
-const BANNED := [
-	"gadget",
-	"star wars",
-	"the mand",
-	"jar jar",
-	"yaddle",
-	"tatoo",
-	"besp",
-	"mandalorian",
-	"jarjar",
-	"starwars",
-	"x-wing",
-	"tie fighter",
-	"millennium falcon",
-]
+## M12: the list lives in data so the bartender's runtime output filter and this
+## scan share one source of truth. That file is the list itself, so it is exempt.
+const BLOCKLIST := "res://content/core/llm/ip_blocklist.json"
+var BANNED: Array = []
 
-## This file is the list itself, so it is the one file not scanned.
+## The list file and this file are the only files not scanned.
 const SELF := "res://tests/test_ip_neutral.gut.gd"
 
 const SCAN_DIRS := [
@@ -34,6 +23,8 @@ var _files := PackedStringArray()
 
 
 func before_each() -> void:
+	var d = JSON.parse_string(FileAccess.get_file_as_string(BLOCKLIST))
+	BANNED = d.get("terms", []) if d is Dictionary else []
 	_files.clear()
 	for root in SCAN_DIRS:
 		# A trailing slash matters: "res://scenes" + "main.gd" is not a path, which
@@ -65,13 +56,17 @@ func test_no_franchise_names_in_any_source_file() -> void:
 			not path.ends_with(".txt") and not path.ends_with(".tscn") and \
 			not path.ends_with(".cfg"):
 			continue
-		if path == SELF or not FileAccess.file_exists(path):
+		if path == SELF or path == BLOCKLIST or not FileAccess.file_exists(path):
 			continue
 		var text: String = FileAccess.get_file_as_string(path).to_lower()
 		for banned in BANNED:
 			if text.contains(banned):
 				offenders.append(path + " :: " + banned)
 	assert_eq(offenders.size(), 0, "franchise names found: " + str(offenders))
+
+
+func test_blocklist_loaded() -> void:
+	assert_gt(BANNED.size(), 10, "the IP blocklist must load from data")
 
 
 func test_content_files_match_manifest() -> void:

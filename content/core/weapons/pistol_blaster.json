@@ -10,5 +10,7 @@
   "mag": 15,
   "reload_time": 1.4,
   "visible_bolt": true,
+  "bolt_color": "#ff6a2a",
+  "spread_deg": 1.2,
   "note": "IP-neutral. Generic label only."
 }

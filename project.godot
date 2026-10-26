@@ -51,6 +51,40 @@ interact={
 "events": [Object(InputEventKey,"keycode":69)]
 }
 
+; Hand weapons (M11). 1/2/3 pick a weapon (again = holster), Q last, H holster.
+fire={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"button_index":1,"button_mask":1)]
+}
+alt_fire={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"button_index":2,"button_mask":2)]
+}
+reload={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":82)]
+}
+weapon_1={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":49)]
+}
+weapon_2={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":50)]
+}
+weapon_3={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":51)]
+}
+weapon_last={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":81)]
+}
+holster={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":72)]
+}
+
 ; Flight (M10). Pitch follows a stick: W / Up pushes the nose down, S / Down pulls it up.
 flight_pitch_up={
 "deadzone": 0.2,

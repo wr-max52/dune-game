@@ -21,6 +21,17 @@
       "wraps": "#26211f", "mantle": "#7a3b1e", "sash": "#a8322a", "bandage": "#cdbb9c",
       "mask": "#d9ccb4", "mask_line": "#c9a058", "boots": "#1c1817", "gloves": "#2a2220", "under": "#26211f"
     },
+    "bartender": {
+      "height": 1.74, "bulk": 1.0,
+      "vest": "#4a2e22", "shirt": "#b9a98a", "apron": "#2e2620", "wrap": "#7a3b1e", "trousers": "#3a302a",
+      "towel": "#c9b896", "prosthetic": "#6b6660", "prosthetic_glow": "#7fd0c8", "lens": "#e0a050", "mask": "#3c3a36",
+      "boots": "#2a2220", "gloves": "#2a2220", "under": "#3a302a"
+    },
+    "player_smuggler": {
+      "height": 1.8, "bulk": 1.0,
+      "skin_wrap": "#1f8a86", "shirt": "#c9b896", "trousers": "#4a3c30", "coat": "#6e4a2c", "gloves": "#4a3020",
+      "hat": "#6a5038", "boots": "#3e2c20", "leather": "#5a3a24", "goggles": "#2a2a2a", "lens": "#7fd0c8"
+    },
     "local": {
       "height": 1.72, "bulk": 1.0,
       "robe": "#9c8262", "hood": "#86694a", "gloves": "#5a4636", "wrap": "#a8322a", "boots": "#4a3628"

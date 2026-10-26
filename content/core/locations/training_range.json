@@ -1,0 +1,22 @@
+{
+  "id": "training_range",
+  "note": "The practice range in the landing pit (M11). Targets to shoot or cut, and a sparring remote that fires stun bolts while you have the blade out, so you can practice deflecting. Firing in the pit is sanctioned; firing in the street is not (WorldState). Positions are town coordinates.",
+  "zone": { "min": [-18, -7, -22], "max": [18, -1, 22] },
+  "record_seconds": 20.0,
+  "targets": [
+    { "id": "t1", "pos": [-15.5, -6, 9.0], "hp": 30 },
+    { "id": "t2", "pos": [-15.5, -6, 12.5], "hp": 30 },
+    { "id": "t3", "pos": [-15.5, -6, 16.0], "hp": 30 },
+    { "id": "t4", "pos": [-11.0, -6, 19.5], "hp": 30 },
+    { "id": "t5", "pos": [-7.0, -6, 19.5], "hp": 30 }
+  ],
+  "reset_seconds": 4.0,
+  "remote": {
+    "pos": [8.0, -4.4, -14.0],
+    "range": 14.0,
+    "interval": 1.7,
+    "bolt_speed": 13.0,
+    "bolt_color": "#4ad0ff",
+    "only_when_blade_out": true
+  }
+}

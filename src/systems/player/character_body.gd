@@ -12,6 +12,15 @@ extends CharacterBody3D
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
 
 signal pose_changed(pose: int)
+signal hurt(amount: float)          ## something hit the player (bolts, blades)
+signal jumped
+signal landed
+
+## M11: while true (talking at the bar, a cutscene) the player stands still and
+## ignores movement input. Gravity and collision still run.
+var locked := false
+var hits_taken := 0
+var _was_on_floor := true
 
 @export var move_actions := PackedStringArray(["move_forward", "move_back", "move_left", "move_right"])
 @export var jump_action := "jump"
@@ -60,7 +69,9 @@ func clear_external_command() -> void:
 
 func _physics_process(delta: float) -> void:
 	var yaw: float = -rotation.y
-	if not use_external_command:
+	if locked:
+		controller.set_command(Vector2.ZERO, false, false, false)
+	elif not use_external_command:
 		var dir_in := Vector2(
 			Input.get_axis(move_actions[2], move_actions[3]),
 			-Input.get_axis(move_actions[0], move_actions[1])
@@ -95,3 +106,16 @@ func _physics_process(delta: float) -> void:
 	if controller.on_ground and controller.pose == CharacterController.Pose.JUMP:
 		controller.pose = CharacterController.Pose.CROUCH if controller.command.crouch else CharacterController.Pose.STAND
 	pose_changed.emit(controller.pose)
+	var on_floor := is_on_floor()
+	if on_floor and not _was_on_floor:
+		landed.emit()
+	elif not on_floor and _was_on_floor and velocity.y > 0.5:
+		jumped.emit()
+	_was_on_floor = on_floor
+
+
+## Bolts and blades call this (see bolt.gd). The slice has no player death yet:
+## hits are reported so the camera and HUD can react.
+func apply_damage(amount: float) -> void:
+	hits_taken += 1
+	hurt.emit(amount)
