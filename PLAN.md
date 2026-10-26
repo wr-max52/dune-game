@@ -21,8 +21,12 @@ Status:
 | M6 | LLM bartender (text) | Typed conversation, memory, 4 tools, guardrails, fallback, Kokoro voice | DONE |
 | M7 | Voice input | whisper.cpp push-to-talk with the bartender; latency measured | DONE |
 | M8 | Polish pass | Bug list cleared, performance report, 3 minute gameplay recording | DONE |
+| M10 | Starfighter flight and dogfights | Data-driven ships, guns, pilots and encounters; flight model; shields + hull; fixed guns + lock-on seekers; fighter AI (pursue, attack, break, extend, evade); playable dogfight scene with HUD; any ship design swaps in from data; headless dogfight trace won end to end | WIP |
 
 ## Notes
+
+- M9 is the port town greybox, planned in `docs/town/TOWN_PLAN.md`; its row is
+  added by that milestone's branch. M10 was numbered after it.
 
 - One feature per branch, off the latest main; merge only when tests pass.
 - Each gameplay system ships a headless trace/log plus GUT assertions; that trace

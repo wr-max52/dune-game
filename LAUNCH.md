@@ -40,6 +40,31 @@ machines; they are not yet bound to global input actions and are driven in the
 playthrough trace. Binding them to the GUI is the remaining polish before a live
 playtest.
 
+## Flying the dogfight (M10)
+
+```sh
+godot --path . res://scenes/flight/dogfight_demo.tscn    # or open it and press F6
+```
+
+You fly the interceptor with a wingman against two waves of remnant fighters. Click
+the window to steer with the mouse; Esc releases it.
+
+| Action         | Key                          |
+|---|---|
+| Pitch          | W / S (or Up / Down). W pushes the nose down, like a stick |
+| Yaw            | A / D (or Left / Right)      |
+| Roll           | Q / E                        |
+| Throttle       | R up, F down                 |
+| Boost          | Shift                        |
+| Fire cannons   | Space or left mouse          |
+| Fire seeker    | X or right mouse (needs a full lock: keep the target in the box) |
+| Next target    | T                            |
+| Chase/cockpit  | V                            |
+
+The HUD shows speed, throttle, boost, shield, hull, ammo, the lock meter (the arc
+around the target box) and the lead marker (the gold dot: aim there to hit). To watch
+the AI fly your ship, tick `autopilot` on the scene's root node.
+
 ## What the 3-minute clip should show
 
 A single take, start to finish, that a viewer can watch top to bottom:

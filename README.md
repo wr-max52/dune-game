@@ -49,16 +49,18 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 
 ## Plan
 
-`PLAN.md` holds the 8 milestones (M0-M8) in build order, with status and the
-"done means" for each. M0-M8 are done; `LAUNCH.md` is how to run and record the
-finished slice.
+`PLAN.md` holds the milestones in build order, with status and the "done means"
+for each. M0-M8 are done; M9 (the port town) is planned in `docs/town/TOWN_PLAN.md`;
+M10 (starfighter flight and dogfights) is on its feature branch. `LAUNCH.md` is how to run and record the slice and how to fly the dogfight;
+`docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights from data.
 
 ## Layout
 
 ```
 content/core/      the only place names/weapons/dialogue live (swappable)
-src/systems/       gameplay + support systems (dataloader, player, combat, ai, ...)
-scenes/            boot + level scenes
+content/look/      palettes, ship looks, lighting (what things look like)
+src/systems/       gameplay + support systems (dataloader, player, combat, ai, flight, ...)
+scenes/            boot + level scenes; scenes/flight/ is the playable dogfight
 tests/             GUT tests + (M5) the headless bot playthrough
 scripts/           ci.sh, record.sh, pin.txt
 addons/            godot plugins (gut; nobodywho added at M6)

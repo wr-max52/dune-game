@@ -2,7 +2,34 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After M8 (2026-10-25)
+## After M10 (2026-10-26)
+
+**What is real and proven by tests:** everything through M8, plus starfighter flight
+and dogfights. The headless trace (`test_results/m10_dogfight_trace.txt`) flies the
+orbital_skirmish encounter to COMPLETE with the player flown by the AI; GUT checks the
+flight model, guns, seekers, shields, AI actions, wave logic, ship looks, the playable
+scene, and that a new ship/gun/pilot/fight works from data alone.
+
+**Stubbed / deferred, honestly:**
+- **Ships are primitive stand-ins.** `ship_kit.gd` builds them from boxes, cylinders
+  and prisms. Real models plug in through the look's `scene` path; none exist yet.
+- **No ship-to-ship collisions.** Ships pass through each other and through the
+  planet. Hit spheres exist for bolts only.
+- **The dogfight is its own scene.** There is no walk-to-the-ship, launch, or landing
+  yet; the port and orbit are not connected, and the encounter is not tied to the
+  fixer's contracts or the save file. (The flight model has `to_dict()`/`from_dict()`
+  ready for the save system.)
+- **Not tested on a Mac.** Logic is proven headless; the look was reviewed in Linux
+  software rendering (lavapipe), and the scene has not been played with a real GPU,
+  keyboard or mouse.
+- **Glow is off** in `content/look/space.json`: under lavapipe it lifted the black of
+  space to navy. Try it on the Mac.
+- **No gamepad bindings** for flight yet; keyboard and mouse only.
+- **Balance is first-pass.** Tuned so the trace's AI-flown player wins with damage
+  taken. A human will find it easier or harder; the numbers are all in JSON.
+- **The 3D world on foot is still greybox**, as after M8 (unchanged by M10).
+
+## After M8 (2026-10-25) -- superseded by the notes above.
 
 **What is real and proven by tests:** everything in M1-M7, plus the M8 polish pass.
 The vertical slice now hangs together in one playthrough

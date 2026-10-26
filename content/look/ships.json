@@ -1,0 +1,31 @@
+{
+  "note": "Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md.",
+  "looks": {
+    "interceptor": {
+      "frame": "dart",
+      "scene": "",
+      "length": 9.0, "span": 7.6, "height": 1.6,
+      "hull": "#c9c2b4", "trim": "#d99a2b", "dark": "#2a2c33",
+      "canopy": "#1f7a78", "engine": "#8fd8ff"
+    },
+    "remnant_fighter": {
+      "frame": "blade",
+      "scene": "",
+      "length": 5.0, "span": 6.0, "height": 4.2,
+      "hull": "#3d4147", "trim": "#6b1e1e", "dark": "#1e1c1c",
+      "canopy": "#ffae4a", "engine": "#ff7a4a"
+    },
+    "remnant_heavy": {
+      "frame": "hauler",
+      "scene": "",
+      "length": 12.0, "span": 8.4, "height": 2.6,
+      "hull": "#4b4f55", "trim": "#a8844a", "dark": "#1e1c1c",
+      "canopy": "#ffae4a", "engine": "#ff7a4a"
+    }
+  },
+  "bolts": {
+    "player": { "color": "#7fe8ff", "length": 6.0, "width": 0.22 },
+    "hostile": { "color": "#ff5a3c", "length": 6.0, "width": 0.22 },
+    "missile": { "color": "#ffd28a", "length": 1.6, "width": 0.3 }
+  }
+}

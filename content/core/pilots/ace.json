@@ -1,0 +1,17 @@
+{
+  "id": "ace",
+  "label": "Ace",
+  "steer_gain": 3.8,
+  "aim_cone_deg": 4.0,
+  "aim_error": 0.01,
+  "engage_range": 750.0,
+  "break_distance": 120.0,
+  "break_time": 1.4,
+  "break_on_hit": 0.6,
+  "extend_distance": 450.0,
+  "evade_missile": 0.8,
+  "attack_throttle": 0.68,
+  "retarget_interval": 1.0,
+  "missile_use": true,
+  "note": "Tight lead, early break. Flies the player's autopilot in the headless trace."
+}

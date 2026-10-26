@@ -2,6 +2,76 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — M10 (starfighter flight and dogfights)
+
+- **Arcade flight, not Newtonian.** The ship always moves along its nose and speed
+  eases toward the throttle target. Alternative: full 6-DOF momentum -- rejected for
+  the slice: it is harder to fly with a keyboard and harder for the AI. The model is one pure file; a Newtonian variant could replace it behind the same
+  `step()`/`set_command()` shape.
+
+- **Same pattern as M1-M8: pure spine, node wraps it.** The flight model, lead solver,
+  seeker lock, shield, loadout, projectile field, fighter brain and dogfight director
+  are all RefCounted and headless. `ship_node.gd` and `dogfight_demo.gd` only draw and
+  read input. That is why the whole fight is provable in CI.
+
+- **The bot flies the player with the same AI as the enemies.** The headless trace
+  turns on the player's autopilot (a fighter brain with the ace profile) instead of
+  scripting inputs. This is the M5 rule: bot and human share one implementation, so
+  the trace proves the real flight model and guns.
+
+- **Ship guns reuse the M2 weapon state machine.** A hardpoint is a `weapon.gd`
+  instance, so ship guns get the same rate/mag/reload rules as the hand blasters.
+  `mag` + `reload_time` double as a heat limit on cannons. Alternative: a separate
+  ship-weapon class -- rejected as a second copy of the same rules. One addition:
+  ship weapons start reloading on their own when empty (the hand blaster waits for the
+  trigger), because a seeker rack must recharge while the trigger is never pulled.
+
+- **Bolts inherit the shooter's velocity, and the lead solver accounts for it.** A
+  fighter at 70 m/s firing 300 m/s bolts would otherwise see its own shots fall behind
+  in a chase. The solve runs in the shooter's frame (relative position and velocity).
+
+- **Hits are swept, not sampled.** A bolt travels ~5 m per frame; a fighter is ~3 m
+  across. A point-in-sphere check would miss most hits. The projectile field tests the
+  frame's travel segment against each hit sphere.
+
+- **Hit spheres, not physics bodies.** Ships and bolts are pure data with a radius,
+  not Area3D/RigidBody3D. Alternative: Godot physics -- rejected because it ties the
+  fight to the scene tree (no headless proof) and costs more per bolt. Ship-to-ship
+  collision is deferred (KNOWN_ISSUES).
+
+- **New data categories use one generic loader path.** `ships`, `pilots` and
+  `encounters` load through `_load_category()` from the manifest, the same way
+  missions and locations do. Ship guns are ordinary `weapons` entries with a
+  `fire_group`. A test builds a new ship, gun, pilot and encounter in `user://` and
+  flies it: the "zero code change to add content" rule, proven for flight.
+
+- **Gameplay and look are separate files.** `content/core/ships/*.json` says how a
+  ship flies and fights; `content/look/ships.json` says what it looks like, keyed by a
+  `look` id. A look is either a `scene` path (any .glb/.tscn, forward -Z, metres) or a
+  primitive stand-in from `ship_kit.gd`. A missing model falls back to the stand-in
+  so a bad path never makes a ship invisible. This mirrors the character kit:
+  stand-ins now, real models later, no gameplay change.
+
+- **AI pilots are data too.** Aim cone, aim error, engage/break/extend distances, and
+  the chance to break when hit or when a seeker is launched at them live in
+  `content/core/pilots/*.json`. Missile evasion was added after the first trace: with
+  seekers that never missed, the player's wingman and then the player died to the
+  heavy fighter's rack every run. A break on launch makes seekers dodgeable (they turn
+  slower than a fighter), and the trace now shows both hits and misses.
+
+- **The AI is deterministic per seed.** Each brain gets its own seeded RNG (from the
+  encounter seed and the ship id), so the trace is reproducible run to run.
+
+- **Glow is off in the space backdrop.** In the Linux software-renderer review stills,
+  Godot's glow lifted the black of space to navy whatever blend mode or threshold was
+  used. The value is data (`content/look/space.json`); it can be turned back on after
+  a check on the Mac.
+
+- **Fixed two CI gaps found while doing this.** The IP scan never read files at the
+  top of a scanned folder (missing slash in the path join), and `ci.sh` passed on a
+  fresh checkout without running any test (GUT cannot load before an import). Both
+  were silent passes, so they are fixed here rather than left.
+
 ## 2026-10-25 — M8 (polish pass: bug list, performance report, cross-system trace)
 
 - **The "3-minute gameplay recording" is the manual/recorded path, not a headless

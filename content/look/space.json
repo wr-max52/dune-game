@@ -1,0 +1,14 @@
+{
+  "note": "The dogfight backdrop: high orbit over the desert world. Read by scenes/flight/dogfight_demo.gd. Colours follow docs/ART_DIRECTION.md (sand, oxblood, amber). Glow is off: in the lavapipe review renders it lifts the black of space to navy (see KNOWN_ISSUES.md); try intensity 0.6-0.9 on the Mac.",
+  "background": "#05060b",
+  "ambient": { "color": "#6a5a4a", "energy": 0.6 },
+  "sun": { "color": "#ffe2b0", "energy": 2.2, "azimuth": -35.0, "elevation": 22.0 },
+  "planet": {
+    "radius": 5200.0,
+    "center": [0, -6400, -2600],
+    "color": "#c49a63",
+    "atmosphere": "#f0b979"
+  },
+  "stars": { "count": 1400, "distance": 9000.0, "size": 9.0, "color": "#e9e6f2" },
+  "glow": { "intensity": 0.0, "bloom": 0.0 }
+}

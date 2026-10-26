@@ -1,0 +1,30 @@
+{
+  "id": "interceptor",
+  "class": "starfighter",
+  "label": "Interceptor",
+  "faction": "smuggler",
+  "look": "interceptor",
+  "pilot": "ace",
+  "hull": 120,
+  "shield": { "max": 80, "regen": 12.0, "delay": 2.5 },
+  "hit_radius": 3.2,
+  "convergence": 320.0,
+  "flight": {
+    "min_speed": 14.0,
+    "max_speed": 48.0,
+    "boost_speed": 78.0,
+    "accel": 30.0,
+    "pitch_rate": 1.9,
+    "yaw_rate": 1.1,
+    "roll_rate": 3.2,
+    "boost_time": 3.0,
+    "boost_recharge": 0.5,
+    "boost_turn_scale": 0.6
+  },
+  "hardpoints": [
+    { "weapon": "ship_cannon", "mount": [-3.4, 0.0, -0.8] },
+    { "weapon": "ship_cannon", "mount": [3.4, 0.0, -0.8] },
+    { "weapon": "ship_missile", "mount": [0.0, -0.7, -1.6] }
+  ],
+  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack."
+}

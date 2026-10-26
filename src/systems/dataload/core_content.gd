@@ -19,6 +19,9 @@ var dialogues: Dictionary = {}   # list-id -> Array of Dictionary
 var persona_prompts: Dictionary = {}  # npc-id -> String
 var locations: Dictionary = {}    # location-id -> Dictionary (outpost, etc.)
 var missions: Dictionary = {}      # mission-id -> Dictionary (crate_retrieval, etc.)
+var ships: Dictionary = {}         # ship-id -> Dictionary (interceptor, etc.) (M10)
+var pilots: Dictionary = {}        # pilot-id -> Dictionary (AI flying profiles) (M10)
+var encounters: Dictionary = {}    # encounter-id -> Dictionary (dogfight setups) (M10)
 var _loaded := false
 
 
@@ -31,6 +34,9 @@ func load_from(root: String = ROOT) -> bool:
 	persona_prompts = {}
 	locations = {}
 	missions = {}
+	ships = {}
+	pilots = {}
+	encounters = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -65,6 +71,11 @@ func load_from(root: String = ROOT) -> bool:
 		var md: Dictionary = _read_dir_entry(root, "missions", mission_id)
 		if not md.is_empty():
 			missions[mission_id] = md
+	# M10: flight categories use the same generic path; a new ship, pilot or encounter
+	# is a JSON file plus a manifest entry, with no code change.
+	_load_category(root, "ships", ships)
+	_load_category(root, "pilots", pilots)
+	_load_category(root, "encounters", encounters)
 
 	_loaded = true
 	return true
@@ -108,6 +119,18 @@ func get_mission(id: String) -> Dictionary:
 	return missions.get(id, {})
 
 
+func get_ship(id: String) -> Dictionary:
+	return ships.get(id, {})
+
+
+func get_pilot(id: String) -> Dictionary:
+	return pilots.get(id, {})
+
+
+func get_encounter(id: String) -> Dictionary:
+	return encounters.get(id, {})
+
+
 func get_persona(npc_id: String) -> String:
 	return persona_prompts.get(npc_id, "")
 
@@ -117,6 +140,17 @@ func get_dialogue(list_id: String) -> Array:
 
 
 # ---- IO helpers -----------------------------------------------------------
+
+## Load every id the manifest lists under `category` from the folder of the same
+## name. Missing entries are skipped with a warning, never a crash.
+func _load_category(root: String, category: String, into: Dictionary) -> void:
+	for id in manifest.get(category, []):
+		var d: Dictionary = _read_dir_entry(root, category, str(id))
+		if d.is_empty():
+			push_warning("CoreContent: %s entry missing: %s" % [category, id])
+			continue
+		into[str(id)] = d
+
 
 func _read_dir_entry(root: String, dir: String, id: String) -> Dictionary:
 	return _read_json(root, dir, id + ".json")

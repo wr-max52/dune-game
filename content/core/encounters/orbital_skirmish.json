@@ -1,0 +1,27 @@
+{
+  "id": "orbital_skirmish",
+  "label": "Orbital Skirmish",
+  "location": "outpost",
+  "payout": 200,
+  "arena": { "center": [0, 0, 0], "radius": 1600.0 },
+  "player": { "ship": "interceptor", "spawn": [0, 0, 0], "facing": [0, 0, -1] },
+  "allies": [
+    { "ship": "interceptor", "pilot": "veteran", "spawn": [60, 12, 40], "facing": [0, 0, -1] }
+  ],
+  "waves": [
+    {
+      "delay": 2.0,
+      "spawn_distance": 800.0,
+      "ships": [ { "ship": "remnant_fighter", "count": 3 } ]
+    },
+    {
+      "delay": 4.0,
+      "spawn_distance": 900.0,
+      "ships": [
+        { "ship": "remnant_fighter", "count": 3 },
+        { "ship": "remnant_heavy", "count": 1 }
+      ]
+    }
+  ],
+  "note": "IP-neutral. Above the port: the player and a wingman hold off two raid waves."
+}
