@@ -164,5 +164,53 @@
         "decimate": 12000
       }
     ]
+  },
+  "local": {
+    "note": "Hyper3D Rodin Gen-2.5 from a prompt (sand head scarf with black-lensed goggles and no face, loose linen shirt and trousers; generation 5bd6acca-b04a-492e-a6c5-7f178ffd97c6), rigged with the human template (c2e7e926-412c-46c2-9f8e-60501d1c0a5a). Split into head, torso and legs so every local can mix parts and colours (content/look/characters.json, local.model.parts; colours: tools/look/recolor_parts.gd).",
+    "source": "res://assets/characters/local/source/local_rigged.glb",
+    "out": "res://assets/characters/local/local.glb",
+    "flatten": [],
+    "reweight": {
+      "to": "Hips",
+      "radius": 0.11
+    },
+    "cut": [],
+    "min_island_tris": 0,
+    "decimate": 60000,
+    "split": [
+      {
+        "name": "head",
+        "above": 0.58
+      },
+      {
+        "name": "torso",
+        "rest": true,
+        "bones": [
+          "LeftShoulder",
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "RightShoulder",
+          "RightArm",
+          "RightForeArm",
+          "RightHand"
+        ]
+      },
+      {
+        "name": "legs",
+        "below": 0.14
+      }
+    ],
+    "recolor": {
+      "out": "res://assets/characters/local/colors/local_%s.png",
+      "colors": {
+        "darker": "#8a7454",
+        "lighter": "#f2ebdc",
+        "blue": "#46648c",
+        "red": "#963c30",
+        "yellow": "#d6ad3c"
+      }
+    },
+    "min_claim_tris": 300
   }
 }

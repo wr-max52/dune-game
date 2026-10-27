@@ -116,7 +116,7 @@ them by id. Tuning a preset means editing JSON and re-shooting, never editing co
 | Remnant commander (player option) | Trooper plus long open greatcoat and shoulder cape | Darker plate, oxblood coat, brass rank | Cloth crest on the helmet, brass epaulettes |
 | Smuggler (player option) | Wide hat, long flared duster, low gun belt | Sand leather, dark trousers, teal scarf | Goggles over a dark face wrap, coil pistol, bandolier |
 | Duelist | Lean, wide stance; asymmetric rust mantle | Charcoal wraps, rust, madder sash | Sculpted pale mask with one slit; **yellow energy sword** |
-| Local | Round, draped, layered | Sand, one dye accent | Wrapped head and veil, staff, woven pack |
+| Local | Loose and draped: head scarf, linen shirt, linen trousers | Sand, or a dye per part (darker, lighter, blue, red, yellow) | Scarf and goggles with black lenses, no face; parts mix and match |
 
 - **Faces are covered.** Helmets, goggles, wraps and masks. It avoids the uncanny
   valley and saves months.

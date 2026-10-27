@@ -23,6 +23,16 @@ extends SceneTree
 ##   `tint` multiplies its albedo; `discs` add flat glowing lenses (prop space centre
 ##   and radius, facing +Z).
 ## - decimate: cut a surface (or an attached prop) down to about this many triangles.
+## - split: cut the body into parts that are swapped and recoloured on their own (the
+##   locals: head, torso, legs). A triangle goes to the first part whose `bones` (name
+##   prefixes) carry 80% of its weight, else to the first part
+##   whose `above` / `below` (mesh-space y, metres) holds its centroid, else to the
+##   `rest` part. Height cuts give straight seams (belt, collar); `bones` keep a hand
+##   that hangs below the belt on the torso; a claimed patch smaller than
+##   `min_claim_tris` (connected triangles) is cloth the fingers touch, and goes back
+##   to the height rule. Every part is its own MeshInstance3D,
+##   named after the part (lower case: "Head" is taken by the bone), on the same
+##   skeleton and skin.
 
 const CFG_PATH := "res://content/look/character_models.json"
 
@@ -50,6 +60,8 @@ func _init() -> void:
 	var scene := doc.generate_scene(state)
 	for mi in scene.find_children("*", "MeshInstance3D", true, false):
 		_prep_mesh(mi as MeshInstance3D, cfg)
+		if cfg.has("split") and (mi as MeshInstance3D).skin != null:
+			_split(mi as MeshInstance3D, cfg.split, int(cfg.get("min_claim_tris", 0)), scene)
 	var out_doc := GLTFDocument.new()
 	var out_state := GLTFState.new()
 	out_doc.append_from_scene(scene, out_state)
@@ -187,7 +199,11 @@ static func _decimate(arr: Array, target: int) -> Array:
 		if li.size() / 3 < target:
 			break
 		idx = li
-	# Compact: keep only the vertices the chosen indices use.
+	return _compact(arr, idx)
+
+
+## A copy of `arr` with only the vertices `idx` uses, and `idx` renumbered.
+static func _compact(arr: Array, idx: PackedInt32Array) -> Array:
 	var remap := PackedInt32Array()
 	remap.resize((arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
 	remap.fill(-1)
@@ -215,6 +231,121 @@ static func _decimate(arr: Array, target: int) -> Array:
 		out[k] = dst
 	out[Mesh.ARRAY_INDEX] = out_idx
 	return out
+
+
+func _split(mi: MeshInstance3D, parts: Array, min_claim: int, scene: Node) -> void:
+	var skel := mi.get_node_or_null(mi.skeleton) as Skeleton3D
+	var claim := {}                    ## bind -> part index, from `bones`
+	var rest := -1
+	for pi in parts.size():
+		if parts[pi].get("rest", false):
+			rest = pi
+	for b in mi.skin.get_bind_count():
+		var n := String(mi.skin.get_bind_name(b))
+		if n == "" and skel != null and mi.skin.get_bind_bone(b) >= 0:
+			n = skel.get_bone_name(mi.skin.get_bind_bone(b))
+		for pi in range(parts.size() - 1, -1, -1):
+			for prefix in parts[pi].get("bones", []):
+				if n.begins_with(str(prefix)):
+					claim[b] = pi
+	var src := mi.mesh as ArrayMesh
+	var meshes: Array = []
+	for pi in parts.size():
+		meshes.append(ArrayMesh.new())
+	for s in src.get_surface_count():
+		var arr := src.surface_get_arrays(s)
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+		var per := bones.size() / v.size()
+		var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if per == 8 else 0
+		var part_tri := PackedInt32Array()   ## triangle -> part
+		var claimed := PackedInt32Array()    ## triangle -> part its bones claim, or -1
+		for t in range(0, idx.size(), 3):
+			var total := 0.0
+			var share := {}                ## claiming part -> weight
+			for j in 3:
+				for k in per:
+					var bw := weights[idx[t + j] * per + k]
+					total += bw
+					var cp := int(claim.get(bones[idx[t + j] * per + k], -1))
+					if bw > 0.0 and cp >= 0:
+						share[cp] = float(share.get(cp, 0.0)) + bw
+			var pick := -1
+			for cp in share:
+				if share[cp] >= 0.8 * total:
+					pick = cp
+			claimed.append(pick)
+			part_tri.append(pick if pick >= 0 else _by_height(parts, v, idx, t, rest))
+		_drop_small_claims(part_tri, claimed, v, idx, parts, rest, min_claim)
+		for pi in parts.size():
+			var mine := PackedInt32Array()
+			for t in part_tri.size():
+				if part_tri[t] == pi:
+					mine.append_array([idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]])
+			if mine.is_empty():
+				continue
+			var m: ArrayMesh = meshes[pi]
+			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _compact(arr, mine), [], {}, flags)
+			m.surface_set_material(m.get_surface_count() - 1, src.surface_get_material(s))
+	for pi in parts.size():
+		var part := MeshInstance3D.new()
+		part.name = str(parts[pi].name)
+		part.mesh = meshes[pi]
+		part.skin = mi.skin
+		part.transform = mi.transform
+		mi.get_parent().add_child(part)
+		part.owner = scene
+		part.skeleton = mi.skeleton
+		var tris := 0
+		for s in (meshes[pi] as ArrayMesh).get_surface_count():
+			tris += ((meshes[pi] as ArrayMesh).surface_get_arrays(s)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+		print("prep: split %s  %d triangles" % [part.name, tris])
+	mi.get_parent().remove_child(mi)
+	mi.free()
+
+
+static func _by_height(parts: Array, v: PackedVector3Array, idx: PackedInt32Array, t: int, rest: int) -> int:
+	var y := (v[idx[t]].y + v[idx[t + 1]].y + v[idx[t + 2]].y) / 3.0
+	for pi in parts.size():
+		if (parts[pi].has("above") and y > float(parts[pi].above)) or (parts[pi].has("below") and y < float(parts[pi].below)):
+			return pi
+	return rest
+
+
+## Claimed triangles in connected patches (by shared position) under `min_claim`
+## triangles fall back to the height rule.
+static func _drop_small_claims(part_tri: PackedInt32Array, claimed: PackedInt32Array, v: PackedVector3Array,
+		idx: PackedInt32Array, parts: Array, rest: int, min_claim: int) -> void:
+	if min_claim <= 0:
+		return
+	var parent := PackedInt32Array()
+	parent.resize(v.size())
+	for i in v.size():
+		parent[i] = i
+	var weld := {}
+	for i in v.size():
+		var k := Vector3i((v[i] * 10000.0).round())
+		if weld.has(k):
+			_union(parent, i, weld[k])
+		else:
+			weld[k] = i
+	for t in claimed.size():
+		if claimed[t] >= 0:
+			_union(parent, idx[t * 3], idx[t * 3 + 1])
+			_union(parent, idx[t * 3 + 1], idx[t * 3 + 2])
+	var count := {}
+	for t in claimed.size():
+		if claimed[t] >= 0:
+			var r := _find(parent, idx[t * 3])
+			count[r] = int(count.get(r, 0)) + 1
+	var dropped := 0
+	for t in claimed.size():
+		if claimed[t] >= 0 and int(count[_find(parent, idx[t * 3])]) < min_claim:
+			part_tri[t] = _by_height(parts, v, idx, t * 3, rest)
+			dropped += 1
+	print("prep: split  %d triangles in small claimed patches back to the height rule" % dropped)
 
 
 static func _skin_to(arr: Array, count: int, bone: int, per: int) -> void:
