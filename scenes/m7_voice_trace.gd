@@ -1,9 +1,9 @@
 extends SceneTree
 ## M7: the headless voice-input trace.
 ##
-## Machine proof that "voice input reaches the bartender and the guardrail holds":
+## Machine proof that "voice input reaches the cantina owner and the guardrail holds":
 ## the player's spoken request is captured by a speech source, routed through the
-## push-to-talk to the SAME bartender brain as M6, and the text is READ but never
+## push-to-talk to the SAME cantina owner brain as M6, and the text is READ but never
 ## executed as a command -- an effect happens only when the MODEL proposes a tool
 ## the npc is allowed.
 ##
@@ -20,7 +20,7 @@ extends SceneTree
 ## tests/test_m7_voice.gut.gd.
 
 var Scripted
-var Bartender
+var CantinaOwner
 var PTT
 var Whisper
 
@@ -38,11 +38,11 @@ func _build() -> void:
 	if not DirAccess.dir_exists_absolute("res://test_results"):
 		DirAccess.make_dir_recursive_absolute("res://test_results")
 	Scripted = load("res://src/systems/llm/scripted_client.gd")
-	Bartender = load("res://src/systems/llm/bartender_ai.gd")
+	CantinaOwner = load("res://src/systems/llm/cantina_owner_ai.gd")
 	PTT = load("res://src/systems/voice/push_to_talk.gd")
 	Whisper = load("res://src/systems/voice/whisper_runtime.gd")
 
-	bar = Bartender.new()
+	bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor", "set_disposition", "offer_drink", "call_guards"]
 	bar.memory = {}
 	bar.fallback_lines = [

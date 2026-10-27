@@ -8,7 +8,7 @@ signal submitted(text: String)
 signal leave_requested
 signal job_answered(job_id: String, accepted: bool)
 
-var npc_name := "Bartender"
+var npc_name := "Cantina Owner"
 var _root: PanelContainer
 var _name: Label
 var _mood: Label

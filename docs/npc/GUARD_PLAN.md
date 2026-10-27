@@ -3,13 +3,13 @@
 **Goal:** the gate guards feel like people with a job. They stand their post,
 notice you, challenge you or wave you through depending on how the Remnant feels
 about you, and fight properly when it goes wrong. What happens at the gate changes
-the town, and the bartender hears about it.
+the town, and the cantina owner hears about it.
 
 **Product owner decisions (2026-10-26):**
 
 | Decision | Choice |
 |---|---|
-| LLM? | **No.** Guards are authored barks and choices. The bartender stays the only LLM NPC. |
+| LLM? | **No.** Guards are authored barks and choices. The cantina owner stays the only LLM NPC. |
 | Architecture | **The fighter pattern.** A pure brain writes a command; the body (on the player's own movement code) carries it out. |
 | Default gate behavior | **Driven by standing with the Imperial Remnant** (`WorldState.standing.imperial_remnant`). |
 | Order | Steps 1 to 3 first, check in and test, then continue. |
@@ -127,7 +127,7 @@ within `alert_radius` (and the tower post once it is live). Hit reactions
 
 Through WorldState only: waved through, bribed (credits, a flag), searched, fought
 (standing down, `gate_fight` flag, event log line), guard killed (bigger drop,
-counter). The bartender reads it all for free.
+counter). The cantina owner reads it all for free.
 
 ### 10. Acceptance (part 2 trace)
 

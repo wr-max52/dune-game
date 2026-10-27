@@ -4,7 +4,7 @@ extends CanvasLayer
 ## first token, total time, tokens, fallbacks, dropped actions and why, filter
 ## flags, trust, the raw reply, and a button that copies the full prompt.
 
-var brain: BartenderBrain
+var brain: NpcBrain
 var llm: LLMService
 var _panel: PanelContainer
 var _text: RichTextLabel

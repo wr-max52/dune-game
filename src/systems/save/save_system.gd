@@ -4,7 +4,7 @@ extends RefCounted
 ##   - player position (Vector3)
 ##   - credits (int)
 ##   - mission state (from a Mission's to_save())
-##   - bartender memory (a Dictionary of remembered facts)
+##   - cantina owner memory (a Dictionary of remembered facts)
 ##
 ## It writes one JSON file. A future skin can swap the path or add fields without
 ## other code changes. A deterministic stub path is fine for CI because this is a
@@ -12,7 +12,7 @@ extends RefCounted
 ##
 ## v2 (M12) adds "world" (WorldState: standing, flags, jobs, credits) and
 ## "relationships" (npc id -> Relationship). A v1 file migrates on load: its loose
-## bartender_memory becomes facts the bartender remembers.
+## npc_memory becomes facts the cantina owner remembers.
 
 const VERSION := 2
 
@@ -25,7 +25,7 @@ func new_game() -> void:
 		"player_position": [0.0, 0.0, 0.0],
 		"credits": 0,
 		"mission": {},
-		"bartender_memory": {},
+		"npc_memory": {},
 		"world": {},
 		"relationships": {},
 		"version": VERSION,
@@ -57,12 +57,12 @@ func get_mission() -> Dictionary:
 	return data.get("mission", {})
 
 
-func remember_in_bartender(key: String, value: Variant) -> void:
-	data["bartender_memory"][key] = value
+func remember_in_cantina_owner(key: String, value: Variant) -> void:
+	data["npc_memory"][key] = value
 
 
-func get_bartender_memory() -> Dictionary:
-	return data.get("bartender_memory", {})
+func get_npc_memory() -> Dictionary:
+	return data.get("npc_memory", {})
 
 
 func set_world(w: Dictionary) -> void:
@@ -89,10 +89,10 @@ static func migrate(d: Dictionary) -> Dictionary:
 	if v < 2:
 		d["world"] = d.get("world", {})
 		var rel := { "facts": [] }
-		var mem: Dictionary = d.get("bartender_memory", {})
+		var mem: Dictionary = d.get("npc_memory", {})
 		for k in mem:
 			rel.facts.append("%s: %s" % [str(k).replace("_", " "), str(mem[k])])
-		d["relationships"] = { "bartender": rel }
+		d["relationships"] = { "cantina_owner": rel }
 		d["version"] = 2
 	return d
 

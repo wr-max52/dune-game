@@ -1,5 +1,5 @@
 {
-  "note": "Jobs the bartender can offer (M12). Only real jobs: each one completes when something actually happens in the game (completes_on is a WorldState trigger). requires uses the same conditions as rumors.",
+  "note": "Jobs the cantina owner can offer (M12). Only real jobs: each one completes when something actually happens in the game (completes_on is a WorldState trigger). requires uses the same conditions as rumors.",
   "jobs": [
     { "id": "j_patrol_bounty", "title": "Thin the orbital patrol", "text": "The locals pool 200 credits for anyone who breaks the Remnant patrol in orbit. Your ship is in the pit; the pad is the button.", "pays": 200, "completes_on": "flight_complete", "requires": { "not_flags": ["remnant_patrol_beaten"] } },
     { "id": "j_range_bet", "title": "The range bet", "text": "Knock all five practice targets flat in under twenty seconds. The pot is 40 credits and some pride.", "pays": 40, "completes_on": "range_record", "requires": { "not_flags": ["range_record"] } },

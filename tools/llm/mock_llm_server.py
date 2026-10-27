@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A tiny OpenAI-compatible chat server for tests (M12). Standard library only.
 
-Streams a bartender reply as SSE, the way llama-server / Ollama / OpenRouter do,
+Streams a cantina owner reply as SSE, the way llama-server / Ollama / OpenRouter do,
 so the game's real HTTP path (HTTPClient polling, chunked SSE, UTF-8 split across
 chunks) is exercised in CI with no model.
 

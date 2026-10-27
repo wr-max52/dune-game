@@ -77,7 +77,7 @@ if [ ! -f test_results/m5_mission_trace.txt ]; then
 fi
 echo "CI: m5 trace present ($(wc -l < test_results/m5_mission_trace.txt) lines)"
 
-# M6: generate the headless bartender conversation trace so
+# M6: generate the headless cantina owner conversation trace so
 # tests/test_m6_dialogue.gut.gd can check "the npc's typed text is read but never
 # executed as a command, an allowed tool applies, a disallowed tool is ignored,
 # exhaustion routes to a fallback, and Kokoro gives a voice signature."
@@ -148,7 +148,7 @@ if [ ! -f test_results/m11_body_trace.txt ]; then
 fi
 echo "CI: m11 trace present ($(wc -l < test_results/m11_body_trace.txt) lines)"
 
-# M12: the live bartender. Scripted providers always; the real HTTP path too when
+# M12: the live cantina owner. Scripted providers always; the real HTTP path too when
 # python3 is around to run the mock OpenAI-compatible streaming server.
 MOCK_PORT=8765
 MOCK_PID=""
@@ -157,7 +157,7 @@ if command -v python3 >/dev/null 2>&1; then
   MOCK_PID=$!
   sleep 1
 fi
-echo "CI: generating m12 bartender trace (mock server: ${MOCK_PID:-none})..."
+echo "CI: generating m12 cantina owner trace (mock server: ${MOCK_PID:-none})..."
 if [ -n "$MOCK_PID" ]; then
   "$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/m12_bar_trace.gd -- mock_port=$MOCK_PORT >/dev/null 2>&1 || true
   kill "$MOCK_PID" 2>/dev/null || true

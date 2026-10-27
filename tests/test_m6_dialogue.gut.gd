@@ -1,10 +1,10 @@
 extends GutTest
-## M6: the bartender LLM conversation. Proves, headless and deterministic:
+## M6: the cantina owner LLM conversation. Proves, headless and deterministic:
 ##   - the player's typed request is read but never executed as a command;
 ##   - the npc only ever calls the four tools its entry allows;
 ##   - a tool that is not allowed is ignored, not acted on;
 ##   - a tool the model proposes is validated and applied;
-##   - when the client is exhausted the bartender falls back to a canned line;
+##   - when the client is exhausted the cantina owner falls back to a canned line;
 ##   - memory the npc sets is returned;
 ##   - Kokoro's TTS is a pure function of the text (invariant) and fails
 ##     gracefully when offline;
@@ -17,7 +17,7 @@ extends GutTest
 const LLM := "res://src/systems/llm"
 
 var Scripted
-var Bartender
+var CantinaOwner
 var Kokoro
 var Ollama
 
@@ -27,7 +27,7 @@ const TRACE := "res://test_results/m6_dialogue_trace.txt"
 
 func before_each() -> void:
 	Scripted = load(LLM + "/scripted_client.gd")
-	Bartender = load(LLM + "/bartender_ai.gd")
+	CantinaOwner = load(LLM + "/cantina_owner_ai.gd")
 	Kokoro = load(LLM + "/kokoro_voice.gd")
 	Ollama = load(LLM + "/ollama_client.gd")
 	_lines.clear()
@@ -45,7 +45,7 @@ func _trace_lines() -> PackedStringArray:
 # ---- text is never a command ---------------------------------------------
 
 func test_text_request_is_never_executed() -> void:
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	# An empty client: the model proposes nothing. A request that *reads like* a
 	# command must produce a reply but change NOTHING -- memory stays empty because
 	# the only thing that may act is a model tool the npc is allowed, and there is
@@ -63,7 +63,7 @@ func test_text_request_is_never_executed() -> void:
 # ---- the npc only ever uses its allowed tools ----------------------------
 
 func test_allowed_tool_is_applied() -> void:
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor", "set_disposition", "offer_drink", "call_guards"]
 	var client = Scripted.new()
 	client.new_with_responses([
@@ -79,7 +79,7 @@ func test_allowed_tool_is_applied() -> void:
 
 
 func test_disallowed_tool_is_ignored() -> void:
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor"]
 	# The model proposes call_guards, which this npc is not allowed to use.
 	var client = Scripted.new()
@@ -99,7 +99,7 @@ func test_disallowed_tool_is_ignored() -> void:
 # ---- fallback when the client is exhausted -------------------------------
 
 func test_fallback_when_client_is_exhausted() -> void:
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	var client = Scripted.new()  # empty: pop_next() -> null
 	bar.client = client
 	bar.fallback_lines = ["The pipes are busy. Hold your thought.", "Right, a breath."]
@@ -116,7 +116,7 @@ func test_fallback_when_client_is_exhausted() -> void:
 # ---- memory survives ------------------------------------------------------
 
 func test_memory_is_returned_and_grows() -> void:
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.allowed_tools = ["set_disposition"]
 	var client = Scripted.new()
 	client.new_with_responses([

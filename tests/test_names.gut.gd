@@ -155,7 +155,7 @@ func test_authored_names_are_never_handed_out() -> void:
 	var got := b.name_for("person_remnant", "npc:x")
 	assert_ne(got, "")
 	assert_ne(NameEngine.normalize(got), NameEngine.normalize(wanted), "the reserved name went to its author")
-	assert_eq(b.by_key.get("npc:bartender", ""), "Oda Vell", "the bartender's own name is reserved from the start")
+	assert_eq(b.by_key.get("npc:cantina_owner", ""), "Oda Vell", "the cantina owner's own name is reserved from the start")
 	assert_false(b.reserve("Oda Vell", "npc:someone_else"), "and nobody else can claim it")
 
 

@@ -71,17 +71,17 @@ func test_world_save_round_trip() -> void:
 
 func test_save_v1_migrates() -> void:
 	var S = load("res://src/systems/save/save_system.gd")
-	var v1 := { "player_position": [0, 0, 0], "credits": 5, "mission": {}, "bartender_memory": { "player_name": "Rider" }, "version": 1 }
+	var v1 := { "player_position": [0, 0, 0], "credits": 5, "mission": {}, "npc_memory": { "player_name": "Rider" }, "version": 1 }
 	var d: Dictionary = S.migrate(v1)
 	assert_eq(int(d.version), 2)
-	assert_true(str(d.relationships.bartender.facts).contains("Rider"))
+	assert_true(str(d.relationships.cantina_owner.facts).contains("Rider"))
 	var s = S.new()
 	s.new_game()
-	s.set_relationship("bartender", { "trust": 33 })
+	s.set_relationship("cantina_owner", { "trust": 33 })
 	s.set_world({ "credits": 7 })
 	assert_true(s.save_to("user://test_save_v2.json"))
 	var t = S.new()
 	assert_true(t.load_from("user://test_save_v2.json"))
-	assert_eq(int(t.get_relationship("bartender").trust), 33)
+	assert_eq(int(t.get_relationship("cantina_owner").trust), 33)
 	assert_eq(int(t.get_world().credits), 7)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_save_v2.json"))

@@ -1,5 +1,5 @@
 {
-  "note": "Plain-language facts for the bartender's world briefing (M12). PromptBuilder turns WorldState flags into these lines.",
+  "note": "Plain-language facts for the cantina owner's world briefing (M12). PromptBuilder turns WorldState flags into these lines.",
   "world": "port_desert",
   "place": "WHERE YOU ARE: your bar is in %s, on the planet %s. Use those names; never invent other place names for here.",
   "people": "PEOPLE IN TOWN YOU KNOW BY NAME: %s.",

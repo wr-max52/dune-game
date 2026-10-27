@@ -1,6 +1,6 @@
 class_name BarScene
 extends Node
-## The cantina bar, live (M12). Owns the bartender's body, her brain, the LLM
+## The cantina bar, live (M12). Owns the cantina owner's body, her brain, the LLM
 ## service, the conversation UI, the debug and settings panels, and saving what
 ## she remembers. town_demo.gd builds one of these when the look is on.
 ##
@@ -13,9 +13,9 @@ const TWO_SHOT_FOV := 34.0
 const SAVE_PATH := "user://save.json"
 
 var demo                              ## town_demo.gd
-var npc: BartenderNPC
+var npc: CantinaOwnerNPC
 var llm: LLMService
-var brain: BartenderBrain
+var brain: NpcBrain
 var panel: DialoguePanel
 var overlay: LLMDebugOverlay
 var settings: LLMSettingsPanel
@@ -43,9 +43,9 @@ func setup(town_demo, scripted = null) -> void:
 	bar_front = town.marker_pos("bar_front")
 	# Her body stands just behind the counter, facing the customers.
 	var counter: Dictionary = town.get_box("bar_counter")
-	var marker: Vector3 = town.marker_pos("bartender")
+	var marker: Vector3 = town.marker_pos("cantina_owner")
 	var mats: LookMaterials = demo._flat_mats() if demo.has_method("_flat_mats") else LookMaterials.new()
-	npc = BartenderNPC.new(mats)
+	npc = CantinaOwnerNPC.new(mats)
 	demo.add_child(npc)
 	var stand_x := float(counter.min[0]) - 0.55 if not counter.is_empty() else marker.x
 	npc.global_position = Vector3(stand_x, marker.y, marker.z)
@@ -65,7 +65,7 @@ func setup(town_demo, scripted = null) -> void:
 	llm.status_changed.connect(_on_llm_status)
 	if is_inside_tree():
 		get_tree().create_timer(3.0).timeout.connect(_on_llm_status)
-	brain = BartenderBrain.new(llm)
+	brain = NpcBrain.new(llm)
 	brain.thinking.connect(_on_thinking)
 	brain.line_delta.connect(_on_delta)
 	brain.line_done.connect(_on_done)
@@ -90,7 +90,7 @@ func setup(town_demo, scripted = null) -> void:
 	_hud.layer = 5
 	add_child(_hud)
 	_prompt = _label(Control.PRESET_CENTER_BOTTOM, Vector2(-260, -140), 22, HORIZONTAL_ALIGNMENT_CENTER)
-	_prompt.text = "[E]  Talk to " + str(brain.card.get("name", "the bartender"))
+	_prompt.text = "[E]  Talk to " + str(brain.card.get("name", "the cantina owner"))
 	_prompt.visible = false
 	_status_dot = _label(Control.PRESET_TOP_RIGHT, Vector2(-760, 12), 14, HORIZONTAL_ALIGNMENT_RIGHT)
 	_status_dot.offset_right = -16
@@ -137,7 +137,7 @@ func _process(_dt: float) -> void:
 		if near and not brain.serving():
 			_prompt.text = "She's not serving you. Come back later."
 		elif near:
-			_prompt.text = "[E]  Talk to " + str(brain.card.get("name", "the bartender"))
+			_prompt.text = "[E]  Talk to " + str(brain.card.get("name", "the cantina owner"))
 		if near and brain.serving() and InputMap.has_action("interact") and Input.is_action_just_pressed("interact"):
 			start_talk()
 	if not warmed and llm.mode == "auto" and bool(llm.health.get("local", {}).get("up", false)):
@@ -159,7 +159,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		overlay.toggle()
 	elif event.keycode == KEY_F10 and event.shift_pressed:
 		var m := llm.cycle_mode()
-		_toast("Bartender brain: " + m)
+		_toast("Cantina Owner brain: " + m)
 	elif event.keycode == KEY_F10:
 		settings.toggle()
 
@@ -185,7 +185,7 @@ func start_talk() -> void:
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var greeting := brain.begin_visit()
-	panel.open(str(brain.card.get("name", "Bartender")), greeting)
+	panel.open(str(brain.card.get("name", "Cantina Owner")), greeting)
 	panel.set_mood(brain.rel.mood)
 	panel.set_money(WorldState.credits, brain.rel.tab)
 	npc.speak_pulse()
@@ -210,7 +210,7 @@ func end_talk() -> void:
 		rig.clear_override()
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	npc.set_act(BartenderNPC.Act.IDLE)
+	npc.set_act(CantinaOwnerNPC.Act.IDLE)
 	_save_memory()
 
 
@@ -239,13 +239,13 @@ func _on_submit(text: String) -> bool:
 	panel.add_player_line(text)
 	panel.set_line("")
 	panel.set_input_enabled(false)
-	npc.set_act(BartenderNPC.Act.THINKING)
+	npc.set_act(CantinaOwnerNPC.Act.THINKING)
 	return brain.say(text)
 
 
 func _on_thinking(bark: String) -> void:
 	panel.set_line(bark, true)
-	npc.set_act(BartenderNPC.Act.THINKING)
+	npc.set_act(CantinaOwnerNPC.Act.THINKING)
 
 
 func _on_delta(text: String) -> void:
@@ -262,7 +262,7 @@ func _on_done(turn: Dictionary) -> void:
 
 
 func _on_drink(d: Dictionary) -> void:
-	npc.set_act(BartenderNPC.Act.POURING, 1.4)
+	npc.set_act(CantinaOwnerNPC.Act.POURING, 1.4)
 	panel.set_money(int(d.credits), int(d.tab))
 
 
@@ -282,9 +282,9 @@ func _end_soon(_reason: String) -> void:
 func _on_llm_status() -> void:
 	if overlay != null:
 		overlay.refresh()
-	# Say why in the Godot output too, so a dumb bartender is never a mystery.
+	# Say why in the Godot output too, so a dumb cantina owner is never a mystery.
 	var rep := llm.brain_report()
-	var text := "Bartender brain: %s\n  %s" % [rep.summary, "\n  ".join(PackedStringArray(rep.lines))]
+	var text := "Cantina Owner brain: %s\n  %s" % [rep.summary, "\n  ".join(PackedStringArray(rep.lines))]
 	if text != _last_report:
 		_last_report = text
 		print(text)
@@ -304,7 +304,7 @@ func _load_memory() -> void:
 	if not autosave:
 		return
 	if save.load_from(save_path):
-		var r := save.get_relationship("bartender")
+		var r := save.get_relationship("cantina_owner")
 		if not r.is_empty():
 			brain.rel.from_save(r)
 		if not _loaded_once and not save.get_world().is_empty():
@@ -322,7 +322,7 @@ func _save_memory() -> void:
 		return
 	if save.data.is_empty():
 		save.new_game()
-	save.set_relationship("bartender", brain.rel.to_save())
+	save.set_relationship("cantina_owner", brain.rel.to_save())
 	save.set_world(WorldState.to_save())
 	save.data["credits"] = WorldState.credits
 	save.save_to(save_path)

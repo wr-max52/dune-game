@@ -1,5 +1,5 @@
 {
-  "note": "Rumors (M12). Each one is only shown to the bartender when its conditions hold in WorldState, so everything she passes on is true right now. requires: flags (all), not_flags (none), tier, standing { faction: [min, max] }, counters { name: min }, time [presets].",
+  "note": "Rumors (M12). Each one is only shown to the cantina owner when its conditions hold in WorldState, so everything she passes on is true right now. requires: flags (all), not_flags (none), tier, standing { faction: [min, max] }, counters { name: min }, time [presets].",
   "rumors": [
     { "id": "r_checkpoint", "text": "The Remnant set up a checkpoint at the east gate. They search anything bigger than a lunchbox.", "requires": { "flags": ["gate_checkpoint_up"] }, "weight": 3 },
     { "id": "r_gate_bribe", "text": "The east gate gets lazy after dark. Coin helps it get lazier.", "requires": { "flags": ["gate_checkpoint_up"], "tier": "regular", "time": ["dusk"] }, "weight": 2 },

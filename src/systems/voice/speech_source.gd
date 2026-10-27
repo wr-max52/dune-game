@@ -1,5 +1,5 @@
 extends RefCounted
-## Speech source (M7): turns raw input into the text the bartender hears.
+## Speech source (M7): turns raw input into the text the cantina owner hears.
 ##
 ## A source is pure and dependency-aware: is_available()/dependency() say whether
 ## it can be used and what it needs, so the controller prefers the dependency-free

@@ -1,6 +1,6 @@
 class_name ReplyParser
 extends RefCounted
-## Reads the bartender's reply (M12). Pure.
+## Reads the cantina owner's reply (M12). Pure.
 ##
 ## The reply is one JSON object with "say" first, so while it streams we can pull
 ## the characters of the say string out of the raw text (decoding escapes) and

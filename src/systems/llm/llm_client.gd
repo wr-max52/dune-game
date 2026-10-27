@@ -1,5 +1,5 @@
 extends RefCounted
-## LLM client interface (M6). The bartender brain talks to the LLM through this,
+## LLM client interface (M6). The cantina owner brain talks to the LLM through this,
 ## so it does not care whether the response came from a live model or a canned
 ## one. A client yields one response per pop; a response is a Dictionary:
 ##   { "text": <reply String>, "tool": <name String, optional>, "args": <Dict> }

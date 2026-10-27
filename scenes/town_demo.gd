@@ -23,7 +23,7 @@ const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
 const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
-const BartenderNPC := preload("res://src/systems/npc/bartender_npc.gd")
+const CantinaOwnerNPC := preload("res://src/systems/npc/cantina_owner_npc.gd")
 const BarScene := preload("res://src/systems/npc/bar_scene.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
@@ -40,7 +40,7 @@ const ROLE_COLORS := {
 @export var lookdev_mode := false     ## true: fixed review cameras, no player
 @export var preset := ""              ## "" = default preset in time_of_day.json
 @export var with_body := true         ## M11: animated body + hand weapons (needs use_look)
-@export var with_bar := true          ## M12: the live bartender (needs use_look)
+@export var with_bar := true          ## M12: the live cantina owner (needs use_look)
 @export var with_gear := true         ## M13: pickups, the gear trader, the jetpack (works in greybox too)
 @export var with_desert := true       ## the terrain around the town (collider in greybox too)
 @export var terrain_resolution := 320 ## mesh vertices per side (look only; issue #46: was 400)
@@ -61,7 +61,7 @@ var _rig: Node
 var _arrival: Dictionary = {}
 var player_kit: PlayerKit             ## M11 body + weapons (null in the CI greybox)
 var training_range: TrainingRange
-var bartender: Node3D                 ## M12 (null in the CI greybox)
+var cantina_owner: Node3D                 ## M12 (null in the CI greybox)
 var bar: Node
 var gear: GearController              ## M13
 var pilot: ShipPilot                  ## M14
@@ -216,13 +216,13 @@ func _build_markers() -> void:
 
 
 ## The one seam the character art pass replaces. M11: with the look on, markers
-## get CharacterKit characters (the bartender is built separately by the bar);
+## get CharacterKit characters (the cantina owner is built separately by the bar);
 ## the CI greybox keeps the capsules.
 const MARKER_ARCHETYPES := { "npc": "smuggler", "trooper_post": "remnant_trooper", "ambient": "local" }
 
 func _make_marker_visual(m: Dictionary) -> Node3D:
 	if use_look and not lookdev_mode:
-		if str(m.get("npc", "")) == "bartender" and with_bar:
+		if str(m.get("npc", "")) == "cantina_owner" and with_bar:
 			var holder := Node3D.new()      # the bar puts her here
 			holder.set_meta("feet", true)
 			return holder
@@ -230,7 +230,7 @@ func _make_marker_visual(m: Dictionary) -> Node3D:
 		c.set_meta("feet", true)
 		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
 		if m.has("face"):
-			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))   # e.g. bar patrons look at the bartender
+			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))   # e.g. bar patrons look at the cantina owner
 		var here := town.marker_pos(str(m.id))
 		c.rotation.y = atan2(face.x - here.x, face.z - here.z)
 		characters[str(m.id)] = c
@@ -371,7 +371,7 @@ func _build_npcs() -> void:
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
-## people (bodies, the bartender, and the brains that run them) and the small
+## people (bodies, the cantina owner, and the brains that run them) and the small
 ## props (lamps, banners, boulders). ShipPilot feeds it the viewer's altitude.
 func _build_detail() -> void:
 	var cc := CoreContent.new()
@@ -379,7 +379,7 @@ func _build_detail() -> void:
 	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
-	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), bartender, garrison, townsfolk])
+	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk])
 	if decor != null:
 		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
 	if landforms != null:
@@ -397,7 +397,7 @@ func npc(post_id: String) -> NpcBody:
 # ---------------------------------------------------------------- M11 / M12
 
 ## Facts the scene itself makes true, plus whatever the flight we just came back
-## from did. The bartender reads these (WorldState), so her talk matches the town.
+## from did. The cantina owner reads these (WorldState), so her talk matches the town.
 func _world_from_scene() -> void:
 	WorldState.set_flag("gate_checkpoint_up", not town.markers_with_role("trooper_post").is_empty())
 	WorldState.time_of_day = preset if preset != "" else WorldState.time_of_day
@@ -422,7 +422,7 @@ func _build_bar(scripted = null, save_path: String = "user://save.json") -> void
 		bar.save_path = save_path
 	add_child(bar)
 	bar.setup(self, scripted)
-	bartender = bar.npc
+	cantina_owner = bar.npc
 
 
 ## M13: gear in the town. Pickups and vendors come from content/core; the gear

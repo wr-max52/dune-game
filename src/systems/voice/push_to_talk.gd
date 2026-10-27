@@ -1,12 +1,12 @@
 extends RefCounted
-## PushToTalk (M7): the ONE door a player's request reaches the bartender through.
+## PushToTalk (M7): the ONE door a player's request reaches the cantina owner through.
 ##
 ## Per the M7 decision, TYPED is the default and the only path with no dependency;
 ## WHISPER is an optional, dependency-bearing upgrade behind the same button. When
 ## whisper is unavailable (no runtime/model -- the CI case, and any build without
 ## the model) a voice turn degrades to typed, so a request is never dropped.
 ##
-## Both paths feed the SAME bartender brain as M6, so the guardrail "the player's
+## Both paths feed the SAME cantina owner brain as M6, so the guardrail "the player's
 ## text is read but never executed as a command" is unchanged: the captured text is
 ## only something to talk about; an effect happens only when the MODEL proposes an
 ## allowed tool.

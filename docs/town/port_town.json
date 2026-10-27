@@ -1844,14 +1844,14 @@
    "role": "interact"
   },
   {
-   "id": "bartender",
+   "id": "cantina_owner",
    "pos": [
     -82,
     0,
     0
    ],
    "role": "npc",
-   "npc": "bartender"
+   "npc": "cantina_owner"
   },
   {
    "id": "fixer",

@@ -1,10 +1,10 @@
-class_name BartenderNPC
+class_name CantinaOwnerNPC
 extends Node3D
-## The bartender's body (M12): a CharacterKit character behind the counter with a
+## The cantina owner's body (M12): a CharacterKit character behind the counter with a
 ## procedural idle. She wipes a glass; while "thinking" she slows and looks up;
 ## while talking her free hand gestures and her head nods with the words; she
 ## pours when a drink is ordered; and she tracks the player with her head.
-## The words come from BartenderBrain; this node only acts them out.
+## The words come from NpcBrain; this node only acts them out.
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 
@@ -23,9 +23,9 @@ var _talk_energy := 0.0
 
 
 func _init(materials: LookMaterials = null) -> void:
-	name = "Bartender"
+	name = "CantinaOwner"
 	kit = CharacterKit.new(materials if materials != null else LookMaterials.new(), -1000.0)
-	body = kit.build("bartender", "idle")
+	body = kit.build("cantina_owner", "idle")
 	add_child(body)
 	joints = body.get_meta("joints")
 	glass = kit.make_bar_glass()

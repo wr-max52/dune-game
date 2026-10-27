@@ -1,6 +1,6 @@
 class_name PromptBuilder
 extends RefCounted
-## Builds the message list for one bartender turn (M12). Pure: same inputs, same
+## Builds the message list for one cantina owner turn (M12). Pure: same inputs, same
 ## messages, so the whole prompt is unit-tested.
 ##
 ## Layout is cache friendly: the two static system messages (who she is, the
@@ -167,6 +167,6 @@ func summary_messages(rel, history: Array) -> Array:
 	for h in history:
 		lines.append(("PLAYER: " if h.role == "user" else "YOU: ") + str(h.content))
 	return [
-		{ "role": "system", "content": "You are Oda Vell, a bartender, thinking back on a conversation. Write 2 or 3 short facts worth remembering about the player (what they want, what they did, what they promised), one per line, no numbering, under 12 words each. Facts only; nothing about yourself." },
+		{ "role": "system", "content": "You are Oda Vell, a cantina owner, thinking back on a conversation. Write 2 or 3 short facts worth remembering about the player (what they want, what they did, what they promised), one per line, no numbering, under 12 words each. Facts only; nothing about yourself." },
 		{ "role": "user", "content": "\n".join(lines) },
 	]

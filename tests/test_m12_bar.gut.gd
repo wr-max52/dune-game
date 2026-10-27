@@ -1,5 +1,5 @@
 extends GutTest
-## M12: the live bartender, from the headless trace (scenes/m12_bar_trace.gd).
+## M12: the live cantina owner, from the headless trace (scenes/m12_bar_trace.gd).
 ## Part 1 runs scripted providers through the real pipe; part 2 runs the same
 ## brain over real HTTP against tools/llm/mock_llm_server.py (ci.sh starts it
 ## when python3 exists; those tests are skipped otherwise).

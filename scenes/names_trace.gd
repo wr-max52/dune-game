@@ -1,7 +1,7 @@
 extends SceneTree
 ## Issue #15 trace (headless): the naming system in the real scenes. The town's
 ## guards, the town, its planet, your ship and the jetpack get names as they
-## spawn; a guard's name floats over them up close; the bartender is briefed with
+## spawn; a guard's name floats over them up close; the cantina owner is briefed with
 ## them; a save and reload keeps every name; a new game with the same world seed
 ## gives the same names, another seed different ones; the space fight's pilots
 ## are named (new ones each sortie); and 5,000 people named in one game are all
@@ -82,7 +82,7 @@ func _run() -> void:
 	var jet: Dictionary = cc.get_item("jetpack")
 	out("JETPACK_SHOWN", demo.gear._shown(jet, "jetpack"))
 	out("JETPACK_MODEL", NameHooks.equipment(jet, "jetpack"))
-	out("BARTENDER_RESERVED", WorldState.names.by_key.get("npc:bartender", ""))
+	out("CANTINA_OWNER_RESERVED", WorldState.names.by_key.get("npc:cantina_owner", ""))
 
 	# The name floats over a guard when you walk up to them, not from across town.
 	var guard = demo.npcs[0]
@@ -95,7 +95,7 @@ func _run() -> void:
 	out("NAMEPLATE_FAR_AWAY", guard.nameplate_shown())
 	out("DEBUG_LINE_NAMED", guard.debug_text().begins_with(guard.display_name))
 
-	# The bartender is briefed with the place and the people.
+	# The cantina owner is briefed with the place and the people.
 	var builder := PromptBuilder.new({}, _json("res://content/core/llm/world_briefing.json"), {})
 	var world := cc.get_world(str(builder.world_text.get("world", "")))
 	var brief: Dictionary = builder.briefing({ "flags": {}, "standing": {}, "time": "golden", "events": [],

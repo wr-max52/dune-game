@@ -1,5 +1,5 @@
 extends SceneTree
-## M12 trace (headless): the live bartender, end to end.
+## M12 trace (headless): the live cantina owner, end to end.
 ##
 ##  Part 1, scripted providers (always): walk up, talk, and prove every rule with
 ##  recorded replies running through the real chain, parser, filter, validator,
@@ -20,7 +20,7 @@ const SAVE := "user://m12_trace_save.json"
 
 var demo
 var bar: BarScene
-var brain: BartenderBrain
+var brain: NpcBrain
 var A: ScriptedProvider
 var B: ScriptedProvider
 var lines := PackedStringArray()
@@ -206,7 +206,7 @@ func _run() -> void:
 	var s = load("res://src/systems/save/save_system.gd").new()
 	s.load_from(SAVE)
 	var rel := Relationship.new()
-	rel.from_save(s.get_relationship("bartender"))
+	rel.from_save(s.get_relationship("cantina_owner"))
 	out("SAVE_VERSION", int(s.data.get("version", 0)))
 	out("SAVED_TRUST_MATCHES", rel.trust == brain.rel.trust)
 	out("SAVED_KNOWN", ",".join(PackedStringArray(rel.known_rumors)))
@@ -266,7 +266,7 @@ func _live_turn(local_mode: String, ollama_mode: String, mode: String, text: Str
 	svc.configure(_cfg(local_mode, ollama_mode))
 	svc.set_mode(mode)
 	svc._recheck_left = 999.0          # no background health checks during the turn
-	var b := BartenderBrain.new(svc)
+	var b := NpcBrain.new(svc)
 	b.log_transcripts = false
 	b.begin_visit()
 	var deltas := [0]

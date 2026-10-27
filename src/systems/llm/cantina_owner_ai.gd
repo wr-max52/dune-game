@@ -1,5 +1,5 @@
 extends RefCounted
-## Bartender brain (M6). Pure, headless. This is the single LLM-driven NPC.
+## Cantina Owner brain (M6). Pure, headless. This is the single LLM-driven NPC.
 ##
 ## The brain talks to the LLM through a client (ScriptedClient in CI, OllamaClient
 ## live). A KEY GUARDRAIL: the player's typed text is READ but NEVER executed as a

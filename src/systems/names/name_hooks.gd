@@ -77,7 +77,7 @@ static func _place(world: Dictionary, what: String, key: String, book: NameBook)
 
 
 ## Everyone named so far whose key starts with `prefix` ("npc:"), as shown
-## (with titles). For the bartender's briefing: she knows the town's people.
+## (with titles). For the cantina owner's briefing: she knows the town's people.
 static func known(prefix: String, book: NameBook = null) -> PackedStringArray:
 	var b := book if book != null else WorldState.names
 	var out := PackedStringArray()

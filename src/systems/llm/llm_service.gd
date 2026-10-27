@@ -13,7 +13,7 @@ extends Node
 ## health check says it is down or its circuit is open (3 failures in 60 s opens it
 ## for 2 minutes). A provider that cannot connect, answers with an error, or does
 ## not produce a first token in time is abandoned for the next one (`fallback` is
-## emitted so the bartender can do a "thinking" beat). A stream that stalls after
+## emitted so the cantina owner can do a "thinking" beat). A stream that stalls after
 ## it started keeps what it said. When everything fails, finished() reports
 ## ok = false and the caller uses its canned lines.
 ##

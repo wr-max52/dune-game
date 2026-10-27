@@ -70,8 +70,8 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 		"duelist":
 			_dress_duelist(root, p)
 			default_pose = "ox_guard"
-		"bartender":
-			_dress_bartender(root, p)
+		"cantina_owner":
+			_dress_cantina_owner(root, p)
 			default_pose = "idle"
 		"player_smuggler":
 			_dress_smuggler(root, p)
@@ -342,7 +342,7 @@ func _rel(root: Node3D, node: Node3D) -> Transform3D:
 	return t
 
 
-## Public IK hook for runtime animators (player_avatar.gd, bartender_npc.gd).
+## Public IK hook for runtime animators (player_avatar.gd, cantina_owner_npc.gd).
 func reach(body: Node3D, side: String, target: Vector3, pole: Vector3) -> void:
 	_reach(body, side, target, pole)
 
@@ -631,14 +631,14 @@ func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_overrid
 	return sword
 
 
-# ------------------------------------------------------------------ bartender
+# ------------------------------------------------------------------ cantina owner
 
-## The cantina's bartender: a working outfit, not a costume. Rolled sleeves and an
+## The cantina's cantina_owner: a working outfit, not a costume. Rolled sleeves and an
 ## apron (she works), a mechanical left forearm (an old injury, a story she sells
 ## by the drink), goggles pushed up on a head wrap, a breather mask (faces stay
 ## covered), and a bar towel over the right shoulder. Her silhouette is the apron's
 ## long straight front against the counter.
-func _dress_bartender(body: Node3D, p: Dictionary) -> void:
+func _dress_cantina_owner(body: Node3D, p: Dictionary) -> void:
 	var vest := _m(_c(p, "vest"), "leather", 0.5)
 	var shirt := _m(_c(p, "shirt"), "cloth", 0.4)
 	var apron := _m(_c(p, "apron"), "leather", 0.7)
@@ -697,7 +697,7 @@ func _dress_bartender(body: Node3D, p: Dictionary) -> void:
 		_mi(head, _cyl(0.022, 0.022, 0.03, 8), g, Vector3(0.05 * sx, -0.07, 0.11), Vector3(90, 0, 0))   # filters
 
 
-## A glass and a rag: the bartender's props (the npc's animator moves her hands).
+## A glass and a rag: the cantina owner's props (the npc's animator moves her hands).
 func make_bar_glass() -> Node3D:
 	var root := Node3D.new()
 	root.name = "Glass"

@@ -2,7 +2,7 @@ class_name ActionValidator
 extends RefCounted
 ## The model proposes, the game decides (M12). Pure.
 ##
-## Every action in a reply is checked against what the bartender was actually
+## Every action in a reply is checked against what the cantina owner was actually
 ## shown this turn (the briefing) and against game rules. Anything that fails is
 ## dropped with a reason (the debug overlay shows them). The validator never
 ## invents: it only keeps or clamps.

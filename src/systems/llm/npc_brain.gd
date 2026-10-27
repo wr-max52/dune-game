@@ -1,6 +1,6 @@
-class_name BartenderBrain
+class_name NpcBrain
 extends RefCounted
-## The bartender's turn logic (M12). Replaces the M6 scaffold (bartender_ai.gd,
+## The cantina owner's turn logic (M12). Replaces the M6 scaffold (cantina_owner_ai.gd,
 ## kept only for the M6/M7 traces): this one actually sends the player's words to
 ## a model, streams the answer, and turns the model's proposals into game effects
 ## only after they pass the validator.
@@ -21,10 +21,10 @@ signal drink_poured(drink: Dictionary)
 signal ended(reason: String)
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
-const CARD_PATH := "res://content/core/npcs/bartender_card.json"
+const CARD_PATH := "res://content/core/npcs/cantina_owner_card.json"
 const BRIEF_PATH := "res://content/core/llm/world_briefing.json"
 const SCHEMA_PATH := "res://content/core/llm/reply_schema.json"
-const LOG_DIR := "user://logs/bartender"
+const LOG_DIR := "user://logs/cantina_owner"
 const BARK_AFTER_MS := 900
 
 var llm: LLMService
