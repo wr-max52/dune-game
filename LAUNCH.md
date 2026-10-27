@@ -40,6 +40,13 @@ machines; they are not yet bound to global input actions and are driven in the
 playthrough trace. Binding them to the GUI is the remaining polish before a live
 playtest.
 
+## The HUD (issue #52)
+
+The banner along the top shows the planet, the town, the clock and your credits; the
+footer shows health, stamina and jetpack fuel. **F1** (or a click on either, once Esc
+has freed the mouse) opens the info screen with your standing with every faction.
+**F11 > HUD** changes the HUD colour and lists every function key.
+
 ## The demo: the town, and flight from the pit (M9)
 
 ```sh

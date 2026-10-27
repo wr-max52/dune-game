@@ -25,6 +25,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	prompt = _label(-210.0)
+	RetroUI.prompt(prompt)
 	toast_label = _label(-250.0)
 	toast_label.visible = false
 	meter = Control.new()

@@ -435,16 +435,16 @@ func _build_hud() -> void:
 		c.color = Color(1, 0.92, 0.8, 0.85)
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_cross.add_child(c)
-	_ammo = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -70), 26)
-	_name = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -104), 18)
+	_ammo = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -114), 26)
+	_name = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -148), 18)
 	_stam = ProgressBar.new()
 	_stam.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_stam.position = Vector2(-220, -36)
+	_stam.position = Vector2(-220, -80)
 	_stam.size = Vector2(190, 10)
 	_stam.offset_left = -220
-	_stam.offset_top = -36
+	_stam.offset_top = -80
 	_stam.offset_right = -30
-	_stam.offset_bottom = -26
+	_stam.offset_bottom = -70
 	_stam.show_percentage = false
 	_stam.max_value = 100
 	_stam.mouse_filter = Control.MOUSE_FILTER_IGNORE

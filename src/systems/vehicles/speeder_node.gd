@@ -393,14 +393,14 @@ func _build_hud() -> void:
 	_hud.visible = false
 	add_child(_hud)
 	_readout = Label.new()
-	_readout.position = Vector2(18, 14)
+	_readout.position = Vector2(18, 54)
 	_readout.add_theme_font_size_override("font_size", 18)
 	_readout.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_readout.add_theme_constant_override("outline_size", 4)
 	_hud.add_child(_readout)
 	var help := Label.new()
 	help.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	help.position = Vector2(-420, -90)
+	help.position = Vector2(-420, -100)
 	help.size = Vector2(840, 28)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	help.text = "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [Space / LMB] Lasers   [E] Get off"
@@ -419,6 +419,7 @@ func _build_hud() -> void:
 	_prompt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_prompt.add_theme_constant_override("outline_size", 4)
 	_prompt.visible = false
+	RetroUI.prompt(_prompt)
 	layer.add_child(_prompt)
 
 
