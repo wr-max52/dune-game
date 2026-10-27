@@ -136,7 +136,8 @@ func _run() -> void:
 	out("HULL_SOLID_PARKED", not pilot.hull.get_child(0).disabled)
 	out("TAKEOFF", pilot.takeoff())
 	await frames(2)
-	out("HULL_OFF_IN_FLIGHT", pilot.hull.get_child(0).disabled)
+	# Issue #55: the hull flies with the ship, so the garrison's bolts can hit it.
+	out("HULL_SOLID_IN_FLIGHT", not pilot.hull.get_child(0).disabled)
 	var t0 := 0
 	for i in 600:
 		await physics_frame

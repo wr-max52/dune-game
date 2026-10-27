@@ -2,7 +2,10 @@ class_name CantinaDressing
 extends Node3D
 ## Visual dressing for the cantina (M12): a back bar with shelves and bottles, the
 ## framed card deck, taps on the counter, stools, and warm hanging lamps. Visual
-## only: no collision, so the M9 walk routes and validation are untouched. Every
+## only: no collision, so the M9 walk routes and validation are untouched.
+## Issue #55: the room was too dark (six small lamps in a 31 x 27 m hall), so the
+## hanging lamps reach further and a soft warm fill hangs under the roof. Indoor
+## lights: on day and night, not driven by the time of day. Every
 ## position is derived from the bar_counter and cantina wall boxes in the town data.
 ##
 ## Issue #47: every drink the player pays for, the Cantina Owner sets a bottle on
@@ -14,6 +17,10 @@ const SERVED_MAX := 12
 const SERVED_GAP := 0.2
 
 var mats: LookMaterials
+const LAMP_ENERGY := 3.2
+const FILL_ENERGY := 1.1
+
+var fills: Array[OmniLight3D] = []   ## issue #55: the room's fill lights
 var served: Array = []               ## bottles on the counter, oldest first
 var served_count := 0                ## every bottle ever set down (picks the next slot)
 var _colors_given := 0
@@ -103,12 +110,39 @@ func dress(town, materials: LookMaterials) -> void:
 		add_child(bulb)
 		var l := OmniLight3D.new()
 		l.light_color = Color("#ffb070")
-		l.light_energy = 2.2
-		l.omni_range = 7.0
-		l.omni_attenuation = 1.4
+		l.light_energy = LAMP_ENERGY
+		l.omni_range = 10.0
+		l.omni_attenuation = 1.0
 		l.shadow_enabled = false
 		l.position = p + Vector3(0, -0.25, 0)
 		add_child(l)
+	_add_fill(town, back_x, ceiling)
+
+
+## Soft warm light from under the roof over the four quarters of the room, so the
+## corners and tables read without lifting the bar's pools of light.
+func _add_fill(town, west_x: float, ceiling: float) -> void:
+	var east: Dictionary = town.get_box("cantina_wall_e_s")
+	var north: Dictionary = town.get_box("cantina_wall_n")
+	var south: Dictionary = town.get_box("cantina_wall_s")
+	if east.is_empty() or north.is_empty() or south.is_empty():
+		return
+	var x0 := west_x
+	var x1 := float(east.min[0])
+	var z0 := float(south.max[2])
+	var z1 := float(north.min[2])
+	for fx in [0.25, 0.75]:
+		for fz in [0.25, 0.75]:
+			var l := OmniLight3D.new()
+			l.name = "CantinaFill"
+			l.light_color = Color("#ffc890")
+			l.light_energy = FILL_ENERGY
+			l.omni_range = maxf(x1 - x0, z1 - z0) * 0.6
+			l.omni_attenuation = 0.8
+			l.shadow_enabled = false
+			l.position = Vector3(lerpf(x0, x1, fx), ceiling - 1.5, lerpf(z0, z1, fz))
+			add_child(l)
+			fills.append(l)
 
 
 # ------------------------------------------------------------------ served bottles

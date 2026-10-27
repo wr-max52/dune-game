@@ -16,6 +16,9 @@ extends Node
 ## what they do: "gate" (on the checkpoint), "sentry" (the tower: never leaves it),
 ## "yard" (barracks troopers: patrol, then run to the fight on the alarm).
 ##
+## Issue #55: a speeder ridden into town, or a ship lifting off in it, is hostile:
+## the first trooper to notice it sounds the alarm and the garrison shoots its hull.
+##
 ## It also owns: the choice card, subtitles and health bar (CheckpointHud), the
 ## alarm klaxon, confiscating what a search turns up, and what happens when the
 ## player is downed (knocked out, dragged to the pit, robbed a little).
@@ -104,6 +107,7 @@ func setup(town_demo, all: Array) -> void:
 		b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
 		b.post_facing = g.post_facing
 		brains[g] = b
+		g.sees_vehicles = true
 		g.died.connect(_on_guard_died.bind(g))
 		g.hit_by.connect(_on_guard_hit.bind(g))
 		i += 1
@@ -159,13 +163,15 @@ func _physics_process(dt: float) -> void:
 		if ppos != Vector3.INF:
 			nearest = minf(nearest, g.global_position.distance_to(ppos))
 	var night := (profile.get("checkpoint", {}).get("night_times", ["dusk"]) as Array).has(WorldState.time_of_day)
+	var vehicle := _hostile_vehicle()
 
 	# The gate.
 	var gate_alive := alive.filter(func(g): return guards.has(g))
 	checkpoint.update(dt, {
 		"standing": int(WorldState.standing.get("imperial_remnant", 0)), "night": night,
 		"credits": WorldState.credits, "player_pos": ppos, "gate_pos": gate_pos, "gate_x": gate_pos.x,
-		"noticed": gate_noticed and _ko_left <= 0.0,
+		# Nobody asks a speeder for its papers: that is the alarm's business.
+		"noticed": gate_noticed and _ko_left <= 0.0 and vehicle == null,
 		"armed": player_armed.call() if player_armed.is_valid() else false,
 		# Hurting a trooper is the garrison's alarm (below), not a gate matter.
 		"recent_shot": recent_shot, "attacked": false,
@@ -176,6 +182,12 @@ func _physics_process(dt: float) -> void:
 	# The rest of the garrison: a remembered face, or a wanted one by daylight.
 	if not alarm.active() and ppos != Vector3.INF and _ko_left <= 0.0:
 		_watch_for_trouble(dt, alive, night)
+	if vehicle != null and not alarm.active():
+		for g in alive:
+			if g.perception.noticed:
+				_say(g, "contact")
+				_raise("vehicle")
+				break
 	if _attacked:
 		_raise("attacked")
 	_attacked = false
@@ -251,7 +263,11 @@ func _order_brains() -> void:
 
 func _run_brain(g: NpcBody, dt: float, ppos: Vector3) -> void:
 	var b: GuardBrain = brains[g]
-	g.brief(b, ppos, player.velocity if ppos != Vector3.INF else Vector3.ZERO)
+	var vel := Vector3.ZERO
+	if ppos != Vector3.INF:
+		var v := _hostile_vehicle()
+		vel = v.threat_velocity() if v != null else player.velocity
+	g.brief(b, ppos, vel)
 	b.update(dt)
 	if b.want_cover:
 		b.want_cover = false
@@ -456,7 +472,7 @@ func choose(id: String) -> bool:
 # ------------------------------------------------------------------ troopers
 
 func _on_guard_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
-	if shooter == player:
+	if _is_player(shooter):
 		_attacked = true
 		brains[g].notify_hit()
 	elif shooter != null:
@@ -520,10 +536,35 @@ func _wake_in_pit() -> void:
 	hud.toast("You wake up in the pit. They took %d cr." % taken, 4.0)
 
 
+## Where the garrison's target is: the player on foot, or the speeder / ship they
+## are in while it is a threat in town (it carries the player's position). INF
+## for nobody to fight.
 func _player_pos() -> Vector3:
-	if player == null or not is_instance_valid(player) or player.get("piloting") == true or _ko_left > 0.0:
+	if player == null or not is_instance_valid(player) or _ko_left > 0.0:
+		return Vector3.INF
+	if player.get("piloting") == true and _hostile_vehicle() == null:
 		return Vector3.INF
 	return player.global_position
+
+
+## Issue #55: the speeder or ship the player is in, while it is hostile in town.
+func _hostile_vehicle() -> Node:
+	if player == null or not is_instance_valid(player) or player.get("piloting") != true:
+		return null
+	var v = player.get("vehicle")
+	if v == null or not is_instance_valid(v) or not v.hostile_in_town():
+		return null
+	return v
+
+
+## The player, or a bolt from the speeder or ship they are in.
+func _is_player(shooter: Node) -> bool:
+	if shooter == null:
+		return false
+	if shooter == player:
+		return true
+	var v = player.get("vehicle") if player != null and is_instance_valid(player) else null
+	return v != null and is_instance_valid(v) and shooter == v.hull_body()
 
 
 func _hp_hud(hurt: bool) -> void:

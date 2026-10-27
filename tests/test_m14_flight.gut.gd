@@ -55,10 +55,10 @@ func test_the_pit_ship_is_boarded_not_quick_launched() -> void:
 	_true("BOARD_AGAIN")
 
 
-func test_the_ship_is_solid_parked_and_not_in_flight() -> void:
+func test_the_ship_is_solid_parked_and_in_flight() -> void:
 	_true("PAD_BOX_RETIRED", "the static pad box would stay behind as an invisible wall")
 	_true("HULL_SOLID_PARKED")
-	_true("HULL_OFF_IN_FLIGHT")
+	_true("HULL_SOLID_IN_FLIGHT", "issue #55: bolts hit it in the air")
 	_true("HULL_SOLID_IN_DESERT")
 	_true("SHIP_IS_SOLID", "walking into the parked ship stops you")
 

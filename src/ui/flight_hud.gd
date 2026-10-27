@@ -69,12 +69,16 @@ func _center_label(from_bottom: float) -> Label:
 	return l
 
 
-## values: speed, throttle (0..1), boost (0..1), agl, altitude, climb, space_fraction, state
+## values: speed, throttle (0..1), boost (0..1), agl, altitude, climb, space_fraction, state,
+## and (issue #55) hull, hull_max, shield
 func show_values(v: Dictionary) -> void:
 	if readout == null:
 		return
 	var spd := float(v.get("speed", 0.0))
-	readout.text = ("%s\n" % vessel_name.to_upper() if vessel_name != "" else "") + "SPEED  %4d m/s   %5d km/h\nTHR    %3d%%      BOOST %3d%%\nALT    %6d m    AGL %5d m\nCLIMB  %+5d m/s\n%s" % [
+	var hull := ""
+	if v.has("hull"):
+		hull = "HULL   %4d / %d   SHLD %3d\n" % [int(v.hull), int(v.get("hull_max", 0)), int(v.get("shield", 0))]
+	readout.text = ("%s\n" % vessel_name.to_upper() if vessel_name != "" else "") + hull + "SPEED  %4d m/s   %5d km/h\nTHR    %3d%%      BOOST %3d%%\nALT    %6d m    AGL %5d m\nCLIMB  %+5d m/s\n%s" % [
 		int(spd), int(spd * 3.6), int(float(v.get("throttle", 0.0)) * 100.0), int(float(v.get("boost", 0.0)) * 100.0),
 		int(float(v.get("altitude", 0.0))), int(maxf(0.0, float(v.get("agl", 0.0)))), int(float(v.get("climb", 0.0))),
 		str(v.get("state", ""))]
