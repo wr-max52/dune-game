@@ -2,13 +2,15 @@ class_name DroidMenu
 extends CanvasLayer
 ## A numbered pick list (issue #51): the droid merchant, a cargo droid's hold, and
 ## "you already run three droids: sell one?". Keys 1-9 pick, Esc walks away. No
-## game logic: the caller hands it the options and a callback.
+## game logic: the caller hands it the options and a callback. Issue #58: an
+## optional body (what T-89 is saying) sits between the title and the options.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
 
 var panel: PanelContainer
 var title_label: Label
+var body_label: Label
 var list: VBoxContainer
 var options: Array = []           ## [{ id, text }]
 var on_pick: Callable             ## (id: String) -> void; "" = walked away
@@ -35,6 +37,12 @@ func _ready() -> void:
 	title_label.add_theme_font_size_override("font_size", 20)
 	title_label.add_theme_color_override("font_color", AMBER)
 	box.add_child(title_label)
+	body_label = Label.new()
+	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body_label.custom_minimum_size = Vector2(520, 0)
+	body_label.add_theme_font_size_override("font_size", 17)
+	body_label.add_theme_color_override("font_color", INK)
+	box.add_child(body_label)
 	list = VBoxContainer.new()
 	box.add_child(list)
 	panel.visible = false
@@ -44,13 +52,15 @@ func is_open() -> bool:
 	return panel != null and panel.visible
 
 
-func open(title: String, opts: Array, pick: Callable) -> void:
+func open(title: String, opts: Array, pick: Callable, body: String = "") -> void:
 	options = opts.slice(0, 9)
 	on_pick = pick
 	rows.clear()
 	if panel == null:
 		return
 	title_label.text = title
+	body_label.text = body
+	body_label.visible = body != ""
 	for c in list.get_children():
 		c.queue_free()
 	for i in options.size():

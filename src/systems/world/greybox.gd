@@ -10,6 +10,7 @@ const KIND_COLORS := {
 	"cover":    Color(0.85, 0.60, 0.35),
 	"counter":  Color(0.60, 0.33, 0.18),
 	"ship":     Color(0.48, 0.55, 0.70),
+	"pad":      Color(0.40, 0.38, 0.36),
 	"ramp":     Color(0.70, 0.70, 0.70),
 	"overhead": Color(0.45, 0.42, 0.38),
 	"roof":     Color(0.55, 0.50, 0.42),

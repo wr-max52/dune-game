@@ -1,0 +1,59 @@
+{
+  "id": "t89",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. It says hello once every time the game starts and offers the tutorial (controls and how things work, a page at a time). The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Read by src/systems/npc/ship_salesman.gd.",
+  "name": "T-89",
+  "marker": "t89",
+  "pad": "spare_pad",
+  "reach": 3.2,
+  "greet_delay": 1.5,
+  "look": {
+    "kind": "assassin",
+    "body": "#b8a37a",
+    "trim": "#3b3530",
+    "eye": "#7affd8"
+  },
+  "default_price": 1500,
+  "resale_rate": 0.6,
+  "prices": {
+    "courier": 900,
+    "interceptor": 1200,
+    "gunship": 1800,
+    "freighter": 2400
+  },
+  "greeting": "Hello, pilot! T-89, at your service. Welcome to the pit.",
+  "offer_tutorial": "New in port? I can walk you through the basics. It only takes a minute.",
+  "tutorial": [
+    "Walking first. W A S D to move, Shift to run, Space to jump, C to crouch. The mouse looks around; V swaps between first and third person.",
+    "You are already armed: I checked. 1 is your blaster pistol, 2 your energy blade, 3 your rifle. The mouse wheel cycles them, Q goes back to the last one, H puts them away.",
+    "Left mouse fires the blasters, or swings the blade. Right mouse aims down a blaster's sights. With the blade out, right mouse blocks: block a bolt at the right moment and it goes back where it came from. R reloads.",
+    "A word of advice: the Remnant at the gate do not like drawn weapons. Holster with H before you walk past them, unless you want a fight.",
+    "E does most things here: talk, pick things up, trade, board a ship. The cantina owner will talk about anything. Market stalls buy and sell gear. I opens your inventory, G puts gear like a jetpack on or takes it off. With a jetpack on, hold Space in the air.",
+    "Your ship is on the pad beside you. E boards it, Space lifts off. W and S pitch, A and D turn, Q and E roll, R and F set the throttle, Shift is the ship's trick, left mouse the guns. C lands on whatever is below.",
+    "Climb high enough and you leave the atmosphere. Raiders like to wait up there: fight them off for a payout, or dive back down to break away. Crash, and your ship is towed home.",
+    "F1 shows where you are, your credits and who likes you. F11 holds the settings. The droid merchant in the market sells companions, if you want one.",
+    "And when one ship is not enough, come and see me. That empty pad across the pit is yours: any ship I sell you lands right there. That is all. Good luck out there, pilot!"
+  ],
+  "lines": {
+    "hello_again": "Back again, pilot? Looking for a new ship?",
+    "pad_taken": "Your pad already holds your %s. Sell it back to me first.",
+    "bought": "A fine choice. Your %s is on the pad across the pit.",
+    "sold": "Pleasure doing business. %d credits are yours.",
+    "cant_afford": "The %s is %d credits. You have %d. Come back richer!",
+    "flying_it": "You are flying your %s right now. Land it before you sell it.",
+    "skipped": "Suit yourself. I am right here if you need me."
+  },
+  "labels": {
+    "talk": "[E] Talk to %s",
+    "menu_title": "%s  -  you have %d cr",
+    "yes_tutorial": "Yes, show me the basics",
+    "no_tutorial": "No thanks, I know my way around",
+    "next": "Next",
+    "done": "Thanks, T-89",
+    "skip": "Skip the rest",
+    "buy": "Buy a %s  (%d cr)",
+    "buy_taken": "Buy a %s  (%d cr)  - pad taken",
+    "sell": "Sell back your %s  (+%d cr)",
+    "tutorial": "Run me through the basics again",
+    "event_bought": "Someone bought a %s from the droid in the pit."
+  }
+}
