@@ -21,6 +21,13 @@ Every significant technical choice, the alternative, and why. Newest on top.
   only its bob), because the controller moves the droid. The eye and muzzle ride
   the head and hand bones. Alternative: retarget the CharacterKit animator onto it,
   as the guards do. Rejected: the droid has no kit joints, and stock clips were one call.
+- **The fused pistol is cut out, not regenerated.** The owner's pick was generated
+  holding a gun. Prep drops right-hand triangles further than 0.16 m from the
+  wrist (`cut`), and DroidKit pins the pistol model to the hand bone. Its place in
+  the bone's frame (`carry.bone_local`) was solved so it sits level and forward
+  in the idle clip. Alternative: a new generation without the gun. Rejected: text
+  mode would not give the same droid back. T-89 uses the same model without the
+  pistol, and the extra HappyIdle clip from a second rigging run as his idle.
 - **Droids follow with a leash.** A droid starts closing the gap only once the
   player is `leash` metres away, and stops inside `settle` of its slot. Before, it
   chased its slot every frame, so any step the player took moved every droid.

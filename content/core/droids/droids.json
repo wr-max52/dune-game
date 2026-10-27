@@ -155,23 +155,51 @@
           ]
         ],
         "eye_radius": 0.03,
-        "muzzle": [
-          0.6,
-          1.12,
-          -0.33
-        ],
         "anims": {
           "idle": "HumanOffensiveIdle",
           "walk": "HumanWalking",
           "run": "HumanRunning",
-          "die": "HumanStandingDeathBackward01"
+          "die": "HumanStandingDeathBackward01",
+          "calm": "HumanHappyIdle"
         },
         "walk_speed": 1.6,
         "run_speed": 5.0,
         "run_from": 3.5,
         "eye_bone": "Head",
-        "muzzle_bone": "RightHand",
-        "root_bone": "Hips"
+        "root_bone": "Hips",
+        "carry": {
+          "scene": "res://assets/gear/pistol.glb",
+          "bone": "RightHand",
+          "pos": [
+            0.5,
+            1.08,
+            -0.19
+          ],
+          "rot_deg": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1.25,
+          "muzzle": [
+            0.0,
+            0.058,
+            0.165
+          ],
+          "bone_local": {
+            "pos": [
+              0.081,
+              0.096,
+              -0.057
+            ],
+            "rot_deg": [
+              -26.0,
+              103.7,
+              -168.0
+            ],
+            "scale": 1.03
+          }
+        }
       }
     }
   },

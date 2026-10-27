@@ -96,7 +96,7 @@ func _build_body() -> void:
 	body.add_child(cs)
 	var look_cfg: Dictionary = cfg.get("look", {})
 	var mats: LookMaterials = demo._flat_mats() if demo.has_method("_flat_mats") else LookMaterials.new()
-	var look := DroidKit.build(str(look_cfg.get("kind", "assassin")), look_cfg, mats)
+	var look := DroidKit.build(str(look_cfg.get("kind", "assassin")), look_cfg, mats, model_look(look_cfg))
 	_disarm(look)
 	body.add_child(look)
 	DroidKit.set_awake(look, true)
@@ -107,7 +107,19 @@ func _build_body() -> void:
 		_face(Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2])) - pos)
 
 
+## Issue #25: his kind's model (the rigged assassin), with nothing in his hand and
+## the relaxed idle ("calm") instead of the ready stance.
+static func model_look(look_cfg: Dictionary) -> Dictionary:
+	var m: Dictionary = DroidRoster.kind_cfg(str(look_cfg.get("kind", "assassin"))).get("look", {}).duplicate(true)
+	m.erase("carry")
+	var anims: Dictionary = m.get("anims", {})
+	if anims.has("calm"):
+		anims["idle"] = anims["calm"]
+	return m
+
+
 ## No pistol: the assassin frame's gun arm keeps only its arm, and lets it hang.
+## (The primitive frame only; the model carries nothing for him.)
 static func _disarm(look: Node3D) -> void:
 	var arm := look.find_child("GunArm", true, false) as Node3D
 	if arm == null:

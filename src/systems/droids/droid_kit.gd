@@ -66,8 +66,29 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 		var a: Array = look.muzzle
 		mz.position = Vector3(float(a[0]), float(a[1]), float(a[2]))
 		model.add_child(mz)
-	# A rig carries its eyes on the head bone and the muzzle on the hand, so they
-	# move with the clips (look.eye_bone, look.muzzle_bone).
+	# A carried weapon (look.carry: scene, pos, rot_deg, scale, muzzle): placed in
+	# model space for the rest pose, then pinned to its bone below. Its muzzle is
+	# the droid's.
+	var carry: Dictionary = look.get("carry", {})
+	if not carry.is_empty() and ResourceLoader.exists(str(carry.get("scene", ""))):
+		var w: Node3D = (load(str(carry.scene)) as PackedScene).instantiate()
+		w.name = "Carry"
+		var cp: Array = carry.get("pos", [0, 0, 0])
+		var cr: Array = carry.get("rot_deg", [0, 0, 0])
+		w.position = Vector3(float(cp[0]), float(cp[1]), float(cp[2]))
+		w.rotation_degrees = Vector3(float(cr[0]), float(cr[1]), float(cr[2]))
+		w.scale = Vector3.ONE * float(carry.get("scale", 1.0))
+		model.add_child(w)
+		var old := model.get_node_or_null("Muzzle")
+		if old != null:
+			old.free()
+		var mz := Node3D.new()
+		mz.name = "Muzzle"
+		var cm: Array = carry.get("muzzle", [0, 0, 0.2])
+		mz.position = Vector3(float(cm[0]), float(cm[1]), float(cm[2]))
+		w.add_child(mz)
+	# A rig carries its eyes on the head bone and its weapon on the hand, so they
+	# move with the clips (look.eye_bone, look.carry.bone).
 	var sk := n.find_child("Skeleton3D", true, false) as Skeleton3D
 	if sk != null:
 		for c in model.get_children():
@@ -76,8 +97,20 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 				bone = str(look.get("eye_bone", ""))
 			elif c.name == "Muzzle":
 				bone = str(look.get("muzzle_bone", ""))
+			elif c.name == "Carry":
+				bone = str(carry.get("bone", ""))
 			if bone != "" and sk.find_bone(bone) >= 0:
 				_pin_to_bone(c as Node3D, model, sk, bone)
+		# carry.bone_local { pos, rot_deg, scale }: the weapon's place in the bone's own
+		# frame, solved so it sits level and forward in the clips (tools: see DECISIONS).
+		var w := model.find_child("Carry", true, false) as Node3D
+		var bl: Dictionary = carry.get("bone_local", {})
+		if w != null and not bl.is_empty():
+			var bp: Array = bl.get("pos", [0, 0, 0])
+			var br: Array = bl.get("rot_deg", [0, 0, 0])
+			w.position = Vector3(float(bp[0]), float(bp[1]), float(bp[2]))
+			w.rotation_degrees = Vector3(float(br[0]), float(br[1]), float(br[2]))
+			w.scale = Vector3.ONE * float(bl.get("scale", 1.0))
 	return true
 
 
@@ -95,7 +128,17 @@ static func _pin_to_bone(node: Node3D, model: Node3D, sk: Skeleton3D, bone: Stri
 	while p != model and p != null:
 		sk_in_model = (p as Node3D).transform * sk_in_model
 		p = p.get_parent()
-	var bone_in_model := sk_in_model * sk.get_bone_global_rest(sk.find_bone(bone))
+	# Where the bone was when the mesh was modelled (the skin's bind pose), not the
+	# skeleton's rest (a T-pose): what is placed in model space lines up with the mesh.
+	var bone_in_skel := sk.get_bone_global_rest(sk.find_bone(bone))
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.skin == null:
+			continue
+		for b in mi.skin.get_bind_count():
+			if mi.skin.get_bind_name(b) == bone or mi.skin.get_bind_bone(b) == sk.find_bone(bone):
+				bone_in_skel = mi.skin.get_bind_pose(b).affine_inverse()
+		break
+	var bone_in_model := sk_in_model * bone_in_skel
 	var at := bone_in_model.affine_inverse() * node.transform
 	model.remove_child(node)
 	att.add_child(node)

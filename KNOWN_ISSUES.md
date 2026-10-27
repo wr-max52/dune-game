@@ -21,9 +21,9 @@ and stands back up exactly as it was.
 - **Droid deaths are unchanged:** a destroyed droid still snaps flat (`_lay_down`).
 - **Floating droid legs:** the chosen model has four little legs and hovers 1.7 m
   up, as before.
-- **The assassin droid's pistol is part of its mesh,** so it does not aim. Bolts
-  leave from the right hand bone, wherever the clip has it.
-- **T-89 still uses the primitive assassin frame** (he has no gun to drop).
+- **The assassin droid's pistol follows the hand, not the aim.** It points forward
+  in idle and walk but swings up while running. Bolts leave its muzzle wherever the
+  clip has it. Its fist, where the baked-in gun was cut away, is a little ragged.
 - **The rifle's grips and muzzle were placed by eye** from the side view.
 
 ## After the sound library and music (2026-10-27, issue #16)
