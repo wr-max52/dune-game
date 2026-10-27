@@ -308,7 +308,12 @@
         }
       }
     ],
-    "note": "The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
+    "outpost_unit": {
+   "kind": "assassin",
+   "variant": "remnant",
+   "hp": 60
+  },
+  "note": "Issue #64: outpost_unit is the assassin droid each desert outpost keeps (walking the outpost's 'patrol' points). The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
   },
   "labels": {
     "trade": "[E] Trade droids with the %s",

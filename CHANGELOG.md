@@ -2,6 +2,16 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The main story line and three Remnant outposts (2026-10-27, issue #64)
+
+- **A main quest.** T-89 in the pit sends you to Oda. Oda sends you to the practice range (knock all five targets down), then gives you two smuggling runs. On the first one she lends you her old jetpack if she is amused or warm. Then she tells you about Skrugs's speeders and a bounty on a Remnant officer at a desert outpost. Kill the officer and the fence in the market pays the bounty.
+- **The Remnant fleet.** After the bounty, Oda tells you about a Remnant fleet in orbit, and the port's ships unlock ("the pilots leave their keys in them"). Until then, boarding a ship says it is locked. Win the space fight and you get 5000 credits.
+- **After the fleet.** The garrison leaves town. What is left of the Remnant holds the desert outposts and shoots on sight. Oda keeps offering smuggling runs and bounty contracts on repeat. Each contract names a red Remnant officer and their crime and puts them at one of the outposts. Kill them, then collect a big payout from the fence.
+- **Three Remnant outposts** out the front gate, near (about 150 m), mid (about 360 m) and far (about 620 m). Each has one dark grey, black and red building, a parked cargo ship, two troopers and an assassin droid. Each is a little different: the building's size, the ship, a comms mast, a lookout tower. Dead troopers and droids come back after 3 minutes.
+- **Respawns in town.** Until the fleet is beaten, a Remnant trooper or droid killed in town comes back behind the barracks a minute later and walks back to its post.
+- **Reset story** (F11, Story tab). Starts again from the beginning: credits, gear, droids, the bought ship, flags, standing and what every character thinks of you. Names are kept. The Story tab also shows the current chapter and can skip to any chapter.
+- Story text lives in `content/core/story/main.json`; the code is `src/systems/flow/story.gd` and `src/systems/world/remnant_outposts.gd`. New tests are in `tests/test_story.gut.gd`.
+
 ## Gear and droid models, ragdoll deaths (2026-10-27, issue #25)
 
 - **New Hyper3D models** (prompts written against `docs/ART_DIRECTION.md`, kept in `docs/items/HYPER3D_PROMPTS.md`):

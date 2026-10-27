@@ -103,6 +103,12 @@ func begin_visit() -> String:
 	return line
 
 
+## Issue #64: the story's line instead of the greeting begin_visit() picked.
+func replace_greeting(line: String) -> void:
+	if not history.is_empty():
+		history[history.size() - 1] = { "role": "assistant", "content": JSON.stringify({ "say": line, "then": [], "tone": rel.mood }) }
+
+
 ## The player walked off. Summarize the visit in the background (if online).
 func end_visit() -> void:
 	talking = false
@@ -153,6 +159,7 @@ func say(text: String) -> bool:
 		"flags": WorldState.flags, "standing": WorldState.standing, "time": WorldState.time_of_day,
 		"events": WorldState.events, "credits": WorldState.credits,
 		"place": _place(), "people": NameHooks.known("npc:"),
+		"story": Story.brief(id()),
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
 	_messages = built.messages

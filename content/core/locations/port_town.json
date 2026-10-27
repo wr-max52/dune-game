@@ -3441,6 +3441,16 @@
     13
    ],
    "note": "T-89, the ship salesman (issue #58): near the spawn, facing it, and further than a ship's board reach from every bay so E talks to him, not the ship."
+  },
+  {
+   "id": "remnant_respawn",
+   "pos": [
+    72,
+    0,
+    70.5
+   ],
+   "role": "waypoint",
+   "note": "Issue #64: behind the barracks hall, between it and the north wall. A Remnant trooper killed in town comes back here a minute later (while the garrison still holds the town) and walks back to its post."
   }
  ],
  "routes": [

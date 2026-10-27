@@ -11,6 +11,7 @@ const TownDecor := preload("res://src/systems/world/town_decor.gd")
 
 func before_each() -> void:
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64: the story unlocks the ships
 	ShipSalesman.greeted = false
 
 

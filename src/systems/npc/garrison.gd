@@ -56,6 +56,13 @@ var klaxon_left := 0.0
 
 ## Hooks a trace can replace (the greybox has no hand weapons).
 var player_armed: Callable
+## Issue #64: dead troopers come back. respawn_rule(NpcBody) -> { delay, at, ... }
+## or {} (stays dead); spawner(that entry) -> the new NpcBody, or null for not now.
+## The town scene sets both (town_demo.respawn_rule / respawn).
+var respawn_rule: Callable
+var spawner: Callable
+var respawns: Array = []          ## [{ t, ...rule }] waiting, soonest first
+var respawned := 0
 var knockout_s := 1.6             ## black screen before you wake in the pit
 
 ## Numbers the traces read.
@@ -99,18 +106,8 @@ func setup(town_demo, all: Array) -> void:
 	alarm = TownAlarm.new(gcfg.get("alarm", {}))
 	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
 	gate_pos = town.marker_pos("gate")
-	var i := 0
 	for g in members:
-		var b := GuardBrain.new(g.profile, 101 + i * 37)
-		var m: Dictionary = town.get_marker(g.post_id)
-		var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
-		b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
-		b.post_facing = g.post_facing
-		brains[g] = b
-		g.sees_vehicles = true
-		g.died.connect(_on_guard_died.bind(g))
-		g.hit_by.connect(_on_guard_hit.bind(g))
-		i += 1
+		_adopt(g)
 	# Cover anywhere in town: the yard troopers fight wherever the alarm takes them.
 	var b0 := TownNav.town_bounds(town)
 	spots = CoverPicker.candidates(town.boxes(), b0.get_center(), b0.size.length())
@@ -121,6 +118,50 @@ func setup(town_demo, all: Array) -> void:
 	if player != null and player.has_signal("downed"):
 		player.downed.connect(_on_player_downed)
 		player.hurt.connect(func(_a): _hp_hud(true))
+
+
+## A brain for one trooper: its patrol (its marker's route, else its post), its
+## senses on vehicles, and its death and hits wired to the garrison.
+func _adopt(g: NpcBody) -> void:
+	var b := GuardBrain.new(g.profile, 101 + brains.size() * 37)
+	var m: Dictionary = town.get_marker(g.post_id)
+	var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
+	b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
+	b.post_facing = g.post_facing
+	brains[g] = b
+	g.sees_vehicles = true
+	g.died.connect(_on_guard_died.bind(g))
+	g.hit_by.connect(_on_guard_hit.bind(g))
+
+
+## Issue #64: a trooper joins after setup (one come back from the dead, the
+## bounty target at an outpost). Gate guards join the checkpoint.
+func add_member(g: NpcBody) -> void:
+	if g == null or brains.has(g):
+		return
+	if not members.has(g):
+		members.append(g)          # (members may be the town's own npcs list, which has it already)
+	if str(g.profile.get("role", "gate")) == "gate":
+		guards.append(g)
+	_adopt(g)
+
+
+## And leaves (the garrison pulls out of town, a contract is called off).
+func remove_member(g: NpcBody) -> void:
+	members.erase(g)
+	guards.erase(g)
+	brains.erase(g)
+	claimed.erase(g)
+	_warn_left.erase(g)
+
+
+func _tick_respawns() -> void:
+	while not respawns.is_empty() and _clock >= float(respawns[0].t):
+		var r: Dictionary = respawns.pop_front()
+		var g = spawner.call(r) if spawner.is_valid() else null
+		if g != null:
+			respawned += 1
+			add_member(g)
 
 
 func _build_klaxon(gcfg: Dictionary) -> void:
@@ -143,6 +184,7 @@ func _physics_process(dt: float) -> void:
 	if checkpoint == null or player == null:
 		return
 	_clock += dt
+	_tick_respawns()
 	_check_spots()
 	_tick_locks(dt)
 	_tick_klaxon(dt)
@@ -208,7 +250,8 @@ func _physics_process(dt: float) -> void:
 ## the garrison remembers, and they know who is wanted on sight (by day).
 func _watch_for_trouble(dt: float, alive: Array, night: bool) -> void:
 	var standing := int(WorldState.standing.get("imperial_remnant", 0))
-	var wanted := checkpoint.base_band(standing) == "hostile" and not night
+	# Issue #64: after the fleet is beaten, what is left of them shoots on sight.
+	var wanted := (checkpoint.base_band(standing) == "hostile" and not night) or Story.remnant_hostile()
 	for g in alive:
 		if guards.has(g) or not bool(g.profile.get("alarm", {}).get("raise_on_hostile_sight", false)):
 			continue
@@ -482,6 +525,11 @@ func _on_guard_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
 func _on_guard_died(g: NpcBody) -> void:
 	kills += 1
 	claimed.erase(g)
+	var r: Dictionary = respawn_rule.call(g) if respawn_rule.is_valid() else {}
+	if not r.is_empty():
+		r["t"] = _clock + float(r.get("delay", 60.0))
+		respawns.append(r)
+		respawns.sort_custom(func(a, b): return float(a.t) < float(b.t))
 	var left := _alive()
 	var delta := int(g.profile.get("checkpoint", profile.get("checkpoint", {})).get("standing", {}).get("guard_killed", -15))
 	WorldState.on_guard_killed(delta, left.filter(func(x): return guards.has(x)).is_empty())

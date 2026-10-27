@@ -243,10 +243,20 @@ func start_talk(s: TalkSpot = null) -> void:
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var greeting := s.brain.begin_visit()
+	# Issue #64: the story speaks first when it has something to say.
+	var beat := Story.beat(s.id())
+	if not beat.is_empty():
+		greeting = str(beat.say)
+		s.brain.replace_greeting(greeting)
 	panel.open(s.display_name(), greeting)
 	panel.set_notice(Disclaimers.talk_text(s.display_name()))   # issue #29
 	panel.set_mood(s.brain.rel.mood)
 	panel.set_money(WorldState.credits, s.brain.rel.tab)
+	if str(beat.get("job", "")) != "":
+		var j := WorldState.job(str(beat.job))
+		if not j.is_empty():
+			panel.show_job(j)
+	_story_mood(s)
 	s.speak_pulse()
 
 
@@ -321,6 +331,7 @@ func _on_done(s: TalkSpot, turn: Dictionary) -> void:
 	if s != active:
 		return
 	panel.set_line(str(turn.say))
+	_story_mood(s)
 	panel.set_mood(s.brain.rel.mood + ("   (canned: no brain answered)" if str(turn.source) == "canned" else ""))
 	panel.set_money(WorldState.credits, s.brain.rel.tab)
 	panel.set_input_enabled(true)
@@ -343,6 +354,27 @@ func _on_job(s: TalkSpot, j: Dictionary) -> void:
 func _on_job_answer(id: String, accepted: bool) -> void:
 	if accepted and active != null and active.brain.accept_job(id):
 		_toast("Job taken: " + str(WorldState.job(id).get("title", id)))
+		_story_mood(active)
+
+
+## Issue #64: in the first smuggling run, Oda amused or warm lends the player her
+## jetpack. She says so, and it goes on their back if the slot is free.
+func _story_mood(s: TalkSpot) -> void:
+	if s == null or s.id() != "cantina_owner":
+		return
+	var said := Story.on_owner_mood(s.brain.rel.mood)
+	if said == "":
+		return
+	panel.set_line(said)
+	s.speak_pulse()
+	var gear = demo.gear if demo != null and "gear" in demo else null
+	if gear != null:
+		var item: Dictionary = gear.content.get_item(Story.JETPACK)
+		if WorldState.inventory.in_slot(str(item.get("slot", ""))) == "":
+			WorldState.inventory.attach(Story.JETPACK, item)
+		gear.sync_gear()
+		if gear.hud != null:
+			gear.hud.toast(Story.line("jetpack_toast"), 4.0)
 
 
 func _end_soon(_reason: String) -> void:

@@ -188,7 +188,7 @@ func greet() -> void:
 	greeted = true
 	_greet_left = -1.0
 	_beep()
-	_open(str(cfg.get("greeting", "")) + "\n\n" + str(cfg.get("offer_tutorial", "")),
+	_open(str(cfg.get("greeting", "")) + _story_line() + "\n\n" + str(cfg.get("offer_tutorial", "")),
 		[{ "id": "yes", "text": _l("yes_tutorial") }, { "id": "no", "text": _l("no_tutorial") }], _on_offer)
 
 
@@ -204,7 +204,13 @@ func talk() -> void:
 	_beep()
 	var opts := shop_options()
 	opts.append({ "id": "tutorial", "text": _l("tutorial") })
-	_open(_line("hello_again"), opts, _on_shop)
+	_open(_line("hello_again") + _story_line(), opts, _on_shop)
+
+
+## Issue #64: while the story starts with him, he sends you to Oda.
+func _story_line() -> String:
+	var b := Story.beat("t89")
+	return " " + str(b.say) if not b.is_empty() else ""
 
 
 func _open(text: String, opts: Array, pick: Callable) -> void:

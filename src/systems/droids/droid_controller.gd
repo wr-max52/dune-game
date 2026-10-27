@@ -11,7 +11,11 @@ extends Node3D
 ##     beside one fixes it, and it follows you,
 ##   - the range remote follows you once you block its bolts five times in a row,
 ##   - the Remnant's own two droids patrol the main street, call the alarm and
-##     fight when the garrison would.
+##     fight when the garrison would,
+##   - issue #64: each desert outpost keeps an assassin droid walking round it
+##     (RemnantOutposts.droid_specs). Destroyed Remnant droids come back like the
+##     troopers do (behind the barracks / at their outpost); after the fleet is
+##     beaten the town's two are gone and the outposts' shoot on sight.
 ## Up to max_owned droids: a fourth asks which one to sell to make room.
 ## Words, prices and tuning: content/core/droids/droids.json. Looks: DroidKit.
 ##
@@ -519,20 +523,73 @@ func _enemy_near(u: DroidUnit, reach: float) -> Node3D:
 func _build_remnant() -> void:
 	var rc: Dictionary = cfg.get("remnant", {})
 	var pts: Array = rc.get("patrol", [])
-	if pts.is_empty():
+	if not pts.is_empty() and Story.town_garrison():
+		var route: Array = pts.map(func(p): return _v3(p))
+		for spec in rc.get("units", []):
+			var sp: Dictionary = spec.duplicate()
+			sp["patrol"] = route
+			_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+	var outposts = demo.outposts if demo != null and "outposts" in demo else null
+	if outposts == null:
 		return
-	for spec in rc.get("units", []):
-		var u := _make_unit(str(spec.kind), str(spec.get("variant", "remnant")))
-		u.faction = str(rc.get("faction", "imperial_remnant"))
-		u.max_hp = float(spec.get("hp", 40))
-		u.hp = u.max_hp
-		u.gun = spec.get("gun", DroidRoster.kind_cfg(str(spec.kind)).get("gun", {}))
-		u.patrol_i = int(spec.get("start", 0)) % pts.size()
-		add_child(u)
-		var p := _v3(pts[u.patrol_i])
-		u.global_position = Vector3(p.x, _ground_y(p), p.z)
-		DroidKit.set_awake(u.look, true)
-		remnant.append(u)
+	var oc: Dictionary = rc.get("outpost_unit", {})
+	for o in outposts.droid_specs():
+		if (o.patrol as Array).is_empty():
+			continue
+		var sp: Dictionary = oc.duplicate()
+		sp["patrol"] = o.patrol
+		sp["outpost"] = o.outpost
+		_spawn_remnant(sp, 0)
+
+
+## One of the Remnant's droids from its spec ({ kind, variant, hp, gun, patrol:
+## [Vector3], outpost }), standing at patrol point `start`.
+func _spawn_remnant(spec: Dictionary, start: int, at := Vector3.INF) -> DroidUnit:
+	var rc: Dictionary = cfg.get("remnant", {})
+	var u := _make_unit(str(spec.get("kind", "assassin")), str(spec.get("variant", "remnant")))
+	u.faction = str(rc.get("faction", "imperial_remnant"))
+	u.max_hp = float(spec.get("hp", 40))
+	u.hp = u.max_hp
+	u.gun = spec.get("gun", DroidRoster.kind_cfg(u.kind).get("gun", {}))
+	u.spec = spec
+	u.patrol = spec.get("patrol", [])
+	u.patrol_i = start % maxi(1, u.patrol.size())
+	add_child(u)
+	var p: Vector3 = at if at != Vector3.INF else (u.patrol[u.patrol_i] if not u.patrol.is_empty() else Vector3.ZERO)
+	u.global_position = Vector3(p.x, _ground_y(p), p.z)
+	DroidKit.set_awake(u.look, true)
+	remnant.append(u)
+	return u
+
+
+## Issue #64: the fleet is beaten; the town's droids leave with the garrison.
+func withdraw_town_remnant() -> void:
+	for u in remnant.duplicate():
+		if not u.spec.has("outpost"):
+			remnant.erase(u)
+			u.queue_free()
+
+
+## A destroyed Remnant droid comes back: in town behind the barracks a minute
+## later while the garrison holds the town, at its outpost after a few minutes.
+func _tick_remnant_respawns(dt: float) -> void:
+	for u in remnant.duplicate():
+		if not u.dead or u.respawn_left < 0.0:
+			continue
+		u.respawn_left -= dt
+		if u.respawn_left > 0.0:
+			continue
+		var at := Vector3.INF
+		if not u.spec.has("outpost"):
+			if not Story.town_garrison():
+				u.respawn_left = -1.0
+				continue
+			var mk := str(Story.remnant_cfg().get("town_respawn_marker", "remnant_respawn"))
+			if demo != null and not demo.town.get_marker(mk).is_empty():
+				at = demo.town.marker_pos(mk)
+		remnant.erase(u)
+		u.queue_free()
+		_spawn_remnant(u.spec, u.patrol_i, at)
 
 
 func _garrison():
@@ -542,7 +599,7 @@ func _garrison():
 ## They turn on you exactly when the garrison would: the alarm is up, your Remnant
 ## standing is in the hostile band, or you shot at them.
 func remnant_hostile(u: DroidUnit) -> bool:
-	if u.provoked:
+	if u.provoked or Story.remnant_hostile():
 		return true
 	var g = _garrison()
 	if g == null:
@@ -552,10 +609,11 @@ func remnant_hostile(u: DroidUnit) -> bool:
 
 func _remnant_step(dt: float) -> void:
 	var rc: Dictionary = cfg.get("remnant", {})
-	var pts: Array = rc.get("patrol", [])
+	_tick_remnant_respawns(dt)
 	for u in remnant:
 		if u.dead:
 			continue
+		var pts: Array = u.patrol
 		u.gun_cd -= dt
 		var sees := false
 		if remnant_hostile(u) and not player.piloting:
@@ -574,7 +632,7 @@ func _remnant_step(dt: float) -> void:
 			continue
 		if pts.is_empty():
 			continue
-		var goal := _v3(pts[u.patrol_i])
+		var goal: Vector3 = pts[u.patrol_i]
 		var to := Vector3(goal.x - u.global_position.x, 0, goal.z - u.global_position.z)
 		if to.length() < 0.6:
 			u.patrol_i = (u.patrol_i + 1) % pts.size()
@@ -605,6 +663,8 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		u.dead = true
 		_lay_down(u)
 		u.collision_layer = 0
+		var rsc := Story.remnant_cfg()
+		u.respawn_left = float(rsc.get("outpost_respawn_s" if u.spec.has("outpost") else "town_respawn_s", 60.0))
 		WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A Remnant patrol droid was destroyed.")
 		WorldState.log_event(_l("event_remnant_droid"))
 
@@ -773,6 +833,9 @@ class DroidUnit extends StaticBody3D:
 	var gun_cd := 0.0
 	var chirp_cd := 4.0
 	var patrol_i := 0
+	var patrol: Array = []          ## Vector3 points it walks (the Remnant's)
+	var spec: Dictionary = {}       ## how to build it again (the Remnant's)
+	var respawn_left := -1.0        ## seconds until a dead one comes back (< 0 = never)
 	var target: Node3D
 	var following := false          ## closing the gap to its slot (else it holds still)
 	var _t := 0.0
