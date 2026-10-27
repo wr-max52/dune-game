@@ -8,5 +8,10 @@ var on_damage: Callable
 
 
 func apply_damage(amount: float) -> void:
+	apply_damage_from(amount, null)
+
+
+## Issue #64: who shot it matters (another ship can destroy a parked one).
+func apply_damage_from(amount: float, shooter: Node) -> void:
 	if on_damage.is_valid():
-		on_damage.call(amount)
+		on_damage.call(amount, shooter)

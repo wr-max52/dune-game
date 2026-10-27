@@ -205,7 +205,11 @@ func add_berth(v: Node3D, id: String, box_id: String) -> int:
 	_disable_box(box_id)
 	b.hull = _build_hull(v, acc[0], box_id, b.clearance)
 	b.hull.on_damage = _on_hull_hit.bind(i)
+	b.box_id = box_id
+	b.destroyed = false
 	berths.append(b)
+	if WorldState.ships_destroyed.has(box_id):
+		_wreck_berth(i, false)          # issue #64: shot to pieces in an earlier session
 	return i
 
 
@@ -320,6 +324,8 @@ func nearest_berth() -> int:
 	var best_d := INF
 	for i in berths.size():
 		if i == berth and atmo.state != AtmoFlight.State.PARKED:
+			continue
+		if bool(berths[i].get("destroyed", false)):
 			continue
 		var v: Node3D = berths[i].visual
 		var s := v.global_position
@@ -848,6 +854,10 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 		b.streak_length = 2.4
 		b.streak_radius = 0.07
 		b.color = Color("#ff6a3a")
+		var wc: Dictionary = content.weapons.get(str(s.get("weapon_id", "")), {})
+		b.splash_radius = float(wc.get("splash_radius", 0.0))
+		b.splash_damage = float(wc.get("splash_damage", 0.0))
+		b.ground_at = func(x: float, z: float) -> float: return ground.terrain.height_at(x, z)
 		demo.add_child(b)
 		b.global_position = s.origin
 		shots += 1
@@ -858,7 +868,10 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 
 ## A bolt hit berth `i`'s hull. Only the ship you are flying keeps score; a hull
 ## shot to nothing goes down like a crash (and is towed home).
-func _on_hull_hit(amount: float, i: int) -> void:
+func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
+	if i < berths.size() and _parked_target(i, shooter):
+		_hit_parked(i, amount)
+		return
 	if i != berth or not piloting or fight != null or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	defense.apply_damage(amount)
@@ -867,6 +880,61 @@ func _on_hull_hit(amount: float, i: int) -> void:
 	var at := atmo.position()
 	atmo._crash(at, "shot_down")
 	_on_event({ "type": "crashed", "at": at, "what": "shot_down" })
+
+
+# ------------------------------------------------------------------ parked ships (issue #64)
+
+## A parked ship shot by another ship (its guns: the shooter is a ship's hull)
+## takes the damage. Not the one you sit in.
+func _parked_target(i: int, shooter: Node) -> bool:
+	var b: Dictionary = berths[i]
+	if bool(b.get("destroyed", false)) or not (shooter is ShipHull) or shooter == b.hull:
+		return false
+	return not (i == berth and (piloting or atmo.state != AtmoFlight.State.PARKED))
+
+
+func _hit_parked(i: int, amount: float) -> void:
+	var b: Dictionary = berths[i]
+	if not b.has("defense"):
+		b.defense = ShipDefense.new(b.cfg)
+	(b.defense as ShipDefense).apply_damage(amount)
+	if not (b.defense as ShipDefense).is_alive():
+		_wreck_berth(i, true)
+
+
+## Berth `i` is gone for good: it blows up (when `boom`), its model and hull go,
+## nobody can board it, and the save remembers (WorldState.ships_destroyed), so it
+## never comes back. A ship bought from T-89 frees his pad.
+func _wreck_berth(i: int, boom: bool) -> void:
+	var b: Dictionary = berths[i]
+	if bool(b.get("destroyed", false)):
+		return
+	b.destroyed = true
+	var v: Node3D = b.visual
+	if boom and is_instance_valid(v):
+		var at := v.global_position + Vector3(0, 1.5, 0)
+		_crash_fx(at)
+		Sound.play("ship_boom", at)
+		WorldState.log_event("A parked ship in the pit was shot to pieces.")
+	if is_instance_valid(v):
+		v.visible = false
+	if b.hull != null and is_instance_valid(b.hull):
+		b.hull.collision_layer = 0
+		b.hull.collision_mask = 0
+	var key := str(b.get("box_id", ""))
+	var pad_id := ""
+	if demo.salesman != null:
+		pad_id = str(demo.salesman.cfg.get("pad", "spare_pad"))
+	if key != "" and key == pad_id:
+		WorldState.hangar = ""             # T-89's pad is free again
+		demo.salesman.bought_ship = null
+	elif key != "" and not WorldState.ships_destroyed.has(key):
+		WorldState.ships_destroyed.append(key)
+	if i == berth and not piloting:
+		for j in berths.size():
+			if not bool(berths[j].get("destroyed", false)):
+				_use_berth(j)
+				break
 
 
 # ------------------------------------------------------------------ helpers

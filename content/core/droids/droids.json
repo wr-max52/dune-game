@@ -55,6 +55,7 @@
     },
     "cargo": {
       "label": "Cargo droid",
+      "scale": 1.3,
       "price": 50,
       "resale": 40,
       "sound": "cargo_beep",
@@ -160,8 +161,10 @@
           "walk": "HumanWalking",
           "run": "HumanRunning",
           "die": "HumanStandingDeathBackward01",
-          "calm": "HumanHappyIdle"
+          "calm": "HumanHappyIdle",
+          "aim": "HumanOffensiveIdle"
         },
+        "aim_at": 0.0,
         "walk_speed": 1.6,
         "run_speed": 5.0,
         "run_from": 3.5,
@@ -248,6 +251,15 @@
     "min_separation": 180.0,
     "reach": 3.0,
     "note": "Broken droids stranded in the desert. Every check_seconds of play, with this chance, one more turns up (issue #64: was every 300 s at 0.4, about one every 12 minutes; now about one every 3 to 4) (one of each kind at most, never near another). Fixing one takes fix_seconds; it resets and follows you. Radii are metres from the town's centre."
+  },
+  "pit_hauler": {
+    "variant": "tan",
+    "carries": "pit_jetpack",
+    "route": [[-6, -6, 21], [7, -6, 19], [6, -6, 0], [7, -6, -18], [-6, -6, -24], [-7, -6, 2], [-3, -6, 12]],
+    "walk_speed": 1.3,
+    "pause_s": 4.0,
+    "load_lift": 1.05,
+    "note": "Issue #64: an old cargo droid that rattles round the landing pit, like T-89 a fixture of the pit. Nobody owns it. It carries the pickup named by 'carries' (pickups/port_town.json, pit_jetpack) on its back until someone takes it ([E] beside it, the same pickup as before, so saves still know it is taken). route: pit floor points (town coordinates) it walks in turn, stopping pause_s at each. Oda knows it as a rumor (rumors/port_town.json, r_pit_hauler)."
   },
   "remnant": {
     "faction": "imperial_remnant",
