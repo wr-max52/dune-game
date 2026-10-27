@@ -123,6 +123,25 @@ static func town_bounds(town, margin: float = 1.0) -> AABB:
 	return box.grow(margin)
 
 
+## Issue #55: how far past the town's boxes a speeder or ship still counts as in
+## town (the garrison shoots it there).
+const VEHICLE_MARGIN := 20.0
+static var _bounds_id := 0
+static var _bounds := AABB()
+
+
+## Inside the town's footprint (x and z only), grown by `margin`. The bounds are
+## worked out once per town: vehicles ask every frame.
+static func in_town(town, p: Vector3, margin: float = VEHICLE_MARGIN) -> bool:
+	if town == null:
+		return false
+	if _bounds_id != town.get_instance_id():
+		_bounds = town_bounds(town, 0.0)
+		_bounds_id = town.get_instance_id()
+	var b := _bounds.grow(margin)
+	return p.x >= b.position.x and p.x <= b.end.x and p.z >= b.position.z and p.z <= b.end.z
+
+
 func make_navmesh(town) -> NavigationMesh:
 	var nm := NavigationMesh.new()
 	nm.cell_size = float(settings.cell_size)

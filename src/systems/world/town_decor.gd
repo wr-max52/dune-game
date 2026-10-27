@@ -1,9 +1,12 @@
 extends Node3D
-## Visual-only dressing for the port town. Reads the same TownLayout data as the
-## gameplay layer. Adds NO collision. Replaced piece by piece by future art passes.
+## Visual dressing for the port town. Reads the same TownLayout data as the
+## gameplay layer. Replaced piece by piece by future art passes.
 ##
 ## Rules (docs/town/TOWN_PLAN.md addendum, D1 to D6, as changed by art pass 2):
-##   - never adds collision, never moves or resizes a box, never edits port_town.json
+##   - never moves or resizes a box, never edits port_town.json
+##   - issue #55: the only collision it adds is the props' (lamp posts, bay posts,
+##     fuel pods, pit clutter, and the kit's roof props): one box each, in the
+##     kit's "Props" body. The town's boxes, the nav and the routes are untouched.
 ##   - no character art
 ##   - look numbers come from LookMaterials constants or time_of_day.json
 ## Art pass 2: a box with a `look` is drawn by the building kit (town_buildings.gd)
@@ -289,6 +292,7 @@ func _dress_spaceport(town) -> void:
 		var bc := (_v3(b.min) + _v3(b.max)) * 0.5
 		var fy := float(b.min[1]) + 0.01
 		kit.put(LookMeshKit.ring_segment(6.0, 6.35, fy, fy + 0.02, 0.0, TAU, 48), paint, Transform3D(Basis.IDENTITY, Vector3(bc.x, 0, bc.z)))
+		kit.solid = true
 		for k in 4:
 			var a := TAU * k / 4.0 + PI * 0.25 + rng.randf_range(-0.12, 0.12)
 			var p := Vector3(bc.x + cos(a) * 6.9, fy, bc.z + sin(a) * 6.9)
@@ -300,6 +304,7 @@ func _dress_spaceport(town) -> void:
 		kit.put(kit.cyl(0.55, 0.55, 2.6, 16), mats.flat(Color("#8a8d90"), 0.4, 0.6), Transform3D(Basis(Vector3.UP, yaw) * TownBuildings.AXIS_X, fp + Vector3(0, 0.75, 0)))
 		for s in [-0.8, 0.8]:
 			kit.put(kit.box(0.3, 0.3, 1.1), kit.trim, Transform3D(Basis(Vector3.UP, yaw), fp + Vector3(0, 0.15, 0) + Vector3(cos(-yaw), 0, sin(-yaw)) * s))
+		kit.solid = false
 	# Loose clutter, never lined up: barrels, cans, a cart, coils of hose.
 	var placed := 0
 	var tries := 0
@@ -316,6 +321,7 @@ func _dress_spaceport(town) -> void:
 			continue
 		placed += 1
 		var yaw := rng.randf() * TAU
+		kit.solid = true
 		match rng.randi() % 5:
 			0, 1:
 				var col := Color("#6a5848").lerp(LookMaterials.CLOTH_TEAL, rng.randf() * 0.5)
@@ -333,6 +339,7 @@ func _dress_spaceport(town) -> void:
 					kit.put(kit.cyl(0.18, 0.18, 0.08, 10), kit.seam, Transform3D(Basis(Vector3.UP, yaw) * TownBuildings.AXIS_Z, p + Vector3(0, 0.18, 0) + Vector3(cos(-yaw), 0, sin(-yaw)) * s))
 			4:
 				kit.put(LookMeshKit.ring_segment(0.25, 0.42, 0.0, 0.12, 0.0, TAU, 14), kit.seam, Transform3D(Basis(Vector3.UP, yaw), p))
+		kit.solid = false
 
 
 # ---------------------------------------------------------------- street decor
@@ -413,6 +420,7 @@ func _add_street_lamps(town) -> void:
 	var lantern := kit.box(0.24, 0.34, 0.24)
 	var cap := kit.cyl(0.04, 0.2, 0.14, 8)
 	var x := x0
+	kit.solid = true
 	while x <= x1:
 		for s in [-1.0, 1.0]:
 			var z: float = (float(street.max[1]) - 0.6) if s > 0 else (float(street.min[1]) + 0.6)
@@ -423,6 +431,7 @@ func _add_street_lamps(town) -> void:
 			kit.put(lantern, kit.window_glow, Transform3D(Basis.IDENTITY, base + Vector3(0, 3.22, -s * 0.8)))
 			kit.put(cap, kit.metal, Transform3D(Basis.IDENTITY, base + Vector3(0, 3.46, -s * 0.8)))
 		x += 11.0
+	kit.solid = false
 
 
 # ---------------------------------------------------------------- lamps

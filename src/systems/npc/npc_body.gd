@@ -41,6 +41,9 @@ var nav: TownNav               ## where paths come from (null = cannot walk anyw
 var target: Node3D             ## who the senses watch (the player)
 var target_armed: Callable     ## -> bool; is the target holding a weapon out
 var target_crouched: Callable  ## -> bool
+## Issue #55: a garrison trooper also watches the target's speeder or ship while
+## it is a threat in town (the vehicle's hostile_in_town()). Townsfolk do not.
+var sees_vehicles := false
 
 var dead := false
 var faction := ""              ## from the profile; bolts from the same faction do no harm
@@ -519,9 +522,10 @@ func _sense(dt: float) -> void:
 		perception.force_ray()
 	_was_crouched = bool(command.crouch)
 	var tpos := Vector3.INF
-	# A player in a ship's seat is not someone on foot to watch.
+	# A player in a ship's seat is not someone on foot to watch; a trooper still
+	# watches the speeder or ship they are in while it is a threat in town.
 	if target != null and is_instance_valid(target) and target.is_inside_tree() \
-			and target.get("piloting") != true:
+			and (target.get("piloting") != true or hostile_vehicle() != null):
 		tpos = target.global_position
 	var crouched: bool = target_crouched.call() if target_crouched.is_valid() else false
 	var armed: bool = target_armed.call() if target_armed.is_valid() else false
@@ -534,13 +538,30 @@ func _sense(dt: float) -> void:
 	perception.update(dt, {
 		"self_pos": global_position, "forward": forward(), "target_pos": tpos,
 		"crouched": crouched, "armed": armed, "los_clear": _los_clear,
-		"target_speed": Vector2(target.velocity.x, target.velocity.z).length() if tpos != Vector3.INF and "velocity" in target else 0.0,
+		"target_speed": _target_speed() if tpos != Vector3.INF else 0.0,
 	})
 	if perception.noticed and not _was_noticed:
 		noticed_target.emit()
 	elif _was_noticed and not perception.noticed:
 		lost_target.emit()
 	_was_noticed = perception.noticed
+
+
+## Issue #55: the vehicle the target is in, if this trooper should treat it as a
+## threat right now; null otherwise.
+func hostile_vehicle() -> Node:
+	if not sees_vehicles or target == null or not is_instance_valid(target):
+		return null
+	var v = target.get("vehicle")
+	if v == null or not is_instance_valid(v) or not v.hostile_in_town():
+		return null
+	return v
+
+
+func _target_speed() -> float:
+	var v := hostile_vehicle()
+	var vel: Vector3 = v.threat_velocity() if v != null else (target.velocity if "velocity" in target else Vector3.ZERO)
+	return Vector2(vel.x, vel.z).length()
 
 
 ## Eye to the target's chest. Clear if nothing but the target is in the way.
@@ -556,14 +577,18 @@ func _ray_clear(tpos: Vector3) -> bool:
 	if hit.is_empty():
 		return true
 	var n: Node = hit.collider
+	var v := hostile_vehicle()
+	var hull: Node = v.hull_body() if v != null else null
 	while n != null:
-		if n == target:
+		if n == target or (hull != null and n == hull):
 			return true
 		n = n.get_parent()
 	return false
 
 
 func target_chest_height() -> float:
+	if hostile_vehicle() != null:
+		return 0.0                # aim at the hull, not a rider's chest above it
 	var crouched: bool = target_crouched.call() if target_crouched.is_valid() else false
 	if crouched:
 		return float(profile.get("perception", {}).get("target_chest_crouched", 0.75))
