@@ -54,11 +54,16 @@ func archetypes() -> Array:
 ## gets a random choice from its list (characters.json, model.parts).
 func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Node3D:
 	var p: Dictionary = palettes.get(archetype, {})
+	# Issue #45: a variant names a "base" archetype and changes only what it lists
+	# (another planet's cantina owner is Oda's body, re-tinted).
+	var base := str(p.get("base", archetype))
+	if base != archetype and palettes.has(base):
+		p = _merged(palettes[base], p)
 	var root := Node3D.new()
 	root.name = archetype.to_pascal_case()
 	_body(root, p)
 	var default_pose := "idle"
-	match archetype:
+	match base:
 		"remnant_trooper":
 			_dress_trooper(root, p, false)
 			default_pose = "rifle"
@@ -786,3 +791,13 @@ func _dress_local(body: Node3D, p: Dictionary) -> void:
 	_mi(chest, _sphere(0.12, 0.1, 10), wrap, Vector3(0, 0.25, -0.25))
 	var staff := _mi(_j(body, "r_wrist"), _cyl(0.018, 0.022, 1.8, 6), wood, Vector3(0, -0.06, 0.03))
 	staff.rotation_degrees = Vector3(-75, 0, 0)
+
+
+static func _merged(a: Dictionary, b: Dictionary) -> Dictionary:
+	var out := a.duplicate(true)
+	for k in b:
+		if out.get(k) is Dictionary and b[k] is Dictionary:
+			out[k] = _merged(out[k], b[k])
+		else:
+			out[k] = b[k]
+	return out

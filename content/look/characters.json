@@ -116,6 +116,12 @@
           "r_hip": "RightUpLeg", "r_knee": "RightLeg", "r_ankle": "RightFoot"
         }
       }
+    },
+    "cantina_owner_station": {
+      "note": "Issue #45: the asteroid station's cantina owner. Oda's body and model (base: cantina_owner), cooler: a steel-blue cast over her clothes and cyan goggles instead of amber. Only what differs is listed.",
+      "base": "cantina_owner",
+      "height": 1.69,
+      "model": { "tint": { "albedo": "#a6b6c8", "emission": "#4fe3ff" } }
     }
   }
 }

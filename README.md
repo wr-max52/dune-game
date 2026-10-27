@@ -54,7 +54,9 @@ for each. M0-M12 are done (M10 is starfighter flight and dogfights; M11 the
 player's body and hand weapons; M12 the live LLM cantina owner,
 `docs/cantina_owner/CANTINA_OWNER_PLAN.md`; M13 the jetpack; M14 flying the ship from the
 port to space and back). N1 is the naming system: everything that spawns gets a
-generated, unique name (`docs/names/NAMING.md`). `LAUNCH.md` is how to run and
+generated, unique name (`docs/names/NAMING.md`). P1 is the planet generator: a planet is one
+config file (type, town size 1-100, style), and Grit Station, an asteroid you can
+fly to from the port's sky, is the first one (`docs/planets/PLANETS.md`). `LAUNCH.md` is how to run and
 record the slice, fly the ship, fight in space and use the jetpack. `docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights
 from data; `docs/ADDING_ITEMS.md` is the same for items, vendors and pickups.
 

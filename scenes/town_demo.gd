@@ -81,6 +81,10 @@ var retro_hud: RetroHud               ## issue #52: banner, footer and the F1 in
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
+var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
+var world: Dictionary = {}            ## its world (terrain, atmosphere, detail): authored or generated
+var style: TownStyle                  ## its town style (metallic, snowy, pastel, words...)
+var platform: PlatformWorld           ## the deck, glass, shield and what lies below (platform planets only)
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
 @export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
 var droids: DroidController
@@ -93,8 +97,17 @@ var _respawned := 0
 
 
 func _ready() -> void:
-	if not town.load_town("port_town"):
-		push_error("TownDemo: port_town failed to load")
+	# Issue #45: the planet decides the town, the world, the ground and the look.
+	planet = GameFlow.planet()
+	if planet.is_empty():
+		push_error("TownDemo: no planet " + GameFlow.current_planet_id())
+		return
+	world = planet.world
+	style = TownStyle.parse(str(planet.get("style", "")))
+	PlanetGen.reserve_names(planet)
+	town.load_from_dict(planet.town)
+	if town.data.is_empty():
+		push_error("TownDemo: planet %s has no town" % str(planet.id))
 		return
 	var errs := town.validate()
 	if not errs.is_empty():
@@ -105,17 +118,25 @@ func _ready() -> void:
 	_build_markers()
 	if with_npcs and not lookdev_mode:
 		_build_nav()
-	if with_desert:
+	if with_desert and str(planet.get("ground", "terrain")) == "terrain":
 		_build_desert()
+	if str(planet.get("ground", "")) == "platform":
+		platform = PlatformWorld.new()
+		platform.setup(self, planet)
+		add_child(platform)
 	if use_look:
 		look = LookEnvironment.new()
+		_lay_sky(look, planet.get("sky", {}))
 		add_child(look)
 		set_preset(preset)
 		decor = TownDecor.new()
+		decor.style = style
 		add_child(decor)
 		decor.dress(town, look)
 		if terrain != null:
 			_dress_desert()
+		if platform != null:
+			platform.dress(look, decor.mats)
 	else:
 		_add_light_and_sky()
 	if use_look and not lookdev_mode:
@@ -134,7 +155,7 @@ func _ready() -> void:
 		_build_launch_pads()
 		_world_from_scene()
 		if use_look and with_body:
-			_attach_body()
+			_attach_body(has_feature("training_range"))
 		if use_look and with_bar:
 			_build_bar()
 		if with_gear:
@@ -143,7 +164,7 @@ func _ready() -> void:
 			_build_ship()
 		if with_npcs:
 			_build_npcs()
-		if with_speeders and pilot != null:
+		if with_speeders and pilot != null and has_feature("speeders"):
 			_build_speeder_post()
 		if use_look and with_droids and gear != null:
 			_build_droids()
@@ -167,9 +188,6 @@ func _ready() -> void:
 ## The town and its planet get their names from the world's "naming" block
 ## (NameHooks); a card shows them when you arrive, like entering a region.
 func _name_places() -> void:
-	var cc := CoreContent.new()
-	cc.load_from()
-	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
 	town_name = NameHooks.town(world)
 	planet_name = NameHooks.planet(world)
 	if town_name == "":
@@ -523,9 +541,6 @@ func _build_salesman() -> void:
 ## people (bodies, the cantina owner, and the brains that run them) and the small
 ## props (lamps, banners, boulders). ShipPilot feeds it the viewer's altitude.
 func _build_detail() -> void:
-	var cc := CoreContent.new()
-	cc.load_from()
-	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
 	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk,
@@ -554,8 +569,10 @@ func _world_from_scene() -> void:
 	WorldState.on_flight_returned(_arrival)
 
 
-func _attach_body() -> void:
+func _attach_body(with_range: bool = true) -> void:
 	player_kit = PlayerKit.attach(_player, _rig, self, _flat_mats())
+	if not with_range:
+		return                       # issue #45: the practice range is the port's
 	training_range = TrainingRange.new()
 	add_child(training_range)
 	training_range.player = _player
@@ -579,9 +596,11 @@ func _build_bar(scripted = null, save_path: String = "user://save.json") -> void
 ## node puts a jetpack on the player while one is attached.
 func _build_gear() -> void:
 	gear = GearController.new()
-	gear.setup(null, town, _player, _rig, "port_town")
+	gear.setup(null, town, _player, _rig, str(planet.get("town_id", "port_town")))
 	if terrain != null:
 		gear.ground_at = terrain.ground_at
+	elif platform != null:
+		gear.ground_at = platform.ground_at      # the void: the deck's own fall handles it
 	add_child(gear)
 
 
@@ -606,7 +625,34 @@ func _physics_process(dt: float) -> void:
 
 ## The far plane: out to the horizon landforms when the desert is on.
 func view_far() -> float:
-	return 12000.0 if terrain != null else 4000.0
+	return 12000.0 if terrain != null or platform != null else 4000.0
+
+
+# ---------------------------------------------------------------- planets (issue #45)
+
+## True when the planet's config lists this feature (the port's practice range,
+## Skrugs's speeders, the desert landforms, the jetpack pickups).
+func has_feature(f: String) -> bool:
+	return (planet.get("features", []) as Array).has(f)
+
+
+## The planet type's sky: its values laid over every time-of-day preset, so the
+## clock and F11 still work (an asteroid's grey, a snow world's pale blue).
+func _lay_sky(env: LookEnvironment, sky: Dictionary) -> void:
+	if sky.is_empty():
+		return
+	for id in env.presets:
+		env.presets[id] = deep_merge(env.presets[id], sky)
+
+
+static func deep_merge(base: Dictionary, over: Dictionary) -> Dictionary:
+	var out := base.duplicate(true)
+	for k in over:
+		if out.get(k) is Dictionary and over[k] is Dictionary:
+			out[k] = deep_merge(out[k], over[k])
+		else:
+			out[k] = over[k]
+	return out
 
 
 ## Footprints from the town data (no coordinates in this file): every floor box
@@ -657,11 +703,35 @@ func _dress_desert() -> void:
 		var mi := get_node_or_null("Town/%s/Mesh" % str(b.id)) as MeshInstance3D
 		if mi != null:
 			mi.visible = false
+	_tint_sand(terrain.material, planet.get("type_cfg", {}).get("sand", {}))
 	if with_landforms:
 		landforms = DesertLandforms.new()
 		landforms.clear_circles = _landmark_clearings()
 		add_child(landforms)
 		landforms.build(terrain, _flat_mats(), desert_site().floor)
+		_tint_rock(landforms, planet.get("type_cfg", {}).get("rock", {}))
+
+
+## Issue #45: a snow world's white drifts, a red desert's red sand. Shader values
+## from the planet type ("sand"); the port's own (empty) changes nothing.
+func _tint_sand(m: ShaderMaterial, sand: Dictionary) -> void:
+	if m == null:
+		return
+	for k in sand:
+		var v = sand[k]
+		m.set_shader_parameter(k, Color(str(v)) if v is String else v)
+
+
+func _tint_rock(root: Node, rock: Dictionary) -> void:
+	if rock.is_empty():
+		return
+	var done := {}
+	for n in root.find_children("*", "GeometryInstance3D", true, false):
+		var mat = (n as GeometryInstance3D).material_override
+		if mat is ShaderMaterial and not done.has(mat):
+			done[mat] = true
+			for k in rock:
+				mat.set_shader_parameter(k, Color(str(rock[k])))
 
 
 ## Issue #64: the world's landmarks that want open sand round them (the outposts).

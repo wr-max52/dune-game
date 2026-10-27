@@ -51,7 +51,7 @@ func height_at(x: float, z: float) -> float:
 func local_height(x: float, z: float) -> float:
 	if not in_desert(x, z):
 		return skirt_height
-	return float(source.call(x, z)) if source.is_valid() else 0.0
+	return float(source.call(x, z)) if source.is_valid() else float(cfg.get("flat_height", 0.0))
 
 
 ## A world position's altitude above the curved sea level (what "space at 8 km"

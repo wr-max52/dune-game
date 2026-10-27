@@ -8,6 +8,10 @@
    {
     "name": "Oda Vell",
     "key": "npc:cantina_owner"
+   },
+   {
+    "name": "Ilka Vell",
+    "key": "npc:station_owner"
    }
   ]
  },

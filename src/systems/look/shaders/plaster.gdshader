@@ -9,7 +9,9 @@ uniform float band_y = -1000.0;          // world height of the painted band; of
 uniform float band_width = 0.5;
 uniform float ground_y = 8.0;
 uniform float dirt_height = 1.8;
-uniform float tile_size = 0.0;          // > 0: stone slabs on upward faces (paving)
+uniform float tile_size = 0.0;
+uniform float metallic_amount = 0.0;    // issue #45: town styles (metal walls)
+uniform float surface_roughness = 0.9;          // > 0: stone slabs on upward faces (paving)
 uniform vec4 sand_drift : source_color = vec4(0.79, 0.58, 0.35, 1.0);
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 
@@ -47,6 +49,7 @@ void fragment() {
 		alb = mix(alb, sand_drift.rgb, drift * 0.85);
 	}
 	ALBEDO = alb;
-	ROUGHNESS = 0.9;
+	ROUGHNESS = surface_roughness;
+	METALLIC = metallic_amount;
 	SPECULAR = 0.3;
 }

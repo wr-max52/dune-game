@@ -91,6 +91,7 @@ var fight: SpaceFight            ## issue #46: the space encounter in progress, 
 var kit: ShipKit                 ## built once at load (on the town's materials) for every fight
 var fight_log: Array = []        ## { outcome, payout, at } per sortie, for traces and tests
 var space_exit_margin := 250.0   ## metres below the edge that break off a running fight
+var travel: SpaceTravel          ## issue #45: the other planets in this sky, and flying to them
 var _engine: AudioStreamPlayer   ## issue #16: the engine drone while the ship flies
 
 
@@ -103,7 +104,7 @@ func _ready() -> void:
 	_engine = Sound.loop("ship_engine", self)
 	content = CoreContent.new()
 	content.load_from()
-	world = content.world_for_town("port_town")
+	world = demo.world if "world" in demo and not demo.world.is_empty() else content.world_for_town("port_town")
 	ground = WorldGround.new()
 	var desert: DesertTerrain = demo.terrain
 	if desert != null:
@@ -118,6 +119,9 @@ func _ready() -> void:
 			scenery.build_visuals(demo._flat_mats(), desert.material)
 	else:
 		ground.setup(world, demo.town, content)
+	# Issue #45: a platform town's glass (and an asteroid's rock) are solid to ships.
+	if "platform" in demo and demo.platform != null:
+		demo.platform.add_to_ground(ground)
 	if demo.use_look and demo.look != null:
 		sky = AltitudeSky.new()
 		sky.setup(demo.look, ground.atmosphere())
@@ -126,6 +130,8 @@ func _ready() -> void:
 	pad = demo.resolve_pad(pads[0]) if not pads.is_empty() else {}
 	var enc: Dictionary = content.get_encounter(str(pad.get("encounter", "")))
 	ship_id = str(enc.get("player", {}).get("ship", "interceptor"))
+	if GameFlow.flown_ship != "" and content.ships.has(GameFlow.flown_ship):
+		ship_id = GameFlow.flown_ship         # issue #45: the ship you flew in on is on the pad
 	ship_cfg = content.get_ship(ship_id)
 	atmo = AtmoFlight.new()
 	atmo.setup(ship_cfg, ground)
@@ -151,8 +157,14 @@ func _ready() -> void:
 	kit = ShipKit.new(demo._flat_mats())
 	_gather_berths()
 	_use_berth(0)
+	if "planet" in demo and not demo.planet.is_empty():
+		travel = SpaceTravel.new()
+		travel.setup(self, demo.planet.get("neighbours", []), demo.use_look)
+		demo.add_child(travel)
 	if str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
+	elif str(demo._arrival.get("mode", "")) == "travel":
+		arrive_from_space(demo._arrival)
 
 
 ## Every parked ship the decor built becomes a berth: the pit pad's own ship first
@@ -403,6 +415,65 @@ func set_external_command(c: Dictionary) -> void:
 
 
 ## Back from space: start in the sky above the port, flying toward it.
+## The space encounter over this planet: the planet's own ("" = quiet sky), else
+## the pad's (issue #45).
+func encounter_id() -> String:
+	var e = demo.planet.get("encounter", null) if "planet" in demo else null
+	return str(e) if e != null else str(pad.get("encounter", ""))
+
+
+## Issue #45: in from another planet. Seated in the ship you flew (it is parked on
+## this bay's pad, berth 0), flying, high over the bay on the side you came from,
+## nose down at the town.
+func arrive_from_space(a: Dictionary) -> void:
+	var tcfg: Dictionary = demo.planet.get("type_cfg", {})
+	var arr: Dictionary = tcfg.get("arrival", {})
+	var c: Vector3 = pad.get("center", Vector3.ZERO)
+	var from := Vector2(0, 1)
+	for n in demo.planet.get("neighbours", []):
+		if str(n.id) == str(a.get("from", "")):
+			var at: Vector3 = n.at
+			from = Vector2(at.x - c.x, at.z - c.z).normalized()
+	var dist := float(arr.get("distance", pad.get("reentry_distance", 3250.0)))
+	var alt := float(arr.get("altitude", pad.get("reentry_altitude", 2600.0)))
+	_seat_arriving()
+	var at := Vector3(c.x + from.x * dist, alt, c.z + from.y * dist)
+	var to := Vector3(c.x - at.x, 0.0, c.z - at.z).normalized()
+	var pitch := deg_to_rad(float(pad.get("reentry_pitch_deg", -18.0)))
+	var facing := (to * cos(pitch) + Vector3(0, sin(pitch), 0)).normalized()
+	atmo.place_flying(at, facing, 0.0, 0.6)
+	atmo.flight.speed = atmo.flight.cruise_speed(0.6) * atmo.air_scale()
+	_throttle = 0.6
+	_set_hull(true)
+	chase._primed = false
+	hud.visible = true
+	hud.toast(GameFlow.arrival_text(a), 5.0)
+	_sync_visual()
+
+
+## Put the player in the cockpit without the walk up to the ship.
+func _seat_arriving() -> void:
+	var p := player()
+	if p == null or piloting:
+		return
+	piloting = true
+	p.piloting = true
+	p.vehicle = self
+	_ground_follow(null)
+	p.locked = true
+	p.visible = false
+	p.process_mode = Node.PROCESS_MODE_DISABLED
+	_set_player_collision(false)
+	var rig = demo._rig
+	if rig != null:
+		_rig_was_fp = rig.rig.is_first_person()
+		var cam: Camera3D = rig.camera()
+		_cam_near = cam.near
+		_cam_far = cam.far
+		cam.near = 0.3
+		cam.far = 160000.0
+
+
 func reenter() -> void:
 	var p := player()
 	if p != null and not piloting:
@@ -613,7 +684,7 @@ func start_fight() -> bool:
 		return false
 	var f := SpaceFight.new()
 	demo.add_child(f)
-	if not f.begin(content, str(pad.get("encounter", "")), atmo.transform(), atmo.speed(), 1, kit, ship_id):
+	if not f.begin(content, encounter_id(), atmo.transform(), atmo.speed(), 1, kit, ship_id):
 		f.queue_free()
 		return false
 	fight = f

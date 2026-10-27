@@ -101,7 +101,10 @@ func _build_cantina_owner() -> void:
 	var counter: Dictionary = town.get_box("bar_counter")
 	var marker: Vector3 = town.marker_pos("cantina_owner")
 	var mats: LookMaterials = demo._flat_mats() if demo.has_method("_flat_mats") else LookMaterials.new()
-	var body := CantinaOwnerNPC.new(mats)
+	# Issue #45: the marker says who runs this cantina (their card) and how they
+	# look; the port's is Oda. The bar itself takes the planet's town style.
+	var om: Dictionary = town.get_marker("cantina_owner")
+	var body := CantinaOwnerNPC.new(mats, str(om.get("look", "cantina_owner")))
 	demo.add_child(body)
 	var stand_x := float(counter.min[0]) - 0.55 if not counter.is_empty() else marker.x
 	body.global_position = Vector3(stand_x, marker.y, marker.z)
@@ -110,9 +113,11 @@ func _build_cantina_owner() -> void:
 	if demo.use_look:
 		var dressing := CantinaDressing.new()
 		demo.add_child(dressing)
-		dressing.dress(town, mats)
+		dressing.dress(town, demo.decor.mats if "decor" in demo and demo.decor != null else mats)
 		body.dressing = dressing
-	var s := TalkSpot.new(NpcBrain.new(), body, front)
+	var card := str(om.get("card", ""))
+	var brain := NpcBrain.new() if card == "" else NpcBrain.new(null, "res://content/core/" + card)
+	var s := TalkSpot.new(brain, body, front)
 	s.radius = TALK_RADIUS
 	add_spot(s)
 	owner_spot = s

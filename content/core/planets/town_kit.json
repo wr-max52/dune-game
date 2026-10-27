@@ -1,0 +1,55 @@
+{
+  "id": "town_kit",
+  "note": "IP-neutral. How src/systems/planets/town_gen.gd lays out a town of any size from 1 to 100. Size 50 is the port's scale (about 200 x 150 m inside the walls); the area grows as (size / 50) ^ area_power, so size 100 is 5x the area and size 1 shrinks to the smallest compound that still holds a cantina, a landing bay and a stall. Counts (guards, residents, stalls, merchants, bays) are 'per' that area factor, with a minimum each. Building looks are the town kit's (src/systems/world/town_buildings.gd): footprint ranges in metres [min, max], heights [min, max], and a weight. Ship bays are sized to each ship's model, taken from port_town.json.",
+  "area_at_50": 30000.0,
+  "area_power": 2.3219,
+  "aspect": 1.333,
+  "wall": { "thickness": 2.0, "height": 6.0, "gate_width": 12.0 },
+  "street_half": 6.0,
+  "lane": 4.0,
+  "margin": 3.0,
+  "lot": 11.0,
+  "apron": 30.0,
+  "square": 8.0,
+  "backyard": 10.0,
+  "bay": 16.0,
+  "cantina": {
+    "full_from_size": 20,
+    "small": { "length": 18.0, "width": 14.0, "height": 5.5 },
+    "full": { "length": 32.0, "width": 28.0, "height": 9.0 },
+    "door_half": 2.0,
+    "patrons_from_size": 10
+  },
+  "barracks_from_size": 25,
+  "tower_from_size": 35,
+  "counts": {
+    "guards": { "per": 5, "min": 1, "max": 24 },
+    "residents": { "per": 5, "min": 0, "max": 30 },
+    "stalls": { "per": 12, "min": 1, "max": 40 },
+    "merchants": { "per": 4, "min": 1, "max": 14 },
+    "bays": { "per": 3, "min": 1, "max": 10 }
+  },
+  "bay_ships": ["freighter", "courier", "gunship"],
+  "ship_boxes": {
+    "pad": [8.82, 2.36, 7.8],
+    "freighter": [8.26, 2.75, 8.0],
+    "courier": [8.4, 2.4, 6.28],
+    "gunship": [7.68, 3.06, 7.8]
+  },
+  "huts": [
+    { "look": "hut_block", "w": [5, 7], "d": [4, 6], "h": [4.0, 5.5], "weight": 4 },
+    { "look": "hut_round", "w": [5, 7], "round": true, "h": [4.0, 5.0], "weight": 4 },
+    { "look": "hut_stepped", "w": [6, 8], "d": [5, 6], "h": [4.5, 6.0], "weight": 3 },
+    { "look": "hut_long", "w": [7, 9], "d": [4, 5], "h": [3.5, 3.5], "weight": 2 }
+  ],
+  "towers": [
+    { "look": "tower_block", "w": [6, 8], "d": [6, 8], "h": [10.0, 14.0], "weight": 3 },
+    { "look": "tower_round", "w": [7, 8], "round": true, "h": [14.0, 20.0], "weight": 2 },
+    { "look": "tower_wide", "w": [8, 9], "d": [7, 7], "h": [10.0, 12.0], "weight": 1 }
+  ],
+  "tower_share": 0.3,
+  "alarms": {
+    "garrison": { "disengage_dist": 40.0, "disengage_unseen_s": 12.0, "memory_s": 300.0, "fled_standing": -5, "raise_standing": -10 },
+    "locals": { "disengage_dist": 45.0, "disengage_unseen_s": 10.0, "memory_s": 240.0, "fled_standing": -3, "raise_standing": -10, "killed_standing": -8 }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "note": "Issue #45: the town style kit. A style is a preset id or plain words: 'metallic', 'snowy', 'pastel', 'red matte metal', 'pale blue glossy ceramic with gold trim', 'snowy dark steel'. Read by src/systems/planets/town_style.gd, which restyles every material the town's look is built from (LookMaterials: walls, paving, metal trim, props, awnings). Words: a colour sets the walls; a second colour (or one after 'with' / 'trim' / 'accent') sets the trims and painted bands; a shade before a colour changes it; a finish and a material set how shiny and how metallic. Unknown words are ignored (and listed by the parser, so a typo shows up in the tests). 'desert' is the port's own look: no changes. Add a colour or a word here and every planet can use it.",
+  "presets": {
+    "desert": { "words": "", "note": "The port's own look." },
+    "metallic": { "words": "steel brushed metal", "accent": "cyan", "note": "Brushed steel walls and hulls, cyan trim." },
+    "snowy": { "words": "snow frosted plaster", "accent": "ice", "snow": true, "note": "White walls under snow, ice-blue trim, snow drifts instead of sand." },
+    "pastel": { "words": "pastel plaster", "palette": ["pink", "mint", "lavender", "peach", "sky", "butter"], "note": "Every building a different soft colour." }
+  },
+  "colors": {
+    "red": "#b8322a", "crimson": "#9e1b32", "scarlet": "#d0312d", "maroon": "#6b1e1e", "orange": "#d9772b",
+    "amber": "#d99a2b", "gold": "#c9a227", "yellow": "#e3c443", "butter": "#f2e2a0", "cream": "#efe4cc",
+    "ivory": "#f4efe2", "white": "#f2f2f0", "snow": "#f4f7fb", "ice": "#9ed2e6", "silver": "#b8bcc2",
+    "steel": "#7c848e", "gray": "#808080", "grey": "#808080", "charcoal": "#3a3d42", "black": "#1c1d20",
+    "navy": "#1f2f5a", "blue": "#2f5fa8", "sky": "#9cc8e8", "cyan": "#3cc8d8", "teal": "#1f7a78",
+    "turquoise": "#3cb8b0", "mint": "#a8e6c8", "green": "#3f8a4a", "olive": "#6b7a3a", "sage": "#9aac8a",
+    "purple": "#6a3a98", "violet": "#7a4ab8", "lavender": "#c8b4e6", "plum": "#6a2a5a", "pink": "#f0a8c0",
+    "rose": "#d86a8a", "peach": "#f6c4a0", "coral": "#ee7a5e", "salmon": "#f09a80", "brown": "#6a4a32",
+    "rust": "#8a4a2a", "copper": "#b06a3a", "bronze": "#8c6a3c", "brass": "#b89a4a", "tan": "#c9a77c",
+    "sand": "#c9a77c", "khaki": "#a89a6a", "chrome": "#d8dce2"
+  },
+  "shades": {
+    "light": { "lighten": 0.3 }, "pale": { "lighten": 0.5, "desaturate": 0.3 }, "dark": { "darken": 0.35 },
+    "deep": { "darken": 0.2, "saturate": 0.2 }, "bright": { "saturate": 0.35, "lighten": 0.1 },
+    "dusty": { "desaturate": 0.4 }, "faded": { "desaturate": 0.5, "lighten": 0.15 }, "pastel": { "lighten": 0.45, "desaturate": 0.25 }
+  },
+  "finishes": {
+    "matte": { "roughness": 0.95, "metallic_mul": 0.85 },
+    "satin": { "roughness": 0.6 },
+    "glossy": { "roughness": 0.25 },
+    "polished": { "roughness": 0.15, "metallic_mul": 1.1 },
+    "brushed": { "roughness": 0.4 },
+    "weathered": { "roughness": 0.9, "dirt": 1.0 },
+    "clean": { "dirt": 0.0 },
+    "rusty": { "roughness": 0.9, "dirt": 1.0, "dirt_color": "#6a3a22" },
+    "frosted": { "snow": true },
+    "snowy": { "snow": true }
+  },
+  "materials": {
+    "metal": { "metallic": 0.8, "roughness": 0.4, "metal_walls": true },
+    "steel": { "metallic": 0.85, "roughness": 0.38, "metal_walls": true },
+    "chrome": { "metallic": 1.0, "roughness": 0.12, "metal_walls": true },
+    "plaster": { "metallic": 0.0, "roughness": 0.9 },
+    "stone": { "metallic": 0.0, "roughness": 0.95 },
+    "concrete": { "metallic": 0.0, "roughness": 0.92 },
+    "ceramic": { "metallic": 0.0, "roughness": 0.35 },
+    "adobe": { "metallic": 0.0, "roughness": 0.95 }
+  },
+  "accent_words": ["with", "trim", "trims", "accent", "accents", "and"],
+  "snow": { "dirt": "#e8eef5", "drift": "#f4f7fb", "paving": "#dfe6ee" }
+}

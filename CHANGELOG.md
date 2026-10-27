@@ -2,6 +2,56 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## P1 — Planet generator, the town style kit, and a second planet (2026-10-27, issue #45)
+
+What works now:
+- **A planet is one config file.** `content/core/planets/<id>.json` gives a
+  name, a type, a town size from 1 to 100, a style, and where it hangs in another
+  planet's sky. The generator builds the rest. `docs/planets/PLANETS.md` is the
+  whole how-to: a contributor (or an agent) adds a planet with no code.
+- **Towns of any size.** Size 50 is the port's scale, 100 is 5x its area, and size
+  1 is a cantina, one Remnant guard at its door, a merchant out back, and a landing
+  bay. Bigger towns add a market, barracks, a watchtower, more bays, guards, houses,
+  towers and residents strolling the lanes. Every size from 1 to 100 passes the
+  town validator, and the decor, bar, guards, locals and ship work unchanged.
+- **Seven planet types.**
+  - Biome planets: sand (the port), snow (white dunes, grey-blue rocks), red
+    desert.
+  - Element planets (water, lava, gas) and the asteroid station: the town floats
+    on a deck closed underneath.
+  - On a deck, a glass enclosure rises from the walls, solid to people and ships
+    and open above. An energy shield fills the open gate; you walk straight
+    through it. Below is a sea, a lava lake, cloud decks, or the asteroid's own
+    rock with debris drifting round it. Go over the edge and you wake up by the
+    landing bay.
+  - Each type has its own sky over every time of day; the asteroid's is grey.
+- **The town style kit.** `desert` (the port, unchanged), `metallic`, `snowy`,
+  `pastel`, or plain words like `red matte metal` or
+  `pale blue glossy ceramic with gold trim`. One line restyles every wall, slab,
+  trim, prop and awning. The words are in `content/look/town_styles.json`.
+- **Grit Station, a second planet you can fly to.** An asteroid with a size-1
+  town in `metallic`, hanging in the port's sky 12 km away and 5 km up:
+  - Climb out of the atmosphere and fly into it. A marker in space names it and
+    gives its distance.
+  - You arrive in its grey sky, still flying the same ship, above its bay. Land,
+    get out, and visit its cantina.
+  - Fly into the port's planet in its sky to go home.
+- **Ilka Vell runs the station's cantina.** She is Oda's younger sister, on her
+  own AI card with her own drinks, secrets and voice. She wears Oda's model
+  re-tinted steel-blue with cyan goggles, and her briefing names the station.
+- Town names fit the place. Stations are named like "Grit Hold" and floating towns
+  like "Brine Quay"; new name grammars were added to the name engine.
+
+How to see it:
+- Run the town, take off (Space, R), climb past 4 km and fly at the grey rock
+  marked "◇ <name>".
+- `./tools/planets/shoot_planets.sh` renders the station, the styles, every type
+  and sizes 10, 50 and 100 to `test_results/planets/`. The current ones are in
+  `docs/planets/`.
+- `./scripts/ci.sh` adds two things:
+  - `test_planets`: every size, every type, the style parser, the station, a new
+    planet from a config.
+  - `test_planets_trace`, backed by `scenes/planets_trace.gd`: the whole trip.
 ## The main story line and three Remnant outposts (2026-10-27, issue #64)
 
 - **A main quest.** T-89 in the pit sends you to Oda. Oda sends you to the practice range (knock all five targets down), then gives you two smuggling runs. On the first one she lends you her old jetpack if she is amused or warm. Then she tells you about Skrugs's speeders and a bounty on a Remnant officer at a desert outpost. Kill the officer and the fence in the market pays the bounty.

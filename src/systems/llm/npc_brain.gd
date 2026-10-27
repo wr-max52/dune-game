@@ -422,9 +422,13 @@ static func _read(path: String) -> Dictionary:
 ## names the place card and the flight HUD show.
 func _place() -> Dictionary:
 	if _world_cache.is_empty():
-		var cc := CoreContent.new()
-		cc.load_from()
-		_world_cache = cc.get_world(str(builder.world_text.get("world", "")))
+		# Issue #45: the planet the player is on (its world names the town and the
+		# planet); the briefing's own "world" only when no planet is current.
+		_world_cache = GameFlow.planet().get("world", {})
+		if _world_cache.is_empty():
+			var cc := CoreContent.new()
+			cc.load_from()
+			_world_cache = cc.get_world(str(builder.world_text.get("world", "")))
 	if _world_cache.is_empty():
 		return {}
 	return { "town": NameHooks.town(_world_cache), "planet": NameHooks.planet(_world_cache) }

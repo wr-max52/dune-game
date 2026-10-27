@@ -1,0 +1,13 @@
+{
+  "id": "grit_station",
+  "note": "Issue #45's test planet: an asteroid station a short hop from the port, with a size-1 town (a cantina, a guard at its door, a merchant out back) in metal. Everything else comes from the planet generator. See docs/planets/PLANETS.md.",
+  "name": "",
+  "type": "asteroid",
+  "town_size": 1,
+  "seed": 45,
+  "style": "metallic",
+  "near": "port_desert",
+  "at": [9000, 5200, -6500],
+  "cantina_owner": { "card": "npcs/station_owner_card.json", "look": "cantina_owner_station" },
+  "encounter": ""
+}

@@ -27,6 +27,7 @@ var items: Dictionary = {}         # item-id -> Dictionary (jetpack, etc.) (M13)
 var vendors: Dictionary = {}       # vendor-id -> Dictionary (who buys and sells items) (M13)
 var pickups: Dictionary = {}       # location-id -> Dictionary (items lying in that place) (M13)
 var worlds: Dictionary = {}        # world-id -> Dictionary (terrain, landmarks, atmosphere) (M14)
+var planets: Dictionary = {}       # planet-id -> Dictionary (a planet's config: type, town size, style) (issue #45)
 var names: Dictionary = {}         # bank-id -> Dictionary (the name library: lists, tongues, kinds) (issue #15)
 var _loaded := false
 
@@ -49,6 +50,7 @@ func load_from(root: String = ROOT) -> bool:
 	pickups = {}
 	worlds = {}
 	names = {}
+	planets = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -98,6 +100,8 @@ func load_from(root: String = ROOT) -> bool:
 	_load_category(root, "worlds", worlds)
 	# Issue #15: the name library (NameBook also reads it straight from disk).
 	_load_category(root, "names", names)
+	# Issue #45: planets (the generator turns each into a town and a world).
+	_load_category(root, "planets", planets)
 
 	_loaded = true
 	return true

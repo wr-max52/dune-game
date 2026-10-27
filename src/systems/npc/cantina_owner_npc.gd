@@ -36,10 +36,10 @@ var _act_left := 0.0
 var _talk_energy := 0.0
 
 
-func _init(materials: LookMaterials = null) -> void:
+func _init(materials: LookMaterials = null, archetype: String = "cantina_owner") -> void:
 	name = "CantinaOwner"
 	kit = CharacterKit.new(materials if materials != null else LookMaterials.new(), -1000.0)
-	body = kit.build("cantina_owner", "idle")
+	body = kit.build(archetype, "idle")      # issue #45: another planet's owner, another look
 	add_child(body)
 	joints = body.get_meta("joints")
 	glass = kit.make_bar_glass()

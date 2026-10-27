@@ -29,6 +29,7 @@ var skipped_kinds := {}       ## kind -> true, for boxes that keep their greybox
 var kit: TownBuildings        ## building variants, shared parts, batching
 var market: TownMarket        ## the stalls
 var cables: Array[MeshInstance3D] = []
+var style: TownStyle          ## issue #45: the planet's town style (null = the port's own look)
 var _rng := RandomNumberGenerator.new()
 
 
@@ -36,6 +37,7 @@ func dress(town, look_env: LookEnvironment) -> void:
 	name = "TownDecor"
 	look = look_env
 	mats = LookMaterials.new()
+	mats.style = style
 	_rng.seed = 9001                      # fixed seed: same town every run
 	_apply_materials(town)
 	kit = TownBuildings.new(mats, look)
@@ -102,6 +104,8 @@ func material_for(town, b: Dictionary) -> Material:
 			if zone == "cantina":
 				return mats.plaster(0.0, 3.6, LookMaterials.CLOTH_TEAL)
 		"overhead", "roof":
+			if zone == "perimeter":              # issue #45: the gate lintel, like its walls
+				return mats.plaster(0.0, 5.2, LookMaterials.REMNANT_OXBLOOD.darkened(0.1))
 			if zone == "cantina":
 				return mats.plaster(0.0, 3.6, LookMaterials.CLOTH_TEAL)
 			if zone == "residential_e" or zone == "barracks":
@@ -552,6 +556,8 @@ func _park_ships(town) -> void:
 		var box: Dictionary = town.get_box(str(p.get("town_box", "")))
 		var enc: Dictionary = content.encounters.get(str(p.get("encounter", "")), {})
 		var ship_id := str(enc.get("player", {}).get("ship", ""))
+		if GameFlow.flown_ship != "" and content.ships.has(GameFlow.flown_ship):
+			ship_id = GameFlow.flown_ship          # issue #45: you flew in on this one
 		var look_id := str(content.ships.get(ship_id, {}).get("look", ""))
 		if box.is_empty() or look_id == "":
 			push_warning("TownDecor: pad %s has no ship to park" % str(p.get("id", "")))
@@ -562,6 +568,8 @@ func _park_ships(town) -> void:
 	# lets you board any of them.
 	for b in town.boxes():
 		if str(b.kind) == "ship" and b.has("ship"):
+			if str(b.ship) == GameFlow.flown_ship:
+				continue                  # issue #45: it is on the pad (you flew it here)
 			var look := str(content.ships.get(str(b.ship), {}).get("look", ""))
 			if look == "":
 				push_warning("TownDecor: bay %s names unknown ship %s" % [str(b.id), str(b.ship)])
