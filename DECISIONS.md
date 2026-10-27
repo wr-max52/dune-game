@@ -2,6 +2,47 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — Gear and droid models, ragdoll deaths (issue #25)
+
+- **Rodin text mode, two rounds, picks reviewed on a sheet.** The first round's
+  prompts were long and detailed. Rodin drifted toward familiar archetypes (a red
+  sniper rifle, a quadcopter, a wheeled rover, a generic android). Round two used
+  shorter prompts that lead with the silhouette and the main colour. The owner picked
+  round 2 for the rifle and the floating and cargo droids, and round 1 for the
+  assassin droid. Every id is in `content/look/gear_models.json`; rejected sources
+  were deleted and can be fetched again from Hyper3D Mine.
+- **Pistol, jetpack and cargo case came later, in the same short style.** The
+  first pistol was a plain real-world revolver and the first jetpack a diving rig on
+  wheels; the second tries were kept. The jetpack keeps the kit's flames
+  (`flames_at`), so a model never flies without them.
+- **One cargo case model for every cargo.** It is a 1 m cube in prep, and each look
+  stretches it to its own width, height and depth and tints it toward its shell
+  colour. Alternative: a model per cargo. Rejected: four generations for what is a
+  size and a colour.
+- **The energy sword stays code-built.** Four attempts failed: an ornate fantasy
+  sword, three crossed katanas, a scissor-like hilt, and a hammer with a stub of
+  light. Text mode cannot hold a long, thin, two-material object. Alternatives were
+  agentic mode fed renders of the current sword, or more text prompts. The owner
+  chose to keep the procedural sword, which already ignites a yellow laser blade.
+- **Droids tint one model per kind.** The variant's body colour multiplies the
+  model's albedo (`look.tint`). The cargo droid came out yellow, so prep washes its
+  texture toward grey first (`desaturate`). Glowing eyes and the muzzle are placed
+  from data, so `set_awake`, wrecks and the guns did not change. Alternative: one
+  generation per variant. Rejected: eight more models for a colour change.
+- **A point-mass ragdoll on the kit joints, not PhysicalBone3D.** Characters are a
+  CharacterKit joint hierarchy (a SkinnedBody copies it onto the rig each frame).
+  So a Verlet sim of 21 particles, with bone-length links, two rigid torso blocks,
+  hinge and reach limits and one ray per particle against the world, writes joint
+  rotations, and primitive and skinned bodies fall the same. Alternative: Godot's
+  PhysicalBone3D. Rejected: it needs a Skeleton3D under every body, and the
+  primitives have none. It would also be a second pose source fighting the
+  animator, and getting up would mean blending back from bone poses.
+- **The kick comes from the shooter.** Bolts already pass their shooter
+  (`apply_damage_from`). The player body now records where hits come from too, so a
+  knocked-out player falls away from the guard who shot them.
+- **The dead drop their rifle as a real rigid body** (`Ragdoll.drop`). It is frozen
+  after 20 s so the town does not keep simulating it.
+
 ## 2026-10-27 — The port's fleet: every parked ship is flyable (issue #43)
 
 - **Agentic models for the interceptor and speeder.** Hyper3D's agentic (n-gon) mode,

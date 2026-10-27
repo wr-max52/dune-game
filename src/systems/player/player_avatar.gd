@@ -173,6 +173,8 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 	if not (scene is PackedScene):
 		return null
 	var n: Node3D = scene.instantiate()
+	if spec.get("retint", true) == false:
+		return n
 	var tint: Dictionary = spec.get("tint", {})
 	for mi in _meshes_under(n):
 		var src: Material = mi.mesh.surface_get_material(0) if mi.mesh != null and mi.mesh.get_surface_count() > 0 else null

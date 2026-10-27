@@ -1,9 +1,9 @@
 {
-  "note": "Item looks, keyed by the 'look' id in content/core/items/*.json. Shapes for the stand-ins live in src/systems/items/item_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (wearer's back is -Z in the model, 1 unit = 1 metre); the stand-in is then skipped. 'on_back' places the worn item on the chest joint (metres, degrees). See docs/ADDING_ITEMS.md.",
+  "note": "Item looks, keyed by the 'look' id in content/core/items/*.json. Shapes for the stand-ins live in src/systems/items/item_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (wearer's back is -Z in the model, 1 unit = 1 metre); the stand-in is then skipped. 'on_back' places the worn item on the chest joint (metres, degrees). See docs/ADDING_ITEMS.md. Issue #25: the cargo cases share one Hyper3D model (assets/gear/cargo_case.glb, a 1 m cube stretched to width x height x depth), tinted toward 'shell' by 'tint'.",
   "looks": {
     "jetpack": {
       "frame": "twin_tank",
-      "scene": "",
+      "scene": "res://assets/gear/jetpack.glb",
       "height": 0.52,
       "tank_radius": 0.085,
       "spread": 0.2,
@@ -27,47 +27,63 @@
           0.0,
           0.0
         ]
-      }
+      },
+      "flames_at": [
+        [
+          0.08,
+          -0.3,
+          -0.2
+        ],
+        [
+          -0.08,
+          -0.3,
+          -0.2
+        ]
+      ]
     },
     "cell_case": {
       "frame": "case",
-      "scene": "",
+      "scene": "res://assets/gear/cargo_case.glb",
       "width": 0.5,
       "height": 0.3,
       "depth": 0.34,
       "shell": "#3c4a52",
       "trim": "#8c8478",
-      "glow": "#59d6ff"
+      "glow": "#59d6ff",
+      "tint": 0.75
     },
     "quantonium_flask": {
       "frame": "case",
-      "scene": "",
+      "scene": "res://assets/gear/cargo_case.glb",
       "width": 0.3,
       "height": 0.36,
       "depth": 0.3,
       "shell": "#4a3a2a",
       "trim": "#b0a48c",
-      "glow": "#ffb347"
+      "glow": "#ffb347",
+      "tint": 0.75
     },
     "crystal_case": {
       "frame": "case",
-      "scene": "",
+      "scene": "res://assets/gear/cargo_case.glb",
       "width": 0.42,
       "height": 0.18,
       "depth": 0.3,
       "shell": "#2e2a3c",
       "trim": "#8c8478",
-      "glow": "#b98cff"
+      "glow": "#b98cff",
+      "tint": 0.75
     },
     "tooth_crate": {
       "frame": "case",
-      "scene": "",
+      "scene": "res://assets/gear/cargo_case.glb",
       "width": 0.7,
       "height": 0.28,
       "depth": 0.32,
       "shell": "#d8cdb4",
       "trim": "#5a3a24",
-      "glow": "#f2ead8"
+      "glow": "#f2ead8",
+      "tint": 0.75
     }
   },
   "pickup": {

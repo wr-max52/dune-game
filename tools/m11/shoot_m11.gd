@@ -23,6 +23,7 @@ func _initialize() -> void:
 		if a.begins_with("shots="):
 			_only = a.substr(6).split(",")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	Disclaimers.launch_shown = true     # the launch notice would cover every shot
 	demo = load("res://scenes/town_demo.gd").new()
 	demo.preset = "golden"
 	get_root().add_child(demo)
@@ -33,6 +34,7 @@ func _initialize() -> void:
 		["tpv_pistol_back", _back.bind("pistol_blaster")],
 		["fpv_pistol", _fpv.bind("pistol_blaster", 0.0)],
 		["fpv_rifle", _fpv.bind("rifle_blaster", 0.0)],
+		["tpv_rifle_front", _front.bind("rifle_blaster", 3.0, 25.0)],
 		["tpv_sword_guard", _front.bind("energy_blade", 3.0, 30.0)],
 		["tpv_sword_swing", _swing.bind(0.48)],
 		["tpv_sword_block", _block],

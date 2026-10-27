@@ -674,7 +674,7 @@ func _make_unit(kind: String, variant: String) -> DroidUnit:
 			u.shape.shape = b
 			u.shape.position = Vector3(0, b.size.y * 0.5, 0)
 	u.add_child(u.shape)
-	u.look = DroidKit.build(kind, DroidRoster.variant_cfg(kind, variant), _mats)
+	u.look = DroidKit.build(kind, DroidRoster.variant_cfg(kind, variant), _mats, cfg.get("kinds", {}).get(kind, {}).get("look", {}))
 	u.look.position.y = u.look_lift
 	u.add_child(u.look)
 	if kind == "floating":

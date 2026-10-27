@@ -1,0 +1,11 @@
+{
+  "title": "Issue #25: items as the game builds them (cargo cases share one model)",
+  "out": "res://docs/lookdev/gear/08_items.png",
+  "views": ["front34", "front", "top"],
+  "cells": [
+    { "name": "cell_case", "item": "cell_case" },
+    { "name": "quantonium_flask", "item": "quantonium_flask" },
+    { "name": "crystal_case", "item": "crystal_case" },
+    { "name": "tooth_crate", "item": "tooth_crate" }
+  ]
+}

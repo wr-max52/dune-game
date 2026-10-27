@@ -18,6 +18,9 @@ var _jump: AudioStreamPlayer
 var _jet: AudioStreamPlayer        ## issue #16: the jetpack's roar while it burns
 var _hurt_flash: ColorRect
 var _hurt_left := 0.0
+## Issue #25: while the player is downed, the avatar falls as a ragdoll.
+var ragdoll: Ragdoll
+var _hidden_weapon: Node3D
 
 
 ## Build and attach. `bolts_into` is where bolts live (the scene root).
@@ -86,6 +89,12 @@ func _on_hurt(_amount: float) -> void:
 func _physics_process(dt: float) -> void:
 	if player == null:
 		return
+	if _ragdolled(dt):
+		_hurt_left = maxf(0.0, _hurt_left - dt)
+		_hurt_flash.color.a = _hurt_left * 1.2
+		if _steps != null and _steps.playing:
+			_steps.stop()
+		return
 	var rig = rig_node.rig if rig_node != null else null
 	var ctl = player.controller
 	avatar.animate(dt, {
@@ -106,3 +115,33 @@ func _physics_process(dt: float) -> void:
 		_steps.pitch_scale = clampf(Vector2(player.velocity.x, player.velocity.z).length() / 4.0, 0.8, 1.5)
 	_hurt_left = maxf(0.0, _hurt_left - dt)
 	_hurt_flash.color.a = _hurt_left * 1.2
+
+
+## Downed: the avatar goes limp (away from the last hit) and the weapon in hand is
+## put away; getting up puts every joint back. True while the ragdoll owns the body.
+func _ragdolled(dt: float) -> bool:
+	var down: bool = player.get("is_downed") == true
+	if not down:
+		if ragdoll != null:
+			ragdoll.stop()
+			ragdoll = null
+			if _hidden_weapon != null and is_instance_valid(_hidden_weapon):
+				_hidden_weapon.visible = true
+			_hidden_weapon = null
+		return false
+	if ragdoll == null:
+		if not player.is_inside_tree():
+			return false
+		var cfg := Ragdoll.load_config()
+		var kick := Ragdoll.kick_for(player.global_position, player.last_hit_from, player.last_hit_amount, cfg)
+		ragdoll = Ragdoll.new(avatar.joints, cfg)
+		ragdoll.start(player.velocity, kick, player.get_world_3d().direct_space_state, [player.get_rid()])
+		var w := avatar.weapon_node(avatar.current)
+		if w != null and avatar.drawn > 0.5 and w.visible:
+			_hidden_weapon = w
+			w.visible = false
+	var moving := not ragdoll.asleep
+	ragdoll.step(dt)
+	if moving and avatar.skin != null:
+		avatar.skin.sync(avatar.body)
+	return true

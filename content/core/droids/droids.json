@@ -1,6 +1,6 @@
 {
   "id": "droids",
-  "note": "IP-neutral (issue #51). Companion droids: three kinds, each with look variants. Not LLM characters; they only beep. The player runs up to max_owned at once. They show in the inventory as droids; what a cargo droid carries does not show, and the Remnant never searches it. Prices: the merchant sells at price and buys back at resale. Proof-of-concept looks (droid_kit.gd), to be replaced by real models later.",
+  "note": "IP-neutral (issue #51). Companion droids: three kinds, each with look variants. Not LLM characters; they only beep. The player runs up to max_owned at once. They show in the inventory as droids; what a cargo droid carries does not show, and the Remnant never searches it. Prices: the merchant sells at price and buys back at resale. Looks: each kind's 'look' names its Hyper3D model (issue #25, content/look/gear_models.json), tinted by the variant's body colour ('tint' 0..1), with glowing 'eyes' and a 'muzzle' in model space (metres, facing -Z, standing on y = 0). No model = the droid_kit.gd primitives.",
   "max_owned": 3,
   "fix_seconds": 10.0,
   "fix_reach": 2.6,
@@ -37,6 +37,18 @@
           "trim": "#5a5a60",
           "eye": "#ff3030"
         }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_floating.glb",
+        "tint": 0.85,
+        "eyes": [
+          [
+            0.0,
+            0.36,
+            -0.24
+          ]
+        ],
+        "eye_radius": 0.045
       }
     },
     "cargo": {
@@ -66,6 +78,23 @@
           "trim": "#c8c8c0",
           "eye": "#4ad0ff"
         }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_cargo.glb",
+        "tint": 0.9,
+        "eyes": [
+          [
+            -0.085,
+            0.7,
+            -0.15
+          ],
+          [
+            0.085,
+            0.7,
+            -0.15
+          ]
+        ],
+        "eye_radius": 0.03
       }
     },
     "assassin": {
@@ -108,6 +137,23 @@
           "trim": "#2e2e32",
           "eye": "#ff2020"
         }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_assassin.glb",
+        "tint": 0.85,
+        "eyes": [
+          [
+            -0.15,
+            2.09,
+            -0.17
+          ]
+        ],
+        "eye_radius": 0.03,
+        "muzzle": [
+          0.6,
+          1.12,
+          -0.33
+        ]
       }
     }
   },
