@@ -8,6 +8,27 @@
       "hull": "#c9c2b4", "trim": "#d99a2b", "dark": "#2a2c33",
       "canopy": "#1f7a78", "engine": "#8fd8ff"
     },
+    "interceptor_red": {
+      "frame": "dart",
+      "scene": "",
+      "length": 9.0, "span": 7.6, "height": 1.6,
+      "hull": "#c9c2b4", "trim": "#a8322a", "dark": "#2a2c33",
+      "canopy": "#8a2a24", "engine": "#ff6a4a"
+    },
+    "interceptor_gold": {
+      "frame": "dart",
+      "scene": "",
+      "length": 9.0, "span": 7.6, "height": 1.6,
+      "hull": "#d4ac52", "trim": "#2f5d8a", "dark": "#2a2c33",
+      "canopy": "#1f7a78", "engine": "#8fd8ff"
+    },
+    "interceptor_gold_red": {
+      "frame": "dart",
+      "scene": "",
+      "length": 9.0, "span": 7.6, "height": 1.6,
+      "hull": "#d4ac52", "trim": "#a8322a", "dark": "#2a2c33",
+      "canopy": "#8a2a24", "engine": "#ff6a4a"
+    },
     "remnant_fighter": {
       "frame": "blade",
       "scene": "",

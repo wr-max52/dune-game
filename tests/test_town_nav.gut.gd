@@ -6,6 +6,7 @@ extends GutTest
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
+const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
 
 var town
 
@@ -17,7 +18,14 @@ func before_each() -> void:
 
 func test_every_box_becomes_twelve_triangles() -> void:
 	var faces := TownNav.box_faces(town)
-	assert_eq(faces.size(), town.boxes().size() * 36)
+	# The round pit is a hollow shell: its own triangles, not a box (a lid).
+	var bowl_faces := 0
+	for b in town.boxes():
+		if str(b.kind) == "bowl":
+			for m in PitBowl.parts(b, town).values():
+				bowl_faces += (m as ArrayMesh).get_faces().size()
+	assert_gt(bowl_faces, 0)
+	assert_eq(faces.size(), (town.boxes().size() - 1) * 36 + bowl_faces)
 
 
 func test_ramps_keep_their_slope() -> void:

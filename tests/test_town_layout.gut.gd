@@ -39,9 +39,9 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 114)   # M15: + two checkpoint barricades at the gate
-	assert_eq(t.markers().size(), 18)
-	assert_eq(t.routes().size(), 8)   # M15: + the gate guards' and the barracks troopers' patrol loops
+	assert_eq(t.boxes().size(), 169)   # art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 4 ships + crates
+	assert_eq(t.markers().size(), 21)  # art pass 2: + three patrons at the bar
+	assert_eq(t.routes().size(), 9)   # M15: + patrol loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)
 
 
@@ -76,27 +76,28 @@ func test_five_trooper_posts() -> void:
 
 func test_route_lengths_match_reference() -> void:
 	var t := _town()
-	assert_almost_eq(t.route_length("gate_to_cantina"), 234.5, 0.1)
-	assert_almost_eq(t.route_length("spawn_to_cantina"), 162.3, 0.1)
-	assert_almost_eq(t.route_length("backgap_to_cantina"), 140.0, 0.1)
+	# Art pass 2: round the cantina stage instead of across it, and round the bigger pit.
+	assert_almost_eq(t.route_length("gate_to_cantina"), 255.2, 0.1)
+	assert_almost_eq(t.route_length("spawn_to_cantina"), 218.2, 0.1)
+	assert_almost_eq(t.route_length("backgap_to_cantina"), 150.7, 0.1)
 
 
 func test_ramp_ne_top_edge_meets_ground() -> void:
 	var rt := TownLayout.ramp_transform(_town().get_box("ramp_ne"))
 	var b: Basis = rt.basis
 	var top: Vector3 = rt.center + b.y * 0.2 + b.x * (rt.size.x / 2.0)
-	assert_almost_eq(top.x, 18.0, 0.01)
+	assert_almost_eq(top.x, 28.0, 0.01)   # art pass 2: the round pit's east ramp
 	assert_almost_eq(top.y, 0.0, 0.01)
-	assert_almost_eq(top.z, 18.5, 0.01)
+	assert_almost_eq(top.z, 0.0, 0.01)
 
 
 func test_ramp_sw_top_edge_meets_ground() -> void:
 	var rt := TownLayout.ramp_transform(_town().get_box("ramp_sw"))
 	var b: Basis = rt.basis
 	var top: Vector3 = rt.center + b.y * 0.2 - b.x * (rt.size.x / 2.0)
-	assert_almost_eq(top.x, -18.0, 0.01)
+	assert_almost_eq(top.x, -28.0, 0.01)   # and its west ramp
 	assert_almost_eq(top.y, 0.0, 0.01)
-	assert_almost_eq(top.z, -18.5, 0.01)
+	assert_almost_eq(top.z, 0.0, 0.01)
 
 
 func test_ramp_angle_is_walkable() -> void:
@@ -151,3 +152,94 @@ func test_chunks_are_port_kind() -> void:
 		centers.append(float(c.center))
 	centers.sort()
 	assert_eq(centers, [-50.0, 50.0])
+
+
+## Art pass 2: the residential districts are not a grid any more. Huts on the
+## market side, towers (with rooftop bridges) on the barracks side.
+func test_neighbourhoods_are_not_a_grid() -> void:
+	var t := _town()
+	var huts: Array = []
+	var towers: Array = []
+	var bridges := 0
+	for b in t.boxes():
+		var look := str(b.get("look", ""))
+		if str(b.zone) == "residential_w" and look.begins_with("hut_"):
+			huts.append(b)
+		elif str(b.zone) == "residential_e" and look.begins_with("tower_"):
+			towers.append(b)
+		elif str(b.zone) == "residential_e" and look == "bridge":
+			bridges += 1
+			assert_eq(str(b.kind), "overhead", "%s is walked over, not into" % b.id)
+	assert_gt(huts.size(), 30, "plenty of huts by the market")
+	assert_gt(towers.size(), 12, "a tower block by the barracks")
+	assert_gt(bridges, 4, "with bridges between the roofs")
+	# Off-grid: many different row and column starts.
+	var xs := {}
+	var zs := {}
+	for b in huts:
+		xs[float(b.min[0])] = true
+		zs[float(b.min[2])] = true
+	assert_gt(xs.size(), 20, "hut columns do not line up")
+	assert_gt(zs.size(), 8, "hut rows do not line up")
+	var hut_h := 0.0
+	var tower_h := 0.0
+	for b in huts:
+		hut_h = maxf(hut_h, float(b.max[1]))
+	for b in towers:
+		tower_h += float(b.max[1]) / towers.size()
+	assert_lte(hut_h, 5.0, "huts stay low")
+	assert_gt(tower_h, 11.0, "towers stand tall")
+
+
+func test_every_building_has_a_door_side() -> void:
+	for b in _town().boxes():
+		if str(b.get("look", "")) in ["", "bridge", "cistern", "stage", "stair_tower", "lookout"]:
+			continue
+		assert_true(str(b.get("face", "")) in ["+x", "-x", "+z", "-z"], "%s has a door side" % b.id)
+		if str(b.get("shape", "")) == "round":
+			assert_almost_eq(float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2]), 0.01, "%s: round on a square footprint" % b.id)
+
+
+## Art pass 2: the cantina has a stage in the middle that the walk routes go
+## round, and patrons on the bar stools facing the bartender.
+func test_cantina_stage_and_patrons() -> void:
+	var t := _town()
+	var stage := t.get_box("cantina_stage")
+	assert_false(stage.is_empty(), "the stage exists")
+	assert_eq(str(stage.kind), "cover", "you cannot walk through it")
+	var roof := t.get_box("cantina_roof")
+	assert_gte(float(roof.min[1]), 8.0, "a tall hall")
+	var patrons := 0
+	for m in t.markers():
+		if str(m.id).begins_with("patron_"):
+			patrons += 1
+			assert_eq(str(m.get("face", "")), "bartender", "%s faces the bar" % m.id)
+	assert_gte(patrons, 3, "locals at the bar")
+
+
+## Art pass 2: a round pit with four bays. The player's ship is on the launch
+## pad and the spawn is beside it; the others are colour variants that never fly.
+func test_round_pit_with_four_ships() -> void:
+	var t := _town()
+	var bowl := t.get_box("pit_bowl")
+	assert_eq(str(bowl.kind), "bowl")
+	assert_true(bool(bowl.get("hollow", false)), "other boxes sit inside it")
+	var ships: Array = []
+	for b in t.boxes():
+		if str(b.kind) == "ship":
+			ships.append(b)
+	assert_eq(ships.size(), 4, "four ships in the pit")
+	var looks := {}
+	for b in ships:
+		if b.has("ship_look"):
+			looks[str(b.ship_look)] = true
+	assert_eq(looks.keys().size(), 3, "three parked variants, all different")
+	var own := t.get_box("ship")
+	var c := Vector3((float(own.min[0]) + float(own.max[0])) * 0.5, -6.0, (float(own.min[2]) + float(own.max[2])) * 0.5)
+	assert_lt(t.spawn_pos().distance_to(c), 10.0, "the player spawns by their own ship")
+	var r := (float(bowl.max[0]) - float(bowl.min[0])) * 0.5
+	for b in ships:
+		for x in [float(b.min[0]), float(b.max[0])]:
+			for z in [float(b.min[2]), float(b.max[2])]:
+				assert_lt(Vector2(x, z).length(), r, "%s fits inside the round wall" % b.id)
+

@@ -15,8 +15,9 @@ extends RefCounted
 
 const FLOOR_KINDS := ["floor"]
 ## Box kinds that are not part of the world a ship flies through: the "ship" box
-## in the town data is the parked ship itself.
-const SKIP_KINDS := ["ship"]
+## in the town data is the parked ship itself; the "bowl" is the round pit's
+## hollow shell (its square box would be a lid over the pit).
+const SKIP_KINDS := ["ship", "bowl"]
 
 var terrain: WorldTerrain
 var boxes: Array = []        ## { id, kind, min: Vector3, max: Vector3, ramp_axis, ramp_sign }

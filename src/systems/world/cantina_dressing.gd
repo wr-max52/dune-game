@@ -62,12 +62,18 @@ func dress(town, materials: LookMaterials) -> void:
 		var sx := cmax.x + 0.75
 		_cyl(Vector3(sx, 0.38, z), 0.03, 0.76, brass)
 		_cyl(Vector3(sx, 0.78, z), 0.2, 0.07, mats.flat(Color("#6a2a24"), 0.8))
-	# Warm hanging lamps over the counter and the room.
+	# Warm hanging lamps over the counter and the room, on cords from the ceiling.
+	var roof: Dictionary = town.get_box("cantina_roof")
+	var ceiling := float(roof.min[1]) if not roof.is_empty() else 5.0
 	var lamp_glow := mats.glow(Color("#ffb060"))
 	lamp_glow.emission_energy_multiplier = 3.0
-	for p in [Vector3(cmin.x + 0.5, 3.3, -4.0), Vector3(cmin.x + 0.5, 3.3, 0.0), Vector3(cmin.x + 0.5, 3.3, 4.0),
-			Vector3(-70.0, 3.6, -8.0), Vector3(-64.0, 3.6, -6.0), Vector3(-72.0, 3.6, 6.0)]:
-		_cyl(p + Vector3(0, 0.8, 0), 0.008, 1.6, brass)
+	var lamps := [Vector3(cmin.x + 0.5, 3.3, -4.0), Vector3(cmin.x + 0.5, 3.3, 0.0), Vector3(cmin.x + 0.5, 3.3, 3.5)]
+	for id in ["cantina_table_1", "cantina_table_2", "cantina_table_3"]:
+		var t: Dictionary = town.get_box(id)
+		if not t.is_empty():
+			lamps.append(Vector3((float(t.min[0]) + float(t.max[0])) * 0.5, 3.6, (float(t.min[2]) + float(t.max[2])) * 0.5))
+	for p in lamps:
+		_cyl(Vector3(p.x, (p.y + ceiling) * 0.5, p.z), 0.008, ceiling - p.y, brass)
 		_cyl(p, 0.22, 0.18, mats.flat(Color("#2a2420"), 0.6, 0.5))
 		var bulb := MeshInstance3D.new()
 		var s := SphereMesh.new()

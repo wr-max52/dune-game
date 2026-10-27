@@ -6,7 +6,7 @@ extends GutTest
 
 const TRACE := "res://test_results/town_walk_trace.txt"
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
-const ROUTES := ["spawn_to_cantina", "cantina_to_gate", "gate_to_cantina", "backgap_to_cantina"]
+const ROUTES := ["spawn_to_cantina", "cantina_to_gate", "gate_to_cantina", "backgap_to_cantina", "cantina_to_lookout"]
 
 
 func _trace_lines() -> PackedStringArray:
@@ -54,7 +54,7 @@ func test_all_routes_done() -> void:
 	for l in _trace_lines():
 		if l.begins_with("ROUTE_DONE "):
 			done.append(l.split(" ")[1])
-	assert_eq(done.size(), 4, "four routes finished")
+	assert_eq(done.size(), 5, "five routes finished")
 	for id in ROUTES:
 		assert_true(done.has(id), "%s finished" % id)
 
@@ -72,8 +72,8 @@ func test_every_waypoint_reached() -> void:
 
 func test_built_everything() -> void:
 	var s := _trace_summary()
-	assert_eq(int(s.get("boxes", 0)), 114)   # M15: + two checkpoint barricades
-	assert_eq(int(s.get("markers", 0)), 12)
+	assert_eq(int(s.get("boxes", 0)), 169)   # art pass 2: neighbourhoods, cantina stage + tower + lookout, round pit + ships + crates
+	assert_eq(int(s.get("markers", 0)), 15)  # + three patrons at the bar
 
 
 func test_frame_budget() -> void:
@@ -91,3 +91,17 @@ func test_player_used_the_ramp() -> void:
 func test_player_never_fell() -> void:
 	for r in _trace_rows():
 		assert_gt(r[4], -6.5, "y at frame %d" % r[0])
+
+
+## Art pass 2: the stair tower behind the bar is a real climb. The walk up the
+## spiral ramp reaches the lookout floor, well above the cantina roof.
+func test_player_climbed_to_the_lookout() -> void:
+	var t := TownLayout.new()
+	t.load_town("port_town")
+	var floor_y := float(t.get_box("lookout").min[1])
+	var top := -INF
+	for r in _trace_rows():
+		if r[1] == "cantina_to_lookout":
+			top = maxf(top, r[4])
+	assert_almost_eq(top, floor_y, 0.3, "stood on the lookout floor")
+

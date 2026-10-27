@@ -8,6 +8,22 @@
     "gate_to_desert":     { "pos": [84.0, 1.7, 3.0], "target": [400.0, 4.0, -20.0], "fov": 66.0 },
     "desert_look_back":   { "pos": [360.0, 0.0, 70.0], "height_above_ground": 2.0, "target": [0.0, 6.0, 0.0], "fov": 55.0 },
     "north_wall_outside": { "pos": [30.0, 1.7, 112.0], "target": [-30.0, 3.0, 70.0], "fov": 66.0 },
-    "desert_aerial":      { "pos": [420.0, 140.0, 380.0], "target": [0.0, 0.0, 0.0], "fov": 55.0 }
+    "desert_aerial":      { "pos": [420.0, 140.0, 380.0], "target": [0.0, 0.0, 0.0], "fov": 55.0 },
+    "market_lane":        { "pos": [37.0, 2.2, -22.0], "target": [70.0, 0.8, -40.0], "fov": 66.0 },
+    "market_stall_close": { "pos": [55.0, 1.9, -24.5], "target": [58.0, 0.9, -30.0], "fov": 60.0 },
+    "cantina_front":      { "pos": [-36.0, 2.0, 8.0], "target": [-62.0, 6.0, 2.0], "fov": 66.0 },
+    "cantina_hall":       { "pos": [-58.0, 2.2, -10.0], "target": [-74.0, 2.5, 3.0], "fov": 72.0 },
+    "cantina_stair":      { "pos": [-76.0, 1.8, 3.0], "target": [-84.0, 3.0, 8.0], "fov": 70.0 },
+    "lookout_view":       { "pos": [-81.0, 16.7, 9.0], "target": [0.0, 4.0, -10.0], "fov": 70.0 },
+    "lookout_outside":    { "pos": [-60.0, 22.0, 30.0], "target": [-84.0, 14.0, 10.0], "fov": 60.0 },
+    "spaceport_rim":      { "pos": [24.0, 5.0, 26.0], "target": [-6.0, -6.0, -4.0], "fov": 66.0 },
+    "spaceport_floor":    { "pos": [2.0, -4.3, 19.0], "target": [-4.0, -5.0, -6.0], "fov": 72.0 },
+    "spaceport_aerial":   { "pos": [45.0, 55.0, 45.0], "target": [0.0, -6.0, 0.0], "fov": 55.0 },
+    "spaceport_bays":     { "pos": [0.0, 16.0, 0.5], "target": [0.0, -6.0, 0.0], "fov": 90.0 },
+    "hut_door":           { "pos": [-22.0, 1.7, -45.0], "target": [-25.0, 1.5, -49.2], "fov": 55.0 },
+    "homes_market_side":  { "pos": [26.0, 2.0, -33.0], "target": [-10.0, 2.5, -56.0], "fov": 66.0 },
+    "homes_tower_side":   { "pos": [26.0, 2.0, 33.0], "target": [-20.0, 9.0, 56.0], "fov": 70.0 },
+    "barracks_front":     { "pos": [46.0, 2.0, 6.0], "target": [72.0, 6.0, 50.0], "fov": 68.0 },
+    "town_oblique":       { "pos": [150.0, 95.0, -150.0], "target": [0.0, 0.0, 0.0], "fov": 50.0 }
   }
 }
