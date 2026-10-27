@@ -28,6 +28,16 @@
     { "id": "r_cache", "text": "Somebody left a drop out past the front gate. Unmarked cells. The fence in the market would pay, if you could get them past the gate.", "requires": { "tier": "regular", "not_flags": ["contraband_confiscated"] }, "weight": 2 },
     { "id": "r_confiscated", "text": "The gate took a case of cells off somebody today. The fence is in mourning.", "requires": { "flags": ["contraband_confiscated"] }, "weight": 4 },
     { "id": "r_alarm", "text": "The klaxon went off at the barracks today. Half the garrison ran to the front gate with their boots untied.", "requires": { "flags": ["gate_fight"] }, "weight": 3 },
-    { "id": "r_noon", "text": "Nobody sane walks the market at noon. The sun out there has a grudge.", "requires": { "time": ["noon"] }, "weight": 1 }
+    { "id": "r_noon", "text": "Nobody sane walks the market at noon. The sun out there has a grudge.", "requires": { "time": ["noon"] }, "weight": 1 },
+  {
+   "id": "r_pit_hauler",
+   "text": "That old cargo droid rattling round the landing pit has a jetpack strapped to its back. Nobody's claimed it in a month. Walk up and take it; it won't mind.",
+   "requires": {
+    "not_flags": [
+     "pit_jetpack_taken"
+    ]
+   },
+   "weight": 3
+  }
   ]
 }

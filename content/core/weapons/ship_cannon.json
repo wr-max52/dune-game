@@ -11,5 +11,7 @@
   "mag": 40,
   "reload_time": 2.0,
   "visible_bolt": true,
-  "note": "IP-neutral. Fixed forward ship gun; 'mag' + 'reload_time' act as a heat limit."
+  "splash_radius": 3.5,
+  "splash_damage": 22,
+  "note": "IP-neutral. Fixed forward ship gun; 'mag' + 'reload_time' act as a heat limit. Issue #64: in the atmosphere a bolt bursts where it lands (on the ground too), hurting everything within splash_radius by splash_damage, so strafing people on the ground works."
 }

@@ -17,6 +17,12 @@ var hit_target
 ## M11 (player weapons). All opt-in so the M2 trooper bolts behave exactly as before.
 var shooter: Node = null       ## never hits its own shooter
 var friends: Array = []        ## issue #64: never hits these either (your droid's bolts fly past you)
+## Issue #64: a ship's cannon bolt bursts where it lands, hurting everything within
+## splash_radius (people on the ground), and bursts on the ground under it too
+## (ground_at: (x, z) -> height; the desert's collider is not where a ship flies).
+var splash_radius := 0.0
+var splash_damage := 0.0
+var ground_at: Callable
 var stylize := false           ## a stretched glowing streak instead of the sphere
 var sweep := false             ## ray-test each step so fast bolts cannot tunnel
 var color := Color(1.0, 0.45, 0.2)
@@ -48,6 +54,32 @@ func apply_to(target: Object) -> void:
 		return
 	_die()
 	handle_hit(target)
+	if splash_radius > 0.0:
+		_splash(target)
+
+
+## Damage everything within splash_radius of where it burst but the thing it hit
+## (that took the full bolt) and whoever fired it.
+func _splash(direct: Object) -> void:
+	if not is_inside_tree():
+		return
+	var q := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = splash_radius
+	q.shape = sphere
+	q.transform = Transform3D(Basis.IDENTITY, global_position)
+	q.collision_mask = 1 | 2
+	q.collide_with_areas = false
+	var seen := {}
+	for r in get_world_3d().direct_space_state.intersect_shape(q, 32):
+		var c: Object = r.collider
+		if c == null or c == direct or c == shooter or seen.has(c) or friends.has(c):
+			continue
+		seen[c] = true
+		if c.has_method("apply_damage_from"):
+			c.apply_damage_from(splash_damage, shooter)
+		elif c.has_method("apply_damage"):
+			c.apply_damage(splash_damage)
 
 
 func handle_hit(target: Object) -> void:
@@ -155,6 +187,9 @@ func _physics_process(dt: float) -> void:
 			apply_to(hit.collider if hit_target == null else hit_target)
 			return
 	global_position += step
+	if _alive and ground_at.is_valid() and global_position.y <= float(ground_at.call(global_position.x, global_position.z)):
+		global_position.y = float(ground_at.call(global_position.x, global_position.z))
+		apply_to(null)
 
 
 func _on_body_entered(body: Node3D) -> void:

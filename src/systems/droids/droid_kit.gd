@@ -192,6 +192,28 @@ static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) ->
 	return true
 
 
+## Issue #64: hold one frame of a clip, still (a droid in a fight stands in its
+## ready stance instead of running the idle's shuffle). look.anims[role] at
+## `at` seconds. False when the look has no rig or no such clip.
+static func hold_pose(look: Node3D, role: String, at := 0.0, blend := 0.2) -> bool:
+	var holder: Node = null
+	for n in look.find_children("*", "Node3D", true, false):
+		if n.has_meta("anim"):
+			holder = n
+			break
+	if holder == null:
+		return false
+	var ap: AnimationPlayer = holder.get_meta("anim")
+	var clip := str((holder.get_meta("anims") as Dictionary).get(role, ""))
+	if clip == "" or not ap.has_animation(clip):
+		return false
+	if ap.current_animation != clip or ap.speed_scale != 0.0:
+		ap.play(clip, blend)
+		ap.seek(at, true)
+	ap.speed_scale = 0.0
+	return true
+
+
 ## Jump the current clip to its last frame (a wreck that has lain there for days).
 static func finish_anim(look: Node3D) -> void:
 	for n in look.find_children("*", "Node3D", true, false):

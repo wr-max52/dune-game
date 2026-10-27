@@ -42,6 +42,7 @@ var rng := RandomNumberGenerator.new()
 var shots_fired := 0
 var _wreck_clock := 0.0
 var _heading := Vector3.FORWARD
+var _follow_t := 0.0
 var _mats: LookMaterials
 var _was_locked := false
 
@@ -70,6 +71,7 @@ func _ready() -> void:
 	for w in roster().wrecks:
 		_build_wreck(w)
 	_build_remnant()
+	_build_hauler()
 	if demo != null and "training_range" in demo and demo.training_range != null:
 		demo.training_range.remote_tamed.connect(_on_remote_tamed)
 
@@ -98,6 +100,7 @@ func _physics_process(dt: float) -> void:
 		_tick_fix(dt)
 		_tick_focus()
 	_remnant_step(dt)
+	_hauler_step(dt)
 	_tick_wrecks(dt)
 	_chirps(dt)
 
@@ -427,6 +430,9 @@ func _spawn_companion(d: Dictionary, at: Vector3) -> DroidUnit:
 	u.uid = int(d.uid)
 	add_child(u)
 	u.global_position = Vector3(at.x, _ground_y(at), at.z)
+	if u.kind == "floating":
+		u.look_lift += u.quirk().z * 0.5 - 0.15      # issue #64: not all at one height
+		u.look.position.y = u.look_lift
 	DroidKit.set_awake(u.look, true)
 	companions[int(d.uid)] = u
 	return u
@@ -453,32 +459,60 @@ func _follow(dt: float) -> void:
 	if v.length() > 0.6:
 		_heading = v.normalized()
 	var right := _heading.cross(Vector3.UP).normalized()
-	var i := 0
+	_follow_t += dt
+	var of_kind := {}                  # kind -> how many placed so far
 	for uid in companions:
 		var u: DroidUnit = companions[uid]
 		var f: Dictionary = DroidRoster.kind_cfg(u.kind).get("follow", {})
-		var slot := player.global_position + right * (float(f.get("side", 1.0)) + 0.6 * (i % 2)) \
-			- _heading * (float(f.get("back", 1.5)) + 0.9 * i)
-		i += 1
+		# Issue #64: two of a kind no longer share a slot and march in step. Each
+		# takes the next place in a fan behind its kind's slot (alternating sides,
+		# further back), drifts a little around it, and has its own pace and
+		# reaction time (from its uid), so a group reads as droids, not puppets.
+		var k := int(of_kind.get(u.kind, 0))
+		of_kind[u.kind] = k + 1
+		var me := u.quirk()
+		var fan := 0.0 if k == 0 else (1.0 if k % 2 == 1 else -1.0) * ceilf(k / 2.0) * 1.4
+		var drift := Vector2(sin(_follow_t * 0.37 + me.x * TAU), cos(_follow_t * 0.29 + me.y * TAU)) * 0.45
+		var slot := player.global_position + right * (float(f.get("side", 1.0)) + fan + drift.x) \
+			- _heading * (float(f.get("back", 1.5)) + 1.1 * k + drift.y)
 		var to := Vector3(slot.x - u.global_position.x, 0, slot.z - u.global_position.z)
 		var dist := to.length()
-		if not u.following and _flat_dist(u.global_position, player.global_position) > float(f.get("leash", 5.0)):
-			u.following = true
-		elif u.following and dist <= float(f.get("settle", 0.35)):
+		var leash := float(f.get("leash", 5.0)) + me.z * 2.0 + 0.8 * k
+		if not u.following and _flat_dist(u.global_position, player.global_position) > leash:
+			u.wait_left -= dt
+			if u.wait_left <= 0.0:
+				u.following = true
+		else:
+			u.wait_left = 0.15 + me.x * 0.6        # a beat before it notices you left
+		if u.following and dist <= float(f.get("settle", 0.35)):
 			u.following = false
 		var pos: Vector3 = u.global_position
 		var speed := 0.0
 		if dist > 40.0:
 			pos = slot
 		elif u.following:
-			speed = float(f.get("speed", 7.0)) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
+			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
 			pos += to / dist * minf(speed * dt, dist)
 			_face(u, to)
 		elif u.kind != "assassin" or u.target == null:
 			_face(u, player.global_position - u.global_position)
+		pos += _separation(u, pos) * dt
 		pos.y = _ground_y(pos)
 		u.global_position = pos
-		u.walk(dt, u.following, speed)
+		u.walk(dt, u.following, speed, u.kind == "assassin" and u.target != null)
+
+
+## A push away from any other droid of yours closer than a body's width.
+func _separation(u: DroidUnit, at: Vector3) -> Vector3:
+	var push := Vector3.ZERO
+	for other in companions.values():
+		if other == u:
+			continue
+		var d := Vector3(at.x - other.global_position.x, 0, at.z - other.global_position.z)
+		var l := d.length()
+		if l < 1.3:
+			push += (d / l if l > 0.01 else Vector3(u.quirk().x - 0.5, 0, 0.5 - u.quirk().y).normalized()) * (1.3 - l) * 4.0
+	return push
 
 
 ## Your assassin droid: deadly aim at whoever the town is fighting you with.
@@ -520,6 +554,57 @@ func _enemy_near(u: DroidUnit, reach: float) -> Node3D:
 			best = c
 			best_d = d
 	return best
+
+
+# ------------------------------------------------------------------ the pit's hauler (issue #64)
+
+var hauler: DroidUnit                 ## the old cargo droid that roams the pit
+var _hauler_pause := 0.0
+
+
+func _build_hauler() -> void:
+	var hc: Dictionary = cfg.get("pit_hauler", {})
+	var route: Array = hc.get("route", [])
+	if route.is_empty():
+		return
+	hauler = _make_unit("cargo", str(hc.get("variant", "tan")))
+	hauler.patrol = route.map(func(p): return _v3(p))
+	hauler.spec = { "hauler": true }
+	add_child(hauler)
+	var p: Vector3 = hauler.patrol[0]
+	hauler.global_position = Vector3(p.x, _ground_y(p), p.z)
+	hauler.patrol_i = 1 % hauler.patrol.size()      # already at the first stop: off to the next
+	DroidKit.set_awake(hauler.look, true)
+
+
+## It walks its round of the pit, stopping a while at each point, and the
+## pickup it carries rides on its back (GearController still owns the pickup).
+func _hauler_step(dt: float) -> void:
+	if hauler == null:
+		return
+	var hc: Dictionary = cfg.get("pit_hauler", {})
+	var moving := false
+	if _hauler_pause > 0.0:
+		_hauler_pause -= dt
+	else:
+		var goal: Vector3 = hauler.patrol[hauler.patrol_i]
+		var to := Vector3(goal.x - hauler.global_position.x, 0, goal.z - hauler.global_position.z)
+		if to.length() < 0.4:
+			hauler.patrol_i = (hauler.patrol_i + 1) % hauler.patrol.size()
+			_hauler_pause = float(hc.get("pause_s", 4.0))
+		else:
+			var spd := float(hc.get("walk_speed", 1.3))
+			var pos: Vector3 = hauler.global_position + to.normalized() * minf(spd * dt, to.length())
+			pos.y = _ground_y(pos)
+			hauler.global_position = pos
+			_face(hauler, to)
+			moving = true
+	hauler.walk(dt, moving, float(hc.get("walk_speed", 1.3)) if moving else 0.0)
+	var load = gear.pickup_node(str(hc.get("carries", ""))) if gear != null else null
+	if load != null and is_instance_valid(load):
+		var at := hauler.global_position + Vector3(0, float(hc.get("load_lift", 1.05)), 0)
+		load.base = at
+		load.global_position = at
 
 
 # ------------------------------------------------------------------ the Remnant's droids
@@ -633,7 +718,7 @@ func _remnant_step(dt: float) -> void:
 		if sees:
 			var aim := _chest(player)
 			_face(u, aim - u.global_position)
-			u.walk(dt, false)
+			u.walk(dt, false, 0.0, true)
 			var g = _garrison(u)
 			if g != null and not g.alarm.active():
 				g._raise("droid")
@@ -752,10 +837,11 @@ func _make_unit(kind: String, variant: String) -> DroidUnit:
 			u.look_lift = float(kc.get("hover", 1.7))
 			u.shape.position = Vector3(0, u.look_lift, 0)
 		"cargo":
+			u.size_scale = float(kc.get("scale", 1.0))
 			var b := BoxShape3D.new()
-			b.size = Vector3(0.66, 0.7, 0.76)
+			b.size = Vector3(0.66, 0.7, 0.76) * u.size_scale
 			u.shape.shape = b
-			u.shape.position = Vector3(0, 0.38, 0)
+			u.shape.position = Vector3(0, 0.38 * u.size_scale, 0)
 		_:
 			var b := BoxShape3D.new()
 			b.size = Vector3(0.55, float(kc.get("height", 2.3)) - 0.1, 0.4)
@@ -764,6 +850,7 @@ func _make_unit(kind: String, variant: String) -> DroidUnit:
 	u.add_child(u.shape)
 	u.look = DroidKit.build(kind, DroidRoster.variant_cfg(kind, variant), _mats, cfg.get("kinds", {}).get(kind, {}).get("look", {}))
 	u.look.position.y = u.look_lift
+	u.look.scale = Vector3.ONE * u.size_scale
 	u.add_child(u.look)
 	if kind == "floating":
 		u.hum = Sound.loop("droid_hum", u)
@@ -849,6 +936,13 @@ class DroidUnit extends StaticBody3D:
 	var patrol: Array = []          ## Vector3 points it walks (the Remnant's)
 	var spec: Dictionary = {}       ## how to build it again (the Remnant's)
 	var respawn_left := -1.0        ## seconds until a dead one comes back (< 0 = never)
+	var wait_left := 0.0            ## a beat before it starts after you (issue #64)
+	var size_scale := 1.0           ## its kind's "scale" (the cargo droid is bigger, issue #64)
+
+	## This droid's own small differences, 0..1 each, steady for its uid.
+	func quirk() -> Vector3:
+		var h := absi(hash(uid * 7919 + 13))
+		return Vector3(float(h % 1000) / 1000.0, float((h / 1000) % 1000) / 1000.0, float((h / 1000000) % 1000) / 1000.0)
 	var target: Node3D
 	var following := false          ## closing the gap to its slot (else it holds still)
 	var _t := 0.0
@@ -858,7 +952,7 @@ class DroidUnit extends StaticBody3D:
 			"floating":
 				return look.global_position
 			"cargo":
-				return global_position + Vector3(0, 0.45, 0)
+				return global_position + Vector3(0, 0.45 * size_scale, 0)
 		return global_position + Vector3(0, 1.5, 0)
 
 	func muzzle() -> Vector3:
@@ -869,7 +963,9 @@ class DroidUnit extends StaticBody3D:
 
 	## Bob (floating), roll the wheels (cargo), walk or run (assassin: its rigged
 	## clips, timed to `speed` in m/s; without a rig, a sway).
-	func walk(dt: float, moving: bool, speed := 0.0) -> void:
+	## `fighting`: standing still in a fight, it holds its ready stance (the idle's
+	## shuffle is for waking up and for standing about, issue #64).
+	func walk(dt: float, moving: bool, speed := 0.0, fighting := false) -> void:
 		_t += dt
 		var model := look.get_node("Model") as Node3D
 		match kind:
@@ -880,7 +976,9 @@ class DroidUnit extends StaticBody3D:
 			"assassin":
 				var a: Dictionary = DroidRoster.kind_cfg(kind).get("look", {})
 				var played := false
-				if not moving:
+				if not moving and fighting:
+					played = DroidKit.hold_pose(look, "aim", float(a.get("aim_at", 0.0)))
+				elif not moving:
 					played = DroidKit.play_anim(look, "idle")
 				elif speed >= float(a.get("run_from", 3.5)):
 					played = DroidKit.play_anim(look, "run", clampf(speed / float(a.get("run_speed", 5.0)), 0.6, 1.8))

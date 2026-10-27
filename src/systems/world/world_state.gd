@@ -32,6 +32,7 @@ static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, ar
 static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
 static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
+static var ships_destroyed: Array = []     ## issue #64: town boxes whose parked ship was shot to pieces (never back)
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 
 static var _rumors: Array = []
@@ -59,6 +60,7 @@ static func reset() -> void:
 	hangar = ""
 	story = {}
 	bounty = {}
+	ships_destroyed = []
 
 
 # ------------------------------------------------------------------ writes
@@ -546,6 +548,7 @@ static func to_save() -> Dictionary:
 		"hangar": hangar,
 		"story": story.duplicate(),
 		"bounty": bounty.duplicate(),
+		"ships_destroyed": ships_destroyed.duplicate(),
 	}
 
 
@@ -561,6 +564,8 @@ static func from_save(d: Dictionary) -> void:
 	clock = float(d.get("clock", 0.0))
 	inventory = Inventory.new()
 	inventory.from_save(d.get("inventory", {}))
+	if inventory.is_taken("pit_jetpack"):
+		set_flag("pit_jetpack_taken")      # issue #64: saves from before the flag
 	names = NameBook.new()
 	names.from_save(d.get("names", {}))
 	smuggle = d.get("smuggle", {}).duplicate(true)
@@ -571,6 +576,7 @@ static func from_save(d: Dictionary) -> void:
 	if not d.has("story"):
 		smuggle = {}           # issue #64: a save from before the story; its old drop goes with it
 	bounty = d.get("bounty", {}).duplicate()
+	ships_destroyed = d.get("ships_destroyed", []).duplicate()
 
 
 static func _read_json(path: String) -> Variant:

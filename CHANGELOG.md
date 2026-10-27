@@ -66,6 +66,16 @@ How to see it:
   - `test_planets`: every size, every type, the style parser, the station, a new
     planet from a config.
   - `test_planets_trace`, backed by `scenes/planets_trace.gd`: the whole trip.
+## Droids that act like droids, the pit hauler, ship guns on the ground (2026-10-27, issue #64)
+
+- **Assassin droids keep the shuffle for quiet moments.** The idle's little dance plays when one wakes up or stands about. In a fight it holds its ready stance and shoots.
+- **Followers are not puppets.** Two droids of the same kind no longer share a spot. Each takes its own place in a fan behind you, drifts a little, reacts a beat later or sooner, walks at its own pace and keeps a body's width from the others. Floating droids hover at different heights.
+- **Bigger cargo droids** (1.3 times the size; `scale` in `droids.json`).
+- **The pit hauler.** An old cargo droid roams the landing pit, like T-89, with the jetpack strapped to its back. Walk up and take it with [E]. Oda knows about it as a rumor until someone does.
+- **Ship guns hit people on the ground.** In the atmosphere a cannon bolt bursts where it lands (on the sand too), hurting everyone within 3.5 m.
+- **Parked ships can be shot to pieces** by another ship's guns. A destroyed ship blows up, can't be boarded and never comes back (the save remembers). A ship bought from T-89 that gets destroyed frees his pad.
+- Remnant standing stays permanent: killing them has lasting consequences.
+
 ## Story fixes: the pit droid step, one drop at a time, speeder lasers, calmer alarms (2026-10-27, issue #64)
 
 - **The game launches again.** A bolt whose shooter had already been removed (a droid that respawned, a trooper who left town) stopped the game when it tested the shooter. Bolts now forget a shooter that is gone.

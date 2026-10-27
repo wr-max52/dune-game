@@ -304,6 +304,8 @@ func _take(node) -> String:
 		return ""
 	var id := str(entry.get("item", ""))
 	var item: Dictionary = content.get_item(id)
+	if str(entry.get("taken_flag", "")) != "":
+		WorldState.set_flag(str(entry.taken_flag))
 	pickups.erase(node)
 	if node == drop:
 		drop = null

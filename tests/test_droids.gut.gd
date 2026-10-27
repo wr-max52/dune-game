@@ -216,3 +216,70 @@ func test_controller_make_room_then_fix_in_ten_seconds() -> void:
 	assert_eq(WorldState.droids.owned.size(), 3)
 	assert_false(ctl.wreck_nodes.has(wid))
 	assert_eq(WorldState.droids.wrecks.size(), 0)
+
+
+# ---- issue #64 ----------------------------------------------------------------
+
+func test_two_of_a_kind_do_not_stack() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	WorldState.credits = 500
+	assert_eq(ctl.buy("floating"), "bought")
+	assert_eq(ctl.buy("floating"), "bought")
+	for spot in [Vector3(20, 0, 0), Vector3(20, 0, 25)]:
+		p.global_position = spot
+		for i in 240:
+			await wait_physics_frames(1)
+	var us: Array = ctl.companions.values()
+	assert_eq(us.size(), 2)
+	var gap := Vector2(us[0].global_position.x - us[1].global_position.x, us[0].global_position.z - us[1].global_position.z).length()
+	assert_gt(gap, 1.0, "two floating droids keep apart instead of sharing a slot")
+	assert_ne(us[0].look_lift, us[1].look_lift, "and hover at their own heights")
+	assert_ne(us[0].quirk(), us[1].quirk(), "each has its own pace")
+
+
+func test_cargo_droid_is_bigger() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var u = ctl._make_unit("cargo", "tan")
+	assert_gt(u.size_scale, 1.0)
+	assert_almost_eq(u.look.scale.x, float(DroidRoster.kind_cfg("cargo").scale), 0.001)
+	assert_gt((u.shape.shape as BoxShape3D).size.y, 0.7, "its body grew with it")
+	u.free()
+
+
+func test_pit_hauler_roams_the_pit() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	assert_not_null(ctl.hauler, "the old cargo droid is in the pit")
+	assert_eq(ctl.hauler.kind, "cargo")
+	assert_eq(ctl.hauler.faction, "", "nobody's: not the Remnant's")
+	assert_false(ctl.companions.values().has(ctl.hauler), "and not yours")
+	var start: Vector3 = ctl.hauler.global_position
+	for i in 120:
+		await wait_physics_frames(1)
+	assert_gt(Vector2(ctl.hauler.global_position.x - start.x, ctl.hauler.global_position.z - start.z).length(), 1.0, "it walks its round")
+	var cfg: Dictionary = DroidRoster.config().pit_hauler
+	assert_eq(str(cfg.carries), "pit_jetpack", "carrying the jetpack")
+	var rumor: Array = WorldState.all_rumors().filter(func(r): return str(r.id) == "r_pit_hauler")
+	assert_eq(rumor.size(), 1, "Oda knows about it")
+	assert_true(str(rumor[0].text).to_lower().contains("jetpack"))
+	assert_false(WorldState.rumors("stranger", [], 99).filter(func(r): return str(r.id) == "r_pit_hauler").is_empty(), "and tells strangers")
+	WorldState.set_flag("pit_jetpack_taken")
+	assert_true(WorldState.rumors("stranger", [], 99).filter(func(r): return str(r.id) == "r_pit_hauler").is_empty(), "until it is taken")
+
+
+func test_assassin_holds_still_in_a_fight() -> void:
+	var look := DroidKit.build("assassin", DroidRoster.variant_cfg("assassin", "bone"), LookMaterials.new(),
+		DroidRoster.kind_cfg("assassin").look)
+	add_child_autofree(look)
+	if not DroidKit.play_anim(look, "idle"):
+		pass_test("no rigged model in this build")
+		return
+	var ap: AnimationPlayer = look.find_child("AnimationPlayer", true, false)
+	assert_eq(ap.speed_scale, 1.0, "standing about: the idle plays (its little dance)")
+	assert_true(DroidKit.hold_pose(look, "aim", 0.0))
+	assert_eq(ap.speed_scale, 0.0, "in a fight: one still ready stance")
+	DroidKit.play_anim(look, "idle")
+	assert_eq(ap.speed_scale, 1.0, "and back to the idle when it is over")
