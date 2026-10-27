@@ -1,6 +1,14 @@
 {
   "note": "Lighting presets. Tune here and re-shoot with tools/lookdev/shoot.sh; never hardcode these in scripts. Azimuth 0 = looking out from the port into the desert (-Z), positive = to the right.",
   "default": "golden",
+  "hours_note": "Continuous time of day (F11 demo settings): the hour blends between these presets. Before the first and after the last key it holds the end preset.",
+  "hours": [
+    { "hour": 6.0, "preset": "dusk" },
+    { "hour": 8.0, "preset": "golden" },
+    { "hour": 12.5, "preset": "noon" },
+    { "hour": 17.0, "preset": "golden" },
+    { "hour": 19.5, "preset": "dusk" }
+  ],
   "presets": {
     "golden": {
       "sun": { "elevation_deg": 8.0, "azimuth_deg": -58.0, "color": "#ffc48a", "energy": 2.9, "angular_size": 0.6, "shadow_distance": 900.0, "fog_energy": 0.8 },

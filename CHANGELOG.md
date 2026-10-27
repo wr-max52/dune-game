@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## F11 demo settings (2026-10-26)
+
+What works now:
+- **F11 in the town opens demo settings.** The game pauses and the mouse frees;
+  F11 or Esc closes it and saves. Tabs, so the full settings can move in later:
+  - **World:** an hour slider (0-24) that blends the lighting between the
+    golden / noon / dusk presets (keys in `content/look/time_of_day.json` "hours"),
+    preset buttons, game speed (0.25x-4x) and credits.
+  - **Standing:** a slider per faction (-100..100, with its label), reset to
+    defaults, and each individual with a relationship (Oda for now): trust with
+    its tier, mood, tab owed, and clear a ban.
+  - **Player:** god mode, heal / revive, give and wear the jetpack, endless fuel,
+    teleport to a town marker, and the guard-senses debug (F4).
+  - **Flags:** every flag a rumor, job or mood rule reads, as checkboxes, plus a
+    field to set a custom one.
+- Everything writes where the game does (WorldState, the npc's Relationship, the
+  look), so the bartender, rumors and the gate checkpoint react straight away.
+
 ## M15 part 3 — The garrison, sound, crouching, smuggling (2026-10-26)
 
 What works now:

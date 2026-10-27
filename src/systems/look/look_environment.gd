@@ -3,13 +3,17 @@ extends Node3D
 ## Sky, sun, fog and post-processing for a time-of-day preset from
 ## content/look/time_of_day.json. Add it to a scene, then call apply("golden").
 ## Materials that need the sun direction register with track_material().
+## apply_hour(h) blends between presets by the "hours" keys in the same file
+## (the F11 demo settings' time-of-day slider).
 
 const PRESETS_PATH := "res://content/look/time_of_day.json"
 const SKY_SHADER := preload("res://src/systems/look/shaders/desert_sky.gdshader")
 
 var presets: Dictionary = {}
 var default_preset := "golden"
-var current := ""
+var current := ""                    ## the preset applied, or the nearest one to `hour`
+var hours: Array = []                ## [{ hour, preset }] ascending, from the json
+var hour := -1.0                     ## last apply_hour(), -1 after a plain apply()
 var sun: DirectionalLight3D
 var world_env: WorldEnvironment
 var env: Environment
@@ -55,6 +59,7 @@ func _init() -> void:
 	var data := load_presets()
 	presets = data.get("presets", {})
 	default_preset = data.get("default", "golden")
+	hours = data.get("hours", [])
 
 	sky_mat = ShaderMaterial.new()
 	sky_mat.shader = SKY_SHADER
@@ -120,7 +125,63 @@ func apply(preset_id: String = "") -> void:
 		push_error("LookEnvironment: unknown preset '%s'" % preset_id)
 		return
 	current = preset_id
-	var p: Dictionary = presets[preset_id]
+	hour = -1.0
+	_apply_values(presets[preset_id])
+
+
+## A time of day in hours (0..24), blended between the two presets keyed around
+## it. `current` becomes whichever of those two is nearer.
+func apply_hour(h: float) -> void:
+	var k := keys_at_hour(h)
+	if k.is_empty():
+		return
+	hour = h
+	current = str(k.a) if float(k.t) < 0.5 else str(k.b)
+	_apply_values(blend(presets[k.a], presets[k.b], float(k.t)))
+
+
+## The two presets around hour `h` and how far from the first: { a, b, t }.
+func keys_at_hour(h: float) -> Dictionary:
+	var keys: Array = hours.filter(func(e): return presets.has(str(e.get("preset", ""))))
+	if keys.is_empty():
+		return {}
+	var first: Dictionary = keys[0]
+	if h <= float(first.hour):
+		return { "a": str(first.preset), "b": str(first.preset), "t": 0.0 }
+	for i in range(1, keys.size()):
+		var lo: Dictionary = keys[i - 1]
+		var hi: Dictionary = keys[i]
+		if h <= float(hi.hour):
+			var span := maxf(0.001, float(hi.hour) - float(lo.hour))
+			return { "a": str(lo.preset), "b": str(hi.preset), "t": (h - float(lo.hour)) / span }
+	var last: Dictionary = keys[keys.size() - 1]
+	return { "a": str(last.preset), "b": str(last.preset), "t": 0.0 }
+
+
+## The hour key of a preset (its first), so a preset button can move the slider.
+func hour_of(preset_id: String) -> float:
+	for e in hours:
+		if str(e.get("preset", "")) == preset_id:
+			return float(e.hour)
+	return -1.0
+
+
+## Two preset dictionaries mixed at t: numbers lerp, "#rrggbb" colors lerp,
+## anything else (bools) switches at the halfway point.
+static func blend(a: Variant, b: Variant, t: float) -> Variant:
+	if a is Dictionary and b is Dictionary:
+		var out := {}
+		for key in a:
+			out[key] = blend(a[key], b[key], t) if b.has(key) else a[key]
+		return out
+	if (a is float or a is int) and (b is float or b is int):
+		return lerpf(float(a), float(b), t)
+	if a is String and b is String and a.begins_with("#") and b.begins_with("#"):
+		return "#" + Color.html(a).lerp(Color.html(b), t).to_html(false)
+	return a if t < 0.5 else b
+
+
+func _apply_values(p: Dictionary) -> void:
 	var s: Dictionary = p["sun"]
 	var k: Dictionary = p["sky"]
 	var fog: Dictionary = p["fog"]
