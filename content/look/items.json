@@ -38,6 +38,36 @@
       "shell": "#3c4a52",
       "trim": "#8c8478",
       "glow": "#59d6ff"
+    },
+    "quantonium_flask": {
+      "frame": "case",
+      "scene": "",
+      "width": 0.3,
+      "height": 0.36,
+      "depth": 0.3,
+      "shell": "#4a3a2a",
+      "trim": "#b0a48c",
+      "glow": "#ffb347"
+    },
+    "crystal_case": {
+      "frame": "case",
+      "scene": "",
+      "width": 0.42,
+      "height": 0.18,
+      "depth": 0.3,
+      "shell": "#2e2a3c",
+      "trim": "#8c8478",
+      "glow": "#b98cff"
+    },
+    "tooth_crate": {
+      "frame": "case",
+      "scene": "",
+      "width": 0.7,
+      "height": 0.28,
+      "depth": 0.32,
+      "shell": "#d8cdb4",
+      "trim": "#5a3a24",
+      "glow": "#f2ead8"
     }
   },
   "pickup": {

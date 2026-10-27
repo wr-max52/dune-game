@@ -2,6 +2,25 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Oda's smuggling run (2026-10-26)
+
+What works now:
+- **Oda always has a drop lined up.** Ask her for work (or about smuggling, a
+  drop, the fence) and she offers "A drop for the fence": what it is and roughly
+  where it is. Take the job and the contraband appears there.
+- **Three new contraband goods:** refined quantonium (45 cr), holocrystals
+  (20 cr, 2-4 cases) and space whale teeth (70 cr). The fence buys all of them at
+  full value; the gate confiscates them like the cells.
+- **Four hiding areas, 17 spots:** the sand past the east gate, the dunes outside
+  the back gap in the west wall, the alleys between the houses, and the low house
+  roofs (bring the jetpack). She only names the area, never the same one twice
+  running, and drops sit still with no glow ring, so you have to look.
+- **It runs forever.** Once the drop is picked up and you carry no contraband
+  (sold to the fence, or taken at the gate), she lines up the next one. The drop
+  in the world, and whether you took it, is saved.
+- Data only for new goods and spots: goods in `content/core/board/bar_board.json`
+  (`j_smuggle_run`), spots in `content/core/pickups/port_town.json` ("drops").
+
 ## F11 demo settings (2026-10-26)
 
 What works now:

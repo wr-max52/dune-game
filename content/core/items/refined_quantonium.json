@@ -1,0 +1,9 @@
+{
+  "id": "refined_quantonium",
+  "label": "Refined quantonium",
+  "kind": "contraband",
+  "contraband": true,
+  "value": 45,
+  "look": "quantonium_flask",
+  "note": "IP-neutral. Reactor-grade quantonium, refined off the books. The Remnant confiscates it at the gate; the fence pays full value. Not worn (no slot). One of the goods Oda lines up for the smuggling run (board/bar_board.json, j_smuggle_run)."
+}

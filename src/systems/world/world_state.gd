@@ -13,6 +13,8 @@ extends RefCounted
 
 const RUMOR_DIR := "res://content/core/rumors"
 const BOARD_PATH := "res://content/core/board/bar_board.json"
+const PICKUP_DIR := "res://content/core/pickups"
+const ITEM_DIR := "res://content/core/items"
 const FACTIONS := ["imperial_remnant", "locals", "smuggler"]
 const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20 }
 
@@ -26,10 +28,12 @@ static var jobs_taken: Dictionary = {}     ## job id -> "active" | "done"
 static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
+static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, out }
 
 static var _rumors: Array = []
 static var _board: Array = []
 static var _cooldowns: Dictionary = {}
+static var _items: Dictionary = {}         ## item id -> its content/core/items entry (cache)
 
 const MAX_EVENTS := 12
 
@@ -46,6 +50,7 @@ static func reset() -> void:
 	_cooldowns = {}
 	inventory = Inventory.new()
 	names = NameBook.new()
+	smuggle = {}
 
 
 # ------------------------------------------------------------------ writes
@@ -178,10 +183,12 @@ static func board() -> Array:
 	return _board
 
 
+## A job as the bartender shows it. A smuggling job comes back with its text
+## and pay filled in from the drop she has lined up.
 static func job(id: String) -> Dictionary:
 	for j in board():
 		if str(j.get("id", "")) == id:
-			return j
+			return _smuggle_job(j) if str(j.get("kind", "")) == "smuggle" else j
 	return {}
 
 
@@ -191,12 +198,16 @@ static func open_jobs(tier: String) -> Array:
 	for j in board():
 		if jobs_taken.has(str(j.id)):
 			continue
+		if str(j.get("kind", "")) == "smuggle" and not smuggle_ready():
+			continue
 		if _conditions_hold(j.get("requires", {}), tier):
-			out.append(j)
+			out.append(job(str(j.id)))
 	return out
 
 
 static func accept_job(id: String) -> bool:
+	if str(job(id).get("kind", "")) == "smuggle":
+		return _start_smuggle(job(id))
 	if job(id).is_empty() or jobs_taken.has(id):
 		return false
 	jobs_taken[id] = "active"
@@ -212,6 +223,100 @@ static func _complete_jobs(trigger: String) -> void:
 			credits += int(j.get("pays", 0))
 			set_flag("job_done_" + id)
 			log_event("Finished the job: " + str(j.get("title", id)))
+
+
+# ------------------------------------------------------------------ smuggling
+
+## Oda's repeating job (kind "smuggle"). She lines up a drop of contraband in
+## one of the town's hiding places (pickups/<location>.json "drops"); taking the
+## job puts it there. She lines up the next one once that drop is picked up and
+## the player carries no contraband (sold to the fence, or lost at the gate),
+## so the loop runs for as long as anyone plays.
+
+## The drop lying in the world, as a pickup entry, or {} when there is none.
+static func smuggle_drop() -> Dictionary:
+	if not bool(smuggle.get("out", false)):
+		return {}
+	var id := "smuggle_%d" % int(smuggle.run)
+	if inventory.is_taken(id):
+		return {}
+	return {
+		"id": id, "item": smuggle.item, "count": int(smuggle.count), "marker": smuggle.marker,
+		"offset": smuggle.offset, "ground": bool(smuggle.get("ground", false)), "hidden": true, "reach": 2.0,
+	}
+
+
+## Can she line up a new drop? Not while one is lying out there, and not while
+## the player still has contraband to get rid of.
+static func smuggle_ready() -> bool:
+	return smuggle_drop().is_empty() and not carrying_contraband()
+
+
+static func carrying_contraband() -> bool:
+	for id in inventory.item_ids():
+		if bool(_item(str(id)).get("contraband", false)):
+			return true
+	return false
+
+
+static func _smuggle_job(j: Dictionary) -> Dictionary:
+	if smuggle.is_empty() or (bool(smuggle.get("out", false)) and smuggle_ready()):
+		_roll_smuggle(j)
+	if smuggle.is_empty():
+		return {}
+	var out := j.duplicate()
+	var n := int(smuggle.count)
+	var goods := {}
+	for g in j.get("goods", []):
+		if str(g.get("item", "")) == str(smuggle.item):
+			goods = g
+	var what := str(goods.get("say_one", goods.get("say", "%d"))) if n == 1 else str(goods.get("say", "%d"))
+	if what.contains("%d"):
+		what = what % n
+	out["text"] = str(j.get("text", "%s %s")) % [what, str(smuggle.hint)]
+	out["pays"] = n * int(_item(str(smuggle.item)).get("value", 0))
+	return out
+
+
+## Pick the next drop: goods from the job, a hiding place from the location's
+## drops (never the same area twice running).
+static func _roll_smuggle(j: Dictionary) -> void:
+	var goods: Array = j.get("goods", [])
+	var d = _read_json(PICKUP_DIR + "/" + str(j.get("location", "")) + ".json")
+	var areas: Array = d.get("drops", {}).get("areas", []) if d is Dictionary else []
+	var last := str(smuggle.get("area", ""))
+	var choices := areas.filter(func(a): return str(a.get("id", "")) != last and not (a.get("spots", []) as Array).is_empty())
+	if goods.is_empty() or choices.is_empty():
+		smuggle = {}
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var g: Dictionary = goods[rng.randi() % goods.size()]
+	var a: Dictionary = choices[rng.randi() % choices.size()]
+	var spots: Array = a.spots
+	var span: Array = g.get("count", [1, 1])
+	smuggle = {
+		"run": int(smuggle.get("run", 0)) + 1, "item": str(g.item),
+		"count": rng.randi_range(int(span[0]), int(span[1])),
+		"area": str(a.id), "hint": str(a.get("hint", "")), "marker": str(a.get("marker", "")),
+		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)), "out": false,
+	}
+
+
+static func _start_smuggle(j: Dictionary) -> bool:
+	if j.is_empty() or not smuggle_ready() or bool(smuggle.get("out", false)):
+		return false
+	smuggle.out = true
+	bump("smuggle_runs")
+	log_event("Oda set up a drop: " + str(j.get("text", "")))
+	return true
+
+
+static func _item(id: String) -> Dictionary:
+	if not _items.has(id):
+		var d = _read_json(ITEM_DIR + "/" + id + ".json")
+		_items[id] = d if d is Dictionary else {}
+	return _items[id]
 
 
 # ------------------------------------------------------------------ rumors
@@ -295,6 +400,7 @@ static func to_save() -> Dictionary:
 		"jobs_taken": jobs_taken.duplicate(), "clock": clock,
 		"inventory": inventory.to_save(),
 		"names": names.to_save(),
+		"smuggle": smuggle.duplicate(true),
 	}
 
 
@@ -312,6 +418,7 @@ static func from_save(d: Dictionary) -> void:
 	inventory.from_save(d.get("inventory", {}))
 	names = NameBook.new()
 	names.from_save(d.get("names", {}))
+	smuggle = d.get("smuggle", {}).duplicate(true)
 
 
 static func _read_json(path: String) -> Variant:
