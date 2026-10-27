@@ -212,5 +212,187 @@
       }
     },
     "min_claim_tris": 300
+  },
+  "kit": {
+    "note": "Issue #48 parts library. One featureless base body (Hyper3D Rodin Gen-2.5 High from a prompt, generation 8b97c0b9-57a0-4253-8603-e60e781f949a, rigged with the human template b98261e0-96e3-445e-a4e3-dc5c494dfd96) gives every outfit its skeleton, proportions and seams. Each outfit is one whole costumed character generated from a prompt alone (reference images override the prompt's costume), rigged with the human template, turned to the base body's rest pose, fitted onto it and cut at its head/torso/legs seams (tools/look/fit_parts.gd, dress). Player 7c959192-8d52-4325-a662-b14eb652adfd (rig 7ede053b-337b-4305-82f9-c68bf826d411), guard 946b7edc-e31c-4d1c-8dd7-96cda7d28d59 (rig f8d13868-42ce-4b4c-b257-9f14ca19f192). The player head was regenerated alone (prompt only, the face covering described as a bandit bandana mask, with the palette as hex colours: 355aeec8-417b-4b6d-83e0-755b7b02d0d9), fitted into the first head's bounds. A spare head for future NPCs, a brass goggle mask on a teal hood (goggles_head, 1eefa49e-0dd4-4022-8599-0a53fce4446a), came out of a player head retry.",
+    "source": "res://assets/characters/kit/source/base_body_rigged.glb",
+    "out": "res://assets/characters/kit/base_body.glb",
+    "flatten": [],
+    "reweight": {
+      "to": "Hips",
+      "radius": 0.11
+    },
+    "cut": [],
+    "min_island_tris": 0,
+    "decimate": 40000,
+    "split": [
+      {
+        "name": "head",
+        "above": 0.6,
+        "within": {
+          "bone": "Neck",
+          "radius": 0.11,
+          "below": 0.66
+        }
+      },
+      {
+        "name": "torso",
+        "rest": true,
+        "bones": [
+          "LeftShoulder",
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "RightShoulder",
+          "RightArm",
+          "RightForeArm",
+          "RightHand"
+        ]
+      },
+      {
+        "name": "legs",
+        "below": 0.1
+      }
+    ],
+    "min_claim_tris": 300,
+    "fit": {
+      "out": "res://assets/characters/kit/parts.glb",
+      "dress": {
+        "player": {
+          "source": "res://assets/characters/kit/source/player_full.glb",
+          "decimate": 40000,
+          "uniform": true,
+          "axis": "y",
+          "rigged": true,
+          "skip": [
+            "head"
+          ],
+          "trim_top": {
+            "torso": 0.05
+          }
+        },
+        "guard": {
+          "source": "res://assets/characters/kit/source/guard_full.glb",
+          "decimate": 45000,
+          "uniform": true,
+          "axis": "y",
+          "rigged": true,
+          "trim_below": {
+            "torso": [
+              0.12,
+              0.3
+            ]
+          }
+        }
+      },
+      "parts": {
+        "player_head": {
+          "source": "res://assets/characters/kit/source/player_head_wrap.glb",
+          "from": "head",
+          "decimate": 10000,
+          "uniform": true,
+          "box": {
+            "min": [
+              -0.242,
+              0.505,
+              -0.211
+            ],
+            "max": [
+              0.262,
+              0.95,
+              0.278
+            ]
+          }
+        },
+        "goggles_head": {
+          "source": "res://assets/characters/kit/source/goggles_head.glb",
+          "from": "head",
+          "decimate": 10000,
+          "uniform": true,
+          "box": {
+            "min": [
+              -0.242,
+              0.505,
+              -0.211
+            ],
+            "max": [
+              0.262,
+              0.95,
+              0.278
+            ]
+          }
+        }
+      }
+    },
+    "part_colors": {
+      "out": "res://assets/characters/kit/colors/%s_%s.png",
+      "parts": {
+        "player": {
+          "mesh": "player_torso",
+          "tol": 0.35,
+          "min_l": 0.04,
+          "variants": {
+            "rust": {
+              "#4fb8b0": "#a5502e"
+            },
+            "sand": {
+              "#4fb8b0": "#cdb68e"
+            },
+            "dusk": {
+              "#4fb8b0": "#3e4a5c",
+              "#926b3e": "#4a4440"
+            }
+          }
+        },
+        "player_head": {
+          "mesh": "player_head",
+          "tol": 0.35,
+          "min_l": 0.04,
+          "variants": {
+            "rust": {
+              "#1f8a86": "#a5502e"
+            },
+            "sand": {
+              "#1f8a86": "#cdb68e"
+            },
+            "dusk": {
+              "#1f8a86": "#3e4a5c"
+            }
+          }
+        },
+        "guard": {
+          "mesh": "guard_torso",
+          "tol": 0.2,
+          "min_l": 0.3,
+          "variants": {
+            "gunmetal": {
+              "#c0c3c6": "#4f545b"
+            },
+            "oxblood": {
+              "#c0c3c6": "#7a2a26"
+            },
+            "desert": {
+              "#c0c3c6": "#b39a72"
+            }
+          }
+        },
+        "goggles": {
+          "mesh": "goggles_head",
+          "tol": 0.35,
+          "min_l": 0.04,
+          "variants": {
+            "oxblood": {
+              "#2ae3d3": "#8a2c28"
+            },
+            "sand": {
+              "#2ae3d3": "#cdb68e"
+            },
+            "violet": {
+              "#2ae3d3": "#6a4c9c"
+            }
+          }
+        }
+      }
+    }
   }
 }

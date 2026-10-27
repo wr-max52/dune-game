@@ -1,12 +1,14 @@
 {
-  "note": "Character palettes and proportions. An archetype with a \"model\" wears that rigged .glb over its joints (src/systems/look/skinned_body.gd; prep: tools/look/prep_character.gd). Shapes live in src/systems/look/character_kit.gd; colours and sizes live here. See docs/ART_DIRECTION.md, Characters.",
+  "note": "Character palettes and proportions. An archetype with a \"model\" wears that rigged .glb over its joints; a kit model (\"pieces\") wears one piece per part, chosen from model.parts (src/systems/look/skinned_body.gd; prep: tools/look/prep_character.gd). Shapes live in src/systems/look/character_kit.gd; colours and sizes live here. See docs/ART_DIRECTION.md, Characters.",
   "archetypes": {
     "remnant_trooper": {
-      "height": 1.9, "bulk": 1.12,
+      "height": 2.06, "bulk": 1.12,
       "armor": "#3d4147", "armor_light": "#5a5e63", "under": "#3a1517", "trim": "#a8844a",
       "cloth": "#6b1e1e", "visor": "#ffae4a", "boots": "#1e1c1c", "gloves": "#1a1818",
       "model": {
-        "scene": "res://assets/characters/remnant_guard/remnant_guard.glb",
+        "scene": "res://assets/characters/kit/parts.glb",
+        "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
+        "parts": { "head": ["guard:gunmetal"], "torso": ["guard:gunmetal"], "legs": ["guard:gunmetal"] },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
           "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
@@ -17,11 +19,13 @@
       }
     },
     "remnant_commander": {
-      "height": 1.92, "bulk": 1.05,
+      "height": 2.08, "bulk": 1.05,
       "armor": "#2f3237", "armor_light": "#4b4f55", "under": "#2a1012", "trim": "#c9a058",
       "cloth": "#5a1718", "visor": "#ffae4a", "boots": "#151414", "coat": "#2e1214", "gloves": "#151414",
       "model": {
-        "scene": "res://assets/characters/remnant_guard/remnant_guard.glb",
+        "scene": "res://assets/characters/kit/parts.glb",
+        "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
+        "parts": { "head": ["guard:oxblood"], "torso": ["guard:oxblood"], "legs": ["guard:oxblood"] },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
           "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
@@ -58,11 +62,13 @@
       }
     },
     "player_smuggler": {
-      "height": 1.8, "bulk": 1.0,
+      "height": 1.94, "bulk": 1.0,
       "skin_wrap": "#1f8a86", "shirt": "#c9b896", "trousers": "#4a3c30", "coat": "#6e4a2c", "gloves": "#4a3020",
       "hat": "#6a5038", "boots": "#3e2c20", "leather": "#5a3a24", "goggles": "#2a2a2a", "lens": "#7fd0c8",
       "model": {
-        "scene": "res://assets/characters/smuggler/smuggler.glb",
+        "scene": "res://assets/characters/kit/parts.glb",
+        "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
+        "parts": { "head": ["player"], "torso": ["player"], "legs": ["player"] },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
           "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",

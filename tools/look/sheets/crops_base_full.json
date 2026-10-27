@@ -1,0 +1,9 @@
+{
+ "crops": "res://test_results/parts/crops",
+ "cells": [
+  {
+   "name": "base_full",
+   "model": "res://assets/characters/kit/base_body.glb"
+  }
+ ]
+}

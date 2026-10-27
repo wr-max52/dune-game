@@ -1,0 +1,5 @@
+{
+ "title": "Regenerated player head (face wrap), close up",
+ "crops": "res://test_results/parts/crops",
+ "cells": [{"name": "player_head_v2", "model": "res://assets/characters/kit/parts.glb", "show": ["player_head"]}]
+}

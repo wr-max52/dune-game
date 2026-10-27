@@ -6,6 +6,7 @@ extends CanvasLayer
 ##   World     time of day (hour slider + presets), game speed, credits
 ##   Standing  faction standing, and each individual's trust / mood / tab
 ##   Player    god mode, heal, jetpack (give, endless fuel), teleport, guard debug
+##   Character the player's outfit from the kit pieces (CharacterBuilder, issue #48)
 ##   Flags     every world flag the content reads, on or off, plus custom ones
 ##   HUD       the 80s HUD's colour (issue #52) and every function key
 ##   Sound     music and effects volume (issue #16)
@@ -25,6 +26,7 @@ var _hour: HSlider
 var _hour_label: Label
 var _flags_box: VBoxContainer
 var _flag_new: LineEdit
+var builder: CharacterBuilder
 var _god := false
 var _endless_fuel := false
 
@@ -59,6 +61,7 @@ func _ready() -> void:
 	tabs.add_child(_world_tab())
 	tabs.add_child(_standing_tab())
 	tabs.add_child(_player_tab())
+	tabs.add_child(_character_tab())
 	tabs.add_child(_flags_tab())
 	tabs.add_child(_hud_tab())
 	tabs.add_child(_sound_tab())
@@ -322,6 +325,27 @@ func _player_tab() -> Control:
 
 func _player():
 	return demo._player if demo != null else null
+
+
+# ------------------------------------------------------------------ character
+
+## The builder saves each pick itself; the player's body wears it at once.
+func _character_tab() -> Control:
+	var v := _tab("Character")
+	builder = CharacterBuilder.new()
+	builder.outfit_changed.connect(func(o):
+		var a = _avatar()
+		if a != null:
+			a.set_outfit(o))
+	v.add_child(builder)
+	_refreshers.append(func():
+		var a = _avatar()
+		builder.show_outfit(a.worn_outfit() if a != null else PlayerOutfit.load_outfit()))
+	return v.get_parent()
+
+
+func _avatar() -> PlayerAvatar:
+	return demo.player_kit.avatar if demo != null and demo.player_kit != null else null
 
 
 func _give_jetpack() -> void:

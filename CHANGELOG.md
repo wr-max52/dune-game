@@ -2,6 +2,48 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Character builder (2026-10-27, issue #48)
+
+What works now:
+- **Dress the player yourself.** F11, Character: pick the head, upper body and
+  lower body from the kit pieces (player, guard, and the goggle head), each in
+  its original colour or one of its variants. A model turns beside the choices.
+- **Live and kept.** Every pick is worn at once (weapons and the jetpack stay on)
+  and saved to `user://player_outfit.json`, so it is still on after a restart.
+  Random and Default buttons.
+- **No hand-kept list.** The builder reads the pieces from the kit model and the
+  colours from the texture files, so a new piece or colour shows up by itself.
+- **Review shots:** `tools/review/builder_shot.gd` screenshots the builder.
+
+Known gaps:
+- No mouse turning or zoom on the preview; it turns by itself.
+
+## Player and guard outfits from kit pieces (2026-10-27, issue #48)
+
+What works now:
+- **The player and the guards are built from pieces.** Each wears a head, an upper
+  body and a lower body from one shared kit (`assets/characters/kit/parts.glb`), the
+  same way the locals mix their parts. Every piece sits on one skeleton and is cut
+  at the same neck and waist seams, so any head goes with any body.
+- **New looks in the game's style.** The player: wide hat, teal bandana mask, a
+  leather vest over a shirt, cargo pants and boots. The guard: an enclosed helmet
+  with an amber visor and plated armour, now gunmetal for troopers and oxblood for
+  commanders. No packs or weapons are modelled on the bodies.
+- **Colour variants.** Rust, sand and dusk for the player's pieces; gunmetal,
+  oxblood and desert for the guard; an outfit picks one per part
+  (`"guard:gunmetal"` in `characters.json`).
+- **A spare head for later NPCs:** a brass goggle mask on a teal hood
+  (`goggles`), with oxblood, sand and violet variants. Nobody wears it yet.
+- **Tools.** `tools/look/fit_parts.gd` fits a whole generated costume onto the
+  base body and cuts it into pieces; `recolor_fitted.gd` writes the variants;
+  `shoot_sheet.sh` renders review sheets (`tools/look/sheets/`).
+
+Known gaps:
+- The player's head is about 34k triangles and the spare head 75k: the simplifier
+  cannot reduce these meshes further. Future generations should ask Hyper3D for
+  fewer polygons.
+- Seams are cut, not capped, so a ragged edge can show at the guard's waist.
+- No character builder in settings yet (added since: see Character builder).
 ## Sound FX library and music (2026-10-27, issue #16)
 
 - **Music, all the time.** Three ambient tracks cycle with slow cross-fades. When an NPC opens fire on you, the battle track cuts in (from 30 s into the recording) and holds for 15 s after the last shot. Cross the edge of space and the space track takes over; dive back under and the ambient comes back. The music carries on across launches and landings.

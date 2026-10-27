@@ -1,0 +1,5 @@
+{
+ "title": "Guard upper body: the region to trim painted red (preview)",
+ "crops": "res://test_results/parts/crops",
+ "cells": [{"name": "guard_torso_trim", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_torso"]}]
+}
