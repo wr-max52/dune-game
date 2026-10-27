@@ -22,7 +22,8 @@
               "hint_secret",
               "refuse_topic",
               "end_conversation",
-              "call_guards"
+              "call_guards",
+              "offer_speeder"
             ]
           },
           "id": {

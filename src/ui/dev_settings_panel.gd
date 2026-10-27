@@ -8,9 +8,10 @@ extends CanvasLayer
 ##   Player    god mode, heal, jetpack (give, endless fuel), teleport, guard debug
 ##   Character the player's outfit from the kit pieces (CharacterBuilder, issue #48)
 ##   Flags     every world flag the content reads, on or off, plus custom ones
+##   HUD       the 80s HUD's colour (issue #52) and every function key
 ##
 ## Everything writes to the same places the game does (WorldState, the npc's
-## Relationship, the look), so the bartender, rumors and checkpoint react as if
+## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
 ## it had happened in play.
 
 const MOODS := ["wary", "warm", "amused", "irritated"]
@@ -61,6 +62,7 @@ func _ready() -> void:
 	tabs.add_child(_player_tab())
 	tabs.add_child(_character_tab())
 	tabs.add_child(_flags_tab())
+	tabs.add_child(_hud_tab())
 	var h := HBoxContainer.new()
 	v.add_child(h)
 	for b in [["Save now", _save], ["Close", close]]:
@@ -214,12 +216,12 @@ func _standing_tab() -> Control:
 	return v.get_parent()
 
 
-## Named people the player has a Relationship with. Only the bartender so far;
+## Named people the player has a Relationship with. Only the cantina owner so far;
 ## add the next one here when an npc gets a Relationship.
 func _individuals() -> Array:
 	var out: Array = []
 	if demo != null and demo.bar != null and demo.bar.brain != null:
-		out.append({ "label": str(demo.bar.brain.card.get("name", "Bartender")), "rel": demo.bar.brain.rel })
+		out.append({ "label": str(demo.bar.brain.card.get("name", "Cantina Owner")), "rel": demo.bar.brain.rel })
 	return out
 
 
@@ -431,6 +433,61 @@ func known_flags() -> Array:
 func _save() -> void:
 	if demo != null and demo.bar != null:
 		demo.bar._save_memory()
+
+
+# ------------------------------------------------------------------ HUD (issue #52)
+
+const KEYS := [
+	["F1", "Info: planet, town, time, credits, standing"],
+	["F3", "AI debug overlay"],
+	["F4", "Guard debug (what each guard sees and hears)"],
+	["F10", "AI model settings (Shift+F10: next model)"],
+	["F11", "These settings"],
+	["E", "Interact: talk, board, ride, pick up"],
+	["L", "Cycle the lighting"],
+	["V", "First / third person"],
+	["Esc", "Free the mouse, close a panel"],
+]
+
+
+func _hud_tab() -> Control:
+	var v := _tab("HUD")
+	_section(v, "HUD COLOUR")
+	var grid := GridContainer.new()
+	grid.columns = 3
+	for name in RetroUI.PRESETS:
+		var b := Button.new()
+		b.text = name
+		b.custom_minimum_size = Vector2(190, 0)
+		b.pressed.connect(func(): _set_hud_color(RetroUI.PRESETS[name]))
+		grid.add_child(b)
+	v.add_child(grid)
+	var pick := ColorPickerButton.new()
+	pick.custom_minimum_size = Vector2(120, 30)
+	pick.edit_alpha = false
+	pick.color = RetroUI.accent
+	pick.color_changed.connect(_set_hud_color)
+	_row(v, "Your own", pick)
+	_refreshers.append(func(): pick.color = RetroUI.accent)
+	_section(v, "KEYS")
+	for k in KEYS:
+		var l := Label.new()
+		l.text = "[%s]" % k[0]
+		l.custom_minimum_size = Vector2(70, 0)
+		var h := _row(v, "", l)
+		h.get_child(0).custom_minimum_size = Vector2(0, 0)
+		var what := Label.new()
+		what.text = k[1]
+		h.add_child(what)
+	return v.get_parent()
+
+
+func _set_hud_color(c: Color) -> void:
+	if RetroSkin.current != null:
+		RetroSkin.current.set_color(c)
+	else:
+		RetroUI.accent = c
+		RetroUI.save_settings()
 
 
 # ------------------------------------------------------------------ layout

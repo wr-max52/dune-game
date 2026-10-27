@@ -6,7 +6,7 @@ extends RefCounted
 ## when actually talking to a server. A canned path (ScriptedClient) is what CI
 ## uses; this file is the real, manual path when a server is running.
 ##
-## It yields the same response shape the bartender expects:
+## It yields the same response shape the cantina owner expects:
 ##   { "text": <String>, "tool": <name, optional>, "args": <Dict> }
 
 const BASE_URL := "http://localhost:11434"
@@ -32,7 +32,7 @@ func build_request(prompt: String, tools: Array) -> Dictionary:
 	}
 
 
-## Parse an Ollama chat response into the bartender's shape. Pure, so CI can hit
+## Parse an Ollama chat response into the cantina owner's shape. Pure, so CI can hit
 ## it with canned JSON. A tool call comes back as a "tool_calls" array on the
 ## message; if there are none this is a plain text reply.
 func parse_response(raw_json: String) -> Dictionary:

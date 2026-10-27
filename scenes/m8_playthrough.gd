@@ -2,7 +2,7 @@ extends SceneTree
 ## M8: the polish pass. This is the machine proof that the vertical slice hangs
 ## TOGETHER: a single playthrough that walks the port (movement + camera), fights the
 ## outpost (a covering trooper, a deflection duel with the duelist), completes the
-## mission loop (crate -> return -> payout), talks to the LLM bartender by voice, and
+## mission loop (crate -> return -> payout), talks to the LLM cantina owner by voice, and
 ## saves -- with a per-frame performance log proving "no frame over budget" across the
 ## whole session.
 ##
@@ -27,7 +27,7 @@ var Duelist
 var Mission
 var Save
 var Squad
-var Bartender
+var CantinaOwner
 var PTT
 var WhisperRT
 var Scripted
@@ -90,7 +90,7 @@ func _build() -> void:
 	Mission = load("res://src/systems/mission/mission.gd")
 	Save = load("res://src/systems/save/save_system.gd")
 	Squad = load("res://src/systems/ai/squad_coordinator.gd")
-	Bartender = load("res://src/systems/llm/bartender_ai.gd")
+	CantinaOwner = load("res://src/systems/llm/cantina_owner_ai.gd")
 	PTT = load("res://src/systems/voice/push_to_talk.gd")
 	WhisperRT = load("res://src/systems/voice/whisper_runtime.gd")
 	Scripted = load("res://src/systems/llm/scripted_client.gd")
@@ -130,14 +130,14 @@ func _build() -> void:
 	save.new_game()
 	save.set_player_position(Vector3.ZERO)
 	save.set_mission(mission.to_save())
-	save.remember_in_bartender("player_name", "Rider")
+	save.remember_in_cantina_owner("player_name", "Rider")
 
 	squad = Squad.new()
 	squad.cover_nodes = cover
 	squad.members = squad_members
 
-	# The LLM bartender + the voice push-to-talk (typed default).
-	bar = Bartender.new()
+	# The LLM cantina owner + the voice push-to-talk (typed default).
+	bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor", "set_disposition", "offer_drink", "call_guards"]
 	bar.memory = {}
 	bar.fallback_lines = [
@@ -236,7 +236,7 @@ func _step() -> void:
 	# Drive the mission loop through its whole sequence.
 	_mission_frame()
 
-	# The voice conversation: a typed-default PTT turn to the LLM bartender.
+	# The voice conversation: a typed-default PTT turn to the LLM cantina owner.
 	if _frames == 300:
 		var text: String = ptt.capture("greet", 0, 130)
 		var r: Dictionary = bar.respond(text, bar.memory)
@@ -291,7 +291,7 @@ func _load_roundtrip() -> void:
 	if not restored.load_from("user://m8_test_save.json"):
 		_log(4, "RELOAD_MISSING")
 		return
-	var mem: Dictionary = restored.get_bartender_memory()
+	var mem: Dictionary = restored.get_npc_memory()
 	_log(4, "RELOAD_CREDITS=%d RELOAD_POS=%s RELOAD_MEMORY=%s" % [
 		restored.get_credits(),
 		str(restored.get_player_position()),

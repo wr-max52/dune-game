@@ -79,7 +79,7 @@ func test_stalls_face_each_other() -> void:
 	var aisle_z := []
 	for m in t.markers():
 		if not (m.has("face") and m.has("soldier")):
-			continue            # stall keepers only (bar patrons face the bartender)
+			continue            # stall keepers only (bar patrons face the cantina owner)
 		var p := t.marker_pos(str(m.id))
 		var face := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
 		aisle_z.append(face.z)

@@ -1,10 +1,10 @@
 extends SceneTree
-## The bartender gauntlet (M12), run against a live provider.
+## The cantina owner gauntlet (M12), run against a live provider.
 ##
 ##   godot --headless --path . -s res://tools/llm/eval_runner.gd -- mode=local suite=all
 ##   (mode: auto | local | ollama | cloud;  suite: all or one suite name)
 ##
-## Writes docs/bartender/evals/<date>_<mode>_<model>.md with pass rates per suite
+## Writes docs/cantina_owner/evals/<date>_<mode>_<model>.md with pass rates per suite
 ## and first-token / total latency p50 and p95, plus every reply, so you can read
 ## her and decide if she is any good. Numbers do not tell you that; reading does.
 ##
@@ -13,7 +13,7 @@ extends SceneTree
 
 const CASES := "res://tools/llm/evals/gauntlet.json"
 const BLOCK := "res://content/core/llm/ip_blocklist.json"
-const OUT_DIR := "res://docs/bartender/evals"
+const OUT_DIR := "res://docs/cantina_owner/evals"
 
 var mode := "auto"
 var suite := "all"
@@ -73,7 +73,7 @@ func _run() -> void:
 		WorldState.reset()
 		for f in c.get("world", {}).get("flags", []):
 			WorldState.set_flag(str(f))
-		var brain := BartenderBrain.new(svc)
+		var brain := NpcBrain.new(svc)
 		brain.log_transcripts = false
 		brain.rel.trust = int(c.get("trust", 10))
 		brain.begin_visit()
@@ -93,7 +93,7 @@ func _run() -> void:
 	quit()
 
 
-func _check(c: Dictionary, replies: Array, brain: BartenderBrain) -> Dictionary:
+func _check(c: Dictionary, replies: Array, brain: NpcBrain) -> Dictionary:
 	var fails: Array = []
 	var card := brain.card
 	for t in replies:
@@ -133,8 +133,8 @@ func _check(c: Dictionary, replies: Array, brain: BartenderBrain) -> Dictionary:
 func _judge(c: Dictionary, replies: Array) -> int:
 	var convo := ""
 	for i in c.turns.size():
-		convo += "PLAYER: %s\nBARTENDER: %s\n" % [_sub(str(c.turns[i])), replies[i].get("say", "")]
-	var rubric := "Score 1-5: does the bartender stay neutral in the war while explaining both sides (neutrality), or does her tone reflect the town's situation (barometer)? Reply with the digit only."
+		convo += "PLAYER: %s\nCANTINA OWNER: %s\n" % [_sub(str(c.turns[i])), replies[i].get("say", "")]
+	var rubric := "Score 1-5: does the cantina owner stay neutral in the war while explaining both sides (neutrality), or does her tone reflect the town's situation (barometer)? Reply with the digit only."
 	var id := judge.chat([{ "role": "system", "content": rubric }, { "role": "user", "content": convo }], { "max_tokens": 3, "temperature": 0.0 })
 	var got := [ -1 ]
 	var cb := func(tid: int, r: Dictionary):
@@ -172,7 +172,7 @@ func _write() -> void:
 		if model == "" and r.model != "":
 			model = r.model
 	var L: PackedStringArray = []
-	L.append("# Bartender gauntlet: %s / %s" % [mode, model])
+	L.append("# Cantina Owner gauntlet: %s / %s" % [mode, model])
 	L.append("")
 	L.append("Run %s. First token p50 %d ms, p95 %d ms. Full reply p50 %d ms, p95 %d ms." % [
 		Time.get_datetime_string_from_system(), _pct(firsts, 0.5), _pct(firsts, 0.95), _pct(totals, 0.5), _pct(totals, 0.95)])

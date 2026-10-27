@@ -8,7 +8,7 @@ extends RefCounted
 ## Why procedural and not imported clips: the characters are built from joints by
 ## CharacterKit (no skinned mesh), and the free CC0 clip libraries ship for a
 ## humanoid skeleton we do not have. Joint math keeps every character (player,
-## bartender, troopers later) on one system, and every number is tunable here.
+## cantina owner, troopers later) on one system, and every number is tunable here.
 ##
 ## Conventions (CharacterKit): the model faces +Z, its left is +X. Limbs hang along
 ## local -Y. Positive X rotation on a hip swings the leg BACK; positive on a knee

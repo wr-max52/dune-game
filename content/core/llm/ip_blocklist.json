@@ -1,5 +1,5 @@
 {
-  "note": "IP blocklist: franchise terms that must never appear in source, data, or anything a character says. tests/test_ip_neutral.gut.gd reads this file (and is the only scan exemption besides it); the bartender's output filter rewrites any of these in a reply.",
+  "note": "IP blocklist: franchise terms that must never appear in source, data, or anything a character says. tests/test_ip_neutral.gut.gd reads this file (and is the only scan exemption besides it); the cantina owner's output filter rewrites any of these in a reply.",
   "terms": [
     "gadget",
     "star wars",

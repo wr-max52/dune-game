@@ -1,7 +1,7 @@
 extends RefCounted
 ## Deterministic test/client for the LLM interface (M6). It replays canned
 ## responses in order, so a conversation is reproducible in CI. When it is
-## exhausted it returns null, which makes the bartender fall back.
+## exhausted it returns null, which makes the cantina owner fall back.
 ##
 ## Responses are the same shape the real client yields:
 ##   { "text": <String>, "tool": <name>, "args": <Dict> }

@@ -1,7 +1,7 @@
 extends GutTest
 ## Issue #15: names in the real scenes, from the headless trace
 ## (scenes/names_trace.gd). Everyone and everything that spawns gets a name, the
-## names hold across a save and a new game, and they reach the bartender.
+## names hold across a save and a new game, and they reach the cantina owner.
 
 const Reader := preload("res://tests/trace_reader.gd")
 var t: Dictionary
@@ -48,10 +48,10 @@ func test_your_ship_and_gear_are_named() -> void:
 
 
 func test_authored_names_stay_authored() -> void:
-	assert_eq(t.get("BARTENDER_RESERVED"), "Oda Vell")
+	assert_eq(t.get("CANTINA_OWNER_RESERVED"), "Oda Vell")
 
 
-func test_the_bartender_knows_the_names() -> void:
+func test_the_cantina_owner_knows_the_names() -> void:
 	_true("BRIEF_HAS_TOWN")
 	_true("BRIEF_HAS_PLANET")
 	_true("BRIEF_HAS_GUARD")

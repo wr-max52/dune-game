@@ -79,7 +79,7 @@ func name_for(kind: String, key: String, ctx: Dictionary = {}) -> String:
 	return ""
 
 
-## Claim an authored name (the bartender's, a town written by hand) so nothing
+## Claim an authored name (the cantina owner's, a town written by hand) so nothing
 ## generated can ever take it. False if it already belongs to something else.
 func reserve(name: String, key: String) -> bool:
 	var n := NameEngine.normalize(name)

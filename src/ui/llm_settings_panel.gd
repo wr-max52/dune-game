@@ -39,7 +39,7 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 6)
 	_panel.add_child(v)
 	var title := Label.new()
-	title.text = "Bartender brain"
+	title.text = "Cantina Owner brain"
 	title.add_theme_font_size_override("font_size", 18)
 	v.add_child(title)
 	_mode = OptionButton.new()

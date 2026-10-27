@@ -44,6 +44,21 @@ Known gaps:
   fewer polygons.
 - Seams are cut, not capped, so a ragged edge can show at the guard's waist.
 - No character builder in settings yet (added since: see Character builder).
+## The 80s HUD (2026-10-27, issue #52)
+
+- A glowing retro HUD over everything: one phosphor colour, a monospaced font (Anonymous Pro, SIL OFL), dark glass panels with a lit rim. RetroSkin restyles every panel, label and button as it appears, so no screen had to be rebuilt; text that means something (her lines, warnings) keeps its colour.
+- A banner (planet, town, clock, credits) and a footer (health, stamina, jetpack fuel, on foot or piloting). Click either, or press F1, for the info screen: where you are, the time, credits, speeders, standing with every faction, the latest news.
+- Bigger interaction prompts ("[E] Talk to ...", board, ride; they pulse) and a bigger chat box.
+- F11 > HUD: pick the HUD colour (six presets or your own; saved), and a list of every function key.
+- Pilot and speeder readouts moved below the banner; the weapon readout sits above the footer.
+- Tests: test_retro_hud.
+
+## AI disclaimers, the Cantina Owner, Skrugs and speeders (2026-10-27, issues #29, #42, #47)
+
+- **#29:** a notice at game launch, one pinned in every AI conversation, and a reminder whenever the player types a trigger word (content/core/llm/disclaimers.json).
+- **#47:** the bartender is the Cantina Owner everywhere (old saves carry over). Bigger, readable chat box; directions by landmark (front gate, back gate), never compass; every paid drink puts a new-coloured bottle on the counter.
+- **#42:** Skrugs's stall outside the back gate, run by the same AI brain from his own card (sells speeders, no jobs, knows Oda). Click-to-buy speeders (100 credits), parked behind his house and saved. Speeders hover, jump off ramps, have lasers and a hull only gunfire can hurt.
+- Tests: test_disclaimers, test_cantina_owner, test_speeders, and the end-to-end scenes/speeder_trace.gd.
 
 ## Seamless flight to space (2026-10-27, issue #46)
 

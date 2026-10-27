@@ -40,7 +40,7 @@ coordinates.** You copy the data and write code that reads it.
 
 Replace the 40 x 40 m test floor with a real, walkable greybox town: a walled
 desert port with a gate, market, barracks, a sunken landing pit with a parked
-ship, a cantina (bartender + fixer), and two residential districts. The town is
+ship, a cantina (cantina owner + fixer), and two residential districts. The town is
 built at runtime from a JSON file, the player spawns next to the ship, and a
 headless bot proves every main route can be walked with real collision.
 
@@ -562,7 +562,7 @@ func _has_rule(errs: Array, rule: String) -> bool:
 |---|---|
 | `test_town_loads_with_expected_counts` | boxes = 112, markers = 18, routes = 4, zones = 8 |
 | `test_town_validates_clean` | `validate()` returns `[]`. On failure, print every error. |
-| `test_required_markers_exist` | ids `player_spawn`, `gate`, `back_gap`, `cantina_door`, `bar_front`, `bartender`, `fixer` all exist |
+| `test_required_markers_exist` | ids `player_spawn`, `gate`, `back_gap`, `cantina_door`, `bar_front`, `cantina owner`, `fixer` all exist |
 | `test_npc_markers_match_data_layer` | for every marker with role `npc`, `CoreContent.get_npc(marker.npc)` is not empty |
 | `test_spawn_is_on_pit_floor` | `spawn_pos().y == -6.0` |
 | `test_five_trooper_posts` | `markers_with_role("trooper_post").size() == 5` |
@@ -895,7 +895,7 @@ Same style as `tests/test_m1_trace.gut.gd`: read the file, parse lines, assert.
 | `test_player_never_fell` | no logged y below -6.5 |
 
 **Note on `markers=12`:** only roles `npc`, `trooper_post` and `ambient` get a
-visible capsule: 2 + 5 + 5 = 12. Cross-check by listing them: bartender, fixer (2);
+visible capsule: 2 + 5 + 5 = 12. Cross-check by listing them: cantina owner, fixer (2);
 trooper_gate_n, trooper_gate_s, trooper_tower, trooper_yard_a, trooper_yard_b (5);
 vendor_1, vendor_2, vendor_3, resident_w, resident_e (5). The other 6 markers
 (spawn, waypoints, bar_front) are invisible. 12 + 6 = 18 total ✓.

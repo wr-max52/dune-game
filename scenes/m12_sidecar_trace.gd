@@ -4,7 +4,7 @@ extends SceneTree
 ## needs the binary and a .gguf); run it by hand on the Mac to prove her brain:
 ##
 ##   godot --headless --path . -s res://scenes/m12_sidecar_trace.gd -- \
-##       bin=/opt/homebrew/bin/llama-server model=runtime/models/bartender.gguf
+##       bin=/opt/homebrew/bin/llama-server model=runtime/models/cantina_owner.gguf
 ##
 ## Without bin= it searches like the game does. Writes test_results/m12_sidecar_trace.txt.
 
@@ -62,7 +62,7 @@ func _run() -> void:
 	out("LOAD_SECONDS", snappedf((Time.get_ticks_msec() - t0) / 1000.0, 0.1))
 	out("REPORT", svc.brain_report().summary)
 	if svc.sidecar.state == LLMSidecar.State.READY or svc.sidecar.state == LLMSidecar.State.REUSED:
-		var b := BartenderBrain.new(svc)
+		var b := NpcBrain.new(svc)
 		b.log_transcripts = false
 		WorldState.reset()
 		WorldState.set_flag("gate_checkpoint_up")

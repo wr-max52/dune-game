@@ -24,16 +24,16 @@
         16.0
       ],
       "reach": 2.0,
-      "note": "A smuggler's drop outside the east gate: three cases of unmarked cells. Worth 90 cr to the fence, if you can get them past the checkpoint."
+      "note": "A smuggler's drop outside the front gate: three cases of unmarked cells. Worth 90 cr to the fence, if you can get them past the checkpoint."
     }
   ],
-  "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of the pit's north-east ramp, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved).",
+  "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of one of the pit's ramps, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved).",
   "drops": {
     "note": "Hiding places for Oda's smuggling run (board/bar_board.json, j_smuggle_run). Each run picks one area (never the same one twice in a row) and one spot in it. Oda only names the area, so the player has to search it. A spot is an offset from the area's marker. ground: snap the drop to the desert terrain. Drops have no glow ring, so they are hard to spot.",
     "areas": [
       {
         "id": "east_desert",
-        "hint": "out in the sand past the east gate",
+        "hint": "out in the sand past the front gate",
         "marker": "desert_exit",
         "ground": true,
         "spots": [
@@ -61,7 +61,7 @@
       },
       {
         "id": "back_desert",
-        "hint": "in the dunes outside the back gap in the west wall",
+        "hint": "in the dunes outside the back gate",
         "marker": "back_gap",
         "ground": true,
         "spots": [

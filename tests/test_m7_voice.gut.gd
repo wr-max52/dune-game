@@ -4,7 +4,7 @@ extends GutTest
 ##   - whisper is an OPTIONAL upgrade that is unavailable until a runtime loads;
 ##   - a voice request degrades to typed when whisper is down (never dropped);
 ##   - with a runtime+model, a voice sample is transcribed;
-##   - a captured request is fed to the SAME bartender, and the text is read but
+##   - a captured request is fed to the SAME cantina owner, and the text is read but
 ##     never executed as a command -- an effect needs a model tool that is allowed;
 ##   - a disallowed tool the model proposes is ignored, exhaustion falls back;
 ##   - each turn records a latency.
@@ -19,7 +19,7 @@ var PTT
 var Typed
 var WhisperSrc
 var WhisperRT
-var Bartender
+var CantinaOwner
 var Scripted
 
 var _lines := PackedStringArray()
@@ -31,7 +31,7 @@ func before_each() -> void:
 	Typed = load(VOICE + "/typed_speech_source.gd")
 	WhisperSrc = load(VOICE + "/whisper_speech_source.gd")
 	WhisperRT = load(VOICE + "/whisper_runtime.gd")
-	Bartender = load(LLM + "/bartender_ai.gd")
+	CantinaOwner = load(LLM + "/cantina_owner_ai.gd")
 	Scripted = load(LLM + "/scripted_client.gd")
 	_lines.clear()
 
@@ -91,7 +91,7 @@ func test_forceload_needs_a_model() -> void:
 
 func test_captured_text_is_read_not_executed() -> void:
 	var p = PTT.new()
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	var client = Scripted.new()  # empty: model proposes nothing
 	bar.client = client
 	bar.fallback_lines = ["Hold on."]
@@ -107,7 +107,7 @@ func test_captured_text_is_read_not_executed() -> void:
 
 func test_disallowed_tool_is_ignored() -> void:
 	var p = PTT.new()
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor"]
 	var client = Scripted.new()
 	client.new_with_responses([
@@ -123,7 +123,7 @@ func test_disallowed_tool_is_ignored() -> void:
 
 func test_allowed_tool_applies_through_voice() -> void:
 	var p = PTT.new()
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.allowed_tools = ["give_rumor"]
 	client_for(bar)
 	var text: String = p.capture("anything new?", 0, 80)
@@ -158,9 +158,9 @@ func test_latency_is_measured() -> void:
 	assert_eq(p.last_latency_ms, 80, "latency is end - start")
 
 
-func test_press_release_routes_through_bartender() -> void:
+func test_press_release_routes_through_cantina_owner() -> void:
 	var p = PTT.new()
-	var bar = Bartender.new()
+	var bar = CantinaOwner.new()
 	bar.client = Scripted.new()
 	bar.fallback_lines = ["Hold on."]
 	p.now_ms = 0

@@ -18,8 +18,8 @@ func _ready() -> void:
 		" dialogues=", _content.dialogues.size(),
 		" missions=", _content.missions.size())
 
-	var bartender: Dictionary = _content.get_npc("bartender")
-	print("DataLayer: bartender kind=", str(bartender.get("kind", "MISSING")),
-		" tools=", str(bartender.get("tools", [])))
-	if _content.get_persona("bartender").length() == 0:
-		push_error("DataLayer: bartender persona prompt is empty")
+	var cantina_owner: Dictionary = _content.get_npc("cantina_owner")
+	print("DataLayer: cantina owner kind=", str(cantina_owner.get("kind", "MISSING")),
+		" tools=", str(cantina_owner.get("tools", [])))
+	if _content.get_persona("cantina_owner").length() == 0:
+		push_error("DataLayer: cantina owner persona prompt is empty")

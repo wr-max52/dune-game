@@ -3,7 +3,7 @@ extends GutTest
 ## may appear in code, class names, file names, or the data layer. Generic
 ## terms only. This test failing is a hard block on the merge.
 
-## M12: the list lives in data so the bartender's runtime output filter and this
+## M12: the list lives in data so the cantina owner's runtime output filter and this
 ## scan share one source of truth. That file is the list itself, so it is exempt.
 const BLOCKLIST := "res://content/core/llm/ip_blocklist.json"
 var BANNED: Array = []

@@ -54,7 +54,7 @@ func test_town_validates_clean() -> void:
 
 func test_required_markers_exist() -> void:
 	var t := _town()
-	for id in ["player_spawn", "gate", "back_gap", "cantina_door", "bar_front", "bartender", "fixer"]:
+	for id in ["player_spawn", "gate", "back_gap", "cantina_door", "bar_front", "cantina_owner", "fixer"]:
 		assert_false(t.get_marker(id).is_empty(), "marker %s exists" % id)
 
 
@@ -201,7 +201,7 @@ func test_every_building_has_a_door_side() -> void:
 
 
 ## Art pass 2: the cantina has a stage in the middle that the walk routes go
-## round, and patrons on the bar stools facing the bartender.
+## round, and patrons on the bar stools facing the cantina owner.
 func test_cantina_stage_and_patrons() -> void:
 	var t := _town()
 	var stage := t.get_box("cantina_stage")
@@ -214,7 +214,7 @@ func test_cantina_stage_and_patrons() -> void:
 		if str(m.id).begins_with("patron_"):
 			patrons += 1
 			var f := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
-			assert_almost_eq(f.distance_to(t.marker_pos("bartender")), 0.0, 0.5, "%s faces the bartender" % m.id)
+			assert_almost_eq(f.distance_to(t.marker_pos("cantina_owner")), 0.0, 0.5, "%s faces the cantina owner" % m.id)
 	assert_gte(patrons, 3, "locals at the bar")
 
 

@@ -49,6 +49,8 @@ func _build_landmark_colliders() -> void:
 	root.name = "LandmarkColliders"
 	add_child(root)
 	for b in landmark_boxes():
+		if str(b.get("rise", "")) != "":
+			continue                 # a ramp: its dresser builds the sloped collider
 		var cs := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
 		var mn: Vector3 = b.min
@@ -111,6 +113,8 @@ func _build_landmark_visuals() -> void:
 	add_child(root)
 	var op: Dictionary = look.get("outpost", {})
 	for b in landmark_boxes():
+		if not bool(b.get("visual", true)):
+			continue                 # dressed elsewhere (issue #42: Skrugs's post)
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
 		var bm := BoxMesh.new()

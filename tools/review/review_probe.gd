@@ -29,20 +29,20 @@ func _initialize() -> void:
 	sq.members = [Vector3(99, 0, 0), Vector3(1, 0, 0)]  # member0 next to node1, member1 next to node0
 	print("PROBE squad_assign (want [1,0]): ", sq.assign(2))
 
-	# 3. Bartender fallback cycle
-	var B = load("res://src/systems/llm/bartender_ai.gd")
+	# 3. Cantina Owner fallback cycle
+	var B = load("res://src/systems/llm/cantina_owner_ai.gd")
 	var b = B.new()
 	b.fallback_lines = ["A", "B", "C"]
 	var seq := []
 	for i in 7:
 		seq.append(b.respond("hi", {})["reply"])
-	print("PROBE bartender_fallback_seq: ", seq)
+	print("PROBE cantina_owner_fallback_seq: ", seq)
 	# 3b. Does the player's text reach the model at all?
 	var S = load("res://src/systems/llm/scripted_client.gd")
 	var c = S.new()
 	c.new_with_responses([{ "text": "same answer" }, { "text": "same answer" }])
 	b.client = c
-	print("PROBE bartender_ignores_input: ", b.respond("where is the crate?", {})["reply"], " | ", b.respond("I hate you", {})["reply"])
+	print("PROBE cantina_owner_ignores_input: ", b.respond("where is the crate?", {})["reply"], " | ", b.respond("I hate you", {})["reply"])
 
 	# 4. Weapon fire rate frame dependency (pistol rate 0.12s)
 	var W = load("res://src/systems/combat/weapon.gd")

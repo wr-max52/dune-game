@@ -6,9 +6,9 @@ extends GutTest
 ## scene (scenes/m5_mission_trace.gd) runs it end to end and writes
 ## test_results/m5_mission_trace.txt; this test reads that log and asserts the
 ## loop closed and the save/load round-tripped the four things the spec names:
-## player position, credits, mission state, and bartender memory.
+## player position, credits, mission state, and cantina owner memory.
 ##
-## The bartender conversation is a deterministic stub, not real inference (real
+## The cantina owner conversation is a deterministic stub, not real inference (real
 ## inference is the M6 manual + recorded check). A failing bot blocks the merge.
 
 const TRACE := "res://test_results/m5_mission_trace.txt"
@@ -54,7 +54,7 @@ func test_payout_is_credited() -> void:
 
 func test_barter_memory_survives_save_load() -> void:
 	var text: String = "\n".join(_non_comment_lines())
-	assert_true(text.contains("RELOAD_MEMORY=Rider"), "bartender memory survived the save/load")
+	assert_true(text.contains("RELOAD_MEMORY=Rider"), "cantina owner memory survived the save/load")
 
 
 func test_player_position_survives_save_load() -> void:
