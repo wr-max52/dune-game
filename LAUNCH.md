@@ -168,6 +168,24 @@ godot --headless --path . -s res://tools/llm/eval_runner.gd -- mode=local suite=
 Review renders: `./tools/m11/shoot_m11.sh` writes body, weapon, range and bar shots
 to `test_results/m11/`.
 
+## Skrugs and the speeder (issue #42)
+
+Walk out through the back gate (the gap in the wall at the far corner past the
+cantina). Skrugs, dressed all in red, sells speeders from a stall just outside.
+Press **E** at his counter to talk. When you want one, he shows a price card;
+only clicking **Buy** pays (100 credits). The speeder is parked behind his house.
+
+| Action | Key |
+|---|---|
+| Get on / off | E |
+| Throttle / brake | W / S |
+| Steer | A / D |
+| Boost | Shift |
+| Hop | Space |
+| Twin lasers | LMB |
+
+The sand ramp past the house launches you. Only gunfire damages a speeder.
+
 ## The jetpack (M13)
 
 The jetpack is at the top of the pit's north-east ramp, on your way out of the pit

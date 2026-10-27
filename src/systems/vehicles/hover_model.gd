@@ -30,6 +30,8 @@ var air_time := 0.0                  ## of the current (or last) jump
 var top_height := 0.0                ## highest clearance over the ground on the last jump
 
 var _cmd := { "throttle": 0.0, "steer": 0.0, "boost": false, "hop": false }
+var _last_ride := NAN                ## the ride height last step (NAN: none yet)
+var _ground_rate := 0.0              ## how fast the ground under it was rising, m/s
 
 
 func _init(config: Dictionary = {}, world_ground: WorldGround = null) -> void:
@@ -87,6 +89,8 @@ func place(at: Vector3, yaw_rad: float) -> void:
 	vy = 0.0
 	airborne = false
 	position.y = ground_height() + p("hover_height", 1.05)
+	_last_ride = NAN
+	_ground_rate = 0.0
 
 
 ## throttle -1..1 (back..forward), steer -1..1 (left..right).
@@ -161,6 +165,8 @@ func _move(dt: float) -> void:
 
 func _hover(dt: float) -> void:
 	var ride := ground_height() + p("hover_height", 1.05)
+	var rate := 0.0 if is_nan(_last_ride) else (ride - _last_ride) / maxf(dt, 0.0001)
+	_last_ride = ride
 	if not airborne and bool(_cmd.hop):
 		airborne = true
 		vy = p("hop_speed", 7.5)
@@ -180,14 +186,17 @@ func _hover(dt: float) -> void:
 		return
 	var before := position.y
 	if before - ride > p("launch_gap", 0.45):
-		# The ground fell away faster than we can follow: off the edge.
+		# The ground fell away faster than we can follow: off the edge, carrying
+		# the climb the ground was giving it (up a ramp, that is the jump).
 		airborne = true
+		vy = maxf(vy, _ground_rate)
 		air_time = 0.0
 		top_height = before - ride
 		events.append({ "type": "launch", "vy": vy, "speed": speed })
 		vy -= p("gravity", 22.0) * dt
 		position.y += vy * dt
 		return
+	_ground_rate = rate
 	position.y = lerpf(before, ride, clampf(dt * p("follow_rate", 14.0), 0.0, 1.0))
 	if ride > position.y:
 		position.y = maxf(position.y, ride - 0.25)   # never sink into a rise

@@ -301,7 +301,9 @@ func _axis(neg: String, pos: String) -> float:
 ## skids, a ducted fan at the back, a teal glow under the skids.
 func _build_visual() -> void:
 	var look: Dictionary = cfg.get("look", {})
-	var mats := LookMaterials.new()
+	# The town's materials: a new LookMaterials builds its own textures, a 60 ms
+	# hitch at the moment you buy one.
+	var mats: LookMaterials = demo._flat_mats() if demo != null and demo.has_method("_flat_mats") else LookMaterials.new()
 	var hullm := mats.flat(Color(str(look.get("hull", "#c9a46a"))), 0.6)
 	var trim := mats.flat(Color(str(look.get("trim", "#8e3a26"))), 0.7)
 	var metal := mats.flat(Color(str(look.get("metal", "#4a4c52"))), 0.4, 0.6)

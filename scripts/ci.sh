@@ -214,6 +214,17 @@ if [ ! -f test_results/m14_flight_trace.txt ]; then
 fi
 echo "CI: m14 trace present ($(wc -l < test_results/m14_flight_trace.txt) lines)"
 
+# Issue #42: out the back gate to Skrugs, buy a speeder (the real conversation
+# pipeline, scripted model), ride it off the ramp, take a bolt, get off.
+echo "CI: generating speeder trace..."
+rm -f test_results/speeder_trace.txt
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/speeder_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/speeder_trace.txt ]; then
+  echo "CI: ERROR -- speeder trace was not generated" >&2
+  exit 1
+fi
+echo "CI: speeder trace present ($(wc -l < test_results/speeder_trace.txt) lines)"
+
 # NPCs on foot: the navmesh baked from the town data off the main thread, the
 # gate guards walking a patrol, across town, into the pit and back on the
 # player's movement code, their senses (sight cone, line of sight, hearing,
