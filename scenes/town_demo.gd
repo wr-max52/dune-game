@@ -74,6 +74,7 @@ var checkpoint: GateCheckpoint        ## M15: runs the gate guards (null with np
 var town_name := ""                   ## issue #15: this town's generated name ("" when its world names none)
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
+var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 
 
 func _ready() -> void:
@@ -125,6 +126,10 @@ func _ready() -> void:
 		if with_npcs:
 			_build_npcs()
 		_name_places()          # after the bar: a loaded save keeps the names it had
+		dev_settings = DevSettingsPanel.new()
+		dev_settings.name = "DevSettings"
+		dev_settings.demo = self
+		add_child(dev_settings)
 
 
 # ---------------------------------------------------------------- names (issue #15)
@@ -503,6 +508,16 @@ func set_preset(id: String) -> void:
 	if look == null:
 		return
 	look.apply(id)
+	preset = look.current
+	WorldState.time_of_day = preset
+
+
+## A time of day in hours, blended between presets (F11). `preset` and the
+## world's time_of_day follow the nearer preset, so rumors still key on it.
+func set_hour(h: float) -> void:
+	if look == null:
+		return
+	look.apply_hour(h)
 	preset = look.current
 	WorldState.time_of_day = preset
 
