@@ -322,7 +322,7 @@ func nearest_berth() -> int:
 
 func board() -> bool:
 	var i := nearest_berth()
-	if i < 0:
+	if i < 0 or not Story.ships_unlocked():
 		return false
 	if i != berth:
 		_use_berth(i)
@@ -503,6 +503,9 @@ func _on_foot() -> void:
 		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
 		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
 			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
+		if not Story.ships_unlocked():
+			# Issue #64: the port's ships fly once Oda tells you about the fleet.
+			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line("ship_locked")]
 	_foot_prompt.visible = near
 	if near and _just("interact"):
 		board()

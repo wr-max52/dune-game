@@ -10,6 +10,7 @@ extends CanvasLayer
 ##   Flags     every world flag the content reads, on or off, plus custom ones
 ##   HUD       the 80s HUD's colour (issue #52) and every function key
 ##   Sound     music and effects volume (issue #16)
+##   Story     the main story's chapter, skip to one, and "Reset story" (issue #64)
 ##
 ## Everything writes to the same places the game does (WorldState, the npc's
 ## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
@@ -65,6 +66,7 @@ func _ready() -> void:
 	tabs.add_child(_flags_tab())
 	tabs.add_child(_hud_tab())
 	tabs.add_child(_sound_tab())
+	tabs.add_child(_story_tab())
 	var h := HBoxContainer.new()
 	v.add_child(h)
 	for b in [["Save now", _save], ["Close", close]]:
@@ -428,6 +430,62 @@ func known_flags() -> Array:
 	var out := seen.keys()
 	out.sort()
 	return out
+
+
+# ------------------------------------------------------------------ story (issue #64)
+
+func _story_tab() -> Control:
+	var v := _tab("Story")
+	_section(v, "Main story")
+	var now := Label.new()
+	now.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(now)
+	var pick := OptionButton.new()
+	for id in Story.chapter_ids():
+		pick.add_item(str(id).replace("_", " "))
+	var go := Button.new()
+	go.text = "Skip to it"
+	go.pressed.connect(func():
+		if pick.selected >= 0:
+			Story.skip_to(str(Story.chapter_ids()[pick.selected]))
+			refresh())
+	_row(v, "Chapter", pick).add_child(go)
+	_section(v, "Start again")
+	var note := Label.new()
+	note.text = "Resets the story to the beginning: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you, as on a first play. Names are kept. The town reloads."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+	var reset := Button.new()
+	reset.text = "Reset story"
+	reset.pressed.connect(func(): reset_story())
+	_row(v, "", reset)
+	_refreshers.append(func():
+		var b := WorldState.bounty
+		now.text = "Now: %s%s" % [Story.chapter().replace("_", " "),
+			("   ·   bounty on %s (%s)" % [b.name, b.state]) if str(b.get("state", "")) in ["out", "dead"] else ""]
+		pick.select(maxi(0, Story.index(Story.chapter()))))
+	return v.get_parent()
+
+
+## Issue #64: back to the start, as on a first play. Everything the player has or
+## has done goes (WorldState: credits, gear, droids, the bought ship, flags,
+## standing, the story), every character's opinion of them goes back to a
+## stranger's, T-89 says hello again; the names stay. Saved, then the town is
+## built again from scratch. `reload` false: just the state (tests).
+func reset_story(reload := true) -> void:
+	var kept := WorldState.names
+	WorldState.reset()
+	WorldState.names = kept
+	ShipSalesman.greeted = false
+	if demo != null and demo.bar != null:
+		for s in demo.bar.spots:
+			s.brain.rel = Relationship.new()
+		demo.bar._save_memory()
+	if not reload or not is_inside_tree():
+		return
+	visible = false
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 # ------------------------------------------------------------------ save

@@ -62,7 +62,7 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 		"remnant_trooper":
 			_dress_trooper(root, p, false)
 			default_pose = "rifle"
-		"remnant_commander":
+		"remnant_commander", "remnant_marked":
 			_dress_trooper(root, p, true)
 			default_pose = "parade_rest"
 		"smuggler":
@@ -86,6 +86,8 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 	var skin := SkinnedBody.dress(root, p.get("model", {}))
 	if skin != null:
 		_wear_outfit(root, skin, p.model, outfit)
+		if p.has("tint"):
+			_tint(skin.model, Color.html(str(p.tint)))
 		skin.sync(root)
 		root.set_meta("skin", skin)
 	var s := float(p.get("height", REF_HEIGHT)) / REF_HEIGHT
@@ -154,6 +156,18 @@ func _outfit_material(base: Material, pattern: String, color: String) -> Materia
 		m.albedo_texture = load(path)
 		_cache[key] = m
 	return _cache[key]
+
+
+## Issue #64: a palette's "tint" multiplies every piece's colour (the red Remnant
+## officer). Each body gets its own copies, so the shared outfit materials stay as they are.
+func _tint(model: Node, tint: Color) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		for i in (mi as MeshInstance3D).mesh.get_surface_count():
+			var m := (mi as MeshInstance3D).get_active_material(i)
+			if m is BaseMaterial3D:
+				var t := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+				t.albedo_color = t.albedo_color * tint
+				(mi as MeshInstance3D).set_surface_override_material(i, t)
 
 
 # ------------------------------------------------------------------ materials

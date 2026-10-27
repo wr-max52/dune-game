@@ -12,6 +12,7 @@ const DT := 1.0 / 60.0
 
 func before_each() -> void:
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64: the story unlocks the ships
 
 
 func after_each() -> void:

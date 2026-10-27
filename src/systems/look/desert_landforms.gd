@@ -25,6 +25,11 @@ static func load_data(path: String = DATA_PATH) -> Dictionary:
 	return d if d is Dictionary else {}
 
 
+## Issue #64: more places to keep clear, [Vector2 centre, radius] each (the
+## Remnant's desert outposts: the world's landmarks with a "clear" radius).
+var clear_circles: Array = []
+
+
 ## `keep_out` = the town's floor area (xz); nothing is placed on or near it.
 func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void:
 	name = "Landforms"
@@ -44,7 +49,7 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	for m in data.get("mesas", []):
 		var r: float = m[2]
 		var h: float = m[3]
-		if _hits(clear, m[0], m[1], r):
+		if _hits(clear, m[0], m[1], r) or _in_circles(m[0], m[1], r):
 			continue
 		noise.frequency = 0.9 / r
 		var base := _cyl(r * 0.8, r, h, 40)
@@ -59,7 +64,7 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	for hd in data.get("hoodoos", []):
 		var r: float = hd[2]
 		var h: float = hd[3]
-		if _hits(clear, hd[0], hd[1], r):
+		if _hits(clear, hd[0], hd[1], r) or _in_circles(hd[0], hd[1], r):
 			continue
 		noise.frequency = 1.4 / r
 		var base := _cyl(r * 0.55, r, h, 16)
@@ -99,7 +104,7 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		var s := rng.randf_range(0.5, 1.0) * (1.0 + pow(rng.randf(), 3.0) * 5.0)
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.2), s * rng.randf_range(0.8, 1.3)))
 		basis = basis * Basis(Vector3.RIGHT, rng.randf_range(-0.4, 0.4))
-		if _hits(clear, x, z, s * 2.0):
+		if _hits(clear, x, z, s * 2.0) or _in_circles(x, z, s * 2.0):
 			continue
 		xforms.append(Transform3D(basis, Vector3(x, terrain.height_at(x, z) - s * 0.25, z)))
 	var mm := MultiMesh.new()
@@ -120,6 +125,13 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 
 static func _hits(r: Rect2, x: float, z: float, radius: float) -> bool:
 	return r.grow(radius).has_point(Vector2(x, z))
+
+
+func _in_circles(x: float, z: float, radius: float) -> bool:
+	for c in clear_circles:
+		if (c[0] as Vector2).distance_to(Vector2(x, z)) < float(c[1]) + radius:
+			return true
+	return false
 
 
 func _cyl(top: float, bottom: float, h: float, seg: int) -> CylinderMesh:

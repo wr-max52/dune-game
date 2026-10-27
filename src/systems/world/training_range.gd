@@ -73,6 +73,7 @@ func _on_down(id: String) -> void:
 		if not t.is_down:
 			all_down = false
 	if all_down:
+		WorldState.on_range_cleared()      # issue #64: the story's target practice
 		var secs := _time - _first_down_at
 		if secs <= float(spec.get("record_seconds", 20.0)):
 			record_set.emit(secs)

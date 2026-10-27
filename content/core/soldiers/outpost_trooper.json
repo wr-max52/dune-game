@@ -1,0 +1,27 @@
+{
+  "id": "outpost_trooper",
+  "base": "gate_guard",
+  "label": "Outpost trooper",
+  "role": "sentry",
+  "note": "Issue #64: a trooper at one of the Remnant's desert outposts. Holds its ground by the outpost building (there is no navmesh out there), watches the sand, shouts the alarm and shoots. After the fleet is beaten they shoot on sight (Story.remnant_hostile). Only the blocks below differ from gate_guard.json.",
+  "hp": 70,
+  "perception": {
+    "sight_range": 55.0,
+    "fov_deg": 160.0,
+    "reaction_s": 1.0
+  },
+  "combat": {
+    "hold_ground": true,
+    "cover_search_radius": 0.0,
+    "hold_radius": 3.0,
+    "chase_leash": 30.0
+  },
+  "patrol": {
+    "pause_s": 6.0,
+    "look_around_deg": 90.0,
+    "look_every_s": 3.0
+  },
+  "alarm": {
+    "raise_on_hostile_sight": true
+  }
+}
