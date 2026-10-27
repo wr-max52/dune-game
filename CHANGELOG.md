@@ -12,7 +12,9 @@ Plain English, newest on top. One entry per milestone.
   - **Floating droid:** a white dome with one big lens on four little legs.
   - **Cargo droid:** a boxy hauler on two tank treads, with goggle eyes.
   - **Assassin droid:** a tall plated humanoid with a visor and a pistol in its right hand.
+  - **The assassin droid walks.** Hyper3D rigged it with walk, run, idle and death clips: it walks or runs to keep up, stands ready when still, and falls backward when destroyed.
   - Every droid variant tints its model (rust, black, tan, olive, blue, bone, gunmetal, copper) and keeps its glowing eyes, which still go dark when it breaks.
+- **Droids follow more calmly.** A droid holds its ground until you are a few metres away (`follow.leash`: floating 4 m, cargo 5 m, assassin 6 m), then walks to its spot beside or behind you and stops. It no longer shuffles every time you move.
 - **The energy sword stays code-built.** It is already the laser sword (an igniting yellow blade over a forged spine with a brass guard). Four Hyper3D attempts could not hold a long, thin sword together.
 - **Ragdoll deaths.** Troopers and locals no longer tip over like a plank. They crumple: knees buckle, the body falls away from whoever landed the killing shot, rolls to a stop on the sand and rests. The rifle flies out of their hands and clatters to the ground. The player does the same when knocked out at the gate, and stands back up in the pit.
 - Tuning in `content/look/ragdoll.json`; model placement in `content/look/gear_models.json` (prep: `tools/look/prep_gear.gd`) and each droid kind's `look` in `content/core/droids/droids.json`.

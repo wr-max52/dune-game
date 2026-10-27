@@ -1,6 +1,6 @@
 {
   "id": "droids",
-  "note": "IP-neutral (issue #51). Companion droids: three kinds, each with look variants. Not LLM characters; they only beep. The player runs up to max_owned at once. They show in the inventory as droids; what a cargo droid carries does not show, and the Remnant never searches it. Prices: the merchant sells at price and buys back at resale. Looks: each kind's 'look' names its Hyper3D model (issue #25, content/look/gear_models.json), tinted by the variant's body colour ('tint' 0..1), with glowing 'eyes' and a 'muzzle' in model space (metres, facing -Z, standing on y = 0). No model = the droid_kit.gd primitives.",
+  "note": "IP-neutral (issue #51). Companion droids: three kinds, each with look variants. Not LLM characters; they only beep. The player runs up to max_owned at once. They show in the inventory as droids; what a cargo droid carries does not show, and the Remnant never searches it. Prices: the merchant sells at price and buys back at resale. Looks: each kind's 'look' names its Hyper3D model (issue #25, content/look/gear_models.json), tinted by the variant's body colour ('tint' 0..1), with glowing 'eyes' and a 'muzzle' in model space (metres, facing -Z, standing on y = 0). No model = the droid_kit.gd primitives. Following (issue #25 follow-up): a droid stays put until the player is 'leash' metres away, then walks to its slot and stops within 'settle'.",
   "max_owned": 3,
   "fix_seconds": 10.0,
   "fix_reach": 2.6,
@@ -14,7 +14,9 @@
       "follow": {
         "side": 1.1,
         "back": 1.4,
-        "speed": 7.0
+        "speed": 7.0,
+        "leash": 4.0,
+        "settle": 0.35
       },
       "variants": {
         "range": {
@@ -60,7 +62,9 @@
       "follow": {
         "side": -1.2,
         "back": 1.8,
-        "speed": 6.5
+        "speed": 6.5,
+        "leash": 5.0,
+        "settle": 0.35
       },
       "variants": {
         "tan": {
@@ -106,7 +110,9 @@
       "follow": {
         "side": 0.0,
         "back": 2.6,
-        "speed": 7.5
+        "speed": 7.5,
+        "leash": 6.0,
+        "settle": 0.35
       },
       "gun": {
         "range": 34.0,
@@ -153,7 +159,19 @@
           0.6,
           1.12,
           -0.33
-        ]
+        ],
+        "anims": {
+          "idle": "HumanOffensiveIdle",
+          "walk": "HumanWalking",
+          "run": "HumanRunning",
+          "die": "HumanStandingDeathBackward01"
+        },
+        "walk_speed": 1.6,
+        "run_speed": 5.0,
+        "run_from": 3.5,
+        "eye_bone": "Head",
+        "muzzle_bone": "RightHand",
+        "root_bone": "Hips"
       }
     }
   },
