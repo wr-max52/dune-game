@@ -10,7 +10,7 @@
   "pilots": ["rookie", "veteran", "ace"],
   "soldiers": ["gate_guard", "tower_sentry", "yard_trooper"],
   "encounters": ["orbital_skirmish"],
-  "items": ["jetpack", "unmarked_cells"],
+  "items": ["jetpack", "unmarked_cells", "refined_quantonium", "holocrystals", "space_whale_teeth"],
   "vendors": ["gear_trader", "fence"],
   "pickups": ["port_town"],
   "worlds": ["port_desert"],

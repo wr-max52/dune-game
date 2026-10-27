@@ -3,6 +3,8 @@ extends Node
 ## Gear in a scene (M13). The thin node over the pure Inventory and Jetpack:
 ##   - places the location's pickups (content/core/pickups/<location>.json) and
 ##     knows where its vendors stand (content/core/vendors/*.json),
+##   - puts Oda's smuggling drop out once the player takes her job
+##     (WorldState.smuggle_drop()), and swaps it when she lines up the next one,
 ##   - shows a prompt when the player is in reach and acts on `interact` (E):
 ##     pick up, sell, buy,
 ##   - attaches and detaches gear on `gear_toggle` (G),
@@ -32,6 +34,7 @@ var hud: GearHud
 var inventory_panel: InventoryPanel
 var labels: Dictionary = {}
 var pickups: Array = []         ## PickupNode
+var drop                        ## PickupNode: Oda's smuggling drop, while one is lying out there
 var vendors: Array = []         ## { cfg, pos }
 var worn: Node3D                ## the attached item's look on the body
 var worn_id := ""
@@ -44,7 +47,6 @@ var ground_at := Callable()
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
 var _last_safe := Vector3.ZERO
-var _first_person := false
 
 
 func setup(p_content, p_town, p_player: CharacterBody3D, p_rig: Node = null, p_location: String = "port_town") -> void:
@@ -125,6 +127,27 @@ func _build_pickups() -> void:
 		pickups.append(node)
 
 
+## Make the world match Oda's drop: place it when she puts one out, clear it
+## once it is taken. Cheap; called every frame.
+func sync_drop() -> void:
+	var want := WorldState.smuggle_drop()
+	var have := str(drop.pickup.get("id", "")) if drop != null and is_instance_valid(drop) else ""
+	if str(want.get("id", "")) == have:
+		return
+	if have != "":
+		drop.queue_free()
+	drop = null
+	if want.is_empty():
+		return
+	var item: Dictionary = content.get_item(str(want.item))
+	if item.is_empty():
+		push_warning("GearController: smuggling drop names an unknown item")
+		return
+	drop = PickupNode.new()
+	drop.setup(items, want, item, _place(want))
+	add_child(drop)
+
+
 func _build_vendors() -> void:
 	for v in content.vendors_in(location_id):
 		vendors.append({ "cfg": v, "pos": _place(v) })
@@ -136,7 +159,11 @@ func _place(entry: Dictionary) -> Vector3:
 	var at := Vector3.ZERO
 	if town != null and not town.get_marker(str(entry.get("marker", ""))).is_empty():
 		at = town.marker_pos(str(entry.get("marker", "")))
-	return at + Vector3(float(off[0]), float(off[1]), float(off[2]))
+	at += Vector3(float(off[0]), float(off[1]), float(off[2]))
+	# Out in the desert the sand is not flat: sit on it, never under it.
+	if bool(entry.get("ground", false)) and ground_at.is_valid():
+		at.y = maxf(at.y, float(ground_at.call(at.x, at.z)))
+	return at
 
 
 func pickup_node(pickup_id: String) -> Node3D:
@@ -157,6 +184,7 @@ func _physics_process(dt: float) -> void:
 			hud.set_prompt("")
 			hud.set_fuel(0.0, false, false)
 		return
+	sync_drop()
 	focus = _find_focus()
 	if hud != null:
 		hud.set_prompt(prompt_text())
@@ -180,6 +208,8 @@ func _find_focus() -> Dictionary:
 	for n in pickups:
 		if is_instance_valid(n) and n.in_reach(p):
 			return { "kind": "pickup", "node": n }
+	if drop != null and is_instance_valid(drop) and drop.in_reach(p):
+		return { "kind": "pickup", "node": drop }
 	for v in vendors:
 		var vp: Vector3 = v.pos
 		if Vector2(p.x - vp.x, p.z - vp.z).length() <= float(v.cfg.get("reach", 3.0)) and absf(p.y - vp.y) <= 2.0:
@@ -253,6 +283,8 @@ func _take(node) -> String:
 	var id := str(entry.get("item", ""))
 	var item: Dictionary = content.get_item(id)
 	pickups.erase(node)
+	if node == drop:
+		drop = null
 	node.queue_free()
 	focus = {}
 	var msg := _l("picked_up") % str(item.get("label", id))
@@ -353,22 +385,23 @@ func _mount_worn(id: String, item: Dictionary) -> void:
 		chest = avatar
 	chest.add_child(worn)
 	worn.transform = items.on_back_transform(look_id)
-	_first_person = not _first_person      # force the view pass below to apply
 	_update_worn_view()
 
 
 ## First person: the worn pack casts a shadow but is not drawn (like the body).
+## Checked per mesh every tick rather than on a cached view flag: the flag could
+## fall out of step with the meshes and leave the pack's shoulder straps drawn
+## right beside the first-person camera.
 func _update_worn_view() -> void:
+	if worn == null:
+		return
 	var fp := false
 	if rig_node != null and "rig" in rig_node and rig_node.rig != null:
 		fp = rig_node.rig.is_first_person()
-	if fp == _first_person or worn == null:
-		_first_person = fp
-		return
-	_first_person = fp
 	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if fp else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for m in PlayerAvatar._meshes_under(worn):
-		if not str(m.get_parent().get_parent().name).begins_with("Flames") and m.get_parent().name != "Flames":
+		if not str(m.get_parent().get_parent().name).begins_with("Flames") and m.get_parent().name != "Flames" \
+				and (m as GeometryInstance3D).cast_shadow != mode:
 			(m as GeometryInstance3D).cast_shadow = mode
 
 

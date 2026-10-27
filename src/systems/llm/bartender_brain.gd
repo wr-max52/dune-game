@@ -326,6 +326,11 @@ func canned_reply(text: String) -> Dictionary:
 			if rs.is_empty():
 				return { "say": _pick(c.get("no_rumor", ["Quiet week."])), "actions": [] }
 			return { "say": _pick(c.get("rumor", ["%s"])) % str(rs[0].text), "actions": [{ "type": "share_rumor", "id": rs[0].id }] }
+		"smuggle":
+			var sj := WorldState.open_jobs(rel.tier()).filter(func(j): return str(j.get("kind", "")) == "smuggle")
+			if sj.is_empty():
+				return { "say": _pick(c.get("no_smuggle", ["Nothing lined up."])), "actions": [] }
+			return { "say": _pick(c.get("job", ["%s"])) % str(sj[0].text), "actions": [{ "type": "offer_job", "id": sj[0].id }] }
 		"job":
 			var js := WorldState.open_jobs(rel.tier())
 			if js.is_empty():
@@ -343,7 +348,7 @@ func canned_reply(text: String) -> Dictionary:
 func _topic(text: String) -> String:
 	var low := text.to_lower()
 	var tw: Dictionary = card.get("topic_words", {})
-	for topic in ["bye", "job", "rumor", "drink", "war"]:
+	for topic in ["bye", "smuggle", "job", "rumor", "drink", "war"]:
 		for w in tw.get(topic, []):
 			if low.contains(str(w)):
 				return topic
