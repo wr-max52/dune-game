@@ -30,7 +30,16 @@ Every new id also goes in `content/core/manifest.json` under `ships`, `weapons`,
    - `hardpoints`: each is a weapon id and a `mount` point in the ship's own space
      (metres; forward is -Z, up is +Y, right is +X).
    - `convergence`: how far ahead the fixed guns cross.
+   - `blaster_power`: multiplies every gun's damage (1.0 = as the weapon data says).
+   - `flight.ability`: what Shift does. `{ "kind": "boost" }` (default),
+     `{ "kind": "drift", "turn_scale": 2.0 }` (slide on the old heading while the nose
+     turns faster) or `{ "kind": "brake", "turn_scale": 2.4, "brake_speed": 0 }` (air
+     brake). All drain the boost meter (`boost_time`, `boost_recharge`).
+   - `label`: its make and model, from the name generator (`equipment`, class `ship`).
 4. Add the id to `ships` in the manifest.
+5. To park it in the port so the player can fly it, give a `ship` box in
+   `content/core/locations/port_town.json` a `"ship": "<id>"` and size the box to the
+   model (issue #43). E beside it boards it.
 
 ### Flying it in the atmosphere (M14)
 
@@ -83,6 +92,15 @@ Add an entry under `looks` in `content/look/ships.json`, keyed by the ship's `lo
 
 Engine glows go in a child node called `Engines`. A model can bring its own (name
 the node `Engines` in the scene) or leave it out.
+
+**A Hyper3D model (issue #43):** put the raw .glb in `assets/vehicles/source/`, add an
+entry to `content/look/vehicle_models.json` (`source`, `out`, `yaw_deg` (180 for Rodin,
+whose noses face +Z), `length`, `max_span`), run
+`godot --headless --path . -s res://tools/look/prep_vehicle.gd -- id=<id>`, and point the
+look's `scene` at `out`. Review it with
+`godot --path . -s res://tools/look/shoot_vehicles.gd -- sheet=tools/look/sheets/vehicles_final.json`.
+The speeder takes the same kind of model through its look's `scene` in
+`content/core/vehicles/speeder.json`.
 
 Check the look with `./tools/lookdev/shoot_dogfight.sh`: `lineup.png` shows every
 look side by side.

@@ -6,7 +6,7 @@
   "factions": ["imperial_remnant", "smuggler", "locals"],
   "locations": ["outpost", "port_town", "skrugs_post"],
   "missions": ["crate_retrieval"],
-  "ships": ["interceptor", "remnant_fighter", "remnant_heavy"],
+  "ships": ["interceptor", "freighter", "courier", "gunship", "remnant_fighter", "remnant_heavy"],
   "pilots": ["rookie", "veteran", "ace"],
   "soldiers": ["gate_guard", "tower_sentry", "yard_trooper", "local_resident", "local_merchant", "local_fence"],
   "encounters": ["orbital_skirmish"],

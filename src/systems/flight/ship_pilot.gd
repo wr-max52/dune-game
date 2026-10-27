@@ -21,7 +21,11 @@ extends Node
 ##     again starts another sortie.
 ##   - (an arrival "reentry" from the stand-alone flight scene still starts you in
 ##     the sky above the port, still flying),
-##   - a crash tows the ship back to its pad and puts you beside it.
+##   - a crash tows the ship back to its pad and puts you beside it,
+##   - issue #43: every ship parked in the pit is flyable. Each is a berth (its ship
+##     data, model, hull and home bay); E beside any parked one boards it, and that
+##     ship's own stats, guns and Shift ability fly from then on. The one you left
+##     stays where you landed it.
 ##
 ## The headless trace drives it with board(), takeoff(), land(), exit_ship() and
 ## set_external_command(): the same code paths the keys use.
@@ -48,6 +52,8 @@ var atmo: AtmoFlight
 var ship_id := ""
 var ship_cfg: Dictionary = {}
 var pad: Dictionary = {}         ## the resolved home pad
+var berths: Array = []           ## issue #43: { ship_id, cfg, visual, hull, home, home_yaw, clearance } per parked ship
+var berth := 0                   ## the berth you fly (or last flew)
 var home := Vector3.ZERO
 var home_yaw := 0.0
 var visual: Node3D
@@ -63,7 +69,6 @@ var space_time := -1.0
 var _throttle := 0.0
 var _stick := Vector2.ZERO
 var _external: Dictionary = {}   ## a bot's command; empty = read the keys
-var _pad_shape: CollisionShape3D
 var _cam_near := 0.05
 var _cam_far := 4000.0
 var _rig_was_fp := false
@@ -113,15 +118,6 @@ func _ready() -> void:
 	atmo = AtmoFlight.new()
 	atmo.setup(ship_cfg, ground)
 	space_exit_margin = GameFlow.setting("space_exit_margin", space_exit_margin)
-	_find_pad_shape()
-	_take_visual()
-	_build_hull()
-	atmo.park(home, home_yaw)
-	_sync_visual()
-	# The ship carries its own collision now; the pad's static box would stay
-	# behind as an invisible wall when the ship leaves.
-	if _pad_shape != null:
-		_pad_shape.disabled = true
 	hud = FlightHud.new()
 	hud.space_label = GameFlow.label("space_edge")
 	hud.space_altitude = atmo.space_altitude
@@ -136,71 +132,97 @@ func _ready() -> void:
 	_foot_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_foot_prompt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_foot_prompt.add_theme_constant_override("outline_size", 4)
-	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
 	planet_name = NameHooks.planet(world)
-	_foot_prompt.text = GameFlow.label("board") + ("  " + vessel_name if vessel_name != "" else "")
-	hud.vessel_name = vessel_name
 	_foot_prompt.visible = false
 	RetroUI.prompt(_foot_prompt)
 	layer.add_child(_foot_prompt)
 	kit = ShipKit.new(demo._flat_mats())
-	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
-	chase.fit_to(float(look.get("length", 9.0)))
+	_gather_berths()
+	_use_berth(0)
 	if str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
 
 
-## The parked model the decor built becomes the flying ship; in the greybox there
-## is none, so a bare node stands in (the trace does not need to see it).
-func _take_visual() -> void:
-	var parked: Node3D = null
-	if demo.decor != null and not demo.decor.parked_ships.is_empty():
-		parked = demo.decor.parked_ships[0]
+## Every parked ship the decor built becomes a berth: the pit pad's own ship first
+## (berth 0, the pad's encounter ship), then each bay's. In the greybox there are no
+## models, so a bare node stands in for the pit ship (the trace does not need to see
+## it). Each berth's greybox box stops being solid: the ship carries its own hull, and
+## the static box would stay behind as an invisible wall when the ship leaves.
+func _gather_berths() -> void:
+	var parked: Array = demo.decor.parked_ships if demo.decor != null else []
 	var c: Vector3 = pad.get("center", Vector3.ZERO)
-	home_yaw = deg_to_rad(float(pad.get("parked_yaw_deg", 0.0)))
-	if parked != null:
-		visual = parked
-		home = parked.global_position
-		home_yaw = parked.rotation.y
-		var a := TownDecor.visual_aabb(parked)
-		atmo.clearance = maxf(0.3, parked.global_position.y - a.position.y)
-	else:
-		visual = Node3D.new()
-		visual.name = "ShipStandIn"
-		demo.add_child(visual)
-		home = c
-	home.y = c.y if parked == null else home.y
+	if parked.is_empty():
+		var v := Node3D.new()
+		v.name = "ShipStandIn"
+		demo.add_child(v)
+		v.position = c
+		v.rotation.y = deg_to_rad(float(pad.get("parked_yaw_deg", 0.0)))
+		parked = [v]
+	for i in parked.size():
+		var v: Node3D = parked[i]
+		var id := ship_id if i == 0 else str(v.get_meta("ship_id", ship_id))
+		var b := {
+			"ship_id": id, "cfg": ship_cfg if i == 0 else content.get_ship(id), "visual": v,
+			"home": v.global_position, "home_yaw": v.rotation.y, "clearance": atmo.clearance,
+		}
+		var acc := [null]
+		TownDecor._merge_aabb(v, Transform3D.IDENTITY, acc)
+		if acc[0] != null:
+			b.clearance = maxf(0.3, -(acc[0] as AABB).position.y)
+		var box_id := str(pad.get("town_box", "ship")) if i == 0 else str(v.get_meta("box_id", ""))
+		_disable_box(box_id)
+		b.hull = _build_hull(v, acc[0], box_id, b.clearance)
+		berths.append(b)
+
+
+## Fly berth `i` from now on: its data, model, hull and home bay. It is parked
+## wherever its model stands.
+func _use_berth(i: int) -> void:
+	var b: Dictionary = berths[i]
+	berth = i
+	ship_id = b.ship_id
+	ship_cfg = b.cfg
+	visual = b.visual
+	hull = b.hull
+	home = b.home
+	home_yaw = b.home_yaw
+	atmo.setup(ship_cfg, ground)
+	atmo.clearance = b.clearance
+	atmo.park(visual.global_position, visual.rotation.y)
+	_sync_visual()
+	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
+	hud.vessel_name = vessel_name
+	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
+	chase.fit_to(float(look.get("length", 9.0)))
 
 
 ## A box around the ship, in the ship's own frame, that travels with it: you can
 ## walk up to (not through) a parked ship wherever it landed. Sized from the model,
 ## or from the pad's box in the greybox.
-func _build_hull() -> void:
+func _build_hull(v: Node3D, model_box, box_id: String, clear: float) -> StaticBody3D:
 	var size := Vector3(9.0, 2.5, 8.0)
 	var center := Vector3.ZERO
-	var acc := [null]
-	TownDecor._merge_aabb(visual, Transform3D.IDENTITY, acc)
-	if acc[0] != null:
-		var a: AABB = acc[0]
-		size = a.size
-		center = a.get_center()
+	if model_box != null:
+		size = (model_box as AABB).size
+		center = (model_box as AABB).get_center()
 	else:
-		var box: Dictionary = demo.town.get_box(str(pad.get("town_box", "ship")))
+		var box: Dictionary = demo.town.get_box(box_id)
 		if not box.is_empty():
 			var w := WorldGround._v3(box.max) - WorldGround._v3(box.min)
-			var c := absf(cos(home_yaw))
-			var sn := absf(sin(home_yaw))
+			var c := absf(cos(v.rotation.y))
+			var sn := absf(sin(v.rotation.y))
 			size = Vector3(c * w.x + sn * w.z, w.y, sn * w.x + c * w.z)
-			center = Vector3(0, w.y * 0.5 - atmo.clearance, 0)
-	hull = StaticBody3D.new()
-	hull.name = "ShipHull"
+			center = Vector3(0, w.y * 0.5 - clear, 0)
+	var body := StaticBody3D.new()
+	body.name = "ShipHull"
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = size
 	cs.shape = shape
 	cs.position = center
-	hull.add_child(cs)
-	visual.add_child(hull)
+	body.add_child(cs)
+	v.add_child(body)
+	return body
 
 
 func _set_hull(solid: bool) -> void:
@@ -210,13 +232,13 @@ func _set_hull(solid: bool) -> void:
 				ch.set_deferred("disabled", not solid)
 
 
-func _find_pad_shape() -> void:
-	var body: Node = demo.get_node_or_null("Town/" + str(pad.get("town_box", "ship")))
+func _disable_box(box_id: String) -> void:
+	var body: Node = demo.get_node_or_null("Town/" + box_id)
 	if body == null:
 		return
 	for ch in body.get_children():
 		if ch is CollisionShape3D:
-			_pad_shape = ch
+			ch.disabled = true
 
 
 # ------------------------------------------------------------------ queries
@@ -229,22 +251,40 @@ func is_parked_home() -> bool:
 	return atmo.state == AtmoFlight.State.PARKED and Vector2(atmo.position().x - home.x, atmo.position().z - home.z).length() < 3.0
 
 
-## On foot, close enough to the parked ship to climb in.
+## On foot, close enough to a parked ship to climb in.
 func can_board() -> bool:
+	return nearest_berth() >= 0
+
+
+## The berth you are close enough to board (the nearest), or -1. Every ship but the
+## one you fly is always parked; that one only while it is on the ground.
+func nearest_berth() -> int:
 	var p := player()
-	if piloting or p == null or atmo.state != AtmoFlight.State.PARKED:
-		return false
-	var s := atmo.position()
+	if piloting or p == null:
+		return -1
 	var reach := float(pad.get("board_reach", 9.0))
-	return Vector2(p.global_position.x - s.x, p.global_position.z - s.z).length() <= reach \
-		and absf(p.global_position.y - (s.y - atmo.clearance)) <= 4.0
+	var best := -1
+	var best_d := INF
+	for i in berths.size():
+		if i == berth and atmo.state != AtmoFlight.State.PARKED:
+			continue
+		var v: Node3D = berths[i].visual
+		var s := v.global_position
+		var d := Vector2(p.global_position.x - s.x, p.global_position.z - s.z).length()
+		if d <= reach and d < best_d and absf(p.global_position.y - (s.y - float(berths[i].clearance))) <= 4.0:
+			best = i
+			best_d = d
+	return best
 
 
 # ------------------------------------------------------------------ actions
 
 func board() -> bool:
-	if not can_board():
+	var i := nearest_berth()
+	if i < 0:
 		return false
+	if i != berth:
+		_use_berth(i)
 	var p := player()
 	piloting = true
 	_foot_prompt.visible = false
@@ -393,7 +433,13 @@ func _on_foot() -> void:
 		sky.update_for(ground.altitude(p.global_position), p.global_position)
 	if demo.detail != null:
 		demo.detail.update_for(ground.altitude(p.global_position))
-	var near: bool = can_board() and not p.locked
+	var i := nearest_berth() if not p.locked else -1
+	var near := i >= 0
+	if near:
+		var cfg: Dictionary = berths[i].cfg
+		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
+		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
+			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
 	_foot_prompt.visible = near
 	if near and _just("interact"):
 		board()
@@ -498,7 +544,7 @@ func start_fight() -> bool:
 		return false
 	var f := SpaceFight.new()
 	demo.add_child(f)
-	if not f.begin(content, str(pad.get("encounter", "")), atmo.transform(), atmo.speed(), 1, kit):
+	if not f.begin(content, str(pad.get("encounter", "")), atmo.transform(), atmo.speed(), 1, kit, ship_id):
 		f.queue_free()
 		return false
 	fight = f

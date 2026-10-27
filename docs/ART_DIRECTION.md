@@ -157,6 +157,11 @@ on the ground:
 - **Backdrop:** high orbit over the desert world, near-black space, a warm sun low on
   one side. Values in `content/look/space.json`.
 
+- **The port's fleet (issue #43):** the interceptor (silver and cobalt, wingtip
+  guns), a disc freighter in bone and rust, a white and saffron racing courier, and
+  a sky-blue gunship. All are Hyper3D models with big clean shapes. The speeder is a
+  sand and madder sled on red pontoons. Stills: `docs/lookdev/vehicles/`.
+
 `src/systems/look/ship_kit.gd` builds stand-ins from primitives; colours and sizes are
 in `content/look/ships.json`. A real model replaces a stand-in by setting the look's
 `scene` path, with no code change (see `docs/ADDING_SHIPS.md`). Review stills:

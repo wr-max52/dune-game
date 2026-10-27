@@ -1,0 +1,10 @@
+{
+  "title": "Issue #43: reference crops of the chosen Rodin layouts, fed to Hyper3D agentic mode",
+  "crops": "res://assets/vehicles/source/refs",
+  "views": ["front34", "top"],
+  "cells": [
+    { "name": "freighter2", "model": "res://assets/vehicles/source/freighter2.glb" },
+    { "name": "courier2", "model": "res://assets/vehicles/source/courier2.glb" },
+    { "name": "gunship", "model": "res://assets/vehicles/source/gunship.glb" }
+  ]
+}

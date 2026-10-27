@@ -1,0 +1,38 @@
+{
+  "title": "Issue #43: every Hyper3D generation, raw (before prep): the picks and the runner-ups",
+  "out": "res://docs/lookdev/vehicles/01_raw.png",
+  "cells": [
+    {
+      "name": "interceptor_ref",
+      "model": "res://assets/vehicles/source/interceptor_ref.glb"
+    },
+    {
+      "name": "interceptor_text",
+      "model": "res://assets/vehicles/source/interceptor_text.glb"
+    },
+    {
+      "name": "interceptor_text2",
+      "model": "res://assets/vehicles/source/interceptor_text2.glb"
+    },
+    {
+      "name": "freighter",
+      "model": "res://assets/vehicles/source/freighter.glb"
+    },
+    {
+      "name": "courier",
+      "model": "res://assets/vehicles/source/courier.glb"
+    },
+    {
+      "name": "speeder_ref",
+      "model": "res://assets/vehicles/source/speeder_ref.glb"
+    },
+    {
+      "name": "speeder_text",
+      "model": "res://assets/vehicles/source/speeder_text.glb"
+    },
+    {
+      "name": "speeder_text2",
+      "model": "res://assets/vehicles/source/speeder_text2.glb"
+    }
+  ]
+}

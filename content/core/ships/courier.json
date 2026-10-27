@@ -1,0 +1,78 @@
+{
+  "id": "courier",
+  "class": "courier",
+  "label": "Valcourt Kinetics Lanner",
+  "faction": "smuggler",
+  "look": "courier",
+  "pilot": "ace",
+  "hull": 80,
+  "shield": {
+    "max": 60,
+    "regen": 16.0,
+    "delay": 2.0
+  },
+  "hit_radius": 2.8,
+  "convergence": 320.0,
+  "flight": {
+    "min_speed": 18.0,
+    "max_speed": 60.0,
+    "boost_speed": 98.0,
+    "accel": 40.0,
+    "pitch_rate": 2.2,
+    "yaw_rate": 1.3,
+    "roll_rate": 3.8,
+    "boost_time": 4.5,
+    "boost_recharge": 0.7,
+    "boost_turn_scale": 0.6,
+    "ability": {
+      "kind": "boost"
+    }
+  },
+  "hardpoints": [
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -1.2,
+        0.0,
+        -1.5
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        1.2,
+        0.0,
+        -1.5
+      ]
+    }
+  ],
+  "atmosphere": {
+    "min_speed": 0.0,
+    "max_speed": 210.0,
+    "boost_speed": 380.0,
+    "accel": 55.0,
+    "boost_time": 8.0,
+    "boost_recharge": 1.0,
+    "boost_turn_scale": 0.7,
+    "edge_speed_mult": 4.0,
+    "speed_curve": 1.0,
+    "climb_drag": 0.3,
+    "liftoff_height": 18.0,
+    "liftoff_speed": 7.0,
+    "land_max_agl": 150.0,
+    "land_descent": 12.0,
+    "land_slow": 4.0,
+    "land_brake": 45.0,
+    "touchdown_speed": 9.0,
+    "crash_speed": 32.0,
+    "body_radius": 2.0,
+    "clearance": 1.0
+  },
+  "note": "IP-neutral (issue #43). A twin-boom racer: the fastest ship in the port and the lightest, two small cannons, and a long boost on Shift.",
+  "naming": {
+    "kind": "person_drift",
+    "callsign": true,
+    "vessel": "vessel"
+  },
+  "blaster_power": 0.7
+}

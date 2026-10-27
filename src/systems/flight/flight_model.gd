@@ -8,6 +8,14 @@ extends RefCounted
 ## Arcade flight, not Newtonian: the ship always moves along its nose. Every number
 ## comes from the ship's "flight" block in content/core/ships/*.json.
 ##
+## Shift fires the ship's ability (issue #43), the "ability" block in "flight":
+##   boost  -- (the default) speed up to boost_speed, turning slower
+##   drift  -- keep sliding the way you were going while the nose turns faster
+##             (turn_scale), so you can swing round and shoot behind you
+##   brake  -- air brake: bleed speed hard down to brake_speed (never under
+##             min_speed) and turn faster
+## Every ability drains the same meter (boost_time, boost_recharge).
+##
 ## Axes follow Godot: forward is -Z, up is +Y, right is +X.
 ## Command signs: pitch +1 = nose up, yaw +1 = turn right, roll +1 = roll right.
 
@@ -17,7 +25,8 @@ var basis := Basis.IDENTITY
 var speed := 0.0
 var throttle := 0.5
 var boost_left := 0.0
-var boosting := false
+var boosting := false             ## the ability is running this frame (any kind)
+var drift_dir := Vector3.ZERO      ## where a drift is carrying the ship
 var command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.5, "boost": false }
 ## M14: multipliers the atmosphere sets each frame (thin air is faster, climbing
 ## is slower). 1.0 in space, so the dogfight flies exactly as before.
@@ -74,6 +83,20 @@ func boost_turn_scale() -> float:
 	return float(cfg.get("boost_turn_scale", 0.6))
 
 
+## The Shift ability: "boost", "drift" or "brake".
+func ability() -> String:
+	return str(cfg.get("ability", {}).get("kind", "boost"))
+
+
+func ability_turn_scale() -> float:
+	match ability():
+		"drift":
+			return float(cfg.get("ability", {}).get("turn_scale", 1.8))
+		"brake":
+			return float(cfg.get("ability", {}).get("turn_scale", 2.2))
+	return boost_turn_scale()
+
+
 func cruise_speed(t: float) -> float:
 	return lerpf(min_speed(), max_speed(), clampf(t, 0.0, 1.0))
 
@@ -93,7 +116,7 @@ func right() -> Vector3:
 
 
 func velocity() -> Vector3:
-	return forward() * speed
+	return (drift_dir if boosting and ability() == "drift" else forward()) * speed
 
 
 func transform() -> Transform3D:
@@ -128,7 +151,14 @@ func set_command_dict(c: Dictionary) -> void:
 
 ## The speed the ship is heading toward this frame.
 func target_speed() -> float:
-	return boost_speed() if boosting else cruise_speed(throttle)
+	if not boosting:
+		return cruise_speed(throttle)
+	match ability():
+		"drift":
+			return speed
+		"brake":
+			return maxf(min_speed(), float(cfg.get("ability", {}).get("brake_speed", 0.0)) * speed_scale)
+	return boost_speed()
 
 
 ## Integrate one frame. dt is seconds.
@@ -136,24 +166,32 @@ func step(dt: float) -> void:
 	throttle = float(command.throttle)
 
 	# Boost drains while held, recharges otherwise. An empty meter ends the boost.
+	var was := boosting
 	boosting = bool(command.boost) and boost_left > 0.0
+	if boosting and not was:
+		drift_dir = forward()
 	if boosting:
 		boost_left = maxf(0.0, boost_left - dt)
 	else:
 		boost_left = minf(boost_time(), boost_left + boost_recharge() * dt)
 
 	# Speed eases toward the target instead of snapping.
-	speed = move_toward(speed, target_speed(), accel() * dt)
+	var rate := accel() * (3.0 if boosting and ability() == "brake" else 1.0)
+	speed = move_toward(speed, target_speed(), rate * dt)
 
-	# Rotate in the ship's own frame. Boost trades turn rate for speed.
-	var turn := boost_turn_scale() if boosting else 1.0
+	# Rotate in the ship's own frame. Boost trades turn rate for speed; drift and
+	# brake turn faster.
+	var turn := ability_turn_scale() if boosting else 1.0
 	var b := basis
 	b = b * Basis(Vector3.RIGHT, float(command.pitch) * pitch_rate() * turn * dt)
 	b = b * Basis(Vector3.UP, -float(command.yaw) * yaw_rate() * turn * dt)
 	b = b * Basis(Vector3.BACK, -float(command.roll) * roll_rate() * dt)
 	basis = b.orthonormalized()
 
-	position += forward() * speed * dt
+	if boosting and ability() == "drift":
+		# The slide slowly gives way to the nose, so a long drift still comes round.
+		drift_dir = drift_dir.slerp(forward(), minf(1.0, dt * 0.8)).normalized()
+	position += velocity() * dt
 
 
 # ---- save -------------------------------------------------------------------

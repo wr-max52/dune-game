@@ -1,52 +1,94 @@
 {
-  "note": "Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md.",
+  "note": "Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md. Issue #43: the four flyable ships (interceptor, freighter, courier, gunship) use Hyper3D models from assets/vehicles/ (content/look/vehicle_models.json, tools/look/prep_vehicle.gd); their stand-in fields stay as the fallback.",
   "looks": {
     "interceptor": {
       "frame": "dart",
-      "scene": "",
-      "length": 9.0, "span": 7.6, "height": 1.6,
-      "hull": "#c9c2b4", "trim": "#d99a2b", "dark": "#2a2c33",
-      "canopy": "#1f7a78", "engine": "#8fd8ff"
-    },
-    "interceptor_red": {
-      "frame": "dart",
-      "scene": "",
-      "length": 9.0, "span": 7.6, "height": 1.6,
-      "hull": "#c9c2b4", "trim": "#a8322a", "dark": "#2a2c33",
-      "canopy": "#8a2a24", "engine": "#ff6a4a"
-    },
-    "interceptor_gold": {
-      "frame": "dart",
-      "scene": "",
-      "length": 9.0, "span": 7.6, "height": 1.6,
-      "hull": "#d4ac52", "trim": "#2f5d8a", "dark": "#2a2c33",
-      "canopy": "#1f7a78", "engine": "#8fd8ff"
-    },
-    "interceptor_gold_red": {
-      "frame": "dart",
-      "scene": "",
-      "length": 9.0, "span": 7.6, "height": 1.6,
-      "hull": "#d4ac52", "trim": "#a8322a", "dark": "#2a2c33",
-      "canopy": "#8a2a24", "engine": "#ff6a4a"
+      "scene": "res://assets/vehicles/interceptor.glb",
+      "length": 9.0,
+      "span": 7.6,
+      "height": 1.6,
+      "hull": "#c9c2b4",
+      "trim": "#d99a2b",
+      "dark": "#2a2c33",
+      "canopy": "#1f7a78",
+      "engine": "#8fd8ff"
     },
     "remnant_fighter": {
       "frame": "blade",
       "scene": "",
-      "length": 5.0, "span": 6.0, "height": 4.2,
-      "hull": "#3d4147", "trim": "#6b1e1e", "dark": "#1e1c1c",
-      "canopy": "#ffae4a", "engine": "#ff7a4a"
+      "length": 5.0,
+      "span": 6.0,
+      "height": 4.2,
+      "hull": "#3d4147",
+      "trim": "#6b1e1e",
+      "dark": "#1e1c1c",
+      "canopy": "#ffae4a",
+      "engine": "#ff7a4a"
     },
     "remnant_heavy": {
       "frame": "hauler",
       "scene": "",
-      "length": 12.0, "span": 8.4, "height": 2.6,
-      "hull": "#4b4f55", "trim": "#a8844a", "dark": "#1e1c1c",
-      "canopy": "#ffae4a", "engine": "#ff7a4a"
+      "length": 12.0,
+      "span": 8.4,
+      "height": 2.6,
+      "hull": "#4b4f55",
+      "trim": "#a8844a",
+      "dark": "#1e1c1c",
+      "canopy": "#ffae4a",
+      "engine": "#ff7a4a"
+    },
+    "freighter": {
+      "frame": "hauler",
+      "scene": "res://assets/vehicles/freighter.glb",
+      "length": 9.0,
+      "span": 8.0,
+      "height": 2.4,
+      "hull": "#d8cfbf",
+      "trim": "#a8582a",
+      "dark": "#2a2c33",
+      "canopy": "#1f2a33",
+      "engine": "#8fd8ff"
+    },
+    "courier": {
+      "frame": "dart",
+      "scene": "res://assets/vehicles/courier.glb",
+      "length": 8.4,
+      "span": 7.6,
+      "height": 1.6,
+      "hull": "#d9b24a",
+      "trim": "#a8322a",
+      "dark": "#2a2c33",
+      "canopy": "#1f7a78",
+      "engine": "#8fd8ff"
+    },
+    "gunship": {
+      "frame": "hauler",
+      "scene": "res://assets/vehicles/gunship.glb",
+      "length": 9.0,
+      "span": 7.8,
+      "height": 2.6,
+      "hull": "#8fa8b8",
+      "trim": "#d99a2b",
+      "dark": "#2a2c33",
+      "canopy": "#1f7a78",
+      "engine": "#8fd8ff"
     }
   },
   "bolts": {
-    "player": { "color": "#7fe8ff", "length": 6.0, "width": 0.22 },
-    "hostile": { "color": "#ff5a3c", "length": 6.0, "width": 0.22 },
-    "missile": { "color": "#ffd28a", "length": 1.6, "width": 0.3 }
+    "player": {
+      "color": "#7fe8ff",
+      "length": 6.0,
+      "width": 0.22
+    },
+    "hostile": {
+      "color": "#ff5a3c",
+      "length": 6.0,
+      "width": 0.22
+    },
+    "missile": {
+      "color": "#ffd28a",
+      "length": 1.6,
+      "width": 0.3
+    }
   }
 }

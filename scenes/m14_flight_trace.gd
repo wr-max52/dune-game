@@ -130,7 +130,9 @@ func _run() -> void:
 	out("BOARD_AGAIN", pilot.board())
 	_measure = true
 	pilot.set_external_command({ "throttle": 0.0 })
-	out("PAD_BOX_RETIRED", pilot._pad_shape != null and pilot._pad_shape.disabled)
+	var pad_box: Node = demo.get_node_or_null("Town/" + str(pilot.pad.get("town_box", "ship")))
+	out("PAD_BOX_RETIRED", pad_box != null and pad_box.get_children().filter(
+		func(c): return c is CollisionShape3D and not c.disabled).is_empty())
 	out("HULL_SOLID_PARKED", not pilot.hull.get_child(0).disabled)
 	out("TAKEOFF", pilot.takeoff())
 	await frames(2)

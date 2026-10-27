@@ -1,0 +1,9 @@
+{
+  "title": "Issue #43: orthographic reference crops of the originals for Hyper3D",
+  "crops": "res://assets/vehicles/source/refs",
+  "views": ["front34", "side", "top"],
+  "cells": [
+    { "name": "interceptor", "ship_look": "interceptor" },
+    { "name": "speeder", "speeder": "speeder" }
+  ]
+}

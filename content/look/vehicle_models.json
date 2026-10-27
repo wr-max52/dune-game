@@ -1,0 +1,58 @@
+{
+  "note": "Issue #43: Hyper3D ships and speeder, prepped by tools/look/prep_vehicle.gd into assets/vehicles/. Rodin models come out nose toward +Z, so yaw_deg 180 turns them to the game's -Z. length is nose to tail in metres; max_span keeps a ship inside its pit bay (9.4 x 8.2 m, turned 90 degrees, so length <= 9.2 and span <= 8.0). Generation ids are in `generations`.",
+  "interceptor": {
+    "source": "res://assets/vehicles/source/interceptor_agentic.glb",
+    "out": "res://assets/vehicles/interceptor.glb",
+    "yaw_deg": 180,
+    "length": 9.0,
+    "max_span": 7.8
+  },
+  "freighter": {
+    "source": "res://assets/vehicles/source/freighter2.glb",
+    "out": "res://assets/vehicles/freighter.glb",
+    "yaw_deg": 180,
+    "length": 9.0,
+    "max_span": 8.0
+  },
+  "courier": {
+    "source": "res://assets/vehicles/source/courier2.glb",
+    "out": "res://assets/vehicles/courier.glb",
+    "yaw_deg": 180,
+    "length": 8.4,
+    "max_span": 7.6
+  },
+  "gunship": {
+    "source": "res://assets/vehicles/source/gunship.glb",
+    "out": "res://assets/vehicles/gunship.glb",
+    "yaw_deg": 180,
+    "length": 9.0,
+    "max_span": 7.8
+  },
+  "speeder": {
+    "source": "res://assets/vehicles/source/speeder_agentic.glb",
+    "out": "res://assets/vehicles/speeder.glb",
+    "yaw_deg": 180,
+    "length": 4.6,
+    "max_span": 3.0
+  },
+  "options": {
+    "note": "Runner-up generations, kept for later (more ships to buy, or swaps). All in assets/vehicles/source/, nose toward +Z. Not loaded by the game.",
+    "interceptor_text.glb": "text-only interceptor, white and teal, detailed jet (8042... ref copy is interceptor_ref.glb)",
+    "interceptor_text2.glb": "text-only interceptor, teal-green jet",
+    "interceptor_ref.glb": "reference-led copy of the primitive stand-in",
+    "freighter.glb": "long oval barge freighter, bone and rust, very greebled",
+    "courier.glb": "yellow and blue cartoon racer with wing pods",
+    "speeder_text.glb": "teal and sand hover car (has wheels; would need trimming)",
+    "speeder_ref.glb": "reference-led copy of the primitive speeder",
+    "speeder_text2.glb": "text-only hover sled, second try (2130a072); not reviewed"
+  },
+  "generations": {
+    "interceptor": "b173bc6a-9d84-4c6b-8007-5c06d23a24a2 (agentic, refs: stand-in crops)",
+    "freighter": "5f3e0858-7e46-4100-b623-8d34a5ee078f",
+    "courier": "4fa39cfb-2d25-4586-aac6-12fd0f584059",
+    "gunship": "b82e5ccf-faa8-4714-bb76-1564ffd446f3",
+    "speeder": "895b349d-a78a-4094-bccc-f7acfb611e8c (agentic, refs: stand-in crops)",
+    "runner_ups": "8042aad5 (interceptor_ref), afd8adcf (interceptor_text), 9f5deb82 (interceptor_text2), b3bf40dd (freighter), ce66b6d3 (courier), 79440b71 (speeder_ref), 3ecc12e5 (speeder_text), 2130a072 (speeder_text2)",
+    "not_downloaded": "agentic clean-style rebuilds of the chosen layouts, still building when this was committed; fetch from Hyper3D Mine if wanted: fb9ecabb (freighter), e9a97efd (courier), 07fcc97c (gunship)"
+  }
+}

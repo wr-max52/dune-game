@@ -1,0 +1,8 @@
+{
+  "title": "Issue #43: the original interceptor and speeder (stand-ins), for reference",
+  "out": "res://docs/lookdev/vehicles/00_originals.png",
+  "cells": [
+    { "name": "interceptor", "label": "Interceptor (stand-in)", "ship_look": "interceptor" },
+    { "name": "speeder", "label": "Speeder (stand-in)", "speeder": "speeder" }
+  ]
+}

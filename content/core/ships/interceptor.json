@@ -1,7 +1,7 @@
 {
   "id": "interceptor",
   "class": "starfighter",
-  "label": "Interceptor",
+  "label": "Kaldor VX-88 Kestrel",
   "faction": "smuggler",
   "look": "interceptor",
   "pilot": "ace",
@@ -23,7 +23,10 @@
     "roll_rate": 3.2,
     "boost_time": 3.0,
     "boost_recharge": 0.5,
-    "boost_turn_scale": 0.6
+    "boost_turn_scale": 0.6,
+    "ability": {
+      "kind": "boost"
+    }
   },
   "hardpoints": [
     {
@@ -73,6 +76,11 @@
     "body_radius": 2.0,
     "clearance": 1.0
   },
-  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack. 'atmosphere' (M14) is how it flies inside the planet's air: hover at zero throttle, faster as the air thins (edge_speed_mult at the edge of space), slower nose-up (climb_drag), vertical liftoff and auto-landing, and the impact speed that crashes it.",
-  "naming": { "kind": "person_drift", "callsign": true, "vessel": "vessel" }
+  "note": "IP-neutral. The player's starfighter: balanced, shielded, two cannons and a seeker rack. 'atmosphere' (M14) is how it flies inside the planet's air: hover at zero throttle, faster as the air thins (edge_speed_mult at the edge of space), slower nose-up (climb_drag), vertical liftoff and auto-landing, and the impact speed that crashes it. Issue #43: label is its make and model (from the name generator: equipment, class ship); blaster_power multiplies every gun's damage; flight.ability is what Shift does (boost, drift or brake, see flight_model.gd).",
+  "naming": {
+    "kind": "person_drift",
+    "callsign": true,
+    "vessel": "vessel"
+  },
+  "blaster_power": 1.0
 }
