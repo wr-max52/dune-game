@@ -199,5 +199,5 @@ func test_reentry_arrival_starts_in_the_cockpit() -> void:
 	var t = _town()
 	assert_true(t.pilot.piloting, "seated")
 	assert_eq(t.pilot.atmo.state, AtmoFlight.State.FLYING)
-	assert_gt(t.pilot.atmo.altitude(), 4000.0, "high above the port")
+	assert_between(t.pilot.atmo.altitude(), 2000.0, t.pilot.atmo.space_altitude, "high above the port, below the edge of space")
 	assert_eq(GameFlow.arrival_text({ "mode": "reentry", "outcome": "left" }), GameFlow.label("arrive_reentry"))
