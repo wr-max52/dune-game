@@ -24,12 +24,14 @@ var mats: LookMaterials
 var palettes: Dictionary = {}
 var blade_cfg: Dictionary = {}
 var floor_y := 8.0
+var rng := RandomNumberGenerator.new()   ## picks the colours of a split model's parts
 var _cache := {}
 
 
 func _init(materials: LookMaterials, floor_height: float = 8.0) -> void:
 	mats = materials
 	floor_y = floor_height
+	rng.randomize()
 	palettes = _read_json(PALETTES_PATH).get("archetypes", {})
 	blade_cfg = _read_json(BLADE_PATH)
 
@@ -46,8 +48,10 @@ func archetypes() -> Array:
 	return palettes.keys()
 
 
-## Build one character. pose is optional; each archetype has a default.
-func build(archetype: String, pose: String = "") -> Node3D:
+## Build one character. pose is optional; each archetype has a default. outfit picks
+## the colour of each part of a split model ({"head": "blue", ...}); a part left out
+## gets a random colour from its list (characters.json, model.parts).
+func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Node3D:
 	var p: Dictionary = palettes.get(archetype, {})
 	var root := Node3D.new()
 	root.name = archetype.to_pascal_case()
@@ -80,12 +84,49 @@ func build(archetype: String, pose: String = "") -> Node3D:
 	# keep the pose; animated users call skin.sync() every frame after moving them.
 	var skin := SkinnedBody.dress(root, p.get("model", {}))
 	if skin != null:
+		_wear_outfit(root, skin, p.model, outfit)
 		skin.sync(root)
 		root.set_meta("skin", skin)
 	var s := float(p.get("height", REF_HEIGHT)) / REF_HEIGHT
 	var bulk := float(p.get("bulk", 1.0))
 	root.scale = Vector3(s * bulk, s, s * bulk)
 	return root
+
+
+## A split model (the locals) has one mesh per part (prep_character.gd, split), all on
+## one shared texture, and one recoloured copy of that texture per colour
+## (recolor_parts.gd). Each part gets a colour; the model's own texture is "sand".
+## The choice is stored on the body as meta "outfit".
+func _wear_outfit(root: Node3D, skin: SkinnedBody, cfg: Dictionary, outfit: Dictionary) -> void:
+	var parts: Dictionary = cfg.get("parts", {})
+	if parts.is_empty():
+		return
+	var worn := {}
+	for part in parts:
+		var mi := skin.model.find_child(str(part), true, false) as MeshInstance3D
+		var choices: Array = parts[part]
+		if mi == null or choices.is_empty():
+			continue
+		var color := str(outfit.get(part, choices[rng.randi() % choices.size()]))
+		worn[part] = color
+		var mat := _outfit_material(mi.mesh.surface_get_material(0), str(cfg.get("colors", "")), color)
+		if mat != null:
+			mi.set_surface_override_material(0, mat)
+	root.set_meta("outfit", worn)
+
+
+## The part's material with the colour's texture, shared by every body that wears it.
+## null keeps the model's own material (the base colour, or a missing texture).
+func _outfit_material(base: Material, pattern: String, color: String) -> Material:
+	var path := pattern % color if pattern.contains("%s") else ""
+	if not base is BaseMaterial3D or path == "" or not ResourceLoader.exists(path):
+		return null
+	var key := "outfit_" + path
+	if not _cache.has(key):
+		var m := (base as BaseMaterial3D).duplicate() as BaseMaterial3D
+		m.albedo_texture = load(path)
+		_cache[key] = m
+	return _cache[key]
 
 
 # ------------------------------------------------------------------ materials

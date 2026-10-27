@@ -2,6 +2,31 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-26 — Locals are mix-and-match: one model, three parts, six colours
+
+- **One rigged model, split in prep.** Generated with Hyper3D Rodin from a prompt
+  (sand head scarf, goggles with black lenses, no face; loose linen shirt and
+  trousers), rigged with the human template, then cut by `prep_character.gd`'s new
+  `split` step into `head`, `torso` and `legs` meshes on the same skeleton. The
+  cut is by height (collar, belt top), with the arm bones keeping the gloves on the
+  torso. Alternative: generate each part separately, or Rodin's BANG part splitter.
+  Rejected: separate generations would not meet at the seams, and BANG's parts
+  lose the rig.
+- **Colours are recoloured textures, not generations.** All parts share one
+  texture, so `tools/look/recolor_parts.gd` writes one recoloured copy per colour
+  (cloth only: dark texels such as the lenses, belt, gloves and boots stay) and any
+  colour fits any part. Six colours (sand, darker, lighter, blue, red, yellow) on
+  three parts make 216 locals. A new colour is a line in `character_models.json`
+  plus a rerun; a new part list is a line in `characters.json`. Alternative: a
+  tint shader at runtime. Rejected for now: the request was for edited files, and a
+  texture keeps the stitching and shading the generator painted.
+- **`CharacterKit.build()` picks the outfit.** Random per part from the kit's
+  `rng`, or fixed with the new `outfit` argument; the choice is the body's
+  `outfit` meta. Materials are shared per colour, so a crowd costs six materials.
+- **Known gaps.** The staff and woven pack of the old primitive local are gone
+  with the primitives (the model has neither). The goggle frames take the head's
+  colour, and the foot wraps take the legs' colour.
+
 ## 2026-10-26 — N1, the naming system (issue #15)
 
 - **One engine, many kinds, all data.** A kind is a weighted list of templates
