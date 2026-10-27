@@ -14,6 +14,8 @@ extends Node3D
 ## - With a rigged model (SkinnedBody, from characters.json "model") the skin is one
 ##   mesh, so first person shows the kit's primitive forearms and hands instead and
 ##   the whole skin goes shadow only.
+## - The kit pieces and colours it wears are the player's (PlayerOutfit, picked in
+##   the character builder); set_outfit() swaps them while playing.
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
@@ -44,18 +46,51 @@ var skin: SkinnedBody              ## the rigged model over the joints (null = p
 var _arm_meshes: Array = []
 var _other_meshes: Array = []
 var _kit_arms: Array = []          ## kit forearms shown in first person over a skin
+var _kit_chest: Array = []         ## the chest's own children, as the kit built it
 
 
-func _init(materials: LookMaterials = null) -> void:
+## outfit: CharacterKit's {part: "<piece>[:<colour>]"}; null wears the saved one.
+func _init(materials: LookMaterials = null, outfit = null) -> void:
 	name = "Avatar"
 	kit = CharacterKit.new(materials if materials != null else LookMaterials.new(), -1000.0)
-	body = kit.build("player_smuggler", "idle")
+	look = CharacterKit._read_json(LOOK_PATH)
+	_build_body(PlayerOutfit.load_outfit() if outfit == null else outfit)
+	_collect_meshes()
+
+
+func _build_body(outfit: Dictionary) -> void:
+	body = kit.build(PlayerOutfit.ARCHETYPE, "idle", outfit)
 	body.name = "Body"
 	add_child(body)
 	joints = body.get_meta("joints")
-	look = CharacterKit._read_json(LOOK_PATH)
 	skin = body.get_meta("skin") if body.has_meta("skin") else null
+	_kit_chest = (joints.chest as Node3D).get_children()
+
+
+## What the body wears now, every part filled in.
+func worn_outfit() -> Dictionary:
+	return body.get_meta("outfit", {})
+
+
+## Wear another outfit (the character builder). The body is rebuilt; whatever rides
+## on the chest and is not the kit's own (weapons, the worn pack) moves across.
+func set_outfit(outfit: Dictionary) -> void:
+	var old := body
+	var old_chest: Node3D = joints.chest
+	var old_kit := _kit_chest
+	remove_child(old)
+	_build_body(outfit)
+	var chest: Node3D = joints.chest
+	for c in old_chest.get_children():
+		if old_kit.has(c):
+			continue
+		var xf: Transform3D = c.transform
+		old_chest.remove_child(c)
+		chest.add_child(c)
+		c.transform = xf
+	old.free()
 	_collect_meshes()
+	set_first_person(first_person)
 
 
 # ------------------------------------------------------------------ weapons
