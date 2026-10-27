@@ -101,7 +101,7 @@ Review renders: `./tools/m14/shoot_flight.sh` writes to `test_results/m14/`.
 | Last weapon / holster | Q / H |
 | Cycle weapons | mouse wheel |
 | Fire / swing | LMB (press again mid-swing to chain 1-2-3) |
-| Aim (blaster) / block (sword) | RMB (block just before a bolt lands to send it back) |
+| Aim (blaster) / block (sword) | RMB toggles it on/off (re-click to undo; with the sword, block just before a bolt lands to send it back) |
 | Reload | R |
 | Talk to the bartender | E at the bar |
 | Leave the conversation | Esc |

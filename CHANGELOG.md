@@ -41,6 +41,13 @@ How to see it:
 - `./scripts/ci.sh` writes `test_results/garrison_trace.txt` and runs
   `test_garrison_trace`, `test_town_alarm`, and the updated checkpoint, combat and
   guard brain tests.
+## Right-click toggles aim and block (2026-10-26)
+
+What works now:
+- **Aim and the sword's block are a right-click toggle, not a hold.** Right-click
+  turns blaster aim (the zoom) on; right-click again turns it off and the camera
+  zooms back out. With the energy sword out the same click arms the block and
+  re-click disarms it.
 
 ## M15 part 2 — Combat NPCs at the gate (2026-10-26)
 

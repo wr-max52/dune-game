@@ -184,6 +184,17 @@ func _run() -> void:
 	await frames(100)
 	out("RELOADED", pistol.ammo == int(pistol.config.mag))
 
+	# ---- right-click TOGGLES aim (blaster zoom) on, then off
+	place(Vector3(-6, -6, 12.5), -PI * 0.5)
+	rig.set_first_person(true)
+	w.toggle_alt()
+	await frames(60)
+	out("AIM_ON", w.aiming)
+	out("AIM_ZOOMED", w.rig_node != null and w.rig_node.camera().fov < 75.0)
+	w.toggle_alt()
+	await frames(60)
+	out("AIM_OFF", not w.aiming)
+
 	# ---- sword combo on a target
 	var t4: Node3D = demo.training_range.targets[3]
 	var hits_before: int = t4.hits
