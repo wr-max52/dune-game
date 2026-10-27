@@ -52,6 +52,17 @@ How to see it:
   - `test_planets`: every size, every type, the style parser, the station, a new
     planet from a config.
   - `test_planets_trace`, backed by `scenes/planets_trace.gd`: the whole trip.
+## Story fixes: the pit droid step, one drop at a time, speeder lasers, calmer alarms (2026-10-27, issue #64)
+
+- **The game launches again.** A bolt whose shooter had already been removed (a droid that respawned, a trooper who left town) stopped the game when it tested the shooter. Bolts now forget a shooter that is gone.
+- **Oda's practice is just practice.** She sends you to the range; going down to the pit is enough (honour system). When you come back she pays 40 cr for the practice and tells you about the sparring droid: block five of its shots in a row and it follows you. That step is optional: go to the pit and come back, and she gives you the first smuggling run.
+- **One loot box at a time.** A run only counts if Oda gave it to you in that chapter, so contraband picked up early no longer skips a run. The loose contraband cache outside the gate only appears in free play, while no drop of Oda's is out and you carry none. A save from before the story drops its old smuggling drop.
+- **Drops in town are marked.** A drop in the alleys or on a roof has a tall orange beam of light and a glowing ring. Drops out in the sand are still hidden.
+- **Speeder lasers kill.** The two barrels fired straight ahead, either side of the nose, so the bolts passed either side of anyone in front of you. Both now converge on whatever the nose points at.
+- **Your droid never shoots you.** Its bolts fly through you.
+- **Wrecked droids turn up more often** in the desert: a check every 2 minutes at 60%, about one every 3 to 4 minutes (was every 5 minutes at 40%).
+- **Calmer alarms.** Each desert outpost has its own garrison and alarm, so a fight out there (every bounty) no longer puts the whole town on alert, turns the town's droids hostile, or sends the barracks troopers running. A dead trooper comes back only once the alarm is over, as a new face that does not remember you.
+
 ## The main story line and three Remnant outposts (2026-10-27, issue #64)
 
 - **A main quest.** T-89 in the pit sends you to Oda. Oda sends you to the practice range (knock all five targets down), then gives you two smuggling runs. On the first one she lends you her old jetpack if she is amused or warm. Then she tells you about Skrugs's speeders and a bounty on a Remnant officer at a desert outpost. Kill the officer and the fence in the market pays the bounty.

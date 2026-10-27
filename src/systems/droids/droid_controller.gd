@@ -505,10 +505,14 @@ func _enemy_near(u: DroidUnit, reach: float) -> Node3D:
 	for r in remnant:
 		if not r.dead and r.provoked:
 			cands.append(r)
-	var g = _garrison()
-	if g != null and g.alarm.active() and demo != null:
+	if demo != null:
 		for n in demo.npcs:
-			if is_instance_valid(n) and not n.dead:
+			if not is_instance_valid(n) or n.dead:
+				continue
+			# Whoever is fighting you: their own garrison's alarm is up (issue #64:
+			# the town's, or their outpost's).
+			var g = demo.garrison_for(n) if demo.has_method("garrison_for") else _garrison()
+			if g != null and g.alarm.active():
 				cands.append(n)
 	for c in cands:
 		var d: float = u.global_position.distance_to(c.global_position)
@@ -592,8 +596,15 @@ func _tick_remnant_respawns(dt: float) -> void:
 		_spawn_remnant(u.spec, u.patrol_i, at)
 
 
-func _garrison():
-	return demo.garrison if demo != null and "garrison" in demo else null
+func _garrison(u: DroidUnit = null):
+	if demo == null or not "garrison" in demo:
+		return null
+	# Issue #64: an outpost's droid answers to that outpost's garrison.
+	if u != null and u.spec.has("outpost") and demo.outposts != null:
+		var g = demo.outposts.garrisons.get(str(u.spec.outpost), null)
+		if g != null:
+			return g
+	return demo.garrison
 
 
 ## They turn on you exactly when the garrison would: the alarm is up, your Remnant
@@ -601,7 +612,7 @@ func _garrison():
 func remnant_hostile(u: DroidUnit) -> bool:
 	if u.provoked or Story.remnant_hostile():
 		return true
-	var g = _garrison()
+	var g = _garrison(u)
 	if g == null:
 		return false
 	return g.alarm.active() or g.checkpoint.base_band(int(WorldState.standing.get("imperial_remnant", 0))) == "hostile"
@@ -623,7 +634,7 @@ func _remnant_step(dt: float) -> void:
 			var aim := _chest(player)
 			_face(u, aim - u.global_position)
 			u.walk(dt, false)
-			var g = _garrison()
+			var g = _garrison(u)
 			if g != null and not g.alarm.active():
 				g._raise("droid")
 			if u.gun_cd <= 0.0:
@@ -656,7 +667,7 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		return
 	u.provoked = true
 	u.hp -= amount
-	var g = _garrison()
+	var g = _garrison(u)
 	if g != null and not g.alarm.active():
 		g._raise("droid_shot")
 	if u.hp <= 0.0:
@@ -686,6 +697,8 @@ func fire(u: DroidUnit, aim: Vector3, gun: Dictionary) -> Node:
 	b.damage = float(gun.get("damage", 10.0))
 	b.range_m = float(gun.get("range", 30.0)) + 15.0
 	b.shooter = u
+	if u.faction == "" and player != null:
+		b.friends = [player]           # issue #64: your droid shoots past you, never into you
 	b.stylize = true
 	b.sweep = true
 	b.color = Color(str(gun.get("color", "#ff5a3a")))

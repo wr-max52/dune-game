@@ -82,6 +82,8 @@ func _on_down(id: String) -> void:
 
 func _physics_process(dt: float) -> void:
 	_time += dt
+	if player != null and contains(player.global_position):
+		WorldState.on_range_visited()      # issue #64: Oda's practice, on your honour
 	if remote == null or player == null:
 		return
 	var r: Dictionary = spec.remote

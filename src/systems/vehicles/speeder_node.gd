@@ -240,13 +240,33 @@ func _fire(dt: float, trigger: bool) -> void:
 	# together, left and right.
 	if gun.weapon.start_firing(dt, trigger) == Weapon.Result.SHOT:
 		var b := model.transform().basis
+		# Issue #64: the barrels sit either side of the nose, so two parallel bolts
+		# straddled anyone straight ahead. Both converge on what the nose points at.
+		var aim := _aim_point(b)
 		for side in [-0.55, 0.55]:
 			var origin := model.position + b * Vector3(side, 0.25, -2.4)
-			gun._make_bolt(model.forward(), origin, float(gun.weapon.config.get("damage", 18.0)),
+			gun._make_bolt(aim - origin, origin, float(gun.weapon.config.get("damage", 18.0)),
 				float(gun.weapon.config.get("bolt_speed", 90.0)))
 			gun.shots_fired += 1
 		shots += 1
 		Sound.play("speeder_laser", model.position)
+
+
+## Where the lasers meet: the first thing straight ahead of the nose (not the
+## speeder or its rider), else a point at the guns' convergence range.
+func _aim_point(b: Basis) -> Vector3:
+	var from := model.position + b * Vector3(0, 0.25, -2.4)
+	var far := from + model.forward() * float(gun.weapon.config.get("range", 140.0))
+	if is_inside_tree():
+		var q := PhysicsRayQueryParameters3D.create(from, far)
+		var skip: Array[RID] = [hull.get_rid()]
+		if player() != null:
+			skip.append(player().get_rid())
+		q.exclude = skip
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty() and from.distance_to(hit.position) > 3.0:
+			return hit.position
+	return from + model.forward() * float(cfg.get("laser", {}).get("converge", 30.0))
 
 
 func _sync() -> void:

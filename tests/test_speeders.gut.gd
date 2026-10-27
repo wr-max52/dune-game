@@ -243,3 +243,30 @@ func test_a_bolt_on_the_hull_damages_it() -> void:
 	await wait_frames(2)
 	assert_eq(post.speeders.size(), 0, "burned out")
 	assert_eq(WorldState.count("speeders_owned"), 0, "and no longer owned")
+
+
+## Issue #64: the speeder's lasers kill what they hit (a trooper standing in front of it).
+func test_lasers_kill_an_enemy() -> void:
+	var t = _town()
+	var post: SpeederPost = t.speeder_post
+	WorldState.credits = 100
+	post.buy()
+	var s: SpeederNode = post.speeders[0]
+	await wait_frames(1)
+	var p = t._player
+	p.global_position = s.model.position + Vector3(1.5, -1.0, 0)
+	assert_true(s.mount())
+	var ahead: Vector3 = s.model.position + s.model.forward() * 14.0
+	ahead.y = t.terrain.height_at(ahead.x, ahead.z) if t.terrain != null else s.model.position.y
+	var g: NpcBody = t.make_soldier("gate_guard", ahead, 0.0, "probe", "npc:test/probe")
+	g.nav = null
+	await wait_physics_frames(3)
+	s.set_external_command({ "fire": true })
+	for i in 240:
+		await wait_physics_frames(1)
+		if g.dead:
+			break
+	assert_gt(g.hits_taken, 0, "the bolts hit them")
+	assert_true(g.dead, "and kill them")
+	s.set_external_command({})
+	s.dismount()

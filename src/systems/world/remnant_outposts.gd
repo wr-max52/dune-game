@@ -29,6 +29,7 @@ var demo                           ## town_demo.gd
 var ground: WorldGround
 var outposts: Array = []           ## { id, label, origin, yaw, cfg }
 var guards: Array = []             ## NpcBody at the outposts (also in demo.npcs)
+var garrisons: Dictionary = {}     ## outpost id -> its own Garrison (the town builds them)
 var target: NpcBody                ## the bounty target, while one is out there
 var target_run := -1               ## which contract it is
 var bounty_kills := 0              ## for tests and traces
@@ -153,16 +154,18 @@ func spawn_target(o: Dictionary, b: Dictionary) -> NpcBody:
 	adopt(t, str(o.id))
 	t.set_meta("bounty", int(b.run))
 	t.died.connect(_on_target_died.bind(t))
-	if demo.garrison != null:
-		demo.garrison.add_member(t)
+	var g = garrisons.get(str(o.id), demo.garrison)
+	if g != null:
+		g.add_member(t)
 	target = t
 	target_run = int(b.run)
 	return t
 
 
 func _drop_target() -> void:
-	if demo.garrison != null:
-		demo.garrison.remove_member(target)
+	var g = garrisons.get(str(target.get_meta("outpost", "")), demo.garrison)
+	if g != null:
+		g.remove_member(target)
 	demo.npcs.erase(target)
 	target.queue_free()
 	target = null

@@ -16,6 +16,7 @@ var hit_target
 
 ## M11 (player weapons). All opt-in so the M2 trooper bolts behave exactly as before.
 var shooter: Node = null       ## never hits its own shooter
+var friends: Array = []        ## issue #64: never hits these either (your droid's bolts fly past you)
 var stylize := false           ## a stretched glowing streak instead of the sphere
 var sweep := false             ## ray-test each step so fast bolts cannot tunnel
 var color := Color(1.0, 0.45, 0.2)
@@ -131,14 +132,23 @@ func reflect(new_direction: Vector3, new_shooter: Node) -> void:
 
 
 func _physics_process(dt: float) -> void:
+	# Whoever fired it may be gone already (a droid that respawned, a trooper
+	# who left town): a freed shooter is an error to even test with `is`.
+	if shooter != null and not is_instance_valid(shooter):
+		shooter = null
 	# Advance the bolt along its direction by one frame.
 	var step := integrate(dt)
 	if sweep and _alive and is_inside_tree() and step.length() > 0.0:
 		var space := get_world_3d().direct_space_state
 		var q := PhysicsRayQueryParameters3D.create(global_position, global_position + step)
 		q.collide_with_areas = false
+		var skip: Array[RID] = []
 		if shooter is CollisionObject3D:
-			q.exclude = [(shooter as CollisionObject3D).get_rid()]
+			skip.append((shooter as CollisionObject3D).get_rid())
+		for f in friends:
+			if is_instance_valid(f) and f is CollisionObject3D:
+				skip.append((f as CollisionObject3D).get_rid())
+		q.exclude = skip
 		var hit := space.intersect_ray(q)
 		if not hit.is_empty():
 			global_position = hit.position
@@ -150,7 +160,11 @@ func _physics_process(dt: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if not _alive:
 		return
+	if shooter != null and not is_instance_valid(shooter):
+		shooter = null
 	if shooter != null and body == shooter:
+		return
+	if friends.has(body):
 		return
 	if hit_target != null:
 		apply_to(hit_target)

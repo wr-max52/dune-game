@@ -133,9 +133,20 @@ func _build_pickups() -> void:
 		pickups.append(node)
 
 
+## Issue #64: one loot box at a time. Contraband lying in the world (the desert
+## cache) only shows in free play, and only while no drop of Oda's is out and
+## the player carries none: it never gets in the way of the story's runs.
+func _sync_loose_contraband() -> void:
+	var allowed := Story.chapter() == "free" and WorldState.smuggle_drop().is_empty() and not WorldState.carrying_contraband()
+	for n in pickups:
+		if is_instance_valid(n) and bool(content.get_item(str(n.pickup.get("item", ""))).get("contraband", false)):
+			n.visible = allowed
+
+
 ## Make the world match Oda's drop: place it when she puts one out, clear it
 ## once it is taken. Cheap; called every frame.
 func sync_drop() -> void:
+	_sync_loose_contraband()
 	var want := WorldState.smuggle_drop()
 	var have := str(drop.pickup.get("id", "")) if drop != null and is_instance_valid(drop) else ""
 	if str(want.get("id", "")) == have:
@@ -212,7 +223,7 @@ func _physics_process(dt: float) -> void:
 func _find_focus() -> Dictionary:
 	var p := player.global_position
 	for n in pickups:
-		if is_instance_valid(n) and n.in_reach(p):
+		if is_instance_valid(n) and n.visible and n.in_reach(p):
 			return { "kind": "pickup", "node": n }
 	if drop != null and is_instance_valid(drop) and drop.in_reach(p):
 		return { "kind": "pickup", "node": drop }

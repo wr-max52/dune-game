@@ -176,19 +176,27 @@ static func on_flight_returned(arrival: Dictionary) -> void:
 		log_event("A ship came back into the pit trailing smoke.")
 
 
+## Issue #64: the player is on the practice range (Oda's honour system: going
+## there is the practice).
+static func on_range_visited() -> void:
+	Story.event("range_visited")
+
+
 ## Issue #64: every target on the range down at once (any time; the record is
 ## the bet's business).
 static func on_range_cleared() -> void:
 	bump("range_clears")
-	Story.event("range_cleared")
 
 
 ## Issue #64: something contraband went to the fence. The run is over once the
 ## drop was picked up and nothing contraband is left on you or your droids.
+## Only a run Oda gave you in this chapter counts: goods found or carried in from
+## before the story asked for them do not move it on.
 static func on_contraband_sold() -> void:
 	if smuggle_drop().is_empty() and not carrying_contraband():
 		bump("smuggle_sold")
-		Story.event("smuggle_sold")
+		if bool(story.get("took_run", false)):
+			Story.event("smuggle_sold")
 
 
 static func on_range_record(seconds: float) -> void:
@@ -282,6 +290,7 @@ static func smuggle_drop() -> Dictionary:
 	return {
 		"id": id, "item": smuggle.item, "count": int(smuggle.count), "marker": smuggle.marker,
 		"offset": smuggle.offset, "ground": bool(smuggle.get("ground", false)), "hidden": true, "reach": 2.0,
+		"marked": bool(smuggle.get("marked", false)),
 	}
 
 
@@ -341,6 +350,7 @@ static func _roll_smuggle(j: Dictionary) -> void:
 		"count": rng.randi_range(int(span[0]), int(span[1])),
 		"area": str(a.id), "hint": str(a.get("hint", "")), "marker": str(a.get("marker", "")),
 		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)), "out": false,
+		"marked": bool(a.get("marked", false)),
 	}
 
 
@@ -348,6 +358,7 @@ static func _start_smuggle(j: Dictionary) -> bool:
 	if j.is_empty() or not smuggle_ready() or bool(smuggle.get("out", false)):
 		return false
 	smuggle.out = true
+	story["took_run"] = true            # issue #64: this chapter's run is under way
 	bump("smuggle_runs")
 	log_event("Oda set up a drop: " + str(j.get("text", "")))
 	return true
@@ -557,6 +568,8 @@ static func from_save(d: Dictionary) -> void:
 	droids.from_save(d.get("droids", {}))
 	hangar = str(d.get("hangar", ""))
 	story = d.get("story", {}).duplicate()
+	if not d.has("story"):
+		smuggle = {}           # issue #64: a save from before the story; its old drop goes with it
 	bounty = d.get("bounty", {}).duplicate()
 
 
