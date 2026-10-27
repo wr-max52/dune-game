@@ -235,6 +235,15 @@ if [ ! -f test_results/combat_trace.txt ]; then
   exit 1
 fi
 echo "CI: combat trace present ($(wc -l < test_results/combat_trace.txt) lines)"
+# The whole garrison (tower sentry, barracks troopers, the town alarm), NPC sound,
+# the player's crouch, and smuggling (searches that check pockets, the fence).
+echo "CI: generating garrison trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/garrison_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/garrison_trace.txt ]; then
+  echo "CI: ERROR -- garrison trace was not generated" >&2
+  exit 1
+fi
+echo "CI: garrison trace present ($(wc -l < test_results/garrison_trace.txt) lines)"
 # Issue #15: names. The town's guards, the town, its planet, your ship and the
 # jetpack named as they spawn; the same names after a save and for the same world
 # seed; the space fight's pilots named each sortie; a crowd of 5,000 all unique.

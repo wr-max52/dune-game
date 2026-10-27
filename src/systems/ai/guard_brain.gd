@@ -40,6 +40,7 @@ var last_seen := Vector3.INF
 var heard_pos := Vector3.INF
 var cover := Vector3.INF          ## the cover spot the director gave us (INF = none)
 var reloading := false
+var alarm_pos := Vector3.INF      ## M15: where the town alarm last placed the player (shared)
 var facing := 0.0                 ## the body's current yaw (radians)
 var post_facing := 0.0            ## the yaw it was posted with
 
@@ -71,6 +72,7 @@ var _search_left := 0.0
 var _hit_pending := false
 var _bark_cd := 0.0
 var _queued := ""
+var _cover_ask_left := 0.0
 var _opening := false
 var _investigate_left := 0.0
 var _investigate_at := Vector3.INF
@@ -155,6 +157,18 @@ func investigate(at: Vector3, seconds: float = 2.5) -> void:
 	_investigate_left = seconds
 
 
+## `p`, pulled back to within `leash` metres of home (the first patrol point).
+func _leashed(p: Vector3, leash: float) -> Vector3:
+	if patrol_points.is_empty() or leash <= 0.0:
+		return p
+	var home: Vector3 = patrol_points[0]
+	var off := Vector3(p.x - home.x, 0.0, p.z - home.z)
+	if off.length() <= leash:
+		return p
+	var q := home + off.normalized() * leash
+	return Vector3(q.x, p.y, q.z)
+
+
 func _near(p: Vector3, r: float) -> bool:
 	return p != Vector3.INF and Vector2(pos.x - p.x, pos.z - p.z).length() <= r
 
@@ -190,6 +204,9 @@ func update(dt: float) -> int:
 			_search(dt)
 		State.COMBAT:
 			_combat(dt, hit)
+	# A trooper fights near its post: it will not chase you out across the desert.
+	if state == State.COMBAT and go_to != Vector3.INF:
+		go_to = _leashed(go_to, c("hold_radius", 0.0) + 0.1 if holds_ground() else c("chase_leash", 30.0))
 	# Lines asked for by orders (engage, calm) or this frame, said once.
 	bark = _queued
 	_queued = ""
@@ -243,6 +260,13 @@ func _search(dt: float) -> void:
 	crouch = false
 	sprint = false
 	aim = Vector3.INF
+	if holds_ground():
+		go_to = Vector3.INF
+		_look_around(dt)
+		_search_left -= dt
+		if _search_left <= 0.0:
+			state = State.PATROL
+		return
 	var where := last_seen if last_seen != Vector3.INF else heard_pos
 	# On a leash: look around near the post, do not chase into the desert.
 	if where != Vector3.INF and patrol_points.size() > 0:
@@ -266,8 +290,16 @@ func _search(dt: float) -> void:
 		state = State.RETURN
 
 
+## A sentry on a tower never leaves it (profile combat.hold_ground).
+func holds_ground() -> bool:
+	return bool(profile.get("combat", {}).get("hold_ground", false))
+
+
 func _combat(dt: float, hit: bool) -> void:
 	var threat := target_pos if visible else last_seen
+	# The alarm's shared sighting is newer than our own when someone else has eyes on.
+	if not visible and alarm_pos != Vector3.INF:
+		threat = alarm_pos
 	if threat == Vector3.INF:
 		threat = heard_pos
 	if threat == Vector3.INF:
@@ -281,6 +313,9 @@ func _combat(dt: float, hit: bool) -> void:
 	_no_sight = 0.0 if visible else _no_sight + dt
 	if hit and _rng.randf() < 0.5:
 		_say("hit", 3.0)
+	if holds_ground():
+		_hold_ground(dt, threat, hit)
+		return
 	match fight:
 		Fight.TO_COVER:
 			crouch = false
@@ -346,10 +381,66 @@ func _combat(dt: float, hit: bool) -> void:
 				_burst_left = _rng.randi_range(int(c("burst_min", 3)), int(c("burst_max", 5)))
 			go_to = _strafe_to
 			fire = visible and _burst_left > 0 and not reloading
-			if not visible and _no_sight > c("no_sight_reposition_s", 3.0) and last_seen != Vector3.INF:
-				go_to = last_seen
+			if not visible and _no_sight > c("no_sight_reposition_s", 3.0):
+				# Close in on where they were (ours, or the alarm's), running.
+				go_to = threat
+				sprint = true
+			# Keep asking for cover as we close in: a spot in range may turn up.
+			_cover_ask_left -= dt
+			if _cover_ask_left <= 0.0:
+				_cover_ask_left = 2.0
+				want_cover = true
 			if cover != Vector3.INF:
 				fight = Fight.TO_COVER
+
+
+## A sentry fights where it stands: duck (if it can), stand, wind up, burst, repeat.
+func _hold_ground(dt: float, threat: Vector3, hit: bool) -> void:
+	go_to = Vector3.INF
+	# Step to the rim facing the threat (profile combat.hold_radius): from the
+	# middle of a tower top the roof edge hides the street, both ways.
+	var rim := c("hold_radius", 0.0)
+	if rim > 0.0 and patrol_points.size() > 0:
+		var home: Vector3 = patrol_points[0]
+		var to := Vector3(threat.x - home.x, 0.0, threat.z - home.z)
+		if to.length() > 0.5:
+			var spot := home + to.normalized() * rim
+			if not _near(spot, 0.6):
+				go_to = spot
+	sprint = false
+	want_cover = false
+	match fight:
+		Fight.HIDE:
+			crouch = true
+			aim = Vector3.INF
+			_timer -= dt
+			if _timer <= 0.0 and not reloading:
+				fight = Fight.WINDUP
+				_timer = c("windup_s", 0.35)
+		Fight.WINDUP:
+			crouch = false
+			aim = _aim_at(threat)
+			_timer -= dt
+			if _timer <= 0.0:
+				if visible:
+					fight = Fight.BURST
+					_burst_left = _rng.randi_range(int(c("burst_min", 3)), int(c("burst_max", 5)))
+				else:
+					_opening = false
+					_hide()
+		Fight.BURST:
+			crouch = false
+			if hit or reloading or not visible:
+				_bursts += 1
+				_opening = false
+				_hide()
+				return
+			aim = _aim_at(target_pos)
+			fire = true
+		_:
+			# TO_COVER / OPEN make no sense up here.
+			fight = Fight.WINDUP
+			_timer = c("windup_s", 0.35)
 
 
 ## The body reports each bolt that actually left the rifle.
@@ -362,6 +453,10 @@ func on_shot() -> void:
 
 
 func _after_burst() -> void:
+	if holds_ground():
+		_opening = false
+		_hide()
+		return
 	if _opening:
 		_opening = false
 		fight = Fight.TO_COVER

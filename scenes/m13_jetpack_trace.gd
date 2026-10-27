@@ -111,6 +111,7 @@ func _run() -> void:
 	await frames(5)
 	out("GEAR_BUILT", gear != null)
 	out("PICKUPS_PLACED", gear.pickups.size())
+	out("JETPACK_PICKUP_PLACED", gear.pickup_node("pit_jetpack") != null)
 	out("VENDORS_PLACED", gear.vendors.size())
 	out("START_CREDITS", WorldState.credits)
 
@@ -286,6 +287,7 @@ func _run() -> void:
 	get_root().add_child(demo)
 	await frames(5)
 	out("RELOAD_PICKUPS_PLACED", demo.gear.pickups.size())
+	out("RELOAD_JETPACK_PLACED", demo.gear.pickup_node("pit_jetpack") != null)
 	out("RELOAD_ATTACHED", WorldState.inventory.in_slot("back"))
 	out("RELOAD_PLAYER_HAS_JET", demo._player.jetpack != null)
 	var f := FileAccess.open(OUT, FileAccess.WRITE)

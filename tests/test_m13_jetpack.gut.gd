@@ -18,8 +18,9 @@ func test_trace_exists() -> void:
 
 func test_town_places_the_pickup_and_the_trader() -> void:
 	assert_eq(t.get("GEAR_BUILT"), "true")
-	assert_eq(int(t.get("PICKUPS_PLACED", 0)), 1)
-	assert_eq(int(t.get("VENDORS_PLACED", 0)), 1)
+	assert_eq(str(t.get("JETPACK_PICKUP_PLACED", "")), "true", "the jetpack lies in the pit")
+	assert_eq(int(t.get("PICKUPS_PLACED", 0)), 2, "with (M15) the cache outside the gate")
+	assert_eq(int(t.get("VENDORS_PLACED", 0)), 2, "the gear trader and (M15) the fence")
 
 
 func test_without_a_pack_holding_jump_changes_nothing() -> void:
@@ -117,7 +118,7 @@ func test_it_can_be_bought_back() -> void:
 
 
 func test_a_reload_keeps_the_pickup_taken() -> void:
-	assert_eq(int(t.get("RELOAD_PICKUPS_PLACED", -1)), 0, "the jetpack does not reappear")
+	assert_eq(str(t.get("RELOAD_JETPACK_PLACED", "")), "false", "the jetpack does not reappear")
 	assert_eq(t.get("RELOAD_ATTACHED"), "jetpack")
 	assert_eq(t.get("RELOAD_PLAYER_HAS_JET"), "true", "the reloaded player flies again")
 

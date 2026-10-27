@@ -29,6 +29,7 @@ var rig_node: Node              ## camera rig node (first-person check), optiona
 var location_id := "port_town"
 var items: ItemKit
 var hud: GearHud
+var inventory_panel: InventoryPanel
 var labels: Dictionary = {}
 var pickups: Array = []         ## PickupNode
 var vendors: Array = []         ## { cfg, pos }
@@ -69,6 +70,11 @@ func _ready() -> void:
 	hud = GearHud.new()
 	hud.fuel_label = _l("fuel")
 	add_child(hud)
+	# M15: what you are carrying, on I.
+	inventory_panel = InventoryPanel.new()
+	inventory_panel.content = content
+	inventory_panel.name_of = _shown
+	add_child(inventory_panel)
 	lowest_floor = _lowest_floor()
 	if player != null:
 		_last_safe = player.global_position
@@ -208,6 +214,8 @@ func prompt_text() -> String:
 		if cost <= WorldState.credits:
 			return _l("buy") % [_shown(it, str(id)), str(v.get("label", "vendor")).to_lower(), cost]
 		return _l("cant_afford") % [str(it.get("label", id)), cost, WorldState.credits]
+	if v.has("pitch"):
+		return str(v.pitch) % str(v.get("label", "vendor")).to_lower()
 	return _l("nothing_to_trade") % str(v.get("label", "vendor")).to_lower()
 
 

@@ -32,7 +32,7 @@ func _b(key: String) -> bool:
 func test_trace_ran_clean() -> void:
 	assert_true(FileAccess.file_exists(TRACE), "trace exists (run scenes/npc_trace.gd)")
 	assert_eq(str(kv.get("FAILED", "")), "false", "no FAIL lines")
-	assert_eq(int(_f("NPCS")), 2, "both gate guards spawned")
+	assert_eq(int(_f("NPCS")), 5, "the whole garrison spawned (gate x2, tower, yard x2)")
 
 
 func test_navmesh_bakes_off_the_main_thread() -> void:

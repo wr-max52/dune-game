@@ -68,6 +68,44 @@ Every significant technical choice, the alternative, and why. Newest on top.
   the same. Alternative: hand-model a coat patch. Rejected: a new generation gave a
   real back for the same effort. The prep step no longer flattens anything; the
   arm-weight fix and the goggle glow still apply.
+## 2026-10-26 — M15 part 3 (garrison, sound, crouching, smuggling)
+
+- **One alarm for the town, not one per gate.** `TownAlarm` (pure) owns whether
+  the garrison is fighting and how it ends (everyone down, fled, downed); the gate
+  `Checkpoint` only decides when the gate starts one, and follows the alarm with
+  `set_alarm()` (no second bark, no second standing hit). The director became
+  `Garrison` (was `GateCheckpoint`) and runs every soldier in town by its
+  profile's `role`: gate, sentry, yard.
+- **Profiles inherit.** `tower_sentry.json` and `yard_trooper.json` start from
+  `gate_guard.json` (`"base"`, merged block by block in `CoreContent.get_soldier`),
+  so shared numbers live once.
+- **Troopers are leashed.** Without it the barracks pair chased a fleeing player
+  out into the desert forever and the alarm never calmed. `chase_leash` (gate 30 m,
+  barracks 55 m) caps where a trooper will go in a fight, and the alarm's escape
+  distance (40 m from the nearest trooper) sits below what the desert allows past
+  the leash. A unit test checks the two numbers agree.
+- **The sentry fights from the rim.** From the middle of the 6 m tower top the
+  roof edge hides the street both ways (the sentry could not see the player at the
+  tower's foot, nor be seen). On the alarm it steps `hold_radius` (2.3 m) toward
+  the threat and never further.
+- **Sound: stock where there was stock, synthesized where there was not.** The
+  Kenney FPS kit (CC0, already in the repo) covers rifles, footsteps and hurt. No
+  voice or siren pack was reachable from the build machine (only the game's own
+  repo and package registries), so the radio chatter and the klaxon are
+  synthesized by `tools/audio/make_npc_sfx.py`, like the blade sounds. No speech
+  engine: the line stays on screen. Mapping in `content/look/npc_sounds.json`.
+- **Crouch shrinks the player's capsule** (it used to only lower the pose), in
+  `character_body.gd` so the guards share it, with a stand-up check so you cannot
+  rise into a ceiling. The camera eye drops with it.
+- **Contraband is an item flag** (`"contraband": true`), so a new smuggling good
+  is a JSON file. A search checks the player's inventory; papers can still turn
+  into a spot search, so the papers band is not a free pass; a bribe before the
+  search skips it. The fence is an ordinary vendor that buys the `contraband`
+  kind at full value.
+- **Cover spots are checked against the navmesh a slice a frame.** The town has
+  ~2,900 spots now (the barracks troopers fight anywhere), and checking them all on
+  the first cover request cost an 88 ms frame.
+
 ## 2026-10-26 — M15 part 2 (combat NPCs at the gate)
 
 - **Two brains, two jobs.** `Checkpoint` (pure) decides what the gate does for
