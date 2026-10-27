@@ -15,6 +15,15 @@ Every significant technical choice, the alternative, and why. Newest on top.
   first pistol was a plain real-world revolver and the first jetpack a diving rig on
   wheels; the second tries were kept. The jetpack keeps the kit's flames
   (`flames_at`), so a model never flies without them.
+- **The assassin is rigged by Hyper3D, not by the kit.** The human template rig
+  plus four stock clips (Walking, Running, OffensiveIdle, StandingDeathBackward01)
+  came with the model. Walk and run are made in-place at load (the root bone keeps
+  only its bob), because the controller moves the droid. The eye and muzzle ride
+  the head and hand bones. Alternative: retarget the CharacterKit animator onto it,
+  as the guards do. Rejected: the droid has no kit joints, and stock clips were one call.
+- **Droids follow with a leash.** A droid starts closing the gap only once the
+  player is `leash` metres away, and stops inside `settle` of its slot. Before, it
+  chased its slot every frame, so any step the player took moved every droid.
 - **One cargo case model for every cargo.** It is a 1 m cube in prep, and each look
   stretches it to its own width, height and depth and tints it toward its shell
   colour. Alternative: a model per cargo. Rejected: four generations for what is a
