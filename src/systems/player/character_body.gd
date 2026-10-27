@@ -38,6 +38,10 @@ var regen_per_s := 14.0
 var health = HealthT.new(100)
 var is_downed := false
 var invulnerable_left := 0.0
+## Issue #25: where the last hit came from (INF = unknown) and how hard, so a
+## ragdoll falls away from it.
+var last_hit_from := Vector3.INF
+var last_hit_amount := 0.0
 var _since_hit := 999.0
 var _regen_carry := 0.0
 var _was_on_floor := true
@@ -222,6 +226,7 @@ func _step_jetpack(delta: float, grounded: bool) -> void:
 ## trace just keeps walking.
 func apply_damage(amount: float) -> void:
 	hits_taken += 1
+	last_hit_amount = amount
 	hurt.emit(amount)
 	if invulnerable_left > 0.0 or amount <= 0.0 or is_downed:
 		return
@@ -230,6 +235,14 @@ func apply_damage(amount: float) -> void:
 	if health.hp <= 0:
 		is_downed = true
 		downed.emit()
+
+
+## Bolts call this when they know who fired them (issue #25: so the fall is away
+## from the shooter). NpcBody overrides it to skip friendly fire.
+func apply_damage_from(amount: float, shooter: Node) -> void:
+	if shooter is Node3D and is_instance_valid(shooter):
+		last_hit_from = (shooter as Node3D).global_position
+	apply_damage(amount)
 
 
 ## Back on your feet (after being downed): full health, a short grace period.

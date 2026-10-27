@@ -1,15 +1,16 @@
 class_name DroidKit
 extends RefCounted
-## Proof-of-concept droid looks (issue #51): primitive meshes, coloured by the
-## variant's body / trim / eye from content/core/droids/droids.json. Real models
-## replace these later; everything else only needs the node names below.
+## Droid looks. Issue #25: each kind's "look" in content/core/droids/droids.json
+## names a Hyper3D model (assets/gear/, prepped by tools/look/prep_gear.gd), tinted
+## by the variant's body colour, with glowing eyes and a muzzle placed from data.
+## Without a model (or if it is missing) the issue #51 primitives stand in.
 ##
 ## Every look is a Node3D whose origin sits on the ground, facing -Z, with:
 ##   "Model"  the part that tips over (a wreck lies down) or spins
 ##   "Eye*"   glowing meshes (brightness shows whether it is awake)
 ##   "Muzzle" where bolts leave (assassin only)
 
-static func build(kind: String, variant: Dictionary, mats: LookMaterials) -> Node3D:
+static func build(kind: String, variant: Dictionary, mats: LookMaterials, look: Dictionary = {}) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Droid_" + kind
 	var model := Node3D.new()
@@ -18,6 +19,10 @@ static func build(kind: String, variant: Dictionary, mats: LookMaterials) -> Nod
 	var body := Color(str(variant.get("body", "#808080")))
 	var trim := Color(str(variant.get("trim", "#404040")))
 	var eye := Color(str(variant.get("eye", "#4ad0ff")))
+	if _from_model(model, look, body, eye, mats):
+		root.set_meta("source", "model")
+		return root
+	root.set_meta("source", "kit")
 	match kind:
 		"floating":
 			_floating(model, body, trim, eye, mats)
@@ -26,6 +31,41 @@ static func build(kind: String, variant: Dictionary, mats: LookMaterials) -> Nod
 		"assassin":
 			_assassin(model, body, trim, eye, mats)
 	return root
+
+
+## The kind's model, tinted toward the body colour (look.tint: 0 = as generated,
+## 1 = full body colour), with an "Eye" per look.eyes entry and a "Muzzle" at
+## look.muzzle. False when there is no model to load.
+static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color, mats: LookMaterials) -> bool:
+	var path := str(look.get("model", ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return false
+	var scene = load(path)
+	if not (scene is PackedScene):
+		return false
+	var n: Node3D = (scene as PackedScene).instantiate()
+	model.add_child(n)
+	var k := float(look.get("tint", 0.8))
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		for s in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(s) as BaseMaterial3D
+			if src == null:
+				continue
+			var m := src.duplicate() as BaseMaterial3D
+			m.albedo_color = Color.WHITE.lerp(body, k)
+			mi.set_surface_override_material(s, m)
+	var r := float(look.get("eye_radius", 0.04))
+	var i := 0
+	for e in look.get("eyes", []):
+		_mesh(model, _ball(r), mats.glow(eye), Vector3(float(e[0]), float(e[1]), float(e[2])), Vector3.ZERO, "Eye" if i == 0 else "Eye%d" % (i + 1))
+		i += 1
+	if look.has("muzzle"):
+		var mz := Node3D.new()
+		mz.name = "Muzzle"
+		var a: Array = look.muzzle
+		mz.position = Vector3(float(a[0]), float(a[1]), float(a[2]))
+		model.add_child(mz)
+	return true
 
 
 ## All the glowing eyes under a look.

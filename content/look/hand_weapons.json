@@ -1,5 +1,5 @@
 {
-  "note": "How the player's hand weapons look and sit. Models are CC0 (Kenney, via the MIT starter kit; see assets/third_party/kenney_starter_kit_fps/LICENSE.md) and are retinted at runtime so they read as worn gunmetal, not toys. All transforms are chest space (+Z forward, +X the character's left). Grips and muzzle are in model space, before scale.",
+  "note": "How the player's hand weapons look and sit. Issue #25: the rifle is a Hyper3D model (assets/gear/rifle.glb, metres, muzzle +Z) shown with its own textures (retint false). Models are CC0 (Kenney, via the MIT starter kit; see assets/third_party/kenney_starter_kit_fps/LICENSE.md) and are retinted at runtime so they read as worn gunmetal, not toys. All transforms are chest space (+Z forward, +X the character's left). Grips and muzzle are in model space, before scale.",
   "pistol_blaster": {
     "model": "res://assets/third_party/kenney_starter_kit_fps/models/blaster.glb",
     "scale": 0.24,
@@ -19,11 +19,12 @@
     "slot": 2
   },
   "rifle_blaster": {
-    "model": "res://assets/third_party/kenney_starter_kit_fps/models/blaster-repeater.glb",
-    "scale": 0.32,
-    "tint": { "dark": "#424240", "light": "#a8a59e", "accent": "#7a2e26", "glow": "#ff5a2a" },
-    "grips": { "r": [0.0, 0.22, -0.42], "l": [0.0, 0.3, 0.6] },
-    "muzzle": [0.0, 0.47, 1.2],
+    "model": "res://assets/gear/rifle.glb",
+    "scale": 1.0,
+    "retint": false,
+    "tint": { "glow": "#ff5a2a" },
+    "grips": { "r": [0.0, -0.08, -0.11], "l": [0.0, -0.03, 0.2] },
+    "muzzle": [0.0, 0.11, 0.48],
     "aim": { "pos": [-0.1, -0.02, 0.4], "rot": [0, 0, 0] },
     "aim_fpv": { "pos": [-0.22, 0.05, 0.5], "rot": [4, 13, 0] },
     "holster": "back",

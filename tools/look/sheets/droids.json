@@ -1,0 +1,13 @@
+{
+  "title": "Issue #25: the droids as the game builds them, one row per variant",
+  "out": "res://docs/lookdev/gear/05_droids.png",
+  "views": ["front34", "side", "rear34"],
+  "cells": [
+    { "name": "floating_rust", "droid": "floating", "variant": "rust" },
+    { "name": "floating_remnant", "droid": "floating", "variant": "remnant" },
+    { "name": "cargo_tan", "droid": "cargo", "variant": "tan" },
+    { "name": "cargo_blue", "droid": "cargo", "variant": "blue" },
+    { "name": "assassin_bone", "droid": "assassin", "variant": "bone" },
+    { "name": "assassin_copper", "droid": "assassin", "variant": "copper" }
+  ]
+}

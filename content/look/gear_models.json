@@ -1,0 +1,63 @@
+{
+  "note": "Issue #25: Hyper3D gear and droids, prepped by tools/look/prep_gear.gd into assets/gear/. Raw models are in assets/gear/source/ (.gdignore, not imported). Rodin models face +Z: hand weapons keep that (muzzle +Z), droids turn 180 to face the game's -Z and stand on y = 0. Droid colour textures are washed toward grey (desaturate) where the generation came out coloured, so a variant's body colour can tint them. Prompts: docs/items/HYPER3D_PROMPTS.md.",
+  "rifle": {
+    "source": "res://assets/gear/source/rifle_b.glb",
+    "out": "res://assets/gear/rifle.glb",
+    "rot_deg": [
+      0,
+      0,
+      0
+    ],
+    "axis": "z",
+    "size": 0.95,
+    "origin": "center",
+    "max_texture": 1024
+  },
+  "droid_floating": {
+    "source": "res://assets/gear/source/droid_floating_b.glb",
+    "out": "res://assets/gear/droid_floating.glb",
+    "rot_deg": [
+      0,
+      180,
+      0
+    ],
+    "axis": "x",
+    "size": 0.7,
+    "origin": "ground",
+    "max_texture": 1024
+  },
+  "droid_cargo": {
+    "source": "res://assets/gear/source/droid_cargo_b.glb",
+    "out": "res://assets/gear/droid_cargo.glb",
+    "rot_deg": [
+      0,
+      180,
+      0
+    ],
+    "axis": "y",
+    "size": 0.85,
+    "origin": "ground",
+    "desaturate": 0.85,
+    "max_texture": 1024
+  },
+  "droid_assassin": {
+    "source": "res://assets/gear/source/droid_assassin_a.glb",
+    "out": "res://assets/gear/droid_assassin.glb",
+    "rot_deg": [
+      0,
+      180,
+      0
+    ],
+    "axis": "y",
+    "size": 2.3,
+    "origin": "ground",
+    "max_texture": 1024
+  },
+  "generations": {
+    "rifle": "be5f5dd0-2471-47d2-b308-7e3358f472b1 (round 2; round 1 23fd8666 was a bright red scoped sniper)",
+    "droid_floating": "a7924665-ccd7-4b87-9df1-5a8b97621848 (round 2; round 1 08756990 was a quadcopter)",
+    "droid_cargo": "7a815484-1977-4a4c-8c54-2cf6134c87d9 (round 2; round 1 44d32482 was a wheeled rover)",
+    "droid_assassin": "e441fd6b-8c76-473e-a8d2-04ff0583b1bf (round 1, the owner's pick; round 2 71a755bd, a spindly mantis, was rejected)",
+    "sword_rejected": "2c587514 (ornate fantasy sword), e7d40f48 (three crossed katanas)"
+  }
+}
