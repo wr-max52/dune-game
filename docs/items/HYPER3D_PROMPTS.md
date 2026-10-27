@@ -117,3 +117,20 @@ colour, in fewer words:
 
 Lesson: Rodin text mode is good at chunky, compact objects and bad at long thin
 ones. Use agentic mode with reference renders for anything blade-shaped.
+
+## Pistol, jetpack and cargo case (later the same day)
+
+- **Cargo case (picked, first try):** "Smuggler's cargo case: a low rectangular
+  hard-shell crate, light grey painted metal shell with dented rounded corners,
+  chunky brass corner caps, two side carry handles, two heavy front latches, one
+  faded saffron stripe across the lid. ..."
+- **Pistol:** the first try ("... side profile like a heavy old revolver ...") made a
+  plain real-world revolver. The second ("Sci-fi blaster pistol, an energy weapon,
+  not a revolver, no cylinder. Chunky dark gunmetal grey body, a thick copper coil
+  ...") was picked.
+- **Jetpack:** the first try made a yellow diving rig on wheels. The second ("Jetpack
+  worn on the back, no wheels, no legs. Two upright steel fuel tanks side by side
+  ...") made a heavy yellow pack, the owner's pick.
+
+Naming the thing it must not be ("not a revolver", "no wheels") fixed the drift
+both times.

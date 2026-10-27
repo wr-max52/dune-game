@@ -11,6 +11,14 @@ Every significant technical choice, the alternative, and why. Newest on top.
   round 2 for the rifle and the floating and cargo droids, and round 1 for the
   assassin droid. Every id is in `content/look/gear_models.json`; rejected sources
   were deleted and can be fetched again from Hyper3D Mine.
+- **Pistol, jetpack and cargo case came later, in the same short style.** The
+  first pistol was a plain real-world revolver and the first jetpack a diving rig on
+  wheels; the second tries were kept. The jetpack keeps the kit's flames
+  (`flames_at`), so a model never flies without them.
+- **One cargo case model for every cargo.** It is a 1 m cube in prep, and each look
+  stretches it to its own width, height and depth and tints it toward its shell
+  colour. Alternative: a model per cargo. Rejected: four generations for what is a
+  size and a colour.
 - **The energy sword stays code-built.** Four attempts failed: an ornate fantasy
   sword, three crossed katanas, a scissor-like hilt, and a hammer with a stub of
   light. Text mode cannot hold a long, thin, two-material object. Alternatives were

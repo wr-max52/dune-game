@@ -9,8 +9,10 @@ extends SceneTree
 ## Reads content/look/gear_models.json:
 ##   { id: { source, out,
 ##           rot_deg   [x, y, z] turns the raw model into the game's axes,
-##           size      metres along `axis` ("x", "y" or "z") after turning,
-##           origin    "center" (the middle of the bounds) or "ground" (bottom centre),
+##           size      metres along `axis` ("x", "y" or "z") after turning; axis "box"
+##                     squeezes it into a 1 m cube instead (cargo cases),
+##           origin    "center" (the middle of the bounds), "ground" (bottom centre) or
+##                     "back" (centred, its +Z face at 0: a pack worn on the back),
 ##           desaturate 0..1: wash the colour texture toward grey (for tinting),
 ##           max_texture  pixels: textures larger than this are halved until they fit } }
 ## Hand weapons point their muzzle along +Z; droids face -Z and stand on y = 0.
@@ -49,10 +51,17 @@ func _prep(id: String, c: Dictionary) -> void:
 	var box := _aabb(root)
 	var axis := str(c.get("axis", "z"))
 	var along := box.size.x if axis == "x" else (box.size.y if axis == "y" else box.size.z)
-	turn.scale = Vector3.ONE * (float(c.size) / maxf(along, 0.001))
+	turn.scale = Vector3.ONE * (float(c.get("size", 1.0)) / maxf(along, 0.001))
+	if axis == "box":
+		# A unit cube on every axis (the game stretches it to each item's size). Scaled
+		# in the raw model's own axes, so turns of 90 degrees keep it a cube.
+		turn.scale = Vector3.ONE
+		model.scale = Vector3.ONE / _aabb(model).size.max(Vector3.ONE * 0.001)
 	box = _aabb(root)
 	if str(c.get("origin", "center")) == "ground":
 		turn.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z)
+	elif str(c.get("origin", "center")) == "back":
+		turn.position = -Vector3(box.get_center().x, box.get_center().y, box.end.z)
 	else:
 		turn.position = -box.get_center()
 	box = _aabb(root)

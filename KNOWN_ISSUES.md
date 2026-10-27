@@ -9,10 +9,9 @@ lands lying down, falls away from the shot, keeps every bone its length, sleeps,
 and stands back up exactly as it was.
 
 **Not done, honestly:**
-- **Pistol, jetpack and cargo cases have no new model yet.** Their generation calls
-  timed out on Hyper3D's side, and it was not clear whether they were submitted, so
-  they were not re-sent. They still use the Kenney pistol and the primitive pack and
-  cases.
+- **The jetpack is big and bright yellow** (the owner's pick of two tries). It sits
+  0.44 m deep on the back.
+- **The pistol's grips and muzzle were placed by eye**, like the rifle's.
 - **The energy sword was not replaced** (see DECISIONS). It is the code-built one.
 - **The ragdoll has no self-collision.** An arm can pass through the torso.
   Particles collide with the world only (layer 1). The hips, knees, elbows and neck

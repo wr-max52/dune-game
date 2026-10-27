@@ -5,7 +5,10 @@ Plain English, newest on top. One entry per milestone.
 ## Gear and droid models, ragdoll deaths (2026-10-27, issue #25)
 
 - **New Hyper3D models** (prompts written against `docs/ART_DIRECTION.md`, kept in `docs/items/HYPER3D_PROMPTS.md`):
+  - **Pistol:** a chunky gunmetal blaster with copper and orange trim, in place of the Kenney blaster.
   - **Rifle:** a chunky gunmetal energy rifle with red panels, in place of the Kenney repeater. First and third person.
+  - **Jetpack:** a heavy yellow pack with twin tanks. The flames still burn from under its nozzles.
+  - **Cargo cases (the smuggling loot):** one strapped trunk model, stretched to each cargo's size and tinted to its colour, with its glowing status strip.
   - **Floating droid:** a white dome with one big lens on four little legs.
   - **Cargo droid:** a boxy hauler on two tank treads, with goggle eyes.
   - **Assassin droid:** a tall plated humanoid with a visor and a pistol in its right hand.
@@ -13,7 +16,7 @@ Plain English, newest on top. One entry per milestone.
 - **The energy sword stays code-built.** It is already the laser sword (an igniting yellow blade over a forged spine with a brass guard). Four Hyper3D attempts could not hold a long, thin sword together.
 - **Ragdoll deaths.** Troopers and locals no longer tip over like a plank. They crumple: knees buckle, the body falls away from whoever landed the killing shot, rolls to a stop on the sand and rests. The rifle flies out of their hands and clatters to the ground. The player does the same when knocked out at the gate, and stands back up in the pit.
 - Tuning in `content/look/ragdoll.json`; model placement in `content/look/gear_models.json` (prep: `tools/look/prep_gear.gd`) and each droid kind's `look` in `content/core/droids/droids.json`.
-- Review stills: `docs/lookdev/gear/` (`05_droids.png`, `06_ragdoll.png`). Tests: test_ragdoll.
+- Review stills: `docs/lookdev/gear/` (`05_droids.png`, `06_ragdoll.png`, `08_items.png`). Tests: test_ragdoll.
 
 ## Companion droids (2026-10-27, issue #51)
 

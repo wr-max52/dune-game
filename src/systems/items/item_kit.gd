@@ -68,10 +68,23 @@ func build(look_id: String) -> Node3D:
 	if model != null:
 		model.name = "Model"
 		root.add_child(model)
+		# Issue #25: a "case" model is a 1 m cube stretched to the look's size, tinted
+		# toward its shell colour, with the stand-in's glowing status strip low on the latch side (-Z).
+		if str(p.get("frame", "")) == "case":
+			var size := Vector3(float(p.get("width", 0.5)), float(p.get("height", 0.3)), float(p.get("depth", 0.34)))
+			model.scale = size
+			_mi(root, _box(Vector3(size.x * 0.5, 0.02, 0.01)), _glow(_c(p, "glow", "#59d6ff"), 2.5),
+				Vector3(0, size.y * 0.22, -size.z * 0.5 - 0.004), Vector3.ZERO, "Status")
+		if p.has("tint"):
+			_tint(model, _c(p, "shell", "#ffffff"), float(p.tint))
 		if model.get_node_or_null("Flames") == null:
 			var f := Node3D.new()
 			f.name = "Flames"
 			root.add_child(f)
+			# Issue #25: a model without its own flames gets the kit's at each nozzle.
+			for at in p.get("flames_at", []):
+				_flame(f, Vector3(float(at[0]), float(at[1]), float(at[2])), float(p.get("tank_radius", 0.085)),
+					float(p.get("height", 0.52)), p)
 		root.set_meta("source", "scene")
 		set_flames(root, false)
 		return root
@@ -208,8 +221,6 @@ func _twin_tank(body: Node3D, flames: Node3D, p: Dictionary) -> void:
 	var dark := mats.flat(_c(p, "dark", "#2a2622"), 0.8, 0.2)
 	var strap := mats.flat(_c(p, "strap", "#5a3a24"), 0.9, 0.0)
 	var nozzle := mats.flat(_c(p, "nozzle", "#3a3632"), 0.5, 0.6)
-	var flame := _glow(_c(p, "flame", "#ff8a2a"), 1.6)
-	var core := _glow(_c(p, "flame_core", "#ffd9a0"), 2.6)
 
 	_mi(body, _box(Vector3(spread * 1.6, h * 0.9, 0.04)), dark, Vector3(0, 0, -0.02), Vector3.ZERO, "Plate")
 	for side in [-1.0, 1.0]:
@@ -219,19 +230,35 @@ func _twin_tank(body: Node3D, flames: Node3D, p: Dictionary) -> void:
 		_mi(body, _sphere(r), metal, Vector3(x, h * 0.4, z))
 		_mi(body, _cyl(r * 1.04, r * 1.04, h * 0.08), trim, Vector3(x, h * 0.18, z))
 		_mi(body, _cyl(r * 0.55, r * 0.8, h * 0.14), nozzle, Vector3(x, -h * 0.47, z), Vector3.ZERO, "Nozzle")
-		# Flames: an outer cone and a hot core from the nozzle, raked back away from
-		# the wearer (-Z) so a long coat does not swallow them.
-		var fl := Node3D.new()
-		fl.position = Vector3(x, -h * 0.54, z)
-		fl.rotation.x = float(p.get("flame_rake", 0.35))
-		flames.add_child(fl)
-		var fh := h * float(p.get("flame_length", 1.3))
-		var outer := _mi(fl, _cyl(r * 0.85, 0.0, fh, 10), flame, Vector3(0, -fh * 0.5, 0))
-		var inner := _mi(fl, _cyl(r * 0.45, 0.0, fh * 0.6, 8), core, Vector3(0, -fh * 0.3, 0))
-		for m in [outer, inner]:
-			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_flame(flames, Vector3(x, -h * 0.54, z), r, h, p)
 		# Harness straps rising off the top of the plate toward the shoulders.
 		_mi(body, _box(Vector3(0.045, 0.02, 0.16)), strap, Vector3(side * spread * 0.45, h * 0.45, 0.06),
 			Vector3(-0.35, 0, 0))
 	_mi(body, _box(Vector3(spread * 1.2, 0.05, 0.08)), trim, Vector3(0, h * 0.3, -0.06), Vector3.ZERO, "Bar")
 	_mi(body, _box(Vector3(spread * 1.7, 0.06, 0.05)), strap, Vector3(0, -h * 0.38, -0.01), Vector3.ZERO, "Belt")
+
+
+## Flames: an outer cone and a hot core from a nozzle at `at`, raked back away from
+## the wearer (-Z) so a long coat does not swallow them.
+func _flame(flames: Node3D, at: Vector3, r: float, h: float, p: Dictionary) -> void:
+	var fl := Node3D.new()
+	fl.position = at
+	fl.rotation.x = float(p.get("flame_rake", 0.35))
+	flames.add_child(fl)
+	var fh := h * float(p.get("flame_length", 1.3))
+	var outer := _mi(fl, _cyl(r * 0.85, 0.0, fh, 10), _glow(_c(p, "flame", "#ff8a2a"), 1.6), Vector3(0, -fh * 0.5, 0))
+	var inner := _mi(fl, _cyl(r * 0.45, 0.0, fh * 0.6, 8), _glow(_c(p, "flame_core", "#ffd9a0"), 2.6), Vector3(0, -fh * 0.3, 0))
+	for m in [outer, inner]:
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Multiply a model's colour toward `color` (k 0 = as made, 1 = fully), per instance.
+static func _tint(model: Node, color: Color, k: float) -> void:
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		for s in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(s) as BaseMaterial3D
+			if src == null:
+				continue
+			var m := src.duplicate() as BaseMaterial3D
+			m.albedo_color = Color.WHITE.lerp(color, k)
+			mi.set_surface_override_material(s, m)
