@@ -9,12 +9,16 @@ extends Node3D
 ## - Sparring remote: a hovering drone that fires slow stun bolts at you while
 ##   your blade is out (and only then), so deflection can be practiced. Bolts
 ##   you send back knock it around and count.
+## - Issue #51: block or deflect its bolts taming.streak times in a row (one that
+##   hits you resets the count) and it wants to follow you: remote_tamed fires and
+##   DroidController takes it on (release_remote). A tamed remote is gone for good.
 
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const DATA := "res://content/core/locations/training_range.json"
 
 signal target_down(id: String)
 signal record_set(seconds: float)
+signal remote_tamed
 
 var spec: Dictionary = {}
 var player: Node3D
@@ -41,7 +45,7 @@ func _ready() -> void:
 		n.global_position = _v3(t.pos)
 		n.knocked_down.connect(_on_down.bind(str(t.id)))
 		targets.append(n)
-	if spec.has("remote"):
+	if spec.has("remote") and not WorldState.has_flag("range_remote_tamed"):
 		remote = _build_remote()
 		add_child(remote)
 		remote.global_position = _v3(spec.remote.pos)
@@ -118,12 +122,42 @@ func fire_remote() -> Node:
 	b.sweep = true
 	b.color = Color.html(str(r.get("bolt_color", "#4ad0ff")))
 	b.streak_length = 0.5
+	b.on_hit.connect(_on_remote_bolt_hit)
+	b.tree_exiting.connect(_on_remote_bolt_gone.bind(b))
 	add_child(b)
 	b.global_position = origin
 	remote_shots += 1
 	if randf() < 0.35:
 		Sound.play("droid_beep", origin)
 	return b
+
+
+## Issue #51: a remote bolt that reached the player breaks the taming streak.
+func _on_remote_bolt_hit(target) -> void:
+	if target != null and target == player:
+		WorldState.droids.on_remote_hit_player()
+
+
+## A bolt the blade caught (PlayerWeapons marks it "intercepted") counts toward
+## the streak, whether it was blocked dead or sent back.
+func _on_remote_bolt_gone(b: Node) -> void:
+	if remote == null or not b.has_meta("intercepted"):
+		return
+	if WorldState.droids.on_remote_blocked():
+		remote_tamed.emit()
+
+
+## The remote leaves the range (it follows its new owner now). Returns where it was.
+func release_remote() -> Vector3:
+	if remote == null:
+		return Vector3.INF
+	var at := remote.global_position
+	remote.queue_free()
+	remote = null
+	WorldState.droids.streak = 0
+	WorldState.set_flag("range_remote_tamed")
+	WorldState.log_event("Someone walked off with the sparring drone from the pit.")
+	return at
 
 
 func _build_remote() -> Node3D:

@@ -29,6 +29,7 @@ static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
 static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, out }
+static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -51,6 +52,7 @@ static func reset() -> void:
 	inventory = Inventory.new()
 	names = NameBook.new()
 	smuggle = {}
+	droids = DroidRoster.new()
 
 
 # ------------------------------------------------------------------ writes
@@ -252,8 +254,10 @@ static func smuggle_ready() -> bool:
 	return smuggle_drop().is_empty() and not carrying_contraband()
 
 
+## Pockets or a cargo droid (issue #51): the gate never finds what a droid
+## carries, but Oda still waits until it is sold.
 static func carrying_contraband() -> bool:
-	for id in inventory.item_ids():
+	for id in inventory.item_ids() + droids.all_cargo().keys():
 		if bool(_item(str(id)).get("contraband", false)):
 			return true
 	return false
@@ -401,6 +405,7 @@ static func to_save() -> Dictionary:
 		"inventory": inventory.to_save(),
 		"names": names.to_save(),
 		"smuggle": smuggle.duplicate(true),
+		"droids": droids.to_save(),
 	}
 
 
@@ -419,6 +424,8 @@ static func from_save(d: Dictionary) -> void:
 	names = NameBook.new()
 	names.from_save(d.get("names", {}))
 	smuggle = d.get("smuggle", {}).duplicate(true)
+	droids = DroidRoster.new()
+	droids.from_save(d.get("droids", {}))
 
 
 static func _read_json(path: String) -> Variant:
