@@ -332,9 +332,13 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	if upper == BodyAnimator.UPPER_FREE:
 		return
 	# The right hand always rides the grip; the left joins once the weapon is up.
+	# In first person a one-handed weapon (aim_fpv "one_hand") leaves the left arm
+	# alone: reaching across to a grip right of centre lays the forearm sideways
+	# through the view, reading as a second arm.
 	if grips.has("r"):
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), POLE_R)
-	if grips.has("l") and drawn > 0.6:
+	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
+	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
 
 

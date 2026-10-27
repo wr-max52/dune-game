@@ -7,7 +7,7 @@
     "grips": { "r": [0.0, 0.22, -0.42], "l": [0.03, 0.13, -0.3] },
     "muzzle": [0.0, 0.5, 0.94],
     "aim": { "pos": [-0.08, 0.0, 0.5], "rot": [0, 0, 0] },
-    "aim_fpv": { "pos": [-0.21, 0.09, 0.6], "rot": [4, 16, 0] },
+    "aim_fpv": { "pos": [-0.21, 0.09, 0.6], "rot": [4, 16, 0], "one_hand": true },
     "holster": "holster_grip",
     "sound": "res://assets/third_party/kenney_starter_kit_fps/sounds/blaster.ogg",
     "slot": 1
