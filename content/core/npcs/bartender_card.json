@@ -48,6 +48,7 @@
     "no_rumor": ["Quiet week. Nobody's said anything worth repeating."],
     "job": ["There's work if you want it: %s"],
     "no_job": ["Board's empty. Come back when the town's done something stupid."],
+    "no_smuggle": ["Nothing lined up. Get rid of what you're carrying first.", "One drop at a time. Go find the last one."],
     "war": ["Remnant want order and their pensions. Locals want the gate back. I want both of them paying their tabs."],
     "bye": ["Mind the step.", "Don't die in my doorway.", "Go on, then."]
   },
@@ -59,6 +60,7 @@
   "hostile_words": ["kill you", "shoot you", "burn this place", "i'll hurt", "stupid hag", "old hag", "shut up", "idiot", "worthless"],
   "topic_words": {
     "rumor": ["rumor", "rumour", "news", "word", "heard", "gossip", "what's going on", "whats going on"],
+    "smuggle": ["smuggl", "contraband", "a drop", "the drop", "fence", "run something"],
     "job": ["job", "work", "credits", "pay", "gig", "contract", "board"],
     "war": ["war", "remnant", "empire", "side", "rebels", "locals", "who's right", "whos right"],
     "drink": ["drink", "ale", "gin", "pour", "thirsty", "punch", "water", "menu"],
