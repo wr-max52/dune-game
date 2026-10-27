@@ -92,7 +92,10 @@ func refresh() -> void:
 	credits_label.text = "Credits:  %d cr" % WorldState.credits
 	var inv: Inventory = inventory if inventory != null else WorldState.inventory
 	var ids: Array = inv.item_ids()
+	_droid_rows()
 	if ids.is_empty():
+		if not rows.is_empty():
+			return
 		rows.append("Nothing but the clothes on your back.")
 		_text(list, rows[0], 16, Color(INK, 0.7))
 		return
@@ -108,6 +111,15 @@ func refresh() -> void:
 			row += "   CONTRABAND"
 		rows.append(row)
 		_text(list, row, 16, RED if illegal else INK)
+
+
+## Issue #51: your droids, one row each. What a cargo droid carries is not
+## listed (and not in the inventory): the gate never sees it either.
+func _droid_rows() -> void:
+	for d in WorldState.droids.owned:
+		var row := "%s   (droid)   %d cr" % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))]
+		rows.append(row)
+		_text(list, row, 16, AMBER)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Companion droids (2026-10-27, issue #51)
+
+- **Three kinds, each with several looks:** the floating droid (the range remote's shape), a tall, skeletal assassin droid with a pistol and deadly aim, and a cargo droid: a small box on wheels. All are placeholder shapes for now (`src/systems/droids/droid_kit.gd`). None of them talk; they beep, each kind in its own voice (new sounds from `tools/audio/make_game_sfx.py`).
+- **Up to three at a time.** They follow you on foot. They vanish while you fly the ship and come back beside you when you climb out. They show as droids in the inventory (I), but nothing a cargo droid carries is listed there.
+- **The droid merchant** in the market (stall `vendor_4`) sells floating and cargo droids for 50 cr and assassin droids for 100 cr. They buy them back for 40 cr and 90 cr. A sold droid leaves.
+- **Cargo droid:** press E beside it to stash items or unload them. The gate searches your pockets, never the droid, so it is a smuggler's best friend. Oda still waits until the goods are sold before she lines up another drop.
+- **Taming the range remote:** block or deflect five of its bolts in a row and it follows you home. Oda passes this on as a rumour.
+- **Wrecks in the desert:** now and then a broken droid turns up far out in the sand, one of each kind at most, never close to another one. The assassin lies flat like it is dead. Press E and stay beside it for 10 seconds to fix it; it resets and follows you.
+- **At the cap:** a fourth droid (a wreck or the range remote) asks which droid to sell at the merchant's price to make room.
+- **The Remnant's droids:** a black, red-eyed assassin droid and a floating droid patrol the main street. They turn on you whenever the garrison would, sound the alarm, and fight. Shooting them provokes them; destroying one costs Remnant standing. Your own assassin droid shoots back at them, and at troopers while the alarm is up.
+- Data: `content/core/droids/droids.json` (kinds, variants, prices, tuning, words). Saved with the world (`WorldState.droids`).
+- Tests: test_droids.
+
 ## The port's fleet (2026-10-27, issue #43)
 
 - Four flyable ships from Hyper3D replace the placeholder colour variants in the pit. Each has its own stats, guns and Shift ability:

@@ -20,7 +20,26 @@
       ],
       "volume_db": -10.0, "pitch": [0.9, 1.15], "unit_size": 3.0, "max_distance": 30.0
     },
-    "droid_hum":    { "stream": "res://assets/audio/sfx/droid_hum.wav", "volume_db": -20.0, "unit_size": 1.5, "max_distance": 12.0 }
+    "droid_hum":    { "stream": "res://assets/audio/sfx/droid_hum.wav", "volume_db": -20.0, "unit_size": 1.5, "max_distance": 12.0 },
+    "cargo_beep": {
+      "stream": [
+        "res://assets/audio/sfx/cargo_beep_1.wav",
+        "res://assets/audio/sfx/cargo_beep_2.wav",
+        "res://assets/audio/sfx/cargo_beep_3.wav"
+      ],
+      "volume_db": -10.0, "pitch": [0.9, 1.1], "unit_size": 3.0, "max_distance": 30.0
+    },
+    "assassin_beep": {
+      "stream": [
+        "res://assets/audio/sfx/assassin_beep_1.wav",
+        "res://assets/audio/sfx/assassin_beep_2.wav",
+        "res://assets/audio/sfx/assassin_beep_3.wav"
+      ],
+      "volume_db": -12.0, "pitch": [0.85, 1.0], "unit_size": 3.0, "max_distance": 30.0
+    },
+    "droid_fix":    { "stream": "res://assets/audio/sfx/droid_fix.wav", "volume_db": -8.0, "pitch": [0.95, 1.05], "unit_size": 3.0, "max_distance": 25.0 },
+    "droid_wake":   { "stream": "res://assets/audio/sfx/droid_wake.wav", "volume_db": -8.0, "unit_size": 3.0, "max_distance": 30.0 },
+    "droid_shot":   { "stream": "res://assets/audio/sfx/droid_shot.wav", "volume_db": -8.0, "pitch": [0.92, 1.08], "unit_size": 6.0, "max_distance": 80.0 }
   },
   "max_one_shots": 24,
   "music": {

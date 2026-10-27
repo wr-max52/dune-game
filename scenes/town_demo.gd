@@ -82,6 +82,8 @@ var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, play
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
+@export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
+var droids: DroidController
 
 
 func _ready() -> void:
@@ -137,6 +139,8 @@ func _ready() -> void:
 			_build_npcs()
 		if with_speeders and pilot != null:
 			_build_speeder_post()
+		if use_look and with_droids and gear != null:
+			_build_droids()
 		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
@@ -391,6 +395,14 @@ func _build_speeder_post() -> void:
 	add_child(speeder_post)
 	if bar != null:
 		speeder_post.attach_host(bar)
+
+
+## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)
+## and the NPCs (the Remnant's droids answer to the garrison's alarm).
+func _build_droids() -> void:
+	droids = DroidController.new()
+	droids.setup(self, _player, gear)
+	add_child(droids)
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
