@@ -1,0 +1,95 @@
+{
+  "id": "freighter",
+  "class": "freighter",
+  "label": "Marchbank GR-75 Frigatebird",
+  "faction": "smuggler",
+  "look": "freighter",
+  "pilot": "ace",
+  "hull": 260,
+  "shield": {
+    "max": 130,
+    "regen": 8.0,
+    "delay": 3.5
+  },
+  "hit_radius": 4.4,
+  "convergence": 320.0,
+  "flight": {
+    "min_speed": 10.0,
+    "max_speed": 36.0,
+    "boost_speed": 52.0,
+    "accel": 16.0,
+    "pitch_rate": 1.1,
+    "yaw_rate": 0.8,
+    "roll_rate": 1.8,
+    "boost_time": 4.0,
+    "boost_recharge": 0.4,
+    "boost_turn_scale": 0.6,
+    "ability": {
+      "kind": "drift",
+      "turn_scale": 2.0
+    }
+  },
+  "hardpoints": [
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -0.5,
+        1.0,
+        -1.0
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        0.5,
+        1.0,
+        -1.0
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -0.5,
+        -1.0,
+        -1.0
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        0.5,
+        -1.0,
+        -1.0
+      ]
+    }
+  ],
+  "atmosphere": {
+    "min_speed": 0.0,
+    "max_speed": 130.0,
+    "boost_speed": 220.0,
+    "accel": 28.0,
+    "boost_time": 8.0,
+    "boost_recharge": 1.0,
+    "boost_turn_scale": 0.7,
+    "edge_speed_mult": 4.0,
+    "speed_curve": 1.0,
+    "climb_drag": 0.3,
+    "liftoff_height": 18.0,
+    "liftoff_speed": 7.0,
+    "land_max_agl": 150.0,
+    "land_descent": 12.0,
+    "land_slow": 4.0,
+    "land_brake": 45.0,
+    "touchdown_speed": 9.0,
+    "crash_speed": 38.0,
+    "body_radius": 3.8,
+    "clearance": 1.0
+  },
+  "note": "IP-neutral (issue #43). A round industrial disc hauler: tough and slow, four guns on a centre turret, and Shift drifts: it keeps sliding while the nose swings round, so it can fire behind itself.",
+  "naming": {
+    "kind": "person_drift",
+    "callsign": true,
+    "vessel": "vessel"
+  },
+  "blaster_power": 0.8
+}

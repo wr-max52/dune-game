@@ -541,18 +541,25 @@ func _park_ships(town) -> void:
 		if box.is_empty() or look_id == "":
 			push_warning("TownDecor: pad %s has no ship to park" % str(p.get("id", "")))
 			continue
-		_park(ship_kit, look_id, "Parked_" + str(p.id), float(p.get("parked_yaw_deg", 0.0)), box)
-	# Art pass 2: the other bays hold parked ships that never fly. Each "ship" box
-	# with a `ship_look` gets that look (a colour variant of the player's ship).
+		_park(ship_kit, look_id, "Parked_" + str(p.id), float(p.get("parked_yaw_deg", 0.0)), box, ship_id)
+	# Issue #43: the other bays hold the other ships you can fly. Each "ship" box
+	# with a `ship` (an id in content/core/ships) gets that ship's look; ShipPilot
+	# lets you board any of them.
 	for b in town.boxes():
-		if str(b.kind) == "ship" and b.has("ship_look"):
-			_park(ship_kit, str(b.ship_look), "Parked_" + str(b.id), float(b.get("parked_yaw_deg", 0.0)), b)
+		if str(b.kind) == "ship" and b.has("ship"):
+			var look := str(content.ships.get(str(b.ship), {}).get("look", ""))
+			if look == "":
+				push_warning("TownDecor: bay %s names unknown ship %s" % [str(b.id), str(b.ship)])
+				continue
+			_park(ship_kit, look, "Parked_" + str(b.id), float(b.get("parked_yaw_deg", 0.0)), b, str(b.ship))
 
 
 ## Belly on the box base, centred on its footprint; the greybox stand-in hidden.
-func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary) -> void:
+func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> void:
 	var ship := ship_kit.build(look_id)
 	ship.name = node_name
+	ship.set_meta("ship_id", ship_id)
+	ship.set_meta("box_id", str(box.id))
 	ship.rotation.y = deg_to_rad(yaw_deg)
 	add_child(ship)
 	var c := (_v3(box.min) + _v3(box.max)) * 0.5

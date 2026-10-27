@@ -1,0 +1,88 @@
+{
+  "id": "gunship",
+  "class": "gunship",
+  "label": "Ashford Albatross Mk VI",
+  "faction": "smuggler",
+  "look": "gunship",
+  "pilot": "ace",
+  "hull": 220,
+  "shield": {
+    "max": 100,
+    "regen": 10.0,
+    "delay": 3.0
+  },
+  "hit_radius": 3.6,
+  "convergence": 320.0,
+  "flight": {
+    "min_speed": 12.0,
+    "max_speed": 40.0,
+    "boost_speed": 60.0,
+    "accel": 22.0,
+    "pitch_rate": 1.4,
+    "yaw_rate": 0.9,
+    "roll_rate": 2.2,
+    "boost_time": 2.5,
+    "boost_recharge": 0.5,
+    "boost_turn_scale": 0.6,
+    "ability": {
+      "kind": "brake",
+      "turn_scale": 2.4,
+      "brake_speed": 0.0
+    }
+  },
+  "hardpoints": [
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -1.0,
+        -0.6,
+        -3.0
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        1.0,
+        -0.6,
+        -3.0
+      ]
+    },
+    {
+      "weapon": "ship_missile",
+      "mount": [
+        0.0,
+        -0.8,
+        -2.0
+      ]
+    }
+  ],
+  "atmosphere": {
+    "min_speed": 0.0,
+    "max_speed": 150.0,
+    "boost_speed": 240.0,
+    "accel": 34.0,
+    "boost_time": 8.0,
+    "boost_recharge": 1.0,
+    "boost_turn_scale": 0.7,
+    "edge_speed_mult": 4.0,
+    "speed_curve": 1.0,
+    "climb_drag": 0.3,
+    "liftoff_height": 18.0,
+    "liftoff_speed": 7.0,
+    "land_max_agl": 150.0,
+    "land_descent": 12.0,
+    "land_slow": 4.0,
+    "land_brake": 45.0,
+    "touchdown_speed": 9.0,
+    "crash_speed": 36.0,
+    "body_radius": 3.0,
+    "clearance": 1.0
+  },
+  "note": "IP-neutral (issue #43). A flying anvil: armoured, heavy-hitting guns (blaster_power), a seeker rack, and Shift is an air brake: it bleeds speed and snaps round to bring the guns on target.",
+  "naming": {
+    "kind": "person_drift",
+    "callsign": true,
+    "vessel": "vessel"
+  },
+  "blaster_power": 1.8
+}

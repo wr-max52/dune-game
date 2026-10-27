@@ -28,7 +28,10 @@ var hud_label: Label
 ## Start `enc_id` around a ship flying with transform `at` at `speed` m/s.
 ## Returns false (and starts nothing) for an unknown encounter. Pass the scene's
 ## ShipKit: a new one builds its own materials, a 60 ms hitch mid-flight.
-func begin(content, enc_id: String, at: Transform3D, speed: float, rng_seed: int = 1, kit: ShipKit = null) -> bool:
+## `player_ship` (issue #43) flies the encounter as that ship instead of its own
+## player ship: whichever ship you took up.
+func begin(content, enc_id: String, at: Transform3D, speed: float, rng_seed: int = 1, kit: ShipKit = null,
+		player_ship: String = "") -> bool:
 	encounter_id = enc_id
 	name = "SpaceFight"
 	df = Dogfight.new(content, enc_id, rng_seed)
@@ -37,6 +40,8 @@ func begin(content, enc_id: String, at: Transform3D, speed: float, rng_seed: int
 	var fwd := -at.basis.z
 	var yaw := atan2(-fwd.x, -fwd.z) if Vector2(fwd.x, fwd.z).length() > 0.01 else 0.0
 	df.encounter = placed(df.encounter, at.origin, yaw)
+	if player_ship != "" and df.encounter.has("player"):
+		df.encounter.player.ship = player_ship
 	df.wave_yaw = yaw
 	# Issue #15: everyone who spawns gets a name; each sortie brings new pilots.
 	df.names = WorldState.names

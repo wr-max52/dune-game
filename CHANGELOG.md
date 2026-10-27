@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The port's fleet (2026-10-27, issue #43)
+
+- Four flyable ships from Hyper3D replace the placeholder colour variants in the pit. Each has its own stats, guns and Shift ability:
+  - **Kaldor VX-88 Kestrel:** the interceptor, rebuilt from the old stand-in. Silver and cobalt, with wingtip guns. Balanced, and Shift boosts.
+  - **Marchbank GR-75 Frigatebird:** a disc freighter. Tough and slow with four guns. Shift drifts: it keeps sliding while the nose swings round.
+  - **Valcourt Kinetics Lanner:** a racing courier. The fastest and lightest ship, with the longest boost.
+  - **Ashford Albatross Mk VI:** a gunship. Armoured, with double-strength guns. Shift is an air brake that snaps it round.
+- Walk up to any parked ship and press E to fly it. Its stats, its guns and its name go with it into space. The ship you left stays where you landed it.
+- The speeder (Hartwell MK-84 Curlew) is a Hyper3D model of the original sled.
+- Make-and-model names come from the name generator.
+- New data fields:
+  - `blaster_power`, `flight.ability`, and `ship` on a bay box;
+  - `content/look/vehicle_models.json`, with the runner-up generations kept as options.
+- New tools: `tools/look/prep_vehicle.gd` (raw model to game model) and `tools/look/shoot_vehicles.gd` (review stills). The stills are in `docs/lookdev/vehicles/`.
+- Tests: test_ship_fleet. test_ship_kit, the town layout and decor tests, and the m14 flight trace are updated.
 ## Character builder (2026-10-27, issue #48)
 
 What works now:

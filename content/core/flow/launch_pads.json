@@ -31,7 +31,7 @@
     "arrive_reentry": "Back in the port's sky.",
     "board": "[E]  Board",
     "seated": "[Space]  Take off      [E]  Get out",
-    "airborne": "[R / F]  Throttle    [W / S]  Pitch    [A / D]  Turn    [Q / E]  Roll    [Shift]  Boost",
+    "airborne": "[R / F]  Throttle    [W / S]  Pitch    [A / D]  Turn    [Q / E]  Roll    [Shift]  Ability",
     "can_land": "[C]  Land",
     "landing": "Landing...",
     "landed": "Landed.  [E]  Get out    [Space]  Take off",

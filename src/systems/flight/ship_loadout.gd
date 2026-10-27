@@ -12,10 +12,12 @@ const Weapon := preload("res://src/systems/combat/weapon.gd")
 
 var hardpoints: Array = []   ## each: { weapon_id, cfg, weapon, mount: Vector3, group }
 var convergence := 300.0     ## metres ahead where fixed guns cross
+var power := 1.0             ## the ship's "blaster_power": every bolt's damage times this
 
 
 func _init(ship_cfg: Dictionary = {}, content = null) -> void:
 	convergence = float(ship_cfg.get("convergence", convergence))
+	power = float(ship_cfg.get("blaster_power", 1.0))
 	for hp in ship_cfg.get("hardpoints", []):
 		var wid := str(hp.get("weapon", ""))
 		var wcfg: Dictionary = content.get_weapon(wid) if content != null else {}
@@ -94,7 +96,7 @@ func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secon
 			"origin": origin,
 			"velocity": dir * spd + ship_vel,
 			"speed": spd,
-			"damage": float(h.cfg.get("damage", 10.0)),
+			"damage": float(h.cfg.get("damage", 10.0)) * power,
 			"range": float(h.cfg.get("range", 800.0)),
 			"homing": homing,
 			"turn_rate": float(h.cfg.get("turn_rate", 0.0)),

@@ -230,11 +230,11 @@ func test_round_pit_with_four_ships() -> void:
 		if str(b.kind) == "ship":
 			ships.append(b)
 	assert_eq(ships.size(), 4, "four ships in the pit")
-	var looks := {}
+	var kinds := {}
 	for b in ships:
-		if b.has("ship_look"):
-			looks[str(b.ship_look)] = true
-	assert_eq(looks.keys().size(), 3, "three parked variants, all different")
+		if b.has("ship"):
+			kinds[str(b.ship)] = true
+	assert_eq(kinds.keys().size(), 3, "three other flyable ships, all different (issue #43)")
 	var own := t.get_box("ship")
 	var c := Vector3((float(own.min[0]) + float(own.max[0])) * 0.5, -6.0, (float(own.min[2]) + float(own.max[2])) * 0.5)
 	assert_lt(t.spawn_pos().distance_to(c), 10.0, "the player spawns by their own ship")

@@ -331,6 +331,8 @@ func _build_visual() -> void:
 	visual = Node3D.new()
 	visual.name = "Look"
 	add_child(visual)
+	if _build_model(str(look.get("scene", "")), float(look.get("base_y", -0.65))):
+		return
 	# The tub: a low wedge-ended body, the rider sits in it.
 	_part(_box(Vector3(1.5, 0.5, 3.0)), hullm, Vector3(0, -0.15, 0.1))
 	_part(_box(Vector3(1.2, 0.35, 1.0)), hullm, Vector3(0, -0.05, -1.75), Vector3(-18, 0, 0))
@@ -357,6 +359,43 @@ func _build_visual() -> void:
 		blade.material_override = trim
 		blade.rotation.z = k * PI / 3.0
 		_fan.add_child(blade)
+
+
+## Issue #43: the Hyper3D speeder (the look's "scene", prepped by
+## tools/look/prep_vehicle.gd: facing -Z, metres, centred). Its underside sits at
+## `base_y` (where the stand-in's skids are), with the hover glow under it. False
+## when there is no model, so the stand-in is built instead.
+func _build_model(path: String, base_y: float) -> bool:
+	if path == "" or not ResourceLoader.exists(path):
+		return false
+	var res = load(path)
+	var inst = (res as PackedScene).instantiate() if res is PackedScene else null
+	if not (inst is Node3D):
+		if inst != null:
+			inst.free()
+		return false
+	var m := inst as Node3D
+	m.name = "Model"
+	visual.add_child(m)
+	var box := AABB()
+	var first := true
+	for mi: MeshInstance3D in m.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = _local_xf(mi, m) * mi.mesh.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	m.position = Vector3(-box.get_center().x, base_y - box.position.y, -box.get_center().z)
+	for side in [-1.0, 1.0]:
+		_part(_box(Vector3(0.24, 0.04, box.size.z * 0.75)), _glow_mat, Vector3(side * box.size.x * 0.32, base_y - 0.02, 0))
+	return true
+
+
+static func _local_xf(n: Node3D, top: Node3D) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var p: Node = n
+	while p != null and p != top:
+		xf = (p as Node3D).transform * xf
+		p = p.get_parent()
+	return top.transform * xf
 
 
 func _part(mesh: Mesh, mat: Material, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:

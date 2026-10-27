@@ -170,7 +170,7 @@ func test_town_shots_load() -> void:
 
 func test_port_ship_is_the_flight_ship_and_fits_its_box() -> void:
 	var d = _demo(true)
-	assert_eq(d.decor.parked_ships.size(), 4, "the player's ship and three parked variants")
+	assert_eq(d.decor.parked_ships.size(), 4, "the player's ship and the three other flyable ships")
 	var looks := {}
 	for s in d.decor.parked_ships:
 		looks[str(s.get_meta("look_id"))] = true

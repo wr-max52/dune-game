@@ -2,6 +2,40 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — The port's fleet: every parked ship is flyable (issue #43)
+
+- **Agentic models for the interceptor and speeder.** Hyper3D's agentic (n-gon) mode,
+  fed orthographic crops of the old stand-ins, gave clean, minimal hard-surface models that
+  keep the originals' silhouettes. Alternatives tried:
+  - Rodin high-poly with the same references copied the primitive boxes as they were.
+  - Rodin text-only drifted toward real-world jets, and a speeder with wheels.
+
+  The freighter, courier and gunship are Rodin text-only picks, after one retry each to
+  fix the shape. Runner-ups are kept in `assets/vehicles/source/` (listed in
+  `content/look/vehicle_models.json`), which carries a `.gdignore`, so Godot does not
+  import them.
+- **No copy of a film ship.** The issue's saucer spec described one franchise ship
+  feature for feature. ART_DIRECTION pillar 6 rules out franchise silhouettes, so the
+  freighter keeps the idea (an industrial disc, sensor dish, turret, blue engine glow)
+  and drops the signature parts: the twin front mandibles and the side-mounted
+  cockpit. Bolts stay cyan for the player's side, not red: in ART_DIRECTION, red-orange
+  means remnant fire.
+- **Berths, not a ship picker.** `ShipPilot` keeps one `AtmoFlight` and swaps which
+  berth it drives when you board another parked ship: its data, model, hull and home
+  bay. Alternative: an `AtmoFlight` per ship. Rejected: only one ship flies at a time,
+  and the others only need a hull to bump into. The space fight takes the boarded
+  ship's id (`SpaceFight.begin(player_ship)`), so the ship you take up is the ship
+  that fights.
+- **Shift is a per-ship ability on the boost meter.** `flight.ability.kind` is one of:
+  - `boost`: as before.
+  - `drift`: velocity is held along the old heading while the nose turns faster.
+  - `brake`: speed bleeds toward `brake_speed`, never under `min_speed`, while the ship turns faster.
+
+  They live in `FlightModel`, so atmosphere flight, the dogfight and the AI share one
+  rule. Alternative: abilities in `ShipPilot`. Rejected: the space fight would not
+  see them.
+- **Blaster power is one multiplier.** `blaster_power` scales every bolt's damage in
+  `ShipLoadout`, so a ship's punch is one number, and guns stay shared weapon data.
 ## 2026-10-27 — The player and the guards wear pieces of one kit (issue #48)
 
 - **One base body sets the skeleton and the seams.** A featureless mannequin

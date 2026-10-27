@@ -49,11 +49,16 @@ func test_every_look_builds_with_engines_and_a_forward_nose() -> void:
 		var ship := kit.build(id)
 		add_child_autofree(ship)
 		assert_eq(ship.get_meta("look_id"), id)
-		assert_eq(ship.get_meta("source"), "kit", "%s uses the stand-in" % id)
-		assert_gt(_meshes(ship).size(), 5, "%s has real geometry" % id)
 		var engines := ship.get_node_or_null("Engines")
 		assert_not_null(engines, "%s has an Engines node" % id)
-		assert_gt(engines.get_child_count(), 0, "%s has engine glows" % id)
+		# Issue #43: the fleet's looks are Hyper3D models (their glows are painted on).
+		if str(kit.looks[id].get("scene", "")) != "":
+			assert_eq(ship.get_meta("source"), "scene", "%s uses its model" % id)
+			assert_gt(_meshes(ship).size(), 0, "%s has geometry" % id)
+		else:
+			assert_eq(ship.get_meta("source"), "kit", "%s uses the stand-in" % id)
+			assert_gt(_meshes(ship).size(), 5, "%s has real geometry" % id)
+			assert_gt(engines.get_child_count(), 0, "%s has engine glows" % id)
 		var b := _bounds(ship)
 		var length := float(kit.looks[id].get("length", 1.0))
 		assert_lt(b.position.z, -length * 0.3, "%s nose reaches toward -Z" % id)

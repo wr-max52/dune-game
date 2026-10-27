@@ -1,0 +1,11 @@
+{
+  "title": "Issue #43: the port's fleet and the speeder, built by the game (ShipKit, SpeederNode) from the prepped Hyper3D models",
+  "out": "res://docs/lookdev/vehicles/02_fleet.png",
+  "cells": [
+    { "name": "interceptor", "label": "Kaldor VX-88 Kestrel (interceptor)", "ship_look": "interceptor" },
+    { "name": "freighter", "label": "Marchbank GR-75 Frigatebird (freighter)", "ship_look": "freighter" },
+    { "name": "courier", "label": "Valcourt Kinetics Lanner (courier)", "ship_look": "courier" },
+    { "name": "gunship", "label": "Ashford Albatross Mk VI (gunship)", "ship_look": "gunship" },
+    { "name": "speeder", "label": "Hartwell MK-84 Curlew (speeder)", "speeder": "speeder" }
+  ]
+}

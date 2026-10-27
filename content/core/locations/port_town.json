@@ -525,14 +525,14 @@
    "zone": "spaceport",
    "kind": "ship",
    "min": [
-    9.3,
+    9.59,
     -6,
-    6.9
+    7.1
    ],
    "max": [
-    18.7,
-    -3.3,
-    15.1
+    18.41,
+    -3.64,
+    14.9
    ],
    "note": "Bay 1: the player's ship (the town_pit launch pad)."
   },
@@ -541,54 +541,54 @@
    "zone": "spaceport",
    "kind": "ship",
    "min": [
-    -18.7,
+    -18.13,
     -6,
-    6.9
+    7.0
    ],
    "max": [
-    -9.3,
-    -3.3,
-    15.1
+    -9.87,
+    -3.25,
+    15.0
    ],
-   "ship_look": "interceptor_red",
+   "ship": "freighter",
    "parked_yaw_deg": 90,
-   "note": "Bay 2: a parked fighter, red accents."
+   "note": "Bay 2: the disc freighter (flyable, issue #43)."
   },
   {
    "id": "ship_3",
    "zone": "spaceport",
    "kind": "ship",
    "min": [
-    -18.7,
+    -18.2,
     -6,
-    -15.1
+    -14.14
    ],
    "max": [
-    -9.3,
-    -3.3,
-    -6.9
+    -9.8,
+    -3.6,
+    -7.86
    ],
-   "ship_look": "interceptor_gold",
+   "ship": "courier",
    "parked_yaw_deg": 90,
-   "note": "Bay 3: a parked fighter, gold hull, blue accents."
+   "note": "Bay 3: the twin-boom courier (flyable, issue #43)."
   },
   {
    "id": "ship_4",
    "zone": "spaceport",
    "kind": "ship",
    "min": [
-    9.3,
+    10.16,
     -6,
-    -15.1
+    -14.9
    ],
    "max": [
-    18.7,
-    -3.3,
-    -6.9
+    17.84,
+    -2.94,
+    -7.1
    ],
-   "ship_look": "interceptor_gold_red",
+   "ship": "gunship",
    "parked_yaw_deg": -90,
-   "note": "Bay 4: a parked fighter, gold hull, red accents."
+   "note": "Bay 4: the gunship (flyable, issue #43)."
   },
   {
    "id": "dock_booth",
