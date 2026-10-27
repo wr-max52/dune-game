@@ -63,7 +63,12 @@ func persona_message() -> Dictionary:
 	lines.append(str(card.get("identity", "")))
 	lines.append("YOUR PAST: " + str(card.get("backstory", "")))
 	lines.append("HOW YOU TALK:\n- " + "\n- ".join(PackedStringArray(card.get("voice", []))))
-	lines.append("THE WAR: " + str(card.get("neutrality", "")))
+	if card.has("neutrality"):
+		lines.append("THE WAR: " + str(card.get("neutrality", "")))
+	if world_text.has("town"):
+		lines.append(str(world_text.town))
+	if card.has("people"):
+		lines.append("PEOPLE YOU KNOW: " + str(card.people))
 	var menu: PackedStringArray = []
 	for d in card.get("drinks", []):
 		menu.append("%s (%s): %d credits, %s" % [d.name, d.id, int(d.price), d.get("note", "")])

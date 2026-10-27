@@ -4,11 +4,17 @@ extends Node3D
 ## procedural idle. She wipes a glass; while "thinking" she slows and looks up;
 ## while talking her free hand gestures and her head nods with the words; she
 ## pours when a drink is ordered; and she tracks the player with her head.
+## Issue #47: a drink the player pays for, she fetches a bottle from the cabinet
+## behind her and sets it on the counter, a new colour each time (serve()); order
+## several and she brings them one after another.
 ## The words come from NpcBrain; this node only acts them out.
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 
 enum Act { IDLE, THINKING, TALKING, POURING }
+
+const SERVE_TIME := 1.4              ## fetch, carry, set down
+const FETCH_AT := Vector3(-0.3, 0.95, -0.35)   ## behind her right hip (her local frame)
 
 var kit: CharacterKit
 var body: Node3D
@@ -18,6 +24,13 @@ var act := Act.IDLE
 var look_at_target: Node3D
 var glass: Node3D
 var dressing: CantinaDressing    ## the back bar and counter (null in the greybox)
+var bottles_served := 0          ## paid drinks she has set on the counter
+var serve_colors: Array = []     ## the colour of each one, in order
+var _serve_queue := 0            ## paid drinks still to bring
+var _serve_t := -1.0             ## >= 0 while carrying one
+var _bottle: Node3D
+var _from := Vector3.ZERO
+var _to := Vector3.ZERO
 var _t := 0.0
 var _act_left := 0.0
 var _talk_energy := 0.0
@@ -51,6 +64,60 @@ func act_named(n: String, seconds: float = 0.0) -> void:
 			set_act(Act.IDLE, seconds)
 
 
+## A drink was ordered (NpcBrain.drink_poured). Paid: she brings a bottle to the
+## counter. On the tab: she just pours, as before.
+func serve(d: Dictionary) -> void:
+	if not bool(d.get("paid", false)):
+		return
+	_serve_queue += 1
+	if _serve_t < 0.0:
+		_next_bottle()
+
+
+func serving() -> bool:
+	return _serve_t >= 0.0 or _serve_queue > 0
+
+
+func _next_bottle() -> void:
+	if _serve_queue <= 0:
+		return
+	_serve_queue -= 1
+	if dressing == null:
+		# The greybox has no counter to dress: count it all the same.
+		serve_colors.append(Color.WHITE)
+		bottles_served += 1
+		_next_bottle()
+		return
+	dressing.serve_z = global_position.z
+	var color := dressing.take_color()
+	serve_colors.append(color)
+	_bottle = dressing.make_bottle(color)
+	dressing.add_child(_bottle)
+	_from = global_transform * FETCH_AT
+	_to = dressing.slot(dressing.served_count)
+	_bottle.global_position = _from
+	_serve_t = 0.0
+	set_act(Act.POURING, SERVE_TIME)
+
+
+func _tick_serve(dt: float) -> void:
+	if _serve_t < 0.0:
+		return
+	_serve_t += dt
+	var k := clampf(_serve_t / SERVE_TIME, 0.0, 1.0)
+	if is_instance_valid(_bottle):
+		# A beat to grab it, then up and over onto the counter.
+		var u := smoothstep(0.3, 1.0, k)
+		_bottle.global_position = _from.lerp(_to, u) + Vector3(0, sin(PI * u) * 0.35, 0)
+	if k >= 1.0:
+		_serve_t = -1.0
+		if is_instance_valid(_bottle):
+			dressing.set_down(_bottle)
+		_bottle = null
+		bottles_served += 1
+		_next_bottle()
+
+
 ## Pulse while words stream in (drives the nods and gestures).
 func speak_pulse() -> void:
 	_talk_energy = 1.0
@@ -66,6 +133,7 @@ func _process(dt: float) -> void:
 		if _act_left <= 0.0 and act != Act.THINKING:
 			act = Act.IDLE
 	_talk_energy = maxf(0.0, _talk_energy - dt * 2.5)
+	_tick_serve(dt)
 	var out := anim.step(dt, { "speed": 0.0, "grounded": true, "upper": BodyAnimator.UPPER_HOLSTER })
 	for jn in out.joints:
 		if joints.has(jn):
@@ -105,7 +173,11 @@ func _upper(_dt: float) -> void:
 	glass.position = glass_at
 	glass.rotation = Vector3.ZERO
 	kit.reach(body, "l", glass_at + Vector3(0.03, 0.03, -0.01), Vector3(0.6, -0.7, -0.4))
-	if act == Act.TALKING and _talk_energy > 0.2:
+	if _serve_t >= 0.0 and is_instance_valid(_bottle):
+		# Her right hand carries the bottle (the IK reaches as far as the arm goes).
+		var at := chest.global_transform.affine_inverse() * (_bottle.global_position + Vector3(0, 0.12, 0))
+		kit.reach(body, "r", at, Vector3(-0.5, -0.7, -0.5))
+	elif act == Act.TALKING and _talk_energy > 0.2:
 		var g := Vector3(-0.28, -0.05 + 0.08 * sin(_t * 3.0), 0.32 + 0.05 * sin(_t * 2.3))
 		kit.reach(body, "r", g, Vector3(-0.6, -0.5, -0.4))
 	elif act == Act.POURING:

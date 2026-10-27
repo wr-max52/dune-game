@@ -1,8 +1,8 @@
 {
   "note": "Rumors (M12). Each one is only shown to the cantina owner when its conditions hold in WorldState, so everything she passes on is true right now. requires: flags (all), not_flags (none), tier, standing { faction: [min, max] }, counters { name: min }, time [presets].",
   "rumors": [
-    { "id": "r_checkpoint", "text": "The Remnant set up a checkpoint at the east gate. They search anything bigger than a lunchbox.", "requires": { "flags": ["gate_checkpoint_up"] }, "weight": 3 },
-    { "id": "r_gate_bribe", "text": "The east gate gets lazy after dark. Coin helps it get lazier.", "requires": { "flags": ["gate_checkpoint_up"], "tier": "regular", "time": ["dusk"] }, "weight": 2 },
+    { "id": "r_checkpoint", "text": "The Remnant set up a checkpoint at the front gate. They search anything bigger than a lunchbox.", "requires": { "flags": ["gate_checkpoint_up"] }, "weight": 3 },
+    { "id": "r_gate_bribe", "text": "The front gate gets lazy after dark. Coin helps it get lazier.", "requires": { "flags": ["gate_checkpoint_up"], "tier": "regular", "time": ["dusk"] }, "weight": 2 },
     { "id": "r_patrol_orbit", "text": "There's a Remnant patrol sitting in orbit, picking off anything that lifts without their say-so.", "requires": { "not_flags": ["remnant_patrol_beaten"] }, "weight": 3 },
     { "id": "r_patrol_beaten", "text": "Somebody tore up the Remnant patrol in orbit. The gate commander is in a mood.", "requires": { "flags": ["remnant_patrol_beaten"] }, "weight": 4 },
     { "id": "r_patrol_hunt", "text": "The Remnant are asking which ship lifted out of the pit before their patrol went quiet. They have not asked me yet.", "requires": { "flags": ["remnant_patrol_beaten"], "tier": "regular" }, "weight": 3 },
@@ -12,16 +12,16 @@
     { "id": "r_range_record", "text": "Somebody finally cleared the practice range under twenty. The losers are still paying.", "requires": { "flags": ["range_record"] }, "weight": 2 },
     { "id": "r_remote", "text": "There's a sparring drone in the pit that spits stun bolts at anyone with a blade out. Good practice, if you like being stung.", "requires": {}, "weight": 1 },
     { "id": "r_blade", "text": "People say you've got quick hands with that blade. Sending bolts back where they came from is how legends start, and how short lives end.", "requires": { "flags": ["blade_trained"] }, "weight": 2 },
-    { "id": "r_water", "text": "Water's up again. The Remnant took the north well and the haulers are watering the water.", "requires": {}, "weight": 2 },
+    { "id": "r_water", "text": "Water's up again. The Remnant took the old well and the haulers are watering the water.", "requires": {}, "weight": 2 },
     { "id": "r_remnant_angry", "text": "The Remnant have your description. Not a good one.", "requires": { "standing": { "imperial_remnant": [-100, -40] } }, "weight": 4 },
     { "id": "r_locals_like", "text": "The locals have started saying your name without spitting first. That's practically a parade.", "requires": { "standing": { "locals": [20, 100] } }, "weight": 2 },
     { "id": "r_fixer", "text": "The fixer by the tables has a crate job out at the old outpost. Pays well. Pays well because people don't come back.", "requires": { "tier": "regular" }, "weight": 1 },
-    { "id": "r_gate_fight", "text": "There was shooting at the east gate. The Remnant are walking around like someone stepped on their boots.", "requires": { "flags": ["gate_fight"] }, "weight": 5 },
+    { "id": "r_gate_fight", "text": "There was shooting at the front gate. The Remnant are walking around like someone stepped on their boots.", "requires": { "flags": ["gate_fight"] }, "weight": 5 },
     { "id": "r_gate_dead", "text": "Two gate guards came back from their shift on stretchers. Somebody's going to get blamed, and it's not going to be the stretchers.", "requires": { "flags": ["gate_guards_down"] }, "weight": 5 },
     { "id": "r_gate_bribed", "text": "Word is the gate took someone's coin last night and forgot their face. Happens more than they admit.", "requires": { "flags": ["bribed_gate"], "tier": "regular" }, "weight": 3 },
-    { "id": "r_cache", "text": "Somebody left a drop out past the east gate. Unmarked cells. The fence in the market would pay, if you could get them past the gate.", "requires": { "tier": "regular", "not_flags": ["contraband_confiscated"] }, "weight": 2 },
+    { "id": "r_cache", "text": "Somebody left a drop out past the front gate. Unmarked cells. The fence in the market would pay, if you could get them past the gate.", "requires": { "tier": "regular", "not_flags": ["contraband_confiscated"] }, "weight": 2 },
     { "id": "r_confiscated", "text": "The gate took a case of cells off somebody today. The fence is in mourning.", "requires": { "flags": ["contraband_confiscated"] }, "weight": 4 },
-    { "id": "r_alarm", "text": "The klaxon went off at the barracks today. Half the garrison ran to the east gate with their boots untied.", "requires": { "flags": ["gate_fight"] }, "weight": 3 },
+    { "id": "r_alarm", "text": "The klaxon went off at the barracks today. Half the garrison ran to the front gate with their boots untied.", "requires": { "flags": ["gate_fight"] }, "weight": 3 },
     { "id": "r_noon", "text": "Nobody sane walks the market at noon. The sun out there has a grudge.", "requires": { "time": ["noon"] }, "weight": 1 }
   ]
 }

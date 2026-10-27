@@ -31,6 +31,7 @@ var active: TalkSpot                  ## who the player is talking to (null when
 var owner_spot: TalkSpot              ## the Cantina Owner's
 var talking := false
 var warmed := false
+var reminders := 0                    ## issue #29: times the AI reminder was repeated (tests)
 
 ## The Cantina Owner's, for the code (and tests) written before #42.
 var brain: NpcBrain:
@@ -242,6 +243,7 @@ func start_talk(s: TalkSpot = null) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var greeting := s.brain.begin_visit()
 	panel.open(s.display_name(), greeting)
+	panel.set_notice(Disclaimers.talk_text(s.display_name()))   # issue #29
 	panel.set_mood(s.brain.rel.mood)
 	panel.set_money(WorldState.credits, s.brain.rel.tab)
 	s.speak_pulse()
@@ -290,6 +292,10 @@ func _on_submit(text: String) -> bool:
 		return false
 	panel.commit_line()
 	panel.add_player_line(text)
+	if Disclaimers.triggered(text):
+		# Issue #29: the reminder again, before their reply. The message still goes.
+		panel.post_notice(Disclaimers.repeat_text(s.display_name()))
+		reminders += 1
 	panel.set_line("")
 	panel.set_input_enabled(false)
 	s.act("thinking")

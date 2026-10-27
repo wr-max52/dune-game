@@ -135,6 +135,8 @@ func _ready() -> void:
 		dev_settings.name = "DevSettings"
 		dev_settings.demo = self
 		add_child(dev_settings)
+		if use_look:
+			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
 
 
 # ---------------------------------------------------------------- names (issue #15)

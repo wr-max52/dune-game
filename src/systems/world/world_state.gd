@@ -120,7 +120,7 @@ static func on_gate_bribe(price: int) -> void:
 	credits = maxi(0, credits - price)
 	bump("gate_bribes")
 	set_flag("bribed_gate")
-	log_event("Paid off the east gate (%d cr)." % price)
+	log_event("Paid off the front gate (%d cr)." % price)
 
 
 ## A Remnant guard died. `all_down`: that was the last one at the gate.
@@ -131,7 +131,7 @@ static func on_guard_killed(delta: int, all_down: bool) -> void:
 	if all_down:
 		set_flag("gate_guards_down")
 		set_flag("gate_checkpoint_up", false)
-		log_event("The east gate checkpoint is down. Nobody is on it.")
+		log_event("The front gate checkpoint is down. Nobody is on it.")
 
 
 ## Knocked out at the gate and dragged to the pit: they help themselves to a
