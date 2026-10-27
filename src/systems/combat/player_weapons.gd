@@ -8,8 +8,9 @@ extends Node
 ##   1 / 2 / 3     blaster / energy sword / rifle   (same key again holsters)
 ##   Q             last weapon        mouse wheel   cycle        H   holster
 ##   LMB (fire)    shoot / swing (press again mid-swing to chain 1-2-3)
-##   RMB (alt)     blaster: aim down the sights    sword: block (tap it just
-##                 before a bolt lands to deflect it back)
+##   RMB (alt)     right-click TOGGLES: blaster aim/zoom in-out, sword block on-off
+##                 (re-click to undo; with the sword, block just before a bolt lands
+##                 to deflect it back)
 ##   R             reload
 ##
 ## The pure parts are proven headless: WeaponHolder (swap), SwordCombo (chain,
@@ -47,7 +48,7 @@ var blocks := 0
 var sword_hits := 0
 
 var _fire_held := false
-var _alt_held := false
+var _alt_on := false
 var _hitstop := 0.0
 var _sfx: Dictionary = {}
 var _hum: AudioStreamPlayer
@@ -107,9 +108,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_released("fire"):
 		_fire_held = false
 	if event.is_action_pressed("alt_fire"):
-		_alt_held = true
-	elif event.is_action_released("alt_fire"):
-		_alt_held = false
+		toggle_alt()
 
 
 ## Bot / test seam: drive the same paths without input events.
@@ -124,14 +123,19 @@ func release_fire() -> void:
 
 
 func set_alt(on: bool) -> void:
-	_alt_held = on
+	_alt_on = on
+
+
+## Right-click: flip aim (blaster zoom) with the sword's block. Re-click undoes it.
+func toggle_alt() -> void:
+	_alt_on = not _alt_on
 
 
 func set_enabled(on: bool) -> void:
 	enabled = on
 	if not on:
 		_fire_held = false
-		_alt_held = false
+		_alt_on = false
 		combo.set_block(false)
 		aiming = false
 		if rig_node != null:
@@ -167,14 +171,14 @@ func _physics_process(dt: float) -> void:
 		var r: int = g.start_firing(dt, trigger)
 		if r == Weapon.Result.SHOT:
 			_shoot(id)
-	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_held
+	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_on
 	if rig_node != null:
 		rig_node.set_zoom(0.72 if aiming else 1.0)
 
 	# Sword.
 	var sdt := dt * (0.08 if _hitstop > 0.0 else 1.0)
 	_hitstop = maxf(0.0, _hitstop - dt)
-	combo.set_block(enabled and cur == "energy_blade" and holder.is_ready() and _alt_held)
+	combo.set_block(enabled and cur == "energy_blade" and holder.is_ready() and _alt_on)
 	for ev in combo.update(sdt):
 		if str(ev).begins_with("swing:"):
 			_on_swing_started()

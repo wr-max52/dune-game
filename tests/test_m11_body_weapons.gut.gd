@@ -73,6 +73,12 @@ func test_range_shots_are_sanctioned() -> void:
 	assert_eq(t.get("NO_STREET_FLAG_ON_RANGE"), "true")
 
 
+func test_right_click_toggles_aim_on_off() -> void:
+	assert_eq(t.get("AIM_ON"), "true", "right-click toggles aim (zoom) on")
+	assert_eq(t.get("AIM_ZOOMED"), "true", "zoomed in while aim is on")
+	assert_eq(t.get("AIM_OFF"), "true", "re-click toggles aim off")
+
+
 func test_sword_chains_three_and_hits() -> void:
 	assert_eq(int(t.get("COMBO_SWINGS", 0)), 3)
 	assert_eq(int(t.get("COMBO_STAGES", 0)), 3)
