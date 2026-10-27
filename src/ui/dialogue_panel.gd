@@ -59,7 +59,7 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 10)
 	_root.add_child(v)
 	_notice = Label.new()
-	_notice.add_theme_font_size_override("font_size", 18)
+	_notice.add_theme_font_size_override("font_size", RetroUI.size("dialogue_hint", 20))
 	_notice.add_theme_color_override("font_color", Color("#9fc7e8"))
 	_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_notice.visible = false
@@ -67,16 +67,16 @@ func _ready() -> void:
 	var head := HBoxContainer.new()
 	v.add_child(head)
 	_name = Label.new()
-	_name.add_theme_font_size_override("font_size", 30)
+	_name.add_theme_font_size_override("font_size", RetroUI.size("dialogue_name", 32))
 	_name.add_theme_color_override("font_color", Color("#e0a050"))
 	head.add_child(_name)
 	_mood = Label.new()
-	_mood.add_theme_font_size_override("font_size", 20)
+	_mood.add_theme_font_size_override("font_size", RetroUI.size("dialogue_small", 22))
 	_mood.add_theme_color_override("font_color", Color(0.85, 0.8, 0.72))
 	_mood.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_mood)
 	_money = Label.new()
-	_money.add_theme_font_size_override("font_size", 20)
+	_money.add_theme_font_size_override("font_size", RetroUI.size("dialogue_small", 22))
 	_money.add_theme_color_override("font_color", Color(0.85, 0.8, 0.72))
 	head.add_child(_money)
 	_history = RichTextLabel.new()
@@ -85,26 +85,26 @@ func _ready() -> void:
 	_history.scroll_following = true
 	_history.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_history.custom_minimum_size = Vector2(0, 110)
-	_history.add_theme_font_size_override("normal_font_size", 23)
+	_history.add_theme_font_size_override("normal_font_size", RetroUI.size("dialogue_history", 26))
 	_history.add_theme_color_override("default_color", Color(0.86, 0.82, 0.76))
 	v.add_child(_history)
 	_line = RichTextLabel.new()
 	_line.bbcode_enabled = true
 	_line.fit_content = true
 	_line.custom_minimum_size = Vector2(0, 74)
-	_line.add_theme_font_size_override("normal_font_size", 32)
-	_line.add_theme_font_size_override("italics_font_size", 32)
+	_line.add_theme_font_size_override("normal_font_size", RetroUI.size("dialogue_line", 34))
+	_line.add_theme_font_size_override("italics_font_size", RetroUI.size("dialogue_line", 34))
 	_line.add_theme_color_override("default_color", Color(1.0, 0.97, 0.9))
 	v.add_child(_line)
 	_field = LineEdit.new()
 	_field.placeholder_text = "Say something, then Enter.  Esc leaves."
-	_field.add_theme_font_size_override("font_size", 26)
+	_field.add_theme_font_size_override("font_size", RetroUI.size("dialogue_field", 28))
 	_field.custom_minimum_size = Vector2(0, 44)
 	_field.max_length = 300
 	_field.text_submitted.connect(_on_submit)
 	v.add_child(_field)
 	_hint = Label.new()
-	_hint.add_theme_font_size_override("font_size", 17)
+	_hint.add_theme_font_size_override("font_size", RetroUI.size("dialogue_hint", 20))
 	_hint.add_theme_color_override("font_color", Color(0.65, 0.62, 0.58))
 	_hint.text = "F3 debug   F10 model settings   Shift+F10 cycle local / cloud / auto"
 	v.add_child(_hint)
@@ -169,25 +169,25 @@ func _build_job_card() -> void:
 	var v := VBoxContainer.new()
 	_job.add_child(v)
 	_job_title = Label.new()
-	_job_title.add_theme_font_size_override("font_size", 28)
+	_job_title.add_theme_font_size_override("font_size", RetroUI.size("job_title", 32))
 	_job_title.add_theme_color_override("font_color", Color("#e0a050"))
 	v.add_child(_job_title)
 	_job_text = Label.new()
 	_job_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_job_text.custom_minimum_size = Vector2(550, 0)
-	_job_text.add_theme_font_size_override("font_size", 22)
+	_job_text.add_theme_font_size_override("font_size", RetroUI.size("job_text", 26))
 	v.add_child(_job_text)
 	var h := HBoxContainer.new()
 	h.alignment = BoxContainer.ALIGNMENT_END
 	v.add_child(h)
 	_no = Button.new()
 	_no.text = "Not now"
-	_no.add_theme_font_size_override("font_size", 22)
+	_no.add_theme_font_size_override("font_size", RetroUI.size("job_button", 26))
 	_no.pressed.connect(func(): _answer(false))
 	h.add_child(_no)
 	_yes = Button.new()
 	_yes.text = "Take the job"
-	_yes.add_theme_font_size_override("font_size", 22)
+	_yes.add_theme_font_size_override("font_size", RetroUI.size("job_button", 26))
 	_yes.pressed.connect(func(): _answer(true))
 	h.add_child(_yes)
 	_job.visible = false

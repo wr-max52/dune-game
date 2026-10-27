@@ -139,6 +139,8 @@ func _ready() -> void:
 			platform.dress(look, decor.mats)
 	else:
 		_add_light_and_sky()
+	if not lookdev_mode:
+		RetroUI.apply_scale(get_tree())        # issue #71: text size (F11 > HUD), greybox too
 	if use_look and not lookdev_mode:
 		add_child(RetroSkin.new())   # issue #52: the 80s HUD look, on everything from here on
 	if lookdev_mode:

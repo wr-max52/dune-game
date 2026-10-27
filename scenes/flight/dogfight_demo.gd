@@ -51,6 +51,7 @@ var _engine: AudioStreamPlayer ## issue #16: your own engine
 
 
 func _ready() -> void:
+	RetroUI.apply_scale(get_tree())            # issue #71: the same text size as the town
 	# Launched from a port pad: fly that pad's encounter. Opened on its own: unchanged.
 	if GameFlow.in_flight and GameFlow.encounter_id != "":
 		encounter_id = GameFlow.encounter_id

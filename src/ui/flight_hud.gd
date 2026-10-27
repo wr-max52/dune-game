@@ -32,10 +32,13 @@ func _ready() -> void:
 	readout = Label.new()
 	readout.position = Vector2(18, 54)
 	_style(readout)
+	readout.add_theme_font_size_override("font_size", RetroUI.size("flight_readout", 24))   # issue #71
 	add_child(readout)
 	prompt = _center_label(-90.0)
 	RetroUI.prompt(prompt)
-	toast_label = _center_label(-130.0)
+	toast_label = _center_label(-150.0)
+	toast_label.add_theme_font_size_override("font_size", RetroUI.size("flight_toast", 26))
+	toast_label.size.y = 40
 	toast_label.visible = false
 	gauge = Control.new()
 	gauge.name = "Gauge"
@@ -128,5 +131,6 @@ func _draw_gauge() -> void:
 	gauge.draw_rect(Rect2(Vector2(x, top + h - fill), Vector2(10, fill)), SPACE)
 	gauge.draw_rect(Rect2(Vector2(x, top), Vector2(10, h)), DIM, false, 1.0)
 	var font := ThemeDB.fallback_font
-	gauge.draw_string(font, Vector2(x - 120, top - 8), space_label, HORIZONTAL_ALIGNMENT_RIGHT, 130, 12, SPACE)
-	gauge.draw_string(font, Vector2(x - 120, top + 8), "%d m" % int(space_altitude), HORIZONTAL_ALIGNMENT_RIGHT, 110, 11, DIM)
+	var fs := RetroUI.size("flight_gauge", 17)
+	gauge.draw_string(font, Vector2(x - 200, top - 10), space_label, HORIZONTAL_ALIGNMENT_RIGHT, 210, fs, SPACE)
+	gauge.draw_string(font, Vector2(x - 200, top + fs + 4), "%d m" % int(space_altitude), HORIZONTAL_ALIGNMENT_RIGHT, 190, fs - 2, DIM)

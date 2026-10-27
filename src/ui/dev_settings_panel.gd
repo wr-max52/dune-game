@@ -529,6 +529,27 @@ func _hud_tab() -> Control:
 	pick.color_changed.connect(_set_hud_color)
 	_row(v, "Your own", pick)
 	_refreshers.append(func(): pick.color = RetroUI.accent)
+	# Issue #71: one number sizes every UI element; saved per machine.
+	_section(v, "TEXT SIZE")
+	RetroUI.load_settings()
+	var ui := RetroUI.ui()
+	var size := _slider(int(round(float(ui.get("min", 0.75)) * 100.0)), int(round(float(ui.get("max", 2.0)) * 100.0)))
+	size.step = float(ui.get("step", 0.05)) * 100.0
+	size.value = roundf(RetroUI.text_scale * 100.0)
+	var shown := Label.new()
+	shown.text = "%d%%" % int(size.value)
+	size.drag_ended.connect(func(_changed): RetroUI.set_text_scale(get_tree(), size.value / 100.0))
+	size.value_changed.connect(func(x):
+		shown.text = "%d%%" % int(x)
+		if not size.has_focus():
+			RetroUI.set_text_scale(get_tree(), x / 100.0))
+	var row := _row(v, "Size", size)
+	row.add_child(shown)
+	var reset := Button.new()
+	reset.text = "Default"
+	reset.pressed.connect(func(): size.value = roundf(float(ui.get("text_scale", 1.25)) * 100.0); RetroUI.set_text_scale(get_tree(), size.value / 100.0))
+	row.add_child(reset)
+	_refreshers.append(func(): size.set_value_no_signal(roundf(RetroUI.text_scale * 100.0)); shown.text = "%d%%" % int(size.value))
 	_section(v, "KEYS")
 	for k in KEYS:
 		var l := Label.new()

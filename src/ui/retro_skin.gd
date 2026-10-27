@@ -29,6 +29,7 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	RetroUI.apply_scale(get_tree())            # issue #71: one size for every UI element
 	_walk(get_tree().root)
 
 
