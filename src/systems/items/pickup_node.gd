@@ -25,8 +25,11 @@ func setup(kit: ItemKit, entry: Dictionary, item_cfg: Dictionary, at: Vector3) -
 	_visual = kit.build(str(item_cfg.get("look", item_cfg.get("id", ""))))
 	add_child(_visual)
 	position = at
+	if bool(entry.get("marked", false)):
+		_beacon(Color(str(style.get("beacon", "#ff8a2a"))))
 	if bool(entry.get("hidden", false)):
-		# A smuggler's drop: sits still in the sand, no glow. You have to look.
+		# A smuggler's drop: sits still, no glow. Out in the sand you have to look;
+		# in town ("marked", issue #64) a beam of light over it shows where.
 		_spin = 0.0
 		_bob = 0.0
 		_lift = 0.0
@@ -50,6 +53,45 @@ func setup(kit: ItemKit, entry: Dictionary, item_cfg: Dictionary, at: Vector3) -
 	ring.position = Vector3(0, 0.03, 0)
 	add_child(ring)
 	_place()
+
+
+## Issue #64: a tall beam of light over the drop and a glow ring under it, so a
+## drop in the streets or up on a roof can be found from down the street.
+func _beacon(c: Color) -> void:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_color = Color(c.r, c.g, c.b, 0.45)
+	var beam := MeshInstance3D.new()
+	beam.name = "Beacon"
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.06
+	cyl.bottom_radius = 0.22
+	cyl.height = 18.0
+	cyl.radial_segments = 10
+	beam.mesh = cyl
+	beam.material_override = m
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	beam.position = Vector3(0, 9.0, 0)
+	add_child(beam)
+	var ring := MeshInstance3D.new()
+	ring.name = "BeaconRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.55
+	torus.outer_radius = 0.7
+	ring.mesh = torus
+	var rm := StandardMaterial3D.new()
+	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rm.albedo_color = c
+	rm.emission_enabled = true
+	rm.emission = c
+	rm.emission_energy_multiplier = 3.0
+	ring.material_override = rm
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ring.position = Vector3(0, 0.04, 0)
+	add_child(ring)
 
 
 func in_reach(p: Vector3) -> bool:

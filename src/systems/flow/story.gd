@@ -3,7 +3,9 @@ extends RefCounted
 ## The main story line (issue #64). Pure and static, like WorldState, and its
 ## state lives there (WorldState.story, saved with the world):
 ##
-##   T-89 says talk to Oda -> she sends you to the range -> two smuggling runs
+##   T-89 says talk to Oda -> she sends you to practice at the range -> she pays
+##   for it and tells you about the sparring droid (optional: go to the pit and
+##   come back, on your honour) -> two smuggling runs
 ##   (the first with her old jetpack if she is amused or warm) -> Skrugs and a
 ##   bounty at a Remnant outpost -> the Remnant fleet in orbit (the port's ships
 ##   unlock; winning pays 5000) -> free play: smuggling runs and bounty
@@ -107,6 +109,9 @@ static func beat(teller: String) -> Dictionary:
 		return {}
 	var first := not bool(WorldState.story.get("told", false))
 	WorldState.story.told = true
+	if first and int(c.get("pays", 0)) > 0:
+		WorldState.credits += int(c.pays)
+		WorldState.log_event("Oda paid %d cr for the practice." % int(c.pays))
 	if chapter() == "fleet":
 		WorldState.set_flag("ships_unlocked")
 	if chapter() == "free":

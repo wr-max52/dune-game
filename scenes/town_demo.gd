@@ -402,14 +402,21 @@ func _build_npcs() -> void:
 		outposts.setup(self, pilot.ground)
 		add_child(outposts)
 		outposts.build()
-	if npc_brains and not npcs.is_empty():
-		garrison = Garrison.new()
-		garrison.name = "Garrison"
-		add_child(garrison)
-		garrison.setup(self, npcs)
-		garrison.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
-		garrison.respawn_rule = respawn_rule
-		garrison.spawner = respawn
+	if npc_brains:
+		# The town's garrison, and (issue #64) one per desert outpost: each has its
+		# own alarm, so a fight out there never puts the town on alert. The town's
+		# handles the player being knocked out; with no town garrison, the first
+		# outpost's does.
+		var town_troops: Array = npcs if outposts == null else npcs.filter(func(n): return not n.has_meta("outpost"))
+		if not town_troops.is_empty():
+			garrison = _make_garrison("Garrison", town_troops, true)
+		if outposts != null:
+			for o in outposts.outposts:
+				var mine: Array = outposts.guards.filter(func(g): return str(g.get_meta("outpost", "")) == str(o.id))
+				if mine.is_empty():
+					continue
+				var first := garrison == null and outposts.garrisons.is_empty()
+				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin)
 	if npc_brains and not locals.is_empty():
 		townsfolk = Townsfolk.new()
 		townsfolk.name = "Townsfolk"
@@ -418,6 +425,28 @@ func _build_npcs() -> void:
 		if gear != null:
 			gear.vendor_open = townsfolk.vendor_open
 			gear.closed_line = townsfolk.closed_line
+
+
+func _make_garrison(node_name: String, members: Array, handles_player: bool, klaxon_at := Vector3.INF) -> Garrison:
+	var g := Garrison.new()
+	g.name = node_name
+	g.handles_player = handles_player
+	g.klaxon_at = klaxon_at
+	add_child(g)
+	g.setup(self, members)
+	g.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+	g.respawn_rule = respawn_rule
+	g.spawner = respawn
+	return g
+
+
+## The garrison a Remnant body answers to: its outpost's, else the town's.
+func garrison_for(n: Node) -> Garrison:
+	if n != null and n.has_meta("outpost") and outposts != null:
+		var g = outposts.garrisons.get(str(n.get_meta("outpost")), null)
+		if g != null:
+			return g
+	return garrison
 
 
 ## One NpcBody from a soldier profile, standing at `here` facing `yaw`, its senses

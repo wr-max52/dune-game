@@ -1,6 +1,6 @@
 {
   "id": "main",
-  "note": "Issue #64: the main story line. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
+  "note": "Issue #64: the main story line. 'pays': credits the teller hands over with the intro. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
   "chapters": [
     {
       "id": "meet_oda",
@@ -12,9 +12,17 @@
     {
       "id": "range",
       "teller": "cantina_owner",
-      "done_on": "range_cleared",
-      "intro": "New face, and you want work. First show me you can hit something. There's a practice range down in the landing pit: knock all five targets flat, then come back.",
-      "remind": "The range is in the pit. All five targets down, then we talk."
+      "done_on": "range_visited",
+      "intro": "New face, and you want work. First, get some practice in. There's a range down in the landing pit: shoot a few targets, then come back and see me.",
+      "remind": "The range is in the pit. Go and shoot something that isn't a customer, then come back."
+    },
+    {
+      "id": "remote",
+      "teller": "cantina_owner",
+      "done_on": "range_visited",
+      "pays": 40,
+      "intro": "Practice is practice: here's forty for your trouble. One more thing down in the pit, if you're up to it. There's a sparring droid by the range that takes shots at you. Block five in a row with a blade and it'll follow you home. Go on, then come back for real work.",
+      "remind": "The sparring droid's in the pit. Five blocks in a row and it's yours. Or don't; just come back when you've had a look."
     },
     {
       "id": "smuggle_1",

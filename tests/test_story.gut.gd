@@ -76,6 +76,21 @@ func test_the_whole_story_in_order() -> void:
 	assert_true(str(oda.say).to_lower().contains("range"), "she sends you to the range")
 	assert_eq(str(oda.job), "")
 	WorldState.on_range_cleared()
+	assert_eq(Story.chapter(), "range", "clearing the targets is not required: it is only practice")
+	WorldState.on_range_visited()
+	assert_eq(Story.chapter(), "remote", "going down to the range is")
+
+	var c_practice := WorldState.credits
+	oda = Story.beat("cantina_owner")
+	assert_eq(WorldState.credits, c_practice + 40, "she pays for the practice")
+	assert_true(str(oda.say).contains("five"), "and tells you about the sparring droid: block five")
+	Story.beat("cantina_owner")
+	assert_eq(WorldState.credits, c_practice + 40, "once")
+	WorldState.on_range_visited()
+	assert_eq(Story.chapter(), "smuggle_1", "back from the pit: on your honour")
+
+	# Contraband sold before she gave you the run does not count as the run.
+	WorldState.on_contraband_sold()
 	assert_eq(Story.chapter(), "smuggle_1")
 
 	oda = Story.beat("cantina_owner")
@@ -220,7 +235,14 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 	assert_eq(o.outposts.size(), 3)
 	assert_eq(o.guards.size(), 6, "two troopers each")
 	for g in o.guards:
-		assert_true(t.garrison.members.has(g), "they answer to the garrison")
+		var og: Garrison = o.garrisons.get(str(g.get_meta("outpost")))
+		assert_not_null(og, "each outpost has its own garrison")
+		assert_true(og.members.has(g), "they answer to their outpost's garrison")
+		assert_false(t.garrison.members.has(g), "not the town's: a fight out there is not the town's alarm")
+	assert_eq(o.garrisons.size(), 3)
+	assert_true(t.garrison.handles_player, "the town's handles the player being knocked out")
+	for og in o.garrisons.values():
+		assert_false(og.handles_player)
 	var outpost_droids: Array = t.droids.remnant.filter(func(u): return u.spec.has("outpost")) if t.droids != null else []
 	if t.droids != null:
 		assert_eq(outpost_droids.size(), 3, "an assassin droid each")
@@ -232,13 +254,14 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 	assert_not_null(o.target, "the contract puts the officer at the outpost")
 	var at: Dictionary = o.outpost(str(WorldState.bounty.outpost))
 	assert_lt(o.target.global_position.distance_to(at.origin), 30.0, "at the outpost it names")
-	assert_true(t.garrison.members.has(o.target))
+	var tg: Garrison = o.garrisons[str(WorldState.bounty.outpost)]
+	assert_true(tg.members.has(o.target), "the target joins its outpost's garrison")
 	o.target.process_mode = Node.PROCESS_MODE_INHERIT
 	o.target.apply_damage(9999.0)
 	await wait_physics_frames(2)
 	assert_true(WorldState.bounty_collectable(), "killing them makes the bounty collectable")
 	assert_eq(o.bounty_kills, 1)
-	assert_true(t.garrison.respawns.filter(func(r): return r.has("outpost") and str(r.post).ends_with("target")).is_empty(),
+	assert_true(tg.respawns.filter(func(r): return r.has("outpost") and str(r.post).ends_with("target")).is_empty(),
 		"the target never comes back")
 
 
@@ -254,6 +277,7 @@ func test_town_troopers_come_back_behind_the_barracks() -> void:
 	var r: Dictionary = t.garrison.respawns[0]
 	assert_almost_eq(float(r.t) - t.garrison._clock, 60.0, 1.0, "a minute later")
 	assert_eq(r.at, t.town.marker_pos("remnant_respawn"), "behind the barracks")
+	t.garrison.alarm.state = TownAlarm.State.CALM      # the fight is over
 	t.garrison._clock = float(r.t) + 0.1
 	await wait_physics_frames(2)
 	assert_eq(t.garrison.respawned, 1)
@@ -272,11 +296,12 @@ func test_after_the_fleet_the_town_is_free_and_outposts_shoot_on_sight() -> void
 	WorldState.on_flight_returned({ "outcome": "complete", "payout": 0 })
 	await wait_physics_frames(3)
 	assert_eq(t.npcs.filter(func(n): return is_instance_valid(n) and not n.has_meta("outpost")).size(), 0, "the garrison left town")
-	assert_eq(t.garrison.members.size(), 6, "the outposts keep theirs")
+	assert_null(t.garrison.members.filter(func(n): return is_instance_valid(n) and not n.dead).front() if not t.garrison.members.is_empty() else null, "the town's garrison is empty")
+	assert_eq(t.outposts.garrisons.size(), 3, "the outposts keep theirs")
 	assert_false(WorldState.has_flag("gate_checkpoint_up"))
 	if t.droids != null:
 		assert_true(t.droids.remnant.all(func(u): return u.spec.has("outpost")), "the town's droids went too")
-	assert_true(t.garrison.respawn_rule.call(t.outposts.guards[0]).has("delay"), "outpost troopers still come back")
+	assert_true(t.respawn_rule(t.outposts.guards[0]).has("delay"), "outpost troopers still come back")
 	# A dead outpost trooper: a few minutes, not a minute.
 	var r: Dictionary = t.respawn_rule(t.outposts.guards[0])
 	assert_eq(float(r.delay), float(Story.remnant_cfg().outpost_respawn_s))
@@ -288,7 +313,9 @@ func test_a_new_town_after_the_fleet_has_no_garrison() -> void:
 	var t = _town()
 	await wait_physics_frames(2)
 	assert_eq(t.npcs.filter(func(n): return not n.has_meta("outpost")).size(), 0)
-	assert_eq(t.garrison.members.size(), 6)
+	assert_null(t.garrison, "no town garrison at all")
+	assert_eq(t.outposts.garrisons.size(), 3)
+	assert_true(t.outposts.garrisons.values()[0].handles_player, "an outpost's handles the player being knocked out")
 
 
 func test_ships_locked_until_oda_says() -> void:
@@ -326,3 +353,31 @@ func test_reset_story_starts_over() -> void:
 	assert_false(Story.remnant_hostile())
 	assert_eq(WorldState.names, names, "names are kept")
 	assert_false(ShipSalesman.greeted, "T-89 says hello again")
+
+
+func test_an_outpost_fight_is_not_the_towns_alarm() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var og: Garrison = t.outposts.garrisons.values()[0]
+	og._raise("attacked")
+	await wait_physics_frames(2)
+	assert_true(og.alarm.active(), "the outpost is fighting")
+	assert_false(t.garrison.alarm.active(), "the town is not")
+
+
+func test_respawns_wait_for_the_alarm_and_do_not_remember_you() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var g = t.npc("trooper_yard_a")
+	g.apply_damage(9999.0)
+	await wait_physics_frames(2)
+	t.garrison._raise("attacked")
+	t.garrison._clock = float(t.garrison.respawns[0].t) + 0.1
+	await wait_physics_frames(2)
+	assert_eq(t.garrison.respawned, 0, "nobody comes back in the middle of a fight")
+	t.garrison.alarm.state = TownAlarm.State.CALM
+	await wait_physics_frames(2)
+	assert_eq(t.garrison.respawned, 1)
+	assert_true(t.garrison.alarm.remembers(), "the garrison still remembers the fight")
+	var back: NpcBody = t.garrison.members[t.garrison.members.size() - 1]
+	assert_true(back.has_meta("fresh"), "but the new trooper never saw your face")

@@ -63,6 +63,11 @@ var respawn_rule: Callable
 var spawner: Callable
 var respawns: Array = []          ## [{ t, ...rule }] waiting, soonest first
 var respawned := 0
+## Issue #64: each desert outpost runs its own garrison (its own alarm), so a
+## fight out there does not put the town on alert. Only one garrison handles the
+## player being knocked out (and draws the health bar): handles_player.
+var handles_player := true
+var klaxon_at := Vector3.INF      ## INF = the town's klaxon marker
 var knockout_s := 1.6             ## black screen before you wake in the pit
 
 ## Numbers the traces read.
@@ -76,6 +81,7 @@ var klaxon_plays := 0
 var confiscated: Array = []       ## item ids taken by searches
 
 var _rng := RandomNumberGenerator.new()
+var _had_gate := false
 var _attacked := false
 var _lock_left := 0.0
 var _ko_left := 0.0
@@ -100,6 +106,7 @@ func setup(town_demo, all: Array) -> void:
 	content = CoreContent.new()
 	content.load_from()
 	guards = members.filter(func(g): return str(g.profile.get("role", "gate")) == "gate")
+	_had_gate = not guards.is_empty()
 	profile = guards[0].profile if guards.size() > 0 else (members[0].profile if members.size() > 0 else {})
 	checkpoint = Checkpoint.new(profile.get("checkpoint", {}))
 	var gcfg: Dictionary = town.data.get("garrison", {}) if town.data is Dictionary else {}
@@ -115,7 +122,7 @@ func setup(town_demo, all: Array) -> void:
 	add_child(hud)
 	hud.chosen.connect(_on_chosen)
 	_build_klaxon(gcfg)
-	if player != null and player.has_signal("downed"):
+	if handles_player and player != null and player.has_signal("downed"):
 		player.downed.connect(_on_player_downed)
 		player.hurt.connect(func(_a): _hp_hud(true))
 
@@ -155,12 +162,17 @@ func remove_member(g: NpcBody) -> void:
 	_warn_left.erase(g)
 
 
+## A trooper comes back as a new face: not while the alarm is up (they wait for
+## it to end), and the garrison's memory of the player does not pass to them.
 func _tick_respawns() -> void:
+	if alarm != null and alarm.active():
+		return
 	while not respawns.is_empty() and _clock >= float(respawns[0].t):
 		var r: Dictionary = respawns.pop_front()
 		var g = spawner.call(r) if spawner.is_valid() else null
 		if g != null:
 			respawned += 1
+			g.set_meta("fresh", true)
 			add_member(g)
 
 
@@ -178,6 +190,8 @@ func _build_klaxon(gcfg: Dictionary) -> void:
 	add_child(klaxon)
 	var mk := str(gcfg.get("klaxon_marker", ""))
 	klaxon.position = (town.marker_pos(mk) if not town.get_marker(mk).is_empty() else gate_pos) + Vector3(0, 2.0, 0)
+	if klaxon_at != Vector3.INF:
+		klaxon.position = klaxon_at + Vector3(0, 4.0, 0)
 
 
 func _physics_process(dt: float) -> void:
@@ -258,7 +272,7 @@ func _watch_for_trouble(dt: float, alive: Array, night: bool) -> void:
 		if not g.perception.noticed:
 			_warn_left.erase(g)
 			continue
-		if alarm.remembers():
+		if alarm.remembers() and not g.has_meta("fresh"):
 			_say(g, "contact")
 			_raise("remembered")
 			return
@@ -532,7 +546,8 @@ func _on_guard_died(g: NpcBody) -> void:
 		respawns.sort_custom(func(a, b): return float(a.t) < float(b.t))
 	var left := _alive()
 	var delta := int(g.profile.get("checkpoint", profile.get("checkpoint", {})).get("standing", {}).get("guard_killed", -15))
-	WorldState.on_guard_killed(delta, left.filter(func(x): return guards.has(x)).is_empty())
+	# An outpost's garrison has no gate: its dead never take the checkpoint down.
+	WorldState.on_guard_killed(delta, handles_gate() and left.filter(func(x): return guards.has(x)).is_empty())
 	if not left.is_empty():
 		_say(_nearest(left, g.global_position), "man_down")
 		_attacked = true      # a trooper dropping is a fight, whoever started it
@@ -615,8 +630,13 @@ func _is_player(shooter: Node) -> bool:
 	return v != null and is_instance_valid(v) and shooter == v.hull_body()
 
 
+## This garrison holds the town's front gate (it had gate guards to begin with).
+func handles_gate() -> bool:
+	return _had_gate
+
+
 func _hp_hud(hurt: bool) -> void:
-	if player == null or player.get("health") == null:
+	if not handles_player or player == null or player.get("health") == null:
 		return
 	hud.set_hp(float(player.health.hp) / maxf(1.0, float(player.max_health)), hurt)
 

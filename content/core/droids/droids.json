@@ -240,14 +240,14 @@
     "note": "Block or deflect this many of the range remote's bolts in a row (a bolt that hits you resets the count) and it follows you home. Oda drops the hint as a rumor (rumors/port_town.json, r_remote_tame)."
   },
   "wrecks": {
-    "check_seconds": 300.0,
-    "chance": 0.4,
+    "check_seconds": 120.0,
+    "chance": 0.6,
     "max_out": 3,
     "min_radius": 160.0,
     "max_radius": 520.0,
     "min_separation": 180.0,
     "reach": 3.0,
-    "note": "Broken droids stranded in the desert. Every check_seconds of play, with this chance, one more turns up (one of each kind at most, never near another). Fixing one takes fix_seconds; it resets and follows you. Radii are metres from the town's centre."
+    "note": "Broken droids stranded in the desert. Every check_seconds of play, with this chance, one more turns up (issue #64: was every 300 s at 0.4, about one every 12 minutes; now about one every 3 to 4) (one of each kind at most, never near another). Fixing one takes fix_seconds; it resets and follows you. Radii are metres from the town's centre."
   },
   "remnant": {
     "faction": "imperial_remnant",
