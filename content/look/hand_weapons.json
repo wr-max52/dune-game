@@ -32,6 +32,7 @@
   },
   "bolt": { "length": 0.9, "radius": 0.035, "energy": 5.0 },
   "recoil": { "back": 0.05, "up_deg": 7.0, "recover_s": 0.12 },
+  "blade_volume": { "note": "issue #16: the blade was too loud; dB for its one-shots and its hum", "db": -13.0, "hum_db": -24.0 },
   "sounds": {
     "swap": "res://assets/third_party/kenney_starter_kit_fps/sounds/weapon_change.ogg",
     "step": "res://assets/third_party/kenney_starter_kit_fps/sounds/walking.ogg",

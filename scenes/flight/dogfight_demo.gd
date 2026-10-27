@@ -47,6 +47,7 @@ var reentry_margin := 600.0 ## M14: metres above the planet's surface where a di
 var planet_center := Vector3.ZERO
 var planet_radius := 0.0
 var planet_name := ""       ## issue #15: the world below, named (the encounter's "world")
+var _engine: AudioStreamPlayer ## issue #16: your own engine
 
 
 func _ready() -> void:
@@ -62,6 +63,9 @@ func _ready() -> void:
 	df.name_scope = "pilot:%s/%d" % [encounter_id, WorldState.bump("sorties_" + encounter_id)]
 	df.start()
 	df.set_player_autopilot(autopilot)
+	Sound.start_music()
+	Sound.set_space(true)
+	_engine = Sound.loop("ship_engine", self, false)
 	kit = ShipKit.new()
 	view = DogfightView.new(kit)
 	add_child(view)
@@ -142,9 +146,28 @@ func _process(frame_dt: float) -> void:
 	var me: Dictionary = df.get_ship(df.player_id)
 	if not me.is_empty():
 		camera.global_transform = chase.update(dt, me.flight.transform())
+	_engine_step(me)
 	_update_hud(dt)
 	_tick_return(dt)
 	_check_reentry()
+
+
+func _exit_tree() -> void:
+	Sound.set_space(false)
+
+
+## Issue #16: your engine drones while your ship lives; pitch follows the throttle.
+func _engine_step(me: Dictionary) -> void:
+	if _engine == null:
+		return
+	var on := not me.is_empty() and bool(me.alive)
+	if on != _engine.playing:
+		if on:
+			_engine.play()
+		else:
+			_engine.stop()
+	if on:
+		_engine.pitch_scale = 0.75 + float(me.flight.throttle) * 0.5 + (0.15 if me.flight.boosting else 0.0)
 
 
 ## M14: flying down at the planet takes you back to the port's sky, whenever you

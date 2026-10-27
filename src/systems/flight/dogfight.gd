@@ -278,12 +278,13 @@ func step(dt: float) -> Array:
 			if sp.kind == "missile":
 				stats.missiles += 1
 				s.lock.reset()
-				events.append({ "type": "missile", "id": s.id, "uid": uid, "target": sp.target_id })
+				events.append({ "type": "missile", "id": s.id, "uid": uid, "target": sp.target_id, "at": flight.position })
 				var mark = get_ship(int(sp.target_id))
 				if not mark.is_empty() and mark.brain != null:
 					mark.brain.notify_missile()
 			else:
 				stats.shots += 1
+				events.append({ "type": "shot", "id": s.id, "at": flight.position })
 
 	_resolve_hits(projectiles.step(dt, _targets()))
 	_check_outcome()

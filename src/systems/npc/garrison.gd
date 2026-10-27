@@ -129,6 +129,7 @@ func _build_klaxon(gcfg: Dictionary) -> void:
 	klaxon.volume_db = float(c.get("volume_db", -2.0))
 	klaxon.unit_size = float(c.get("unit_size", 40.0))
 	klaxon.max_distance = float(c.get("max_distance", 400.0))
+	klaxon.bus = Sound.SFX_BUS
 	add_child(klaxon)
 	var mk := str(gcfg.get("klaxon_marker", ""))
 	klaxon.position = (town.marker_pos(mk) if not town.get_marker(mk).is_empty() else gate_pos) + Vector3(0, 2.0, 0)
