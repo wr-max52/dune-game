@@ -358,6 +358,15 @@ func _lay_down(u: DroidUnit) -> void:
 	var model := u.look.get_node("Model") as Node3D
 	match u.kind:
 		"assassin":
+			# A rigged assassin plays its fall and stays down; the old look tips over.
+			if DroidKit.play_anim(u.look, "die"):
+				if u.broken:
+					DroidKit.finish_anim(u.look)
+				u.shape.rotation.x = PI * 0.5
+				u.shape.position = Vector3(0, 0.15, 1.1)
+				if u.hum != null:
+					u.hum.stop()
+				return
 			model.rotation.x = PI * 0.5
 			model.position.y = 0.12
 			u.shape.rotation.x = PI * 0.5
@@ -431,9 +440,10 @@ func _despawn_companions() -> void:
 		_free_companion(uid)
 
 
-## Each droid keeps to its slot beside / behind the player (from its kind's
-## "follow"), catches up faster when far behind, and jumps to the slot if it was
-## left a long way back (a jetpack hop, a speeder ride).
+## Each droid holds its ground until the player gets `leash` metres away (its
+## kind's "follow"), then walks to its slot beside / behind the player and stops
+## there (within `settle` m). It catches up faster when far behind, and jumps to
+## the slot if it was left a long way back (a jetpack hop, a speeder ride).
 func _follow(dt: float) -> void:
 	var v := Vector3(player.velocity.x, 0, player.velocity.z)
 	if v.length() > 0.6:
@@ -448,18 +458,23 @@ func _follow(dt: float) -> void:
 		i += 1
 		var to := Vector3(slot.x - u.global_position.x, 0, slot.z - u.global_position.z)
 		var dist := to.length()
+		if not u.following and _flat_dist(u.global_position, player.global_position) > float(f.get("leash", 5.0)):
+			u.following = true
+		elif u.following and dist <= float(f.get("settle", 0.35)):
+			u.following = false
 		var pos: Vector3 = u.global_position
+		var speed := 0.0
 		if dist > 40.0:
 			pos = slot
-		elif dist > 0.25:
-			var speed := float(f.get("speed", 7.0)) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
+		elif u.following:
+			speed = float(f.get("speed", 7.0)) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
 			pos += to / dist * minf(speed * dt, dist)
 			_face(u, to)
 		elif u.kind != "assassin" or u.target == null:
 			_face(u, player.global_position - u.global_position)
 		pos.y = _ground_y(pos)
 		u.global_position = pos
-		u.walk(dt, dist > 0.25)
+		u.walk(dt, u.following, speed)
 
 
 ## Your assassin droid: deadly aim at whoever the town is fighting you with.
@@ -568,7 +583,7 @@ func _remnant_step(dt: float) -> void:
 		pos.y = _ground_y(pos)
 		u.global_position = pos
 		_face(u, to)
-		u.walk(dt, true)
+		u.walk(dt, true, float(rc.get("walk_speed", 2.2)))
 
 
 ## A bolt hit a droid. Yours and wrecks shrug it off; the Remnant's take damage
@@ -759,6 +774,7 @@ class DroidUnit extends StaticBody3D:
 	var chirp_cd := 4.0
 	var patrol_i := 0
 	var target: Node3D
+	var following := false          ## closing the gap to its slot (else it holds still)
 	var _t := 0.0
 
 	func center() -> Vector3:
@@ -775,8 +791,9 @@ class DroidUnit extends StaticBody3D:
 			return m.global_position
 		return center() + (-global_basis.z) * 0.35
 
-	## Bob (floating), roll the wheels (cargo), swing the legs (assassin).
-	func walk(dt: float, moving: bool) -> void:
+	## Bob (floating), roll the wheels (cargo), walk or run (assassin: its rigged
+	## clips, timed to `speed` in m/s; without a rig, a sway).
+	func walk(dt: float, moving: bool, speed := 0.0) -> void:
 		_t += dt
 		var model := look.get_node("Model") as Node3D
 		match kind:
@@ -785,7 +802,16 @@ class DroidUnit extends StaticBody3D:
 			"cargo":
 				model.rotation.z = sin(_t * 18.0) * 0.02 if moving else 0.0
 			"assassin":
-				model.rotation.x = sin(_t * 7.0) * 0.03 if moving else 0.0
+				var a: Dictionary = DroidRoster.kind_cfg(kind).get("look", {})
+				var played := false
+				if not moving:
+					played = DroidKit.play_anim(look, "idle")
+				elif speed >= float(a.get("run_from", 3.5)):
+					played = DroidKit.play_anim(look, "run", clampf(speed / float(a.get("run_speed", 5.0)), 0.6, 1.8))
+				else:
+					played = DroidKit.play_anim(look, "walk", clampf(maxf(speed, 1.0) / float(a.get("walk_speed", 1.6)), 0.6, 1.8))
+				if not played:
+					model.rotation.x = sin(_t * 7.0) * 0.03 if moving else 0.0
 
 	func apply_damage_from(amount: float, shooter: Node) -> void:
 		if ctl != null:

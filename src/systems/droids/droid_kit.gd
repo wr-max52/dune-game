@@ -54,6 +54,7 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 			var m := src.duplicate() as BaseMaterial3D
 			m.albedo_color = Color.WHITE.lerp(body, k)
 			mi.set_surface_override_material(s, m)
+	_animations(n, look)
 	var r := float(look.get("eye_radius", 0.04))
 	var i := 0
 	for e in look.get("eyes", []):
@@ -65,7 +66,97 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 		var a: Array = look.muzzle
 		mz.position = Vector3(float(a[0]), float(a[1]), float(a[2]))
 		model.add_child(mz)
+	# A rig carries its eyes on the head bone and the muzzle on the hand, so they
+	# move with the clips (look.eye_bone, look.muzzle_bone).
+	var sk := n.find_child("Skeleton3D", true, false) as Skeleton3D
+	if sk != null:
+		for c in model.get_children():
+			var bone := ""
+			if str(c.name).begins_with("Eye"):
+				bone = str(look.get("eye_bone", ""))
+			elif c.name == "Muzzle":
+				bone = str(look.get("muzzle_bone", ""))
+			if bone != "" and sk.find_bone(bone) >= 0:
+				_pin_to_bone(c as Node3D, model, sk, bone)
 	return true
+
+
+## Move `node` (a child of `model`) under a BoneAttachment3D on `bone`, keeping
+## where it sits in the rest pose.
+static func _pin_to_bone(node: Node3D, model: Node3D, sk: Skeleton3D, bone: String) -> void:
+	var att := sk.get_node_or_null("At_" + bone) as BoneAttachment3D
+	if att == null:
+		att = BoneAttachment3D.new()
+		att.name = "At_" + bone
+		att.bone_name = bone
+		sk.add_child(att)
+	var sk_in_model := Transform3D.IDENTITY
+	var p: Node = sk
+	while p != model and p != null:
+		sk_in_model = (p as Node3D).transform * sk_in_model
+		p = p.get_parent()
+	var bone_in_model := sk_in_model * sk.get_bone_global_rest(sk.find_bone(bone))
+	var at := bone_in_model.affine_inverse() * node.transform
+	model.remove_child(node)
+	att.add_child(node)
+	node.transform = at
+
+
+## A rigged model (the assassin): its clips from look.anims { idle, walk, run, die }
+## loop (all but die), and the AnimationPlayer is kept as the root's "anim" meta
+## for play_anim(). Starts idle.
+static func _animations(model: Node, look: Dictionary) -> void:
+	var names: Dictionary = look.get("anims", {})
+	var ap := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if ap == null or names.is_empty():
+		return
+	var root_bone := str(look.get("root_bone", "Hips"))
+	for key in names:
+		var a := ap.get_animation(str(names[key]))
+		if a == null or key == "die":
+			continue
+		a.loop_mode = Animation.LOOP_LINEAR
+		# In place: the game moves the droid, so the root bone keeps only its bob.
+		for t in a.get_track_count():
+			if a.track_get_type(t) == Animation.TYPE_POSITION_3D \
+					and str(a.track_get_path(t)).ends_with(":" + root_bone) and a.track_get_key_count(t) > 0:
+				var p0: Vector3 = a.track_get_key_value(t, 0)
+				for k in a.track_get_key_count(t):
+					var v: Vector3 = a.track_get_key_value(t, k)
+					a.track_set_key_value(t, k, Vector3(p0.x, v.y, p0.z))
+	model.set_meta("anim", ap)
+	model.set_meta("anims", names)
+	ap.play(str(names.get("idle", "")))
+
+
+## Play a look's clip by role ("idle", "walk", "run", "die") at `speed`. False when
+## the look has no rig (the caller falls back to its old wobble).
+static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) -> bool:
+	var holder: Node = null
+	for n in look.find_children("*", "Node3D", true, false):
+		if n.has_meta("anim"):
+			holder = n
+			break
+	if holder == null:
+		return false
+	var ap: AnimationPlayer = holder.get_meta("anim")
+	var clip := str((holder.get_meta("anims") as Dictionary).get(role, ""))
+	if clip == "" or not ap.has_animation(clip):
+		return false
+	if ap.current_animation != clip:
+		ap.play(clip, blend)
+	ap.speed_scale = speed
+	return true
+
+
+## Jump the current clip to its last frame (a wreck that has lain there for days).
+static func finish_anim(look: Node3D) -> void:
+	for n in look.find_children("*", "Node3D", true, false):
+		if n.has_meta("anim"):
+			var ap: AnimationPlayer = n.get_meta("anim")
+			if ap.current_animation != "":
+				ap.seek(ap.current_animation_length, true)
+			return
 
 
 ## All the glowing eyes under a look.
