@@ -22,8 +22,13 @@ const PRESETS := {
 }
 const DEFAULT := Color("#ffb347")
 const PROMPT_SIZE := 34              ## "[E] Talk to ..." and the like
+const UI_PATH := "res://content/look/ui.json"   ## issue #71: text_scale and the base font sizes
 
 static var accent := DEFAULT
+## Issue #71: the one number every UI element is sized by (the window's UI scale).
+## F11 > HUD sets it; saved per machine with the colour.
+static var text_scale := -1.0
+static var _ui: Dictionary = {}
 static var _loaded := false
 static var _fonts: Dictionary = {}
 
@@ -36,6 +41,10 @@ static func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) == OK:
 		accent = cfg.get_value("hud", "color", DEFAULT)
+		text_scale = float(cfg.get_value("hud", "text_scale", -1.0))
+	if text_scale <= 0.0:
+		text_scale = float(ui().get("text_scale", 1.25))
+	text_scale = clamp_scale(text_scale)
 
 
 static func save_settings() -> void:
@@ -43,7 +52,44 @@ static func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS_PATH)
 	cfg.set_value("hud", "color", accent)
+	cfg.set_value("hud", "text_scale", text_scale)
 	cfg.save(SETTINGS_PATH)
+
+
+# ------------------------------------------------------------------ size (issue #71)
+
+static func ui() -> Dictionary:
+	if _ui.is_empty():
+		var f := FileAccess.open(UI_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f != null else null
+		_ui = d if d is Dictionary else {}
+	return _ui
+
+
+static func clamp_scale(v: float) -> float:
+	return clampf(v, float(ui().get("min", 0.75)), float(ui().get("max", 2.0)))
+
+
+## A base font size from content/look/ui.json ("dialogue_line", "flight_readout").
+## The window's UI scale (text_scale) multiplies it on screen.
+static func size(key: String, fallback: int) -> int:
+	return int(ui().get("sizes", {}).get(key, fallback))
+
+
+## Size every UI element in `tree` by text_scale. Not headless: the CI traces and
+## tests measure the UI at 1.0.
+static func apply_scale(tree: SceneTree) -> void:
+	load_settings()
+	if tree == null or DisplayServer.get_name() == "headless":
+		return
+	tree.root.content_scale_factor = text_scale
+
+
+static func set_text_scale(tree: SceneTree, v: float) -> void:
+	load_settings()
+	text_scale = clamp_scale(v)
+	save_settings()
+	apply_scale(tree)
 
 
 static func font(style: String = "Regular") -> Font:

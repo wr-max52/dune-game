@@ -461,7 +461,7 @@ func _build_hud() -> void:
 	add_child(_hud)
 	_readout = Label.new()
 	_readout.position = Vector2(18, 54)
-	_readout.add_theme_font_size_override("font_size", 18)
+	_readout.add_theme_font_size_override("font_size", RetroUI.size("speeder_readout", 24))   # issue #71
 	_readout.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_readout.add_theme_constant_override("outline_size", 4)
 	_hud.add_child(_readout)

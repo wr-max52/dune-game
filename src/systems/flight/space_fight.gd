@@ -138,8 +138,9 @@ func _build_hud() -> void:
 	hud.draw.connect(_draw_hud)
 	hud_label = Label.new()
 	hud_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	hud_label.position = Vector2(-330, 14)
-	hud_label.size = Vector2(300, 120)
+	hud_label.position = Vector2(-430, 54)
+	hud_label.size = Vector2(400, 170)
+	hud_label.add_theme_font_size_override("font_size", RetroUI.size("space_fight", 22))   # issue #71
 	hud_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hud_label.add_theme_color_override("font_color", Color(0.5, 0.95, 1.0, 0.95))
 	hud_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))

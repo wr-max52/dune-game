@@ -2,6 +2,20 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Bigger, adjustable text (2026-10-27, issue #71)
+
+- **One number sizes every UI element.** `text_scale` (default 1.25, from
+  `content/look/ui.json`) is the window's UI scale. Every panel, label, prompt,
+  box and HUD read-out grows with it, and layouts keep their shape.
+- **F11 > HUD > Text size:** a slider from 75% to 200%, plus a Default button. It
+  applies live and is saved per machine with the HUD colour.
+- **The worst offenders start bigger:** the dialogue box (her lines, history, your
+  field), the job box, the ship's flight read-out, toasts and edge-of-space gauge,
+  the space-fight read-out and the speeder read-out. Their base sizes are in
+  `content/look/ui.json` too.
+- Headless traces and tests keep the UI at 1.0, so their measurements are
+  unchanged.
+
 ## P1 — Planet generator, the town style kit, and a second planet (2026-10-27, issue #45)
 
 What works now:
