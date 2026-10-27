@@ -84,7 +84,8 @@ func setup(town_demo, scripted = null) -> void:
 	add_child(_hud)
 	_prompt = _label(Control.PRESET_CENTER_BOTTOM, Vector2(-260, -140), 22, HORIZONTAL_ALIGNMENT_CENTER)
 	_prompt.visible = false
-	_status_dot = _label(Control.PRESET_TOP_RIGHT, Vector2(-760, 12), 14, HORIZONTAL_ALIGNMENT_RIGHT)
+	RetroUI.prompt(_prompt)
+	_status_dot = _label(Control.PRESET_TOP_RIGHT, Vector2(-760, 52), 14, HORIZONTAL_ALIGNMENT_RIGHT)
 	_status_dot.offset_right = -16
 	_status_dot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_dot.visible = false

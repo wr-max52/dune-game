@@ -77,6 +77,7 @@ var townsfolk: Townsfolk              ## runs every local (null with npc_brains 
 var town_name := ""                   ## issue #15: this town's generated name ("" when its world names none)
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
+var retro_hud: RetroHud               ## issue #52: banner, footer and the F1 info screen (null in the CI greybox)
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
@@ -109,6 +110,8 @@ func _ready() -> void:
 			_dress_desert()
 	else:
 		_add_light_and_sky()
+	if use_look and not lookdev_mode:
+		add_child(RetroSkin.new())   # issue #52: the 80s HUD look, on everything from here on
 	if lookdev_mode:
 		shots = _load_shots()
 		camera = Camera3D.new()
@@ -140,6 +143,9 @@ func _ready() -> void:
 		dev_settings.demo = self
 		add_child(dev_settings)
 		if use_look:
+			retro_hud = RetroHud.new()
+			retro_hud.demo = self
+			add_child(retro_hud)
 			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
 
 

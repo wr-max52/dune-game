@@ -141,6 +141,7 @@ func _ready() -> void:
 	_foot_prompt.text = GameFlow.label("board") + ("  " + vessel_name if vessel_name != "" else "")
 	hud.vessel_name = vessel_name
 	_foot_prompt.visible = false
+	RetroUI.prompt(_foot_prompt)
 	layer.add_child(_foot_prompt)
 	kit = ShipKit.new(demo._flat_mats())
 	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})

@@ -30,10 +30,11 @@ func _init() -> void:
 
 func _ready() -> void:
 	readout = Label.new()
-	readout.position = Vector2(18, 14)
+	readout.position = Vector2(18, 54)
 	_style(readout)
 	add_child(readout)
 	prompt = _center_label(-90.0)
+	RetroUI.prompt(prompt)
 	toast_label = _center_label(-130.0)
 	toast_label.visible = false
 	gauge = Control.new()

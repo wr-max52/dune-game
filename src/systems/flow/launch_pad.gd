@@ -44,6 +44,7 @@ func _ready() -> void:
 	_prompt = _make_label(-120.0)
 	_prompt.text = GameFlow.label("prompt")
 	_prompt.visible = false
+	RetroUI.prompt(_prompt)
 	_toast = _make_label(-170.0)
 	_toast.visible = false
 	_fade = ColorRect.new()
