@@ -2,6 +2,40 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Seamless flight to space (2026-10-27, issue #46)
+
+What works now:
+- **No more pause and restart.** Flying out of the atmosphere used to fade to black,
+  unload the town and load a separate space scene, then load the town again on the
+  way down. Now the town scene stays loaded the whole time: space is just the sky
+  above the port, already black with stars at 4 km.
+- **The fight comes to you.** Reaching the edge of space starts the pad's encounter
+  right where your ship is (`SpaceFight`): your wingman beside you, the raiders
+  arriving from ahead of your heading. Your parked ship is the one in the fight;
+  guns on LMB / Space, seekers on RMB / X, next target on T.
+- **Three ways out, all in place.** Win and you are paid on the spot and fly on.
+  Dive more than 250 m back below the edge and you break the fight off. Lose your
+  fighter and it is towed home like a crash. Climb out again for a new sortie.
+- **The same part of the planet.** No more arriving 3 km off at a fixed bearing:
+  you come down exactly where you were.
+- **The dogfight is a toggle.** On by default (`space_dogfight` in
+  `content/core/flow/launch_pads.json`); F11 (World tab) switches it at runtime.
+  Off, space is quiet sky.
+- **Less detail the higher you fly** (`AltitudeDetail`, tiers in the world's
+  `detail` block). Above 60 m: real-time GI (SDFGI) and SSIL off. SDFGI rebuilds
+  whenever a fast camera moves, the likely cause of the lag. Above 500 m: SSAO and
+  volumetric fog off, and the people (and their brains) are hidden and paused.
+  Above 1.5 km: shadows off, lamps, banners and boulders hidden. All of it comes
+  back on the way down, 40 m lower so it never flickers.
+- **A smaller planet.** Planet radius 120 km to 60 km, the sand skirt stops at the
+  horizon instead of running out to 100 km, and the desert mesh is 320 vertices a
+  side instead of 400.
+- **Shared dogfight drawing.** The ships, bolts and flashes are one `DogfightView`
+  used by both the stand-alone space scene and the fight in the port's sky.
+
+Measured (headless trace): the worst frame in the whole M14 loop is 16.6 ms (it was
+28.1 ms, the town reload). Starting the fight costs 3.2 ms.
+
 ## Locals on foot (2026-10-26)
 
 What works now:

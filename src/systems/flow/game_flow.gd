@@ -8,6 +8,12 @@ extends RefCounted
 ## sky above the port (arrival mode "reentry"); a lost ship limps home to the pad
 ## on foot (arrival mode "pad").
 ##
+## Issue #46: the town's own ship no longer leaves the scene. Flying out of the
+## atmosphere keeps you in the port's sky, over the same ground, and (when
+## space_dogfight() is on) starts the pad's encounter right there (SpaceFight).
+## The pad launch below is still the hand-off for a quick-launch pad and the
+## stand-alone dogfight scene.
+##
 ## The port and the dogfight are separate scenes. This class is the hand-off
 ## between them: a launch pad in the port calls launch(), the dogfight scene asks
 ## which encounter to fly, and when the fight ends it calls finish_flight(), which
@@ -29,6 +35,8 @@ static var return_scene := ""
 static var arrival: Dictionary = {}       ## { pad, encounter, outcome, payout, mode } until taken
 static var mode := ""                     ## M14: how this flight started: "pad" or "ascent"
 static var change_scene: Callable = Callable()
+## Issue #46: null = the data's "space_dogfight"; a bool once a menu (F11) sets it.
+static var dogfight_override: Variant = null
 
 static var _data: Dictionary = {}
 
@@ -76,6 +84,18 @@ static func vec(a) -> Vector3:
 	if a is Array and a.size() >= 3:
 		return Vector3(float(a[0]), float(a[1]), float(a[2]))
 	return Vector3.ZERO
+
+
+## Issue #46: does flying out of the atmosphere start the pad's space fight? On by
+## default ("space_dogfight" in the pads data); a menu can switch it at runtime.
+static func space_dogfight() -> bool:
+	if dogfight_override != null:
+		return bool(dogfight_override)
+	return bool(data().get("space_dogfight", true))
+
+
+static func set_space_dogfight(on: bool) -> void:
+	dogfight_override = on
 
 
 ## Start a flight from a pad. Loads the flight scene.
@@ -136,6 +156,7 @@ static func reset() -> void:
 	arrival = {}
 	mode = ""
 	change_scene = Callable()
+	dogfight_override = null
 
 
 static func _go(tree: SceneTree, path: String) -> void:

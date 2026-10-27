@@ -12,7 +12,6 @@ extends Node3D
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const Dogfight := preload("res://src/systems/flight/dogfight.gd")
-const ShipNode := preload("res://src/systems/flight/ship_node.gd")
 const ChaseCamera := preload("res://src/systems/camera/chase_camera.gd")
 const SPACE_PATH := "res://content/look/space.json"
 
@@ -31,9 +30,11 @@ var hud: Control
 var hud_label: Label
 var banner: Label
 
-var ship_nodes := {}        ## runtime id -> ShipNode
-var bolt_nodes := {}        ## projectile uid -> Node3D (from ShipKit.build_bolt)
-var _fx: Array = []         ## { node, t, life, grow }
+var view: DogfightView     ## issue #46: ships, bolts and flashes (shared with SpaceFight)
+var ship_nodes: Dictionary:  ## runtime id -> ShipNode
+	get: return view.ship_nodes if view != null else {}
+var bolt_nodes: Dictionary:  ## projectile uid -> Node3D (from ShipKit.build_bolt)
+	get: return view.bolt_nodes if view != null else {}
 var _throttle := 0.6
 var _stick := Vector2.ZERO  ## mouse "virtual stick" (x = yaw, y = pitch)
 var _banner_left := 0.0
@@ -62,6 +63,8 @@ func _ready() -> void:
 	df.start()
 	df.set_player_autopilot(autopilot)
 	kit = ShipKit.new()
+	view = DogfightView.new(kit)
+	add_child(view)
 	_space = ShipKit._read_json(SPACE_PATH)
 	_build_space()
 	camera = Camera3D.new()
@@ -75,7 +78,7 @@ func _ready() -> void:
 		var look: Dictionary = kit.looks.get(me.look, {})
 		chase.fit_to(float(look.get("length", 9.0)))
 	_build_hud()
-	_sync_ships()
+	view.sync(df)
 	var title := str(df.encounter.get("label", "Dogfight"))
 	planet_name = NameHooks.planet(content.get_world(str(df.encounter.get("world", ""))))
 	if planet_name != "":
@@ -134,9 +137,8 @@ func _process(frame_dt: float) -> void:
 	var ev: Array = df.step(dt)
 	for e in ev:
 		_on_event(e)
-	_sync_ships()
-	_sync_bolts()
-	_tick_fx(dt)
+	view.sync(df)
+	view.tick(dt)
 	var me: Dictionary = df.get_ship(df.player_id)
 	if not me.is_empty():
 		camera.global_transform = chase.update(dt, me.flight.transform())
@@ -191,52 +193,17 @@ func warm_up(seconds: float, step: float = 1.0 / 60.0) -> void:
 		if not autopilot:
 			_read_player_input(step)
 		df.step(step)
-	_sync_ships()
-	_sync_bolts()
+	view.sync(df)
 	var me: Dictionary = df.get_ship(df.player_id)
 	if not me.is_empty():
 		chase._primed = false
 		camera.global_transform = chase.update(step, me.flight.transform())
 
 
-func _sync_ships() -> void:
-	for s in df.ships:
-		var node = ship_nodes.get(s.id)
-		if node == null:
-			node = ShipNode.new()
-			add_child(node)
-			node.setup(kit, s.look, s.id, s.team)
-			ship_nodes[s.id] = node
-		node.sync(s.flight, s.alive)
-
-
-func _sync_bolts() -> void:
-	var live := {}
-	for p in df.projectiles.items:
-		live[p.uid] = true
-		var mi = bolt_nodes.get(p.uid)
-		if mi == null:
-			var style := "missile" if p.kind == "missile" else ("player" if p.team == Dogfight.TEAM_PLAYER else "hostile")
-			mi = kit.build_bolt(style)
-			add_child(mi)
-			bolt_nodes[p.uid] = mi
-		var v: Vector3 = p.vel
-		if v.length_squared() > 0.0001:
-			var up := Vector3.UP if absf(v.normalized().y) < 0.99 else Vector3.BACK
-			mi.global_transform = Transform3D(Basis.looking_at(v, up), p.pos)
-	for uid in bolt_nodes.keys():
-		if not live.has(uid):
-			bolt_nodes[uid].queue_free()
-			bolt_nodes.erase(uid)
-
-
 func _on_event(e: Dictionary) -> void:
+	view.on_event(e)
 	match str(e.type):
-		"hit":
-			_spawn_flash(e.point, 1.2 if e.kind == "bolt" else 4.0, 0.15, Color("#ffd28a"))
 		"kill":
-			_spawn_flash(e.point, 6.0, 0.9, Color("#ff9a4a"))
-			_spawn_flash(e.point, 3.0, 0.4, Color("#fff4dc"))
 			if e.by == df.player_id:
 				_show_banner("Kill  ·  " + str(e.who) if str(e.get("who", "")) != "" else "Kill")
 		"wave":
@@ -249,44 +216,6 @@ func _on_event(e: Dictionary) -> void:
 		"failed":
 			_show_banner("Fighter lost", 6.0)
 			_queue_return("failed", 0)
-
-
-func _spawn_flash(point: Vector3, size: float, life: float, color: Color) -> void:
-	var mi := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 1.0
-	s.height = 2.0
-	s.radial_segments = 12
-	s.rings = 6
-	mi.mesh = s
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_color = color
-	m.emission_enabled = true
-	m.emission = color
-	m.emission_energy_multiplier = 6.0
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
-	mi.global_position = point
-	mi.scale = Vector3.ONE * size * 0.3
-	_fx.append({ "node": mi, "t": 0.0, "life": life, "size": size })
-
-
-func _tick_fx(dt: float) -> void:
-	var keep: Array = []
-	for f in _fx:
-		f.t += dt
-		var k: float = f.t / f.life
-		if k >= 1.0:
-			f.node.queue_free()
-			continue
-		f.node.scale = Vector3.ONE * f.size * (0.3 + k)
-		var m: StandardMaterial3D = f.node.material_override
-		m.albedo_color.a = 1.0 - k
-		keep.append(f)
-	_fx = keep
 
 
 # ------------------------------------------------------------------ world
