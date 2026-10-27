@@ -37,7 +37,7 @@ func test_the_bays_hold_every_other_fleet_ship() -> void:
 		if str(b.get("kind", "")) == "ship" and b.has("ship"):
 			parked.append(str(b.ship))
 	parked.sort()
-	assert_eq(parked, ["courier", "freighter", "gunship"])
+	assert_eq(parked, ["freighter", "gunship"], "issue #58: the courier's bay is the empty pad; T-89 sells it")
 
 
 func test_every_fleet_model_is_a_real_model_that_fits_a_bay() -> void:

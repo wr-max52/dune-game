@@ -204,11 +204,11 @@ func test_town_shots_load() -> void:
 
 func test_port_ship_is_the_flight_ship_and_fits_its_box() -> void:
 	var d = _demo(true)
-	assert_eq(d.decor.parked_ships.size(), 4, "the player's ship and the three other flyable ships")
+	assert_eq(d.decor.parked_ships.size(), 3, "the player's ship and two other flyable ships (issue #58: one pad is empty)")
 	var looks := {}
 	for s in d.decor.parked_ships:
 		looks[str(s.get_meta("look_id"))] = true
-	assert_eq(looks.size(), 4, "every ship in the pit looks different")
+	assert_eq(looks.size(), 3, "every ship in the pit looks different")
 	var ship: Node3D = d.decor.parked_ships[0]
 	# Same model as the dogfight: the player ship's look from the pad's encounter.
 	var content = preload("res://src/systems/dataload/core_content.gd").new()

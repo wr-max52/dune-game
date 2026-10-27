@@ -18,6 +18,15 @@ Plain English, newest on top. One entry per milestone.
 - Tuning in `content/look/ragdoll.json`; model placement in `content/look/gear_models.json` (prep: `tools/look/prep_gear.gd`) and each droid kind's `look` in `content/core/droids/droids.json`.
 - Review stills: `docs/lookdev/gear/` (`05_droids.png`, `06_ragdoll.png`, `08_items.png`). Tests: test_ragdoll.
 
+## T-89, the ship salesman, and the empty pad (2026-10-27, issue #58)
+
+- **An empty landing pad in the pit.** The courier's bay is now a bare round pad inside its painted ring. The round freighter and the gunship stay parked; the courier is still for sale.
+- **T-89** stands in the pit near where you start: a droid on the assassin droid's frame, but with no gun, and nothing hurts him. Every time the game starts he says a quick hello and offers the tutorial.
+- **The tutorial** is nine short pages: walking, your weapons (you already carry them; he explains them), blocking bolts with the blade, holstering at the gate, E and the gear keys, flying the ship, space, F1 and F11, and his ship shop. Say no and he leaves you alone. Press E beside him to run it again.
+- **Buying a ship:** press E beside T-89. He sells every ship that flies in the atmosphere, cheapest first: the Lanner courier (900 cr), the Kestrel (1200 cr), the Albatross (1800 cr) and the Frigatebird (2400 cr). The ship you buy lands on the empty pad, and you can board and fly it like any other parked ship. The pad holds one ship at a time. He buys it back for 60% of the price, but not while you are flying it.
+- Data: `content/core/npcs/t89.json` (his lines, tutorial pages, prices, look). The bought ship is saved with the world (`WorldState.hangar`).
+- Tests: test_ship_salesman. test_town_layout, test_town_decor and test_ship_fleet are updated for the empty pad. Review shots: `tools/review/t89_shot.gd`.
+
 ## Companion droids (2026-10-27, issue #51)
 
 - **Three kinds, each with several looks:** the floating droid (the range remote's shape), a tall, skeletal assassin droid with a pistol and deadly aim, and a cargo droid: a small box on wheels. All are placeholder shapes for now (`src/systems/droids/droid_kit.gd`). None of them talk; they beep, each kind in its own voice (new sounds from `tools/audio/make_game_sfx.py`).

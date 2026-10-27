@@ -84,6 +84,8 @@ var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the b
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
 @export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
 var droids: DroidController
+@export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
+var salesman: ShipSalesman
 
 
 func _ready() -> void:
@@ -141,6 +143,8 @@ func _ready() -> void:
 			_build_speeder_post()
 		if use_look and with_droids and gear != null:
 			_build_droids()
+		if with_salesman and gear != null:
+			_build_salesman()
 		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
@@ -209,6 +213,10 @@ func _build_boxes() -> void:
 		else:
 			var cs := Greybox.center_size(b)
 			node = Greybox.make_box(b.id, cs[0], cs[1], color, Basis.IDENTITY, str(b.get("shape", "")) == "round")
+		if b.kind == "pad":
+			for ch in node.get_children():       # issue #58: a painted plate, nothing to trip on
+				if ch is CollisionShape3D:
+					ch.disabled = true
 		root.add_child(node)
 		built_boxes += 1
 
@@ -403,6 +411,14 @@ func _build_droids() -> void:
 	droids = DroidController.new()
 	droids.setup(self, _player, gear)
 	add_child(droids)
+
+
+## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
+## the bar (the save says which ship is on the spare pad).
+func _build_salesman() -> void:
+	salesman = ShipSalesman.new()
+	salesman.setup(self, _player, gear)
+	add_child(salesman)
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the

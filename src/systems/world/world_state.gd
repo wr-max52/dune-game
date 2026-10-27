@@ -30,6 +30,7 @@ static var inventory := Inventory.new()    ## M13: the player's gear (owned, att
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
 static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, out }
 static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
+static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -53,6 +54,7 @@ static func reset() -> void:
 	names = NameBook.new()
 	smuggle = {}
 	droids = DroidRoster.new()
+	hangar = ""
 
 
 # ------------------------------------------------------------------ writes
@@ -406,6 +408,7 @@ static func to_save() -> Dictionary:
 		"names": names.to_save(),
 		"smuggle": smuggle.duplicate(true),
 		"droids": droids.to_save(),
+		"hangar": hangar,
 	}
 
 
@@ -426,6 +429,7 @@ static func from_save(d: Dictionary) -> void:
 	smuggle = d.get("smuggle", {}).duplicate(true)
 	droids = DroidRoster.new()
 	droids.from_save(d.get("droids", {}))
+	hangar = str(d.get("hangar", ""))
 
 
 static func _read_json(path: String) -> Variant:
