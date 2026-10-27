@@ -25,9 +25,21 @@ extends RefCounted
 ##   { type: "bribe", price }                 credits leave the player
 ##   { type: "flag", name }                   a WorldState flag
 ##   { type: "hostile", why }                 every guard fights
-##   { type: "calm", why }                    the fight is over (fled, won, downed)
+##   { type: "calm", why }                    the fight is over (downed)
+##   { type: "gate_down" }                    every gate guard is down (not the town's fight)
+##   { type: "confiscate", items }            the search took these item ids
+##
+## A search looks in your pockets (s.contraband: [{ id, label, count, value }]).
+## Clean: through. Carrying: hand it over (lost, a small standing hit), pay to
+## keep it (a share of its value), or run (a fight). Showing papers can also turn
+## into a spot search (spot_check_chance), so the papers band is not a free pass.
+## Bribing before the search skips it, contraband and all.
+##
+## Since M15's garrison, how a fight ENDS is the town alarm's call (town_alarm.gd):
+## the checkpoint stays HOSTILE until set_alarm(false), all guards are down, or
+## the player is downed.
 
-enum State { IDLE, CHALLENGE, SEARCHING, WARN, CLEARED, HOSTILE }
+enum State { IDLE, CHALLENGE, SEARCHING, WARN, CLEARED, HOSTILE, FOUND }
 
 const BANDS := ["wave", "papers", "search", "hostile"]
 
@@ -49,10 +61,42 @@ var _start_side := 0          ## which side of the gate line the challenge began
 var _search_from := Vector3.ZERO
 var _went_on := false         ## said "go on" this visit while cleared
 var _s: Dictionary = {}
+var found: Array = []         ## what the search turned up (FOUND state)
+var _rng := RandomNumberGenerator.new()
 
 
-func _init(config: Dictionary = {}) -> void:
+func _init(config: Dictionary = {}, rng_seed: int = 11) -> void:
 	cfg = config
+	_rng.seed = rng_seed
+
+
+## The town alarm went up (true) or calmed (false). The gate follows it without
+## re-announcing: no bark, no second standing hit.
+func set_alarm(on: bool) -> void:
+	if on:
+		if state != State.HOSTILE:
+			_close_card()
+			state = State.HOSTILE
+	elif state == State.HOSTILE:
+		state = State.IDLE
+		memory_left = n("memory_s", 300.0)
+
+
+## What keeping contraband costs: a share of what it is worth, never under the floor.
+func keep_price(items: Array) -> int:
+	var total := 0.0
+	for it in items:
+		total += float(it.get("value", 0)) * int(it.get("count", 1))
+	return maxi(int(n("found_bribe_min", 30.0)), int(round(total * n("found_bribe_mult", 0.75))))
+
+
+func found_choices(credits: int) -> Array:
+	var price := keep_price(found)
+	return [
+		{ "id": "hand_over", "label": "Hand it over", "enabled": true },
+		{ "id": "bribe_keep", "label": "Pay %d cr to keep it" % price, "price": price, "enabled": credits >= price },
+		{ "id": "run", "label": "Run for it", "enabled": true },
+	]
 
 
 func n(key: String, fallback: float) -> float:
@@ -118,10 +162,12 @@ func update(dt: float, s: Dictionary) -> void:
 	memory_left = maxf(0.0, memory_left - dt)
 	var alive := int(s.get("guards_alive", 1))
 	if alive <= 0:
+		# Nobody left on the gate. That ends the gate, not the town's fight: the
+		# town alarm decides that (the sentry and the barracks may still be at it).
 		if state != State.IDLE:
 			_close_card()
 			if state == State.HOSTILE:
-				_emit({ "type": "calm", "why": "all_down" })
+				_emit({ "type": "gate_down" })
 			state = State.IDLE
 		return
 	if bool(s.get("attacked", false)) and state != State.HOSTILE:
@@ -179,8 +225,21 @@ func update(dt: float, s: Dictionary) -> void:
 				_bark("warn")
 				_warn("refuse")
 			elif search_left <= 0.0:
-				_bark("cleared_search")
-				_clear()
+				found = (s.get("contraband", []) as Array).duplicate(true)
+				if found.is_empty():
+					_bark("cleared_search")
+					_clear()
+				else:
+					_bark("found")
+					state = State.FOUND
+					choices = found_choices(int(s.get("credits", 0)))
+					card_open = true
+					_emit({ "type": "card", "band": "found", "choices": choices, "found": found })
+		State.FOUND:
+			if pos != Vector3.INF and Vector2(pos.x - _search_from.x, pos.z - _search_from.z).length() > 3.0:
+				_close_card()
+				_bark("run_found")
+				_go_hostile("ran_with_contraband")
 		State.WARN:
 			warn_left -= dt
 			match _warn_for:
@@ -207,13 +266,7 @@ func update(dt: float, s: Dictionary) -> void:
 			if cleared_left <= 0.0:
 				state = State.IDLE
 		State.HOSTILE:
-			var far := dist > n("disengage_dist", 70.0)
-			if float(s.get("unseen_s", 0.0)) >= n("disengage_unseen_s", 12.0) and far:
-				memory_left = n("memory_s", 300.0)
-				state = State.IDLE
-				_emit({ "type": "standing", "delta": int(cfg.get("standing", {}).get("fled", -5)), "why": "Someone shot up the east gate and got away." })
-				_emit({ "type": "flag", "name": "fled_gate_fight" })
-				_emit({ "type": "calm", "why": "fled" })
+			pass    # the town alarm decides when this is over (set_alarm(false))
 
 
 ## The player picked a card choice. Returns true if it was taken.
@@ -228,18 +281,20 @@ func answer(choice_id: String) -> bool:
 			if band != "papers":
 				return false
 			_close_card()
-			_bark("cleared_papers")
 			_emit({ "type": "standing", "delta": int(deltas.get("papers", 1)), "why": "", "cooldown": "gate_papers" })
-			_clear()
+			if _rng.randf() < n("spot_check_chance", 0.25):
+				# Papers are fine. Pockets, though.
+				_bark("spot_check")
+				_start_search()
+			else:
+				_bark("cleared_papers")
+				_clear()
 		"search":
 			if band != "search":
 				return false
 			_close_card()
 			_bark("searching")
-			search_left = n("search_s", 3.0)
-			_search_from = _s.get("player_pos", Vector3.ZERO)
-			_emit({ "type": "lock_player", "seconds": search_left })
-			state = State.SEARCHING
+			_start_search()
 		"bribe":
 			var price := bribe_price(band, night)
 			if credits < price:
@@ -260,6 +315,35 @@ func answer(choice_id: String) -> bool:
 				_:
 					_close_card()
 					_warn("hostile")
+		"hand_over":
+			if state != State.FOUND:
+				return false
+			_close_card()
+			_bark("confiscated")
+			_emit({ "type": "confiscate", "items": found.map(func(it): return str(it.id)) })
+			_emit({ "type": "flag", "name": "contraband_confiscated" })
+			_emit({ "type": "standing", "delta": int(deltas.get("handed_over", -2)), "why": "The east gate confiscated contraband.", "cooldown": "" })
+			found = []
+			_clear()
+		"bribe_keep":
+			if state != State.FOUND:
+				return false
+			var keep := keep_price(found)
+			if credits < keep:
+				_bark("no_credits")
+				return false
+			_close_card()
+			_bark("bribe_taken")
+			_emit({ "type": "bribe", "price": keep })
+			_emit({ "type": "flag", "name": "bribed_gate" })
+			found = []
+			_clear()
+		"run":
+			if state != State.FOUND:
+				return false
+			_close_card()
+			_bark("run_found")
+			_go_hostile("ran_with_contraband")
 		"walk_away":
 			_close_card()
 			_bark("walk_away")
@@ -296,6 +380,13 @@ func _side(pos: Vector3) -> int:
 	if pos.x < gx - 1.2:
 		return -1
 	return 0
+
+
+func _start_search() -> void:
+	search_left = n("search_s", 3.0)
+	_search_from = _s.get("player_pos", Vector3.ZERO)
+	_emit({ "type": "lock_player", "seconds": search_left })
+	state = State.SEARCHING
 
 
 func _open_card() -> void:

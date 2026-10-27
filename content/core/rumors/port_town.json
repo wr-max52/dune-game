@@ -19,6 +19,9 @@
     { "id": "r_gate_fight", "text": "There was shooting at the east gate. The Remnant are walking around like someone stepped on their boots.", "requires": { "flags": ["gate_fight"] }, "weight": 5 },
     { "id": "r_gate_dead", "text": "Two gate guards came back from their shift on stretchers. Somebody's going to get blamed, and it's not going to be the stretchers.", "requires": { "flags": ["gate_guards_down"] }, "weight": 5 },
     { "id": "r_gate_bribed", "text": "Word is the gate took someone's coin last night and forgot their face. Happens more than they admit.", "requires": { "flags": ["bribed_gate"], "tier": "regular" }, "weight": 3 },
+    { "id": "r_cache", "text": "Somebody left a drop out past the east gate. Unmarked cells. The fence in the market would pay, if you could get them past the gate.", "requires": { "tier": "regular", "not_flags": ["contraband_confiscated"] }, "weight": 2 },
+    { "id": "r_confiscated", "text": "The gate took a case of cells off somebody today. The fence is in mourning.", "requires": { "flags": ["contraband_confiscated"] }, "weight": 4 },
+    { "id": "r_alarm", "text": "The klaxon went off at the barracks today. Half the garrison ran to the east gate with their boots untied.", "requires": { "flags": ["gate_fight"] }, "weight": 3 },
     { "id": "r_noon", "text": "Nobody sane walks the market at noon. The sun out there has a grudge.", "requires": { "time": ["noon"] }, "weight": 1 }
   ]
 }

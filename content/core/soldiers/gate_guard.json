@@ -74,7 +74,8 @@
     "search_s": 10.0,
     "disengage_dist": 70.0,
     "disengage_unseen_s": 12.0,
-    "search_leash": 22.0
+    "search_leash": 22.0,
+    "chase_leash": 30.0
   },
   "patrol": {
     "pause_s": 4.0,
@@ -120,9 +121,14 @@
       "mouth_off": -2,
       "fight": -10,
       "guard_killed": -15,
-      "fled": -5
+      "fled": -5,
+      "handed_over": -2
     },
     "standing_cooldown_s": 120.0,
-    "memory_s": 300.0
-  }
+    "memory_s": 300.0,
+    "spot_check_chance": 0.25,
+    "found_bribe_mult": 0.75,
+    "found_bribe_min": 30
+  },
+  "role": "gate"
 }

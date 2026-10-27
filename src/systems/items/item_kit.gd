@@ -82,6 +82,8 @@ func build(look_id: String) -> Node3D:
 	flames.name = "Flames"
 	root.add_child(flames)
 	match str(p.get("frame", FALLBACK_FRAME)):
+		"case":
+			_case(body, p)
 		_:
 			_twin_tank(body, flames, p)
 	root.set_meta("source", "kit")
@@ -172,6 +174,27 @@ func _glow(color: Color, energy: float) -> StandardMaterial3D:
 
 
 # ------------------------------------------------------------------ frames
+
+## "case": a squat carry case with corner guards and a glowing status strip
+## (cargo: power cells, crates). Sits on its base at y = 0.
+func _case(body: Node3D, p: Dictionary) -> void:
+	var size := Vector3(float(p.get("width", 0.5)), float(p.get("height", 0.3)), float(p.get("depth", 0.34)))
+	var shell := StandardMaterial3D.new()
+	shell.albedo_color = _c(p, "shell", "#3c4a52")
+	shell.roughness = 0.6
+	shell.metallic = 0.3
+	var trim := StandardMaterial3D.new()
+	trim.albedo_color = _c(p, "trim", "#8c8478")
+	trim.metallic = 0.6
+	_mi(body, _box(size), shell, Vector3(0, size.y * 0.5, 0))
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			_mi(body, _box(Vector3(0.05, size.y + 0.02, 0.05)), trim,
+				Vector3(sx * (size.x * 0.5 - 0.02), size.y * 0.5, sz * (size.z * 0.5 - 0.02)))
+	_mi(body, _box(Vector3(size.x * 0.6, 0.025, 0.01)), _glow(_c(p, "glow", "#59d6ff"), 2.5),
+		Vector3(0, size.y * 0.62, size.z * 0.5 + 0.006), Vector3.ZERO, "Status")
+	_mi(body, _box(Vector3(size.x * 0.4, 0.03, 0.06)), trim, Vector3(0, size.y + 0.015, 0), Vector3.ZERO, "Handle")
+
 
 ## "twin_tank": two upright fuel tanks on a back plate with straps, a trim band,
 ## and a downward nozzle under each tank. Flames hang below the nozzles. The back

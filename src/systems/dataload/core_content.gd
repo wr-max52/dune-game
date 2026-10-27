@@ -149,8 +149,25 @@ func get_pilot(id: String) -> Dictionary:
 	return pilots.get(id, {})
 
 
+## A soldier profile. One with "base" starts from that profile and overrides it
+## block by block (a tower sentry is a gate guard with longer eyes), so shared
+## numbers live in one file.
 func get_soldier(id: String) -> Dictionary:
-	return soldiers.get(id, {})
+	var d: Dictionary = soldiers.get(id, {})
+	var base := str(d.get("base", ""))
+	if base == "" or base == id or not soldiers.has(base):
+		return d
+	return _merge(get_soldier(base), d)
+
+
+static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
+	var out := a.duplicate(true)
+	for k in b:
+		if out.get(k) is Dictionary and b[k] is Dictionary:
+			out[k] = _merge(out[k], b[k])
+		else:
+			out[k] = b[k]
+	return out
 
 
 func get_encounter(id: String) -> Dictionary:

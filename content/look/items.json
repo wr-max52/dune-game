@@ -28,6 +28,16 @@
           0.0
         ]
       }
+    },
+    "cell_case": {
+      "frame": "case",
+      "scene": "",
+      "width": 0.5,
+      "height": 0.3,
+      "depth": 0.34,
+      "shell": "#3c4a52",
+      "trim": "#8c8478",
+      "glow": "#59d6ff"
     }
   },
   "pickup": {

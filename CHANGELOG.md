@@ -20,6 +20,45 @@ What works now:
 - Everything writes where the game does (WorldState, the npc's Relationship, the
   look), so the bartender, rumors and the gate checkpoint react straight away.
 
+## M15 part 3 — The garrison, sound, crouching, smuggling (2026-10-26)
+
+What works now:
+- **The whole garrison thinks.** The tower sentry and the two barracks troopers
+  are live: the barracks pair walk loops round the yard, and the sentry watches
+  the gate and the street from the watchtower with longer eyes (60 m). Wanted on
+  sight (Remnant standing -40 or worse, by day), the tower or the barracks shout
+  "Halt!" and raise the alarm themselves.
+- **A town-wide alarm.** Start a fight anywhere (the gate, the yard, a sentry who
+  spots you) and every trooper in town fights: a klaxon wails from the
+  watchtower, the barracks troopers run to the trouble using the cover on the way,
+  the sentry steps to the rim of the tower and shoots from up there, and everyone
+  shares the last place anyone saw you. Troopers chase only so far (gate 30 m,
+  barracks 55 m), so you can get away into the desert; they search, go home, and
+  remember you for 5 minutes. Kill all five and the gate is yours.
+- **They make noise.** Rifles (the Kenney blaster repeater), footsteps (quieter
+  crouched), a grunt when hit, a lower one when they drop, helmet-radio chatter
+  under every line they say (shouted lines are sharper), and the alarm klaxon. The
+  chatter and the klaxon are synthesized (tools/audio/make_npc_sfx.py); there is no
+  speech engine, the words stay on screen.
+- **Your crouch is real.** Crouching shrinks your collision to 1.05 m and drops
+  your eye to 1 m, so a waist-high barricade really hides you (and you cannot peek
+  over it while hidden). You stay down where there is no room to stand.
+- **Searches check your pockets.** A search that finds contraband stops you:
+  hand it over (gone, small standing hit), pay to keep it (75% of its value, at
+  least 30 cr), or run for it (the alarm). Bribe before the search and nobody
+  looks. Even showing papers can turn into a spot search (1 in 4).
+- **Something to smuggle.** A drop of three cases of unmarked power cells lies
+  out past the east gate. The new fence in the market pays 30 cr a case, full
+  value, no questions. Getting them past the checkpoint is the game.
+- **I opens your inventory:** credits, every item you carry with its count and
+  value, what you are wearing, and contraband marked in red.
+
+How to see it:
+- Run the town. Walk out of the gate, pick up the cells (E), and try to bring them
+  back in. Press I. Fire a shot near the yard and listen.
+- `./scripts/ci.sh` writes `test_results/garrison_trace.txt` and runs
+  `test_garrison_trace`, `test_town_alarm`, and the updated checkpoint, combat and
+  guard brain tests.
 ## Right-click toggles aim and block (2026-10-26)
 
 What works now:

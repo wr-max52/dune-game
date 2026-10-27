@@ -101,6 +101,36 @@
     ],
     "downed": [
       "Drag that one to the pit. Lighten their pockets first."
+    ],
+    "spot_check": [
+      "Papers are fine. Turn out your pockets.",
+      "Random check. Lucky you.",
+      "Hold on. Search."
+    ],
+    "found": [
+      "Well, well. What's this?",
+      "Unmarked cells. Explain yourself.",
+      "That's not a lunchbox."
+    ],
+    "confiscated": [
+      "Remnant property now. Move.",
+      "Smart. Now get out of my sight.",
+      "Confiscated. Don't let me see it again."
+    ],
+    "run_found": [
+      "Stop! Smuggler!",
+      "Thief! Drop it!",
+      "Grab them!"
+    ],
+    "alarm": [
+      "Alarm! Alarm!",
+      "All units, east gate!",
+      "We've got a live one!"
+    ],
+    "on_my_way": [
+      "Moving up!",
+      "Coming to you!",
+      "On my way!"
     ]
   }
 }

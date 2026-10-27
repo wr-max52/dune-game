@@ -1,0 +1,19 @@
+{
+  "id": "yard_trooper",
+  "base": "gate_guard",
+  "label": "Barracks trooper",
+  "role": "yard",
+  "note": "Troopers in the barracks yard. They walk their loops and leave the gate to the gate guards, but on the town alarm they run to the fight and use whatever cover is on the way. Only the blocks below differ from gate_guard.json.",
+  "hp": 60,
+  "combat": {
+    "cover_search_radius": 24.0,
+    "cover_max_threat_dist": 30.0,
+    "chase_leash": 55.0
+  },
+  "patrol": {
+    "pause_s": 5.0
+  },
+  "alarm": {
+    "raise_on_hostile_sight": true
+  }
+}

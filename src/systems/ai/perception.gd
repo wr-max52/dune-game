@@ -84,6 +84,13 @@ func cone_check(self_pos: Vector3, forward: Vector3, target_pos: Vector3, crouch
 	return f.normalized().dot(to / d) >= cos_half
 
 
+## Look again now (the next wants_ray is true while the target is in the cone).
+## The body calls this when its eyes move a lot, like standing up from cover: the
+## last ray was cast from behind the cover and says nothing about now.
+func force_ray() -> void:
+	_ray_clock = 0.0
+
+
 ## Whether the body should cast a line-of-sight ray this frame: only while the
 ## target is in the cone, and at most ray_hz times a second.
 func wants_ray(dt: float) -> bool:

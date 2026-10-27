@@ -3,7 +3,7 @@ extends CanvasLayer
 ## The gate checkpoint's screen bits (M15): what a guard just said (a subtitle),
 ## the choice card (Show papers / Bribe / Mouth off / Walk away, also on keys 1-4
 ## while it is open), the player's health bar (only while hurt), and the knockout
-## fade. No game logic: GateCheckpoint tells it what to show and hears the pick.
+## fade. No game logic: Garrison tells it what to show and hears the pick.
 
 signal chosen(choice_id: String)
 

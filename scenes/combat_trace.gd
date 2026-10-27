@@ -18,7 +18,7 @@ const GATE_INSIDE := Vector3(93.5, 0, 0)   ## in the zone, inside the gate
 const DESERT := Vector3(108, 0, 0)
 
 var demo
-var cp: GateCheckpoint
+var cp: Garrison
 var player: CharacterBody3D
 var lines := PackedStringArray()
 var failed := false
@@ -26,6 +26,7 @@ var frame := 0
 var worst_ms := 0.0
 var _last_usec := 0
 var _done := false
+var out_path := OUT              ## a trace that extends this one writes elsewhere
 var _armed := false
 var _scenario := ""
 var _worst_where := ""
@@ -95,7 +96,9 @@ func _fresh(name: String, standing: int, time: String = "golden", credits: int =
 	WorldState.credits = credits
 	WorldState.time_of_day = time
 	player = demo._player
-	cp = demo.checkpoint
+	cp = demo.garrison
+	# No random spot searches in the scripted runs (garrison_trace tests them).
+	cp.checkpoint.cfg["spot_check_chance"] = 0.0
 	cp.player_armed = func(): return _armed
 	cp.knockout_s = 1.0
 	_armed = false
@@ -147,39 +150,126 @@ func _arrive_from_desert(to: Vector3 = Vector3(104, 0, 1)) -> void:
 ## Hunt: shoot whoever shows; if nobody does, walk toward the nearest guard.
 func _hunt(seconds: float, heal: bool) -> float:
 	var cool := 0.0
-	var step_left := 0.0
+	var dry := 0                 ## shots in a row that did no damage
+	var flank := Vector3.INF     ## where to go when cover is soaking up the shots
+	var flank_left := 0.0
 	for f in int(seconds * 60.0):
 		if heal:
 			player.health.heal(100)
 		cool -= DT
-		var target: NpcBody = null
-		for g in _alive():
-			if _player_sees(g):
-				target = g
-				break
-		if target != null:
-			player.set_command(Vector2.ZERO, false, false, false)
-			if cool <= 0.0:
-				_shoot_at(target)
-				_hunt_shots += 1
-				cool = 0.18
+		if flank != Vector3.INF:
+			# Moving to a better angle: no shooting on the way (for at most 4 s).
+			flank_left -= DT
+			if _step_toward(flank) < 0.8 or flank_left <= 0.0:
+				flank = Vector3.INF
+				dry = 0
 		else:
-			var near: NpcBody = null
+			var target: NpcBody = null
 			for g in _alive():
-				if near == null or g.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
-					near = g
-			if near != null:
-				var p: PackedVector3Array = demo.nav.path(player.global_position, near.global_position)
-				var to: Vector3 = p[1] if p.size() > 1 else near.global_position
-				player.rotation.y = 0.0
-				var d := Vector3(to.x - player.global_position.x, 0, to.z - player.global_position.z)
-				player.set_command(Vector2(d.x, d.z).normalized(), false, false, false)
+				if _player_sees(g):
+					target = g
+					break
+			if target != null:
+				player.set_command(Vector2.ZERO, false, false, false)
+				if cool <= 0.0:
+					var hp0: int = target.health.hp
+					_shoot_at(target)
+					_hunt_shots += 1
+					cool = 0.18
+					await _frames(1)
+					dry = 0 if target.health.hp < hp0 or target.dead else dry + 1
+					if dry >= 6:
+						# Their cover is taking the hits: flank, like a player would.
+						flank = _flank_spot(target)
+						flank_left = 4.0
+						dry = 0
+			else:
+				var near: NpcBody = null
+				for g in _alive():
+					if near == null or g.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
+						near = g
+				if near != null:
+					# A target up a tower cannot be walked to: head for a spot that sees it.
+					_step_toward(_vantage(near))
 		await physics_frame
 		if _alive().is_empty():
 			return f * DT
 	return -1.0
 
+
+## One frame of walking along the navmesh toward `goal`. Returns the distance left.
+func _step_toward(goal: Vector3) -> float:
+	var p: PackedVector3Array = demo.nav.path(player.global_position, goal)
+	var to: Vector3 = p[1] if p.size() > 1 else goal
+	player.rotation.y = 0.0
+	var d := Vector3(to.x - player.global_position.x, 0, to.z - player.global_position.z)
+	player.set_command(Vector2(d.x, d.z).normalized() if d.length() > 0.05 else Vector2.ZERO, false, false, false)
+	return Vector2(goal.x - player.global_position.x, goal.z - player.global_position.z).length()
+
+
+## A reachable spot 8-20 m from `g`, away from here, with a clear line to its
+## crouched chest (so the cover it is behind is not in the way).
+func _flank_spot(g: NpcBody) -> Vector3:
+	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state
+	var best := Vector3.INF
+	var bd := INF
+	for r in [8.0, 12.0, 16.0, 20.0]:
+		for k in 16:
+			var a := TAU * k / 16.0
+			var spot: Vector3 = demo.nav.closest(Vector3(g.global_position.x + cos(a) * r, 0, g.global_position.z + sin(a) * r))
+			if spot == Vector3.INF or absf(spot.y - player.global_position.y) > 1.0 or spot.distance_to(player.global_position) < 4.0:
+				continue
+			var q := PhysicsRayQueryParameters3D.create(spot + Vector3(0, 1.5, 0), g.global_position + Vector3(0, 0.7, 0))
+			var hit: Dictionary = space.intersect_ray(q)
+			if not hit.is_empty() and hit.collider != g:
+				continue
+			var d := spot.distance_to(player.global_position)
+			if d < bd:
+				bd = d
+				best = spot
+	return best
+
+
 var _hunt_shots := 0
+var _vantage_for: NpcBody = null
+var _vantage_at := Vector3.INF
+var _vantage_age := 0.0          ## re-pick a firing spot that has not paid off
+
+
+## Where to stand to see `g`: its own spot if the navmesh reaches it, else the
+## nearest reachable point 12-30 m out with a clear line to it.
+func _vantage(g: NpcBody) -> Vector3:
+	# Reachable = a path from here actually ends next to it (the tower top is an
+	# island of navmesh nobody can walk onto).
+	var reach: PackedVector3Array = demo.nav.path(player.global_position, g.global_position)
+	if reach.size() > 1 and reach[reach.size() - 1].distance_to(g.global_position) < 1.5:
+		return g.global_position
+	if _vantage_for == g and _vantage_at != Vector3.INF and _vantage_age < 6.0:
+		_vantage_age += DT
+		return _vantage_at
+	_vantage_age = 0.0
+	var best := Vector3.INF
+	var bd := INF
+	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state
+	for r in [18.0, 26.0, 34.0, 42.0]:
+		for k in 16:
+			var a := TAU * k / 16.0
+			var spot: Vector3 = demo.nav.closest(Vector3(g.global_position.x + cos(a) * r, 0, g.global_position.z + sin(a) * r))
+			if spot == Vector3.INF or spot.y > 1.0:
+				continue
+			# Aim the test low (0.9 m, about a crouched chest) so the spot clears
+			# roof edges with a margin, not by a hair.
+			var q := PhysicsRayQueryParameters3D.create(spot + Vector3(0, 1.5, 0), g.global_position + Vector3(0, 0.9, 0))
+			var hit: Dictionary = space.intersect_ray(q)
+			if not hit.is_empty() and hit.collider != g:
+				continue
+			var d := spot.distance_to(player.global_position)
+			if d < bd:
+				bd = d
+				best = spot
+	_vantage_for = g
+	_vantage_at = best if best != Vector3.INF else g.global_position
+	return _vantage_at
 var _searched := false
 var _shot: NpcBody = null
 var _saw_warn := false
@@ -409,10 +499,13 @@ func _fight_and_win() -> void:
 	await _fresh("FIGHT", -60, "noon", 60)
 	var s0 := int(WorldState.standing.imperial_remnant)
 	await _arrive_from_desert()
-	kv("WARN_FIRST", _state() == "WARN")
 	kv("SAID_HALT", cp.barks_said.has("halt_hostile"))
-	var t_hostile := await _until(func(): return cp.checkpoint.state == Checkpoint.State.HOSTILE, 6.0)
-	kv("HOSTILE_AFTER_S", snappedf(t_hostile, 0.01))
+	await _until(func(): return cp.alarm.active(), 8.0)
+	# The warning may come from the gate or from the tower sentry: either way the
+	# shooting starts a warning's length after the first "Halt!".
+	var halt_t := cp.first_said("halt_hostile")
+	kv("WARN_FIRST", halt_t >= 0.0 and cp.alarm_t >= halt_t)
+	kv("HOSTILE_AFTER_S", snappedf(cp.alarm_t - halt_t, 0.01))
 	# Hold still in the open and let them work: opening burst, cover, crouch, bursts.
 	var crouched := {}
 	var hp0: int = player.health.hp
@@ -431,7 +524,11 @@ func _fight_and_win() -> void:
 		if cp.claimed.has(g):
 			spots.append(cp.claimed[g])
 	kv("COVER_SPOTS", spots.size())
-	kv("COVER_DISTINCT", spots.size() < 2 or (spots[0] as Vector3).distance_to(spots[1]) > 1.2)
+	var distinct := true
+	for i in spots.size():
+		for j in range(i + 1, spots.size()):
+			distinct = distinct and (spots[i] as Vector3).distance_to(spots[j]) > 1.2
+	kv("COVER_DISTINCT", distinct)
 	var spot_covers := spots.size() > 0
 	var same_side := true
 	for at in spots:
@@ -453,7 +550,7 @@ func _fight_and_win() -> void:
 	player.revive(0.0)
 	# Fight back like a player who shoots well (and, being a bot, cannot be dropped).
 	_hunt_shots = 0
-	var won_t := await _hunt(60.0, true)
+	var won_t := await _hunt(120.0, true)   # five troopers in cover take a while
 	kv("WON", _alive().is_empty())
 	kv("WON_AFTER_S", snappedf(won_t, 0.01))
 	kv("PLAYER_SHOTS", _hunt_shots)
@@ -463,6 +560,7 @@ func _fight_and_win() -> void:
 	kv("FLAG_FIGHT", WorldState.has_flag("gate_fight"))
 	kv("FLAG_DOWN", WorldState.has_flag("gate_guards_down"))
 	kv("KILLED", WorldState.count("guards_killed"))
+	kv("TROOPERS", demo.npcs.size())
 	kv("CHECKPOINT_FLAG_CLEARED", not WorldState.has_flag("gate_checkpoint_up"))
 	var rumors: Array = WorldState.rumors("confidant", [], 99).map(func(r): return str(r.id))
 	kv("RUMOR_FIGHT", rumors.has("r_gate_fight"))
@@ -564,8 +662,8 @@ func _finish() -> void:
 	kv("FAILED", failed)
 	if not DirAccess.dir_exists_absolute("res://test_results"):
 		DirAccess.make_dir_recursive_absolute("res://test_results")
-	var f := FileAccess.open(OUT, FileAccess.WRITE)
+	var f := FileAccess.open(out_path, FileAccess.WRITE)
 	f.store_string("\n".join(lines) + "\n")
 	f.close()
-	print("COMBATTRACE wrote ", OUT, " failed=", failed)
+	print("TRACE wrote ", out_path, " failed=", failed)
 	quit(1 if failed else 0)

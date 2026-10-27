@@ -124,6 +124,12 @@ func _process(delta: float) -> void:
 		var k := minf(_kick, _kick * 25.0 * delta + 0.0005)
 		rig.add_pitch(k)
 		_kick -= k
+	# M15: the eye drops with a crouch (the capsule shrinks too), so you cannot
+	# peek over cover your body is hiding behind.
+	var crouched: bool = _player.get("crouched_shape") == true
+	var eye_to := 1.0 if crouched else 1.6
+	rig.fpv_offset.y = move_toward(rig.fpv_offset.y, eye_to, delta * 4.0)
+	rig.tpv_height = move_toward(rig.tpv_height, (1.25 if crouched else 1.8), delta * 4.0)
 	var xf: Transform3D = rig.camera_transform(_player.global_position)
 	if not rig.is_first_person() and collide:
 		xf.origin = _resolve_collision(rig.tpv_pivot(_player.global_position), xf.origin)
