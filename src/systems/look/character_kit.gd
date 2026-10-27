@@ -49,8 +49,9 @@ func archetypes() -> Array:
 
 
 ## Build one character. pose is optional; each archetype has a default. outfit picks
-## the colour of each part of a split model ({"head": "blue", ...}); a part left out
-## gets a random colour from its list (characters.json, model.parts).
+## each part of a split model: its colour ({"head": "blue", ...}), or on a kit model
+## its piece and colour ({"head": "guard", "torso": "player:rust"}); a part left out
+## gets a random choice from its list (characters.json, model.parts).
 func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Node3D:
 	var p: Dictionary = palettes.get(archetype, {})
 	var root := Node3D.new()
@@ -96,29 +97,55 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 ## A split model (the locals) has one mesh per part (prep_character.gd, split), all on
 ## one shared texture, and one recoloured copy of that texture per colour
 ## (recolor_parts.gd). Each part gets a colour; the model's own texture is "sand".
+## A kit model ("pieces": true; the player and the guards) holds several pieces of
+## every part on one skeleton (fit_parts.gd, dress), the mesh "<piece>_<part>". A
+## choice is "<piece>" or "<piece>:<colour>", the colour a texture of that piece
+## ("colors" % "<piece>_<part>_<colour>" when the part has its own texture, else
+## "<piece>_<colour>": recolor_fitted.gd); the pieces not chosen are removed.
 ## The choice is stored on the body as meta "outfit".
 func _wear_outfit(root: Node3D, skin: SkinnedBody, cfg: Dictionary, outfit: Dictionary) -> void:
 	var parts: Dictionary = cfg.get("parts", {})
 	if parts.is_empty():
 		return
+	var pieces := bool(cfg.get("pieces", false))
 	var worn := {}
+	var keep := {}
 	for part in parts:
-		var mi := skin.model.find_child(str(part), true, false) as MeshInstance3D
 		var choices: Array = parts[part]
-		if mi == null or choices.is_empty():
+		if choices.is_empty():
 			continue
-		var color := str(outfit.get(part, choices[rng.randi() % choices.size()]))
-		worn[part] = color
+		var choice := str(outfit.get(part, choices[rng.randi() % choices.size()]))
+		var color := choice
+		var mesh_name := str(part)
+		if pieces:
+			var pc := choice.split(":", true, 1)
+			mesh_name = "%s_%s" % [pc[0], part]
+			color = ""
+			if pc.size() == 2:
+				# A piece with its own texture (the player's head) has its own colours.
+				color = "%s_%s" % [mesh_name, pc[1]]
+				if not ResourceLoader.exists(str(cfg.get("colors", "")) % color):
+					color = "%s_%s" % [pc[0], pc[1]]
+		var mi := skin.model.find_child(mesh_name, true, false) as MeshInstance3D
+		if mi == null:
+			continue
+		worn[part] = choice
+		keep[mi] = true
 		var mat := _outfit_material(mi.mesh.surface_get_material(0), str(cfg.get("colors", "")), color)
 		if mat != null:
 			mi.set_surface_override_material(0, mat)
+	if pieces:
+		for mi in skin.model.find_children("*", "MeshInstance3D", true, false):
+			if not keep.has(mi):
+				mi.get_parent().remove_child(mi)
+				mi.free()
 	root.set_meta("outfit", worn)
 
 
 ## The part's material with the colour's texture, shared by every body that wears it.
 ## null keeps the model's own material (the base colour, or a missing texture).
 func _outfit_material(base: Material, pattern: String, color: String) -> Material:
-	var path := pattern % color if pattern.contains("%s") else ""
+	var path := pattern % color if pattern.contains("%s") and color != "" else ""
 	if not base is BaseMaterial3D or path == "" or not ResourceLoader.exists(path):
 		return null
 	var key := "outfit_" + path

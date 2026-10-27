@@ -2,6 +2,27 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — The player and the guards wear pieces of one kit (issue #48)
+
+- **One base body sets the skeleton and the seams.** A featureless mannequin
+  (Hyper3D Rodin, rigged with the human template) is split once into head, torso
+  and legs. Every costume is fitted onto it, and each vertex takes the bone weights
+  and the part of the nearest mannequin vertex (`fit_parts.gd`, `dress`), so every
+  outfit is cut in the same places and pieces mix freely.
+- **Costumes are generated from a prompt alone, then re-posed.** Reference images
+  win over the prompt: renders of the mannequin, even tinted, came back as the bare
+  mannequin. So each costume is a prompt-only whole character, rigged with the same
+  template, and its arms and legs are turned to the mannequin's rest pose before
+  fitting. Alternative: generate each piece separately from crops of the mannequin.
+  Rejected: separate pieces did not meet at the seams and kept their own style.
+- **Cleanup is in the config, not by hand.** `trim_top` and `trim_below` drop
+  stray triangles (a scarf poking above the collar, armour hanging between the
+  hands), and a piece can be replaced on its own (the player's head was regenerated
+  alone and fitted into the old head's bounds).
+- **Colours are recoloured textures, like the locals'.** One texture per outfit,
+  so a variant is written once and fits all its pieces; a piece with its own
+  texture (the player's head) has its own variants, looked up first.
+
 ## 2026-10-27 — Space is the town's own sky (issue #46)
 
 - **One scene, not two.** The space fight runs inside the town scene (`SpaceFight`,

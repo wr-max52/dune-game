@@ -30,7 +30,9 @@ extends SceneTree
 ##   `rest` part. Height cuts give straight seams (belt, collar); `bones` keep a hand
 ##   that hangs below the belt on the torso; a claimed patch smaller than
 ##   `min_claim_tris` (connected triangles) is cloth the fingers touch, and goes back
-##   to the height rule. Every part is its own MeshInstance3D,
+##   to the height rule. `within` { bone, radius, below } limits a height rule, under `below`, to a vertical
+##   cylinder around that bone: the neck above the collar line, but not the tops of
+##   the shoulders (above `below` the whole head counts, ears and all). Every part is its own MeshInstance3D,
 ##   named after the part (lower case: "Head" is taken by the bone), on the same
 ##   skeleton and skin.
 
@@ -197,6 +199,8 @@ static func _decimate(arr: Array, target: int) -> Array:
 	for lod in im.get_surface_lod_count(0):
 		var li := im.get_surface_lod_indices(0, lod)
 		if li.size() / 3 < target:
+			if lod == 0:
+				idx = li                   ## even the first level is under: take it
 			break
 		idx = li
 	return _compact(arr, idx)
@@ -248,6 +252,10 @@ func _split(mi: MeshInstance3D, parts: Array, min_claim: int, scene: Node) -> vo
 			for prefix in parts[pi].get("bones", []):
 				if n.begins_with(str(prefix)):
 					claim[b] = pi
+	for pi in parts.size():
+		if parts[pi].has("within") and skel != null:
+			var o := skel.get_bone_global_rest(skel.find_bone(str(parts[pi].within.bone))).origin
+			parts[pi]["axis_xz"] = Vector2(o.x, o.z)
 	var src := mi.mesh as ArrayMesh
 	var meshes: Array = []
 	for pi in parts.size():
@@ -310,6 +318,10 @@ static func _by_height(parts: Array, v: PackedVector3Array, idx: PackedInt32Arra
 	var y := (v[idx[t]].y + v[idx[t + 1]].y + v[idx[t + 2]].y) / 3.0
 	for pi in parts.size():
 		if (parts[pi].has("above") and y > float(parts[pi].above)) or (parts[pi].has("below") and y < float(parts[pi].below)):
+			if parts[pi].has("axis_xz"):
+				var c := (v[idx[t]] + v[idx[t + 1]] + v[idx[t + 2]]) / 3.0
+				if c.y < float(parts[pi].within.get("below", INF)) and Vector2(c.x, c.z).distance_to(parts[pi].axis_xz) > float(parts[pi].within.radius):
+					continue
 			return pi
 	return rest
 

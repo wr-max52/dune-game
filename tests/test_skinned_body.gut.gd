@@ -1,6 +1,7 @@
 extends GutTest
 ## The player's rigged smuggler model (SkinnedBody over the CharacterKit joints).
-## Model: assets/characters/smuggler/smuggler.glb, made by tools/look/prep_character.gd.
+## Model: assets/characters/kit/parts.glb (the player's kit pieces), made by
+## tools/look/fit_parts.gd.
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 
@@ -29,7 +30,7 @@ func test_primitives_are_hidden_but_joints_stay() -> void:
 func test_model_stands_on_the_ground_at_kit_height() -> void:
 	var aabb := SkinnedBody._aabb(avatar.skin.model, Transform3D())   # body space
 	assert_almost_eq(aabb.position.y, 0.0, 0.02, "soles on y = 0")
-	assert_between(aabb.end.y, 1.7, 2.2, "about a person tall, hat included")
+	assert_between(aabb.end.y * avatar.body.scale.y, 1.7, 2.2, "about a person tall, hat included")
 
 
 func test_walking_moves_the_leg_bones() -> void:
@@ -52,7 +53,7 @@ func test_every_remnant_wears_the_guard_model() -> void:
 		assert_true(c.has_meta("skin"), a + " wears a rigged model")
 		if c.has_meta("skin"):
 			var skin: SkinnedBody = c.get_meta("skin")
-			assert_string_contains(skin.model.scene_file_path, "remnant_guard", a)
+			assert_not_null(skin.model.find_child("guard_torso", true, false), a + " wears the guard pieces")
 		c.free()
 
 
