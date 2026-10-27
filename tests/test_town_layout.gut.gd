@@ -39,9 +39,9 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 169)   # art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 4 ships + crates
-	assert_eq(t.markers().size(), 21)  # art pass 2: + three patrons at the bar
-	assert_eq(t.routes().size(), 9)   # M15: + patrol loops; art pass 2: + the climb to the lookout
+	assert_eq(t.boxes().size(), 181)   # locals: stall back panels; art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 4 ships + crates
+	assert_eq(t.markers().size(), 25)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar
+	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)
 
 
@@ -113,7 +113,7 @@ func test_catches_overlap() -> void:
 
 
 func test_catches_outside_zone() -> void:
-	var errs := _bad(func(d): d.boxes[idx_of(d, "stall_r1_1")].min[0] = 30.0)
+	var errs := _bad(func(d): d.boxes[idx_of(d, "stall_n1")].min[0] = 30.0)
 	assert_true(_has_rule(errs, "V4"), "V4 caught: %s" % str(errs))
 
 
@@ -193,7 +193,7 @@ func test_neighbourhoods_are_not_a_grid() -> void:
 
 func test_every_building_has_a_door_side() -> void:
 	for b in _town().boxes():
-		if str(b.get("look", "")) in ["", "bridge", "cistern", "stage", "stair_tower", "lookout"]:
+		if str(b.get("look", "")) in ["", "bridge", "cistern", "stage", "stair_tower", "lookout", "crates", "stall_back"]:
 			continue
 		assert_true(str(b.get("face", "")) in ["+x", "-x", "+z", "-z"], "%s has a door side" % b.id)
 		if str(b.get("shape", "")) == "round":
@@ -213,7 +213,8 @@ func test_cantina_stage_and_patrons() -> void:
 	for m in t.markers():
 		if str(m.id).begins_with("patron_"):
 			patrons += 1
-			assert_eq(str(m.get("face", "")), "bartender", "%s faces the bar" % m.id)
+			var f := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
+			assert_almost_eq(f.distance_to(t.marker_pos("bartender")), 0.0, 0.5, "%s faces the bartender" % m.id)
 	assert_gte(patrons, 3, "locals at the bar")
 
 

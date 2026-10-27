@@ -12,6 +12,7 @@
     "cant_afford": "%s: %d cr  (you have %d)",
     "bought": "Bought %s for %d cr",
     "nothing_to_trade": "The %s buys gear",
+    "closed": "The %s is not trading",
     "fuel": "JET",
     "recovered": "You drifted out over the walls. Back in port.",
     "event_sold": "Sold a %s at the market",

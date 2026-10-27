@@ -15,7 +15,7 @@ extends SceneTree
 const OUT := "res://test_results/m13_jetpack_trace.txt"
 const OPEN_SKY := Vector3(40, 0, 10)       # street, nothing overhead
 const NORTH_STRIP := Vector3(-84, 0, 71)   # just inside the north wall, clear around
-const TRADER_APPROACH := Vector3(58, 0, -26.5)
+const TRADER_APPROACH := Vector3(58, 0, -38)   # the market aisle, in front of the trader's stall
 
 var demo
 var gear: GearController
@@ -242,7 +242,7 @@ func _run() -> void:
 	await frames(10)
 	var trader: Dictionary = demo.gear.content.get_vendor("gear_trader")
 	var stall: Vector3 = demo.town.marker_pos(str(trader.marker))
-	var fv := await walk_to(Vector3(stall.x, 0, -28.4), 0.3, 400)
+	var fv := await walk_to(Vector3(stall.x, 0, -35.2), 0.3, 400)   # up to the counter
 	out("REACHED_TRADER", fv >= 0 or Vector2(player.global_position.x - stall.x, player.global_position.z - stall.z).length() <= float(trader.reach))
 	await frames(2)
 	out("SELL_PROMPT", gear.prompt_text())

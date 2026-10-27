@@ -319,8 +319,12 @@ def main():
 		"shop_3": {"look": "shop", "face": "+z"}, "shop_4": {"look": "shop", "face": "+z"},
 	}
 	for b in kept:
-		if str(b["id"]).startswith("stall_"):
-			b.update({"look": "stall", "face": "+z"})    # customers on +z, the vendor behind
+		sid = str(b["id"])
+		if sid.startswith("stall_") and sid.endswith("_back"):
+			b.update({"look": "stall_back"})
+		elif sid.startswith("stall_"):
+			# Two rows facing each other across one aisle: the door side is the aisle.
+			b.update({"look": "stall", "face": "-z" if sid.startswith("stall_n") else "+z"})
 	for b in kept:
 		b.update(looks.get(b["id"], {}))
 	town["boxes"] = kept + build_boxes(huts, towers, spans)

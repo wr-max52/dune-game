@@ -72,8 +72,8 @@ func test_every_waypoint_reached() -> void:
 
 func test_built_everything() -> void:
 	var s := _trace_summary()
-	assert_eq(int(s.get("boxes", 0)), 169)   # art pass 2: neighbourhoods, cantina stage + tower + lookout, round pit + ships + crates
-	assert_eq(int(s.get("markers", 0)), 15)  # + three patrons at the bar
+	assert_eq(int(s.get("boxes", 0)), 181)   # locals: stall back panels; art pass 2: neighbourhoods, cantina, round pit + ships + crates
+	assert_eq(int(s.get("markers", 0)), 19)  # art pass 2: + three patrons at the bar
 
 
 func test_frame_budget() -> void:

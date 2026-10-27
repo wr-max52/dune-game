@@ -93,8 +93,8 @@ func test_buildings_drawn_by_the_kit() -> void:
 	var looks := 0
 	for b in d.town.boxes():
 		var look := str(b.get("look", ""))
-		if look == "" or look == "stall":
-			continue
+		if look == "" or look == "stall" or look == "stall_back":
+			continue          # the market dresses these, not the building kit
 		looks += 1
 		var mi: MeshInstance3D = d.get_node("Town/%s/Mesh" % b.id)
 		assert_false(mi.visible, "%s: the greybox stand-in is hidden" % b.id)

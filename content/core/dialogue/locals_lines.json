@@ -1,0 +1,45 @@
+{
+  "note": "Port locals' barks (authored, not LLM), read by src/systems/npc/townsfolk.gd. The keys the guard brain asks for (contact, hit, reload, lost, give_up) plus the locals' own alarm, man_down and downed. A line is picked at random per key. Generic, in-world, no franchise terms.",
+  "lines": {
+    "alarm": [
+      "They're shooting at us! Get them!",
+      "Outlander's started something. Finish it!",
+      "Everyone, out! They hit one of ours!"
+    ],
+    "contact": [
+      "There!",
+      "That's them!",
+      "Over here!"
+    ],
+    "hit": [
+      "Ah! Burns!",
+      "I'm hit!",
+      "Stars, that hurt!"
+    ],
+    "reload": [
+      "Cell's dry!",
+      "Hold on, hold on..."
+    ],
+    "man_down": [
+      "They killed them!",
+      "No! Not like this!",
+      "Somebody's down!"
+    ],
+    "lost": [
+      "Where'd they go?",
+      "Gone into the alleys..."
+    ],
+    "give_up": [
+      "Let them run. We'll remember the face.",
+      "Back to it. Keep your eyes open."
+    ],
+    "downed": [
+      "That's what you get.",
+      "Drag them to the pit. Let the Remnant have them."
+    ],
+    "shop_closed": [
+      "Not selling to you.",
+      "Get away from my stall."
+    ]
+  }
+}

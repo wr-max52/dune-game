@@ -143,7 +143,7 @@ func _apply_materials(town) -> void:
 ## hidden, its collision stays.
 func _build_buildings(town) -> void:
 	for b in town.boxes():
-		if not b.has("look") or str(b.look) == "stall":
+		if not b.has("look") or str(b.look) in ["stall", "stall_back"]:
 			continue
 		if kit.build(b):
 			var mi := _box_mesh(str(b.id))
@@ -155,9 +155,14 @@ func _build_buildings(town) -> void:
 
 func _dress_market(town) -> void:
 	var stalls: Array = []
+	var backs := {}
 	for b in town.boxes():
-		if str(b.get("look", "")) == "stall":
-			stalls.append(b)
+		var look := str(b.get("look", ""))
+		if look == "stall" or look == "stall_back":
+			if look == "stall":
+				stalls.append(b)
+			else:
+				backs[str(b.id)] = b
 			var mi := _box_mesh(str(b.id))
 			if mi != null:
 				mi.visible = false
@@ -165,7 +170,7 @@ func _dress_market(town) -> void:
 	root.name = "Market"
 	add_child(root)
 	market = TownMarket.new(kit)
-	market.dress(root, stalls)
+	market.dress(root, stalls, backs)
 
 
 ## The cantina hall (art pass 2): a tall room with a stage, so the shell gets

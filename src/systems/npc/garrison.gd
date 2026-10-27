@@ -250,43 +250,12 @@ func _order_brains() -> void:
 
 func _run_brain(g: NpcBody, dt: float, ppos: Vector3) -> void:
 	var b: GuardBrain = brains[g]
-	var p: Perception = g.perception
-	b.pos = g.global_position
-	b.facing = g.rotation.y
-	b.hp_frac = float(g.health.hp) / maxf(1.0, float(g.max_health))
-	b.arrived = g.arrived()
-	b.visible = p.visible
-	b.target_pos = ppos
-	b.target_vel = player.velocity if ppos != Vector3.INF else Vector3.ZERO
-	b.target_chest = g.target_chest_height()
-	b.last_seen = p.last_seen_pos
-	b.heard_pos = p.heard_pos
-	b.reloading = g.reloading()
-	# A calm guard turns toward footsteps or a shot it just heard.
-	if p.heard and not p.visible:
-		b.investigate(p.heard_pos)
+	g.brief(b, ppos, player.velocity if ppos != Vector3.INF else Vector3.ZERO)
 	b.update(dt)
 	if b.want_cover:
 		b.want_cover = false
 		b.cover = _pick_cover(g, b)
-	# Apply: the fighter pattern, outputs onto the body.
-	if b.go_to == Vector3.INF:
-		if g.command.go_to != Vector3.INF:
-			g.stop()
-	else:
-		g.go_to(b.go_to, b.sprint)
-	g.command.sprint = b.sprint
-	g.command.crouch = b.crouch
-	if b.face != Vector3.INF:
-		g.face_point(b.face)
-	else:
-		g.clear_face()
-	g.aim_point = b.aim
-	if b.fire and b.aim != Vector3.INF:
-		if g.fire_at(b.aim, dt):
-			b.on_shot()
-	else:
-		g.hold_fire(dt)
+	g.carry_out(b, dt)
 	if b.bark != "":
 		_say(g, b.bark)
 
@@ -312,7 +281,7 @@ func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
 	var reach := float(c.get("cover_search_radius", 28.0))
 	var side := signf(g.global_position.x - gate_pos.x)
 	var mine: Array = []
-	for sp in _spots_near(g.global_position, reach):
+	for sp in spots_near(g.global_position, reach):
 		var sp_pos: Vector3 = sp.pos
 		if signf(sp_pos.x - gate_pos.x) == side and Vector2(sp_pos.x - g.global_position.x, sp_pos.z - g.global_position.z).length() <= reach:
 			mine.append(sp)
@@ -341,7 +310,7 @@ func _cell(x: float, z: float) -> Vector2i:
 	return Vector2i(floori(x / GRID), floori(z / GRID))
 
 
-func _spots_near(p: Vector3, r: float) -> Array:
+func spots_near(p: Vector3, r: float) -> Array:
 	if not is_same(_grid_of, spots):   # identity, not a 2,900-entry compare
 		_grid.clear()
 		for sp in spots:
