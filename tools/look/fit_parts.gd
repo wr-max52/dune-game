@@ -1,0 +1,488 @@
+extends SceneTree
+## Puts separately generated parts on a split character's skeleton (issue #48). Each
+## part was made by Hyper3D from renders of one split part (tools/look/shoot_sheet.gd,
+## crops), so it has the right shape but no rig and the generator's own scale.
+##
+##   godot --headless --path . -s res://tools/look/fit_parts.gd -- id=smuggler
+##
+## Reads "fit" from content/look/character_models.json:
+##   out:   res:// path of the fitted model
+##   parts: { part name: { source: raw .glb, decimate: triangles,
+##            from: reference part (default: the same name; a new name adds a piece),
+##            uniform: true to keep the piece's proportions (smallest axis ratio, centred
+##              on the box, standing on its floor); axis: "y" scales by height alone, so a
+##              hat brim or a pauldron sticking out past the body is not squeezed in;
+##              scale: a correction on top, chosen by eye,
+##            box: { min, max } to fit into instead of the reference part's bounds } }
+##   dress: { outfit name: { source: raw .glb of a whole dressed character, decimate,
+##            uniform, axis, scale, trim_top: { part: share of its height cut off the
+##            top, e.g. stray scarf bits above the collar }, trim_below: { part: [y, radius] }
+##            drops the part's triangles under y and within radius of the vertical axis
+##            (hanging armour between the hands; the hands, further out, stay) }, skip: [parts left out, e.g. a head replaced by a
+##            separately made piece in `parts`], rigged: true when the source has a human-template
+##            skeleton (Hyper3D rigging): its limbs are first turned to the reference
+##            body's rest pose, so a costume made in any A-pose lines up } } (optional)
+## The reference is the character's split model (its "out", from prep_character.gd).
+## For every part:
+## - fit: scale and move the new mesh, per axis, onto the reference part's bounds;
+## - skin: each vertex copies the bones and weights of the nearest reference vertex
+##   of the same part (a grid lookup), so the part bends like the original.
+## The reference part's mesh is swapped for the new one: same node, skin and skeleton.
+## A piece with its own name (a helmet `from` the head) is added beside it instead.
+## A dressed outfit is fitted by height onto the whole reference body, and each vertex
+## copies its weights and its part from the nearest reference vertex, so every outfit
+## is cut at the same seams: it becomes <outfit>_<part> for each reference part, and
+## any outfit's head goes with any other's torso and legs.
+
+const CFG_PATH := "res://content/look/character_models.json"
+const CELL := 0.03
+const Prep := preload("res://tools/look/prep_character.gd")
+
+
+func _init() -> void:
+	var id := "smuggler"
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("id="):
+			id = a.substr(3)
+	var all: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CFG_PATH))
+	var cfg: Dictionary = all.get(id, {})
+	if not cfg.has("fit"):
+		push_error("fit: no fit config for '%s'" % id)
+		quit(1)
+		return
+	var scene := _load(str(cfg.out))
+	if scene == null:
+		quit(1)
+		return
+	var parts: Dictionary = cfg.fit.get("parts", {})
+	var refs := {}                     ## reference meshes, before any swap
+	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		refs[String(mi.name)] = mi.mesh
+	for part in parts:
+		var from := str(parts[part].get("from", part))
+		var ref := scene.find_child(from, true, false) as MeshInstance3D
+		if ref == null or ref.skin == null or not refs.has(from):
+			push_error("fit: no skinned part '%s' in %s" % [from, cfg.out])
+			quit(1)
+			return
+		var target := ref
+		if from != part:
+			target = MeshInstance3D.new()
+			target.name = part
+			target.skin = ref.skin
+			target.transform = ref.transform
+			ref.get_parent().add_child(target)
+			target.owner = scene
+			target.skeleton = target.get_path_to(ref.get_node(ref.skeleton))
+		_fit(target, refs[from], parts[part])
+	var bases: Array = []
+	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if refs.has(String(mi.name)) and mi.skin != null:
+			bases.append(mi)
+	for outfit in cfg.fit.get("dress", {}):
+		_dress(outfit, cfg.fit.dress[outfit], bases, refs)
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	doc.append_from_scene(scene, state)
+	var out := ProjectSettings.globalize_path(str(cfg.fit.out))
+	if doc.write_to_filesystem(state, out) != OK:
+		push_error("fit: cannot write " + out)
+		quit(1)
+		return
+	print("fit: wrote ", out)
+	scene.free()
+	quit()
+
+
+static func _load(path: String) -> Node:
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
+		push_error("fit: cannot read " + path)
+		return null
+	return doc.generate_scene(state)
+
+
+func _fit(target: MeshInstance3D, ref_mesh: Mesh, pc: Dictionary) -> void:
+	var src := _source(pc)
+	if src.is_empty():
+		return
+	var arr: Array = src[0]
+	var to := ref_mesh.get_aabb()
+	if pc.has("box"):
+		var lo := Vector3(pc.box.min[0], pc.box.min[1], pc.box.min[2])
+		to = AABB(lo, Vector3(pc.box.max[0], pc.box.max[1], pc.box.max[2]) - lo)
+	var k := _place(arr, to, pc)
+	var ref_arr := ref_mesh.surface_get_arrays(0)
+	var per := (ref_arr[Mesh.ARRAY_BONES] as PackedInt32Array).size() / (ref_arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	_skin_from(arr, ref_arr, per)
+	target.mesh = _mesh(arr, src[1], per)
+	print("fit: %s  %d triangles, scale %s" % [target.name, (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3, k])
+
+
+## Fits a whole dressed character onto all the reference parts and cuts it where they
+## are cut: a new skinned mesh <outfit>_<part> beside each reference part.
+func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> void:
+	var base_skel := (bases[0] as MeshInstance3D).get_node((bases[0] as MeshInstance3D).skeleton) as Skeleton3D
+	var src := _source(pc, base_skel if pc.get("rigged", false) else null)
+	if src.is_empty():
+		return
+	var arr: Array = src[0]
+	var ref_arr: Array = []                ## all reference parts as one vertex list
+	var label := PackedInt32Array()        ## which part each reference vertex is in
+	var to := AABB()
+	for i in bases.size():
+		var a: Array = (refs[String(bases[i].name)] as Mesh).surface_get_arrays(0)
+		if i == 0:
+			to = AABB((a[Mesh.ARRAY_VERTEX] as PackedVector3Array)[0], Vector3.ZERO)
+		for p: Vector3 in a[Mesh.ARRAY_VERTEX]:
+			to = to.expand(p)
+		if ref_arr.is_empty():
+			ref_arr = [PackedVector3Array(), PackedInt32Array(), PackedFloat32Array()]
+		ref_arr[0].append_array(a[Mesh.ARRAY_VERTEX])
+		ref_arr[1].append_array(a[Mesh.ARRAY_BONES])
+		ref_arr[2].append_array(a[Mesh.ARRAY_WEIGHTS])
+		var n := label.size()
+		label.resize(n + (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+		for j in range(n, label.size()):
+			label[j] = i
+	var whole := []
+	whole.resize(Mesh.ARRAY_MAX)
+	whole[Mesh.ARRAY_VERTEX] = ref_arr[0]
+	whole[Mesh.ARRAY_BONES] = ref_arr[1]
+	whole[Mesh.ARRAY_WEIGHTS] = ref_arr[2]
+	var per := (ref_arr[1] as PackedInt32Array).size() / (ref_arr[0] as PackedVector3Array).size()
+	var k := _place(arr, to, pc)
+	var near := _skin_from(arr, whole, per)
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var lab := PackedInt32Array()
+	lab.resize(near.size())
+	for i in near.size():
+		lab[i] = label[maxi(near[i], 0)]
+	lab = _smooth_labels(arr, lab, bases.size(), int(pc.get("smooth", 8)))
+	var tris: Array = []
+	for i in bases.size():
+		tris.append(PackedInt32Array())
+	for t in range(0, idx.size(), 3):
+		var a := lab[idx[t]]
+		var b := lab[idx[t + 1]]
+		var c := lab[idx[t + 2]]
+		tris[b if b == c else a].append_array([idx[t], idx[t + 1], idx[t + 2]])
+	var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for i in bases.size():
+		var ref: MeshInstance3D = bases[i]
+		if (pc.get("skip", []) as Array).has(String(ref.name)):
+			continue
+		var trim := float((pc.get("trim_top", {}) as Dictionary).get(String(ref.name), 0.0))
+		if trim > 0.0 and tris[i].size() > 0:
+			var lo := INF
+			var hi := -INF
+			for j in tris[i]:
+				lo = minf(lo, vv[j].y)
+				hi = maxf(hi, vv[j].y)
+			var cut := hi - (hi - lo) * trim
+			var kept := PackedInt32Array()
+			for t in range(0, tris[i].size(), 3):
+				if maxf(vv[tris[i][t]].y, maxf(vv[tris[i][t + 1]].y, vv[tris[i][t + 2]].y)) <= cut:
+					kept.append_array([tris[i][t], tris[i][t + 1], tris[i][t + 2]])
+			tris[i] = kept
+		if (pc.get("trim_below", {}) as Dictionary).has(String(ref.name)):
+			var tb: Array = pc.trim_below[String(ref.name)]
+			tris[i] = _trim_below(arr, tris[i], float(tb[0]), float(tb[1]))
+		var mi := MeshInstance3D.new()
+		mi.name = "%s_%s" % [outfit, ref.name]
+		mi.skin = ref.skin
+		mi.transform = ref.transform
+		ref.get_parent().add_child(mi)
+		mi.owner = ref.owner
+		mi.skeleton = mi.get_path_to(ref.get_node(ref.skeleton))
+		mi.mesh = _mesh(_subset(arr, tris[i]), src[1], per)
+		print("fit: %s  %d triangles, scale %s" % [mi.name, tris[i].size() / 3, k])
+
+
+## The triangles that stay when those whose centre is under `y` and within `radius`
+## of the vertical axis are dropped.
+static func _trim_below(arr: Array, tri: PackedInt32Array, y: float, radius: float) -> PackedInt32Array:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var kept := PackedInt32Array()
+	for t in range(0, tri.size(), 3):
+		var c := (v[tri[t]] + v[tri[t + 1]] + v[tri[t + 2]]) / 3.0
+		if c.y >= y or Vector2(c.x, c.z).length() >= radius:
+			kept.append_array([tri[t], tri[t + 1], tri[t + 2]])
+	return kept
+
+
+## Evens out per-vertex part labels: each pass gives every vertex the most common
+## label among itself and its edge neighbours (vertices at one position count as one),
+## so loose clothing far from the body (a hat brim over the shoulder, a coat hem)
+## follows the piece it is attached to and the cut runs clean.
+static func _smooth_labels(arr: Array, lab: PackedInt32Array, count: int, passes: int) -> PackedInt32Array:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var weld := PackedInt32Array()          ## vertex -> first vertex at its position
+	weld.resize(v.size())
+	var seen := {}
+	for i in v.size():
+		var key := Vector3i((v[i] * 2000.0).round())
+		if not seen.has(key):
+			seen[key] = i
+		weld[i] = seen[key]
+	var nbr := {}                           ## welded vertex -> PackedInt32Array
+	for t in range(0, idx.size(), 3):
+		for e in 3:
+			var a := weld[idx[t + e]]
+			var b := weld[idx[t + (e + 1) % 3]]
+			if not nbr.has(a):
+				nbr[a] = PackedInt32Array()
+			if not nbr.has(b):
+				nbr[b] = PackedInt32Array()
+			nbr[a].append(b)
+			nbr[b].append(a)
+	var cur := PackedInt32Array()
+	cur.resize(v.size())
+	for i in v.size():
+		cur[i] = lab[i]
+	var votes := PackedInt32Array()
+	votes.resize(count)
+	for p in passes:
+		var nxt := cur.duplicate()
+		for w in nbr:
+			votes.fill(0)
+			votes[cur[w]] += 1
+			for o in nbr[w]:
+				votes[cur[o]] += 1
+			var best := cur[w]
+			for c in count:
+				if votes[c] > votes[best]:
+					best = c
+			nxt[w] = best
+		cur = nxt
+	var out := PackedInt32Array()
+	out.resize(v.size())
+	for i in v.size():
+		out[i] = cur[weld[i]]
+	return out
+
+
+## The source's first surface (decimated when asked) and its material, or [] when
+## it cannot be read. With `pose_to`, the source is skinned and is baked in the pose
+## that matches pose_to's rest (_repose).
+static func _source(pc: Dictionary, pose_to: Skeleton3D = null) -> Array:
+	var raw := _load(str(pc.source))
+	if raw == null:
+		return []
+	var smi := raw.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var src := smi.mesh
+	var arr := src.surface_get_arrays(0)
+	var mat := src.surface_get_material(0)
+	if pose_to != null:
+		_repose(arr, smi, raw, pose_to)
+	raw.free()
+	if pc.has("decimate"):
+		arr = Prep._decimate(arr, int(pc.decimate))
+	return [arr, mat]
+
+
+## Limb bones turned to the reference rest direction: bone -> the child it points at.
+const LIMB_AIM := {
+	"LeftArm": "LeftForeArm", "LeftForeArm": "LeftHand",
+	"RightArm": "RightForeArm", "RightForeArm": "RightHand",
+	"LeftUpLeg": "LeftLeg", "LeftLeg": "LeftFoot",
+	"RightUpLeg": "RightLeg", "RightLeg": "RightFoot",
+}
+
+
+## Bakes a skinned mesh into the pose where each LIMB_AIM bone points the way the
+## same bone points in `to` at rest; other bones keep their rest. Vertices end in the
+## source scene's space, without bones (the fit copies new weights).
+static func _repose(arr: Array, mi: MeshInstance3D, scene: Node, to: Skeleton3D) -> void:
+	var skel := mi.get_node(mi.skeleton) as Skeleton3D
+	var skin := mi.skin
+	var n := skel.get_bone_count()
+	var pose: Array = []               ## bone -> posed global transform (skeleton space)
+	pose.resize(n)
+	var order: Array = range(n)
+	order.sort_custom(func(a, b): return _depth(skel, a) < _depth(skel, b))
+	for b in order:
+		var parent := skel.get_bone_parent(b)
+		var g: Transform3D = (pose[parent] if parent >= 0 else Transform3D()) * skel.get_bone_rest(b)
+		var nm := skel.get_bone_name(b)
+		var tb := to.find_bone(nm)
+		var kid := skel.find_bone(str(LIMB_AIM.get(nm, "")))
+		var tk := to.find_bone(str(LIMB_AIM.get(nm, "")))
+		if tb >= 0 and kid >= 0 and tk >= 0:
+			var now := g.basis * skel.get_bone_rest(kid).origin
+			var want := to.get_bone_global_rest(tk).origin - to.get_bone_global_rest(tb).origin
+			if now.length() > 0.0001 and want.length() > 0.0001:
+				var axis := now.normalized().cross(want.normalized())
+				var ang := now.angle_to(want)
+				if axis.length() > 0.00001:
+					g.basis = Basis(axis.normalized(), ang) * g.basis
+		pose[b] = g
+	var xf: Array = []                 ## bind -> skinning transform
+	for i in skin.get_bind_count():
+		var bone := skin.get_bind_bone(i)
+		if bone < 0:
+			bone = skel.find_bone(String(skin.get_bind_name(i)))
+		xf.append((pose[bone] as Transform3D) * skin.get_bind_pose(i) if bone >= 0 else Transform3D())
+	var to_scene := _rel(scene, skel)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nr: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var per := bones.size() / v.size()
+	for i in v.size():
+		var p := Vector3.ZERO
+		var q := Vector3.ZERO
+		for k in per:
+			var w := weights[i * per + k]
+			if w <= 0.0:
+				continue
+			var t: Transform3D = xf[bones[i * per + k]]
+			p += (t * v[i]) * w
+			q += (t.basis * nr[i]) * w
+		v[i] = to_scene * p
+		nr[i] = (to_scene.basis * q).normalized()
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nr
+	arr[Mesh.ARRAY_TANGENT] = null
+
+
+static func _depth(skel: Skeleton3D, b: int) -> int:
+	var d := 0
+	while skel.get_bone_parent(b) >= 0:
+		b = skel.get_bone_parent(b)
+		d += 1
+	return d
+
+
+static func _rel(root: Node, node: Node) -> Transform3D:
+	var t := Transform3D()
+	var at := node
+	while at != null and at != root:
+		if at is Node3D:
+			t = (at as Node3D).transform * t
+		at = at.get_parent()
+	return t
+
+
+## Scales and moves the arrays into `to` (per axis, or uniform: see the header).
+## Returns the scale.
+static func _place(arr: Array, to: AABB, pc: Dictionary) -> Vector3:
+	var from := AABB()
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	from.position = v[0]
+	for p in v:
+		from = from.expand(p)
+	var k := to.size / from.size
+	var at := to.position
+	if pc.get("uniform", false):
+		match str(pc.get("axis", "")):
+			"y":
+				k = Vector3.ONE * k.y
+			_:
+				k = Vector3.ONE * minf(k.y, minf(k.x, k.z))
+		k *= float(pc.get("scale", 1.0))
+		at = to.get_center() - from.size * k * 0.5
+		at.y = to.position.y
+	for i in v.size():
+		v[i] = at + (v[i] - from.position) * k
+	arr[Mesh.ARRAY_VERTEX] = v
+	var n: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in n.size():
+		n[i] = (n[i] / k).normalized()
+	arr[Mesh.ARRAY_NORMAL] = n
+	if arr[Mesh.ARRAY_TANGENT] != null:
+		var t: PackedFloat32Array = arr[Mesh.ARRAY_TANGENT]
+		for i in range(0, t.size(), 4):
+			var d := (Vector3(t[i], t[i + 1], t[i + 2]) * k).normalized()
+			t[i] = d.x
+			t[i + 1] = d.y
+			t[i + 2] = d.z
+		arr[Mesh.ARRAY_TANGENT] = t
+	return k
+
+
+static func _mesh(arr: Array, mat: Material, per: int) -> ArrayMesh:
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if per == 8 else 0)
+	mesh.surface_set_material(0, mat)
+	return mesh
+
+
+## The arrays cut down to the given triangles, keeping only the vertices they use.
+static func _subset(arr: Array, idx: PackedInt32Array) -> Array:
+	var count := (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	var remap := {}
+	var keep := PackedInt32Array()
+	var out_idx := PackedInt32Array()
+	out_idx.resize(idx.size())
+	for i in idx.size():
+		if not remap.has(idx[i]):
+			remap[idx[i]] = keep.size()
+			keep.append(idx[i])
+		out_idx[i] = remap[idx[i]]
+	var out := []
+	out.resize(Mesh.ARRAY_MAX)
+	for a in Mesh.ARRAY_MAX:
+		if a == Mesh.ARRAY_INDEX or arr[a] == null:
+			continue
+		var src = arr[a]
+		var stride: int = src.size() / count
+		var dst = src.duplicate()
+		dst.resize(keep.size() * stride)
+		for i in keep.size():
+			for s in stride:
+				dst[i * stride + s] = src[keep[i] * stride + s]
+		out[a] = dst
+	out[Mesh.ARRAY_INDEX] = out_idx
+	return out
+
+
+## Bones and weights of the nearest reference vertex, found in a grid of CELL cubes
+## that widens ring by ring until it has a candidate. Returns each vertex's nearest
+## reference vertex (-1 when none is in reach).
+static func _skin_from(arr: Array, ref_arr: Array, per: int) -> PackedInt32Array:
+	var rv: PackedVector3Array = ref_arr[Mesh.ARRAY_VERTEX]
+	var rb: PackedInt32Array = ref_arr[Mesh.ARRAY_BONES]
+	var rw: PackedFloat32Array = ref_arr[Mesh.ARRAY_WEIGHTS]
+	var grid := {}
+	for i in rv.size():
+		var c := Vector3i((rv[i] / CELL).floor())
+		if not grid.has(c):
+			grid[c] = PackedInt32Array()
+		grid[c].append(i)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var bones := PackedInt32Array()
+	var weights := PackedFloat32Array()
+	var near := PackedInt32Array()
+	near.resize(v.size())
+	near.fill(-1)
+	bones.resize(v.size() * per)
+	weights.resize(v.size() * per)
+	for i in v.size():
+		var c := Vector3i((v[i] / CELL).floor())
+		var best := -1
+		var best_d := INF
+		for r in 12:
+			for x in range(-r, r + 1):
+				for y in range(-r, r + 1):
+					for z in range(-r, r + 1):
+						if maxi(absi(x), maxi(absi(y), absi(z))) != r:
+							continue
+						for j in grid.get(c + Vector3i(x, y, z), PackedInt32Array()):
+							var d := v[i].distance_squared_to(rv[j])
+							if d < best_d:
+								best_d = d
+								best = j
+			if best >= 0:
+				break
+		if best < 0:
+			continue
+		near[i] = best
+		for b in per:
+			bones[i * per + b] = rb[best * per + b]
+			weights[i * per + b] = rw[best * per + b]
+	arr[Mesh.ARRAY_BONES] = bones
+	arr[Mesh.ARRAY_WEIGHTS] = weights
+	return near

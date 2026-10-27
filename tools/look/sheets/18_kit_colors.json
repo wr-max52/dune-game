@@ -1,0 +1,153 @@
+{
+ "title": "Kit colour variants: player, guard and the spare goggle-mask head",
+ "out": "res://test_results/parts/18_kit_colors.png",
+ "cells": [
+  {
+   "label": "Player",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ]
+  },
+  {
+   "label": "Player: rust",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "player_head": "res://assets/characters/kit/colors/player_head_rust.png",
+    "player_torso": "res://assets/characters/kit/colors/player_rust.png",
+    "player_legs": "res://assets/characters/kit/colors/player_rust.png"
+   }
+  },
+  {
+   "label": "Player: sand",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "player_head": "res://assets/characters/kit/colors/player_head_sand.png",
+    "player_torso": "res://assets/characters/kit/colors/player_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png"
+   }
+  },
+  {
+   "label": "Player: dusk",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "player_head": "res://assets/characters/kit/colors/player_head_dusk.png",
+    "player_torso": "res://assets/characters/kit/colors/player_dusk.png",
+    "player_legs": "res://assets/characters/kit/colors/player_dusk.png"
+   }
+  },
+  {
+   "label": "Guard",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "guard_legs"
+   ]
+  },
+  {
+   "label": "Guard: gunmetal",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "guard_legs"
+   ],
+   "textures": {
+    "guard_head": "res://assets/characters/kit/colors/guard_gunmetal.png",
+    "guard_torso": "res://assets/characters/kit/colors/guard_gunmetal.png",
+    "guard_legs": "res://assets/characters/kit/colors/guard_gunmetal.png"
+   }
+  },
+  {
+   "label": "Guard: oxblood",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "guard_legs"
+   ],
+   "textures": {
+    "guard_head": "res://assets/characters/kit/colors/guard_oxblood.png",
+    "guard_torso": "res://assets/characters/kit/colors/guard_oxblood.png",
+    "guard_legs": "res://assets/characters/kit/colors/guard_oxblood.png"
+   }
+  },
+  {
+   "label": "Guard: desert",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "guard_legs"
+   ],
+   "textures": {
+    "guard_head": "res://assets/characters/kit/colors/guard_desert.png",
+    "guard_torso": "res://assets/characters/kit/colors/guard_desert.png",
+    "guard_legs": "res://assets/characters/kit/colors/guard_desert.png"
+   }
+  },
+  {
+   "label": "Goggle mask (spare head)",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head",
+    "player_torso",
+    "player_legs"
+   ]
+  },
+  {
+   "label": "Goggle mask: oxblood",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "goggles_head": "res://assets/characters/kit/colors/goggles_oxblood.png"
+   }
+  },
+  {
+   "label": "Goggle mask: sand",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "goggles_head": "res://assets/characters/kit/colors/goggles_sand.png"
+   }
+  },
+  {
+   "label": "Goggle mask: violet",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head",
+    "player_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "goggles_head": "res://assets/characters/kit/colors/goggles_violet.png"
+   }
+  }
+ ]
+}

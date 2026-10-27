@@ -81,6 +81,7 @@ var fight: SpaceFight            ## issue #46: the space encounter in progress, 
 var kit: ShipKit                 ## built once at load (on the town's materials) for every fight
 var fight_log: Array = []        ## { outcome, payout, at } per sortie, for traces and tests
 var space_exit_margin := 250.0   ## metres below the edge that break off a running fight
+var _engine: AudioStreamPlayer   ## issue #16: the engine drone while the ship flies
 
 
 func setup(town_scene) -> void:
@@ -89,6 +90,7 @@ func setup(town_scene) -> void:
 
 func _ready() -> void:
 	name = "ShipPilot"
+	_engine = Sound.loop("ship_engine", self)
 	content = CoreContent.new()
 	content.load_from()
 	world = content.world_for_town("port_town")
@@ -419,10 +421,31 @@ func _physics_process(dt: float) -> void:
 		_on_foot()
 	else:
 		_seated(dt)
+	_engine_step()
 	if crash_left >= 0.0:
 		crash_left -= dt
 		if crash_left < 0.0:
 			_tow_home()
+
+
+func _exit_tree() -> void:
+	Sound.set_space(false)
+
+
+## Issue #16: the engine drones while the ship is in the air; pitch follows the throttle.
+func _engine_step() -> void:
+	if _engine == null:
+		return
+	var st := atmo.state
+	var on := piloting and (st == AtmoFlight.State.LIFTOFF or st == AtmoFlight.State.FLYING \
+		or st == AtmoFlight.State.LANDING)
+	if on != _engine.playing:
+		if on:
+			_engine.play()
+		else:
+			_engine.stop()
+	if on:
+		_engine.pitch_scale = 0.75 + _throttle * 0.5 + (0.15 if _boost else 0.0)
 
 
 func _on_foot() -> void:
@@ -523,6 +546,7 @@ func _on_event(e: Dictionary) -> void:
 		"reached_space":
 			if space_time < 0.0:
 				space_time = flight_time
+			Sound.set_space(true)
 			_leave_atmosphere()
 
 
@@ -621,6 +645,7 @@ func _rearm_space() -> void:
 	if atmo.reached_space and atmo.altitude() < atmo.space_altitude - space_exit_margin:
 		atmo.reached_space = false
 		ascending = false
+		Sound.set_space(false)
 
 
 func _tow_home() -> void:
@@ -628,6 +653,7 @@ func _tow_home() -> void:
 		visual.visible = true
 	atmo.reached_space = false
 	ascending = false
+	Sound.set_space(false)
 	atmo.park(home, home_yaw)
 	_set_hull(true)
 	_sync_visual()

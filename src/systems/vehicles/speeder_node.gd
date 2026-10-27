@@ -42,6 +42,7 @@ var _prompt: Label
 var _fan: Node3D
 var _glow_mat: StandardMaterial3D
 var _t := 0.0
+var _engine: AudioStreamPlayer3D   ## issue #16: the speeder's drone while you ride
 
 
 func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bool = true) -> void:
@@ -55,6 +56,7 @@ func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bo
 func _ready() -> void:
 	_build_visual()
 	_build_hull()
+	_engine = Sound.loop("speeder_engine", self)
 	if rideable:
 		gun = WeaponActor.new()
 		var laser: Dictionary = cfg.get("laser", {})
@@ -122,6 +124,8 @@ func dismount() -> bool:
 	var p := player()
 	riding = false
 	model.set_command(0.0, 0.0)
+	if _engine != null:
+		_engine.stop()
 	var spot := _exit_spot()
 	p.piloting = false
 	p.locked = false
@@ -163,6 +167,8 @@ func apply_damage(amount: float) -> void:
 
 func _physics_process(dt: float) -> void:
 	if model == null or not model.alive():
+		if _engine != null and _engine.playing:
+			_engine.stop()
 		return
 	_t += dt
 	if riding:
@@ -195,6 +201,10 @@ func _ride(dt: float) -> void:
 		log_events.append(e)
 	_fire(dt, fire)
 	_sync()
+	if _engine != null:
+		if not _engine.playing:
+			_engine.play()
+		_engine.pitch_scale = 1.1 + clampf(absf(model.speed) / 40.0, 0.0, 1.0) * 0.6
 	var p := player()
 	p.global_position = model.position
 	if demo.terrain != null and model.height_over_ground() < 30.0:
@@ -219,6 +229,7 @@ func _fire(dt: float, trigger: bool) -> void:
 				float(gun.weapon.config.get("bolt_speed", 90.0)))
 			gun.shots_fired += 1
 		shots += 1
+		Sound.play("speeder_laser", model.position)
 
 
 func _sync() -> void:
