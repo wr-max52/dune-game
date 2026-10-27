@@ -2,6 +2,18 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Mix-and-match locals (2026-10-26)
+
+What works now:
+- **Locals wear a rigged model in three parts.** A sand head scarf with goggles
+  (black lenses, no face), a loose linen shirt and loose linen trousers, made with
+  Hyper3D Rodin and split into head, torso and legs.
+- **Every part has six colours:** sand, darker, lighter, blue, red and yellow.
+  Each local picks one per part at random (216 combinations), or a caller passes
+  an outfit: `kit.build("local", "", {"head": "blue"})`.
+- To add a colour: add it under `local.recolor.colors` in
+  `content/look/character_models.json`, run `tools/look/recolor_parts.gd`, and add
+  its name to the part lists in `content/look/characters.json`.
 ## Oda's smuggling run (2026-10-26)
 
 What works now:
