@@ -2,6 +2,22 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Character builder (2026-10-27, issue #48)
+
+What works now:
+- **Dress the player yourself.** F11, Character: pick the head, upper body and
+  lower body from the kit pieces (player, guard, and the goggle head), each in
+  its original colour or one of its variants. A model turns beside the choices.
+- **Live and kept.** Every pick is worn at once (weapons and the jetpack stay on)
+  and saved to `user://player_outfit.json`, so it is still on after a restart.
+  Random and Default buttons.
+- **No hand-kept list.** The builder reads the pieces from the kit model and the
+  colours from the texture files, so a new piece or colour shows up by itself.
+- **Review shots:** `tools/review/builder_shot.gd` screenshots the builder.
+
+Known gaps:
+- No mouse turning or zoom on the preview; it turns by itself.
+
 ## Player and guard outfits from kit pieces (2026-10-27, issue #48)
 
 What works now:
@@ -27,7 +43,7 @@ Known gaps:
   cannot reduce these meshes further. Future generations should ask Hyper3D for
   fewer polygons.
 - Seams are cut, not capped, so a ragged edge can show at the guard's waist.
-- No character builder in settings yet.
+- No character builder in settings yet (added since: see Character builder).
 
 ## Seamless flight to space (2026-10-27, issue #46)
 
