@@ -14,7 +14,12 @@ extends SceneTree
 ##           origin    "center" (the middle of the bounds), "ground" (bottom centre) or
 ##                     "back" (centred, its +Z face at 0: a pack worn on the back),
 ##           desaturate 0..1: wash the colour texture toward grey (for tinting),
-##           max_texture  pixels: textures larger than this are halved until they fit } }
+##           max_texture  pixels: textures larger than this are halved until they fit,
+##           cut       { bones: [...], bone_prefix, boxes: [[x0, y0, z0, x1, y1, z1], ...],
+##                     keep_near: [x, y, z, r] }: drop the triangles mostly skinned
+##                     to one of `bones` or a bone starting with `bone_prefix` whose
+##                     centre is in a box (any box if none) and not within r of
+##                     keep_near (game axes, metres): a prop fused into a hand } }
 ## Hand weapons point their muzzle along +Z; droids face -Z and stand on y = 0.
 
 const CFG_PATH := "res://content/look/gear_models.json"
@@ -65,6 +70,8 @@ func _prep(id: String, c: Dictionary) -> void:
 	else:
 		turn.position = -box.get_center()
 	box = _aabb(root)
+	if c.has("cut"):
+		_cut(root, c.cut)
 	_textures(root, int(c.get("max_texture", 1024)), float(c.get("desaturate", 0.0)))
 	_own(root, root)
 	var out_doc := GLTFDocument.new()
@@ -82,6 +89,62 @@ func _prep(id: String, c: Dictionary) -> void:
 	print("prep_gear: %s  bounds %s .. %s (x y z, metres), %d triangles -> %s" % [
 		id, box.position, box.end, tris, out])
 	root.free()
+
+
+## Drop triangles (see `cut` above). Skinned meshes keep their skin; only the index
+## list changes, so the vertices stay put for the rig.
+func _cut(root: Node3D, cut: Dictionary) -> void:
+	var bones: Array = cut.get("bones", [])
+	var prefix := str(cut.get("bone_prefix", ""))
+	var keep_near: Array = cut.get("keep_near", [])     ## [x, y, z, r]: never cut inside
+	var boxes: Array = []
+	for b in cut.get("boxes", []):
+		boxes.append(AABB(Vector3(b[0], b[1], b[2]), Vector3(b[3] - b[0], b[4] - b[1], b[5] - b[2])))
+	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+		var sk := mi.get_node_or_null(mi.skeleton) as Skeleton3D if mi.skin != null else null
+		var xf := Transform3D.IDENTITY
+		var p: Node = mi
+		while p != root:
+			xf = (p as Node3D).transform * xf
+			p = p.get_parent()
+		var out := ArrayMesh.new()
+		var dropped := 0
+		for s in mi.mesh.get_surface_count():
+			var arr := mi.mesh.surface_get_arrays(s)
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+			var bw: PackedInt32Array = arr[Mesh.ARRAY_BONES] if arr[Mesh.ARRAY_BONES] != null else PackedInt32Array()
+			var ww: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS] if arr[Mesh.ARRAY_WEIGHTS] != null else PackedFloat32Array()
+			var per := bw.size() / maxi(verts.size(), 1)
+			var keep := PackedInt32Array()
+			for t in range(0, idx.size(), 3):
+				var tri := [idx[t], idx[t + 1], idx[t + 2]]
+				var centre := (xf * verts[tri[0]] + xf * verts[tri[1]] + xf * verts[tri[2]]) / 3.0
+				var in_box := boxes.is_empty()
+				for b: AABB in boxes:
+					if b.has_point(centre):
+						in_box = true
+				if keep_near.size() == 4 and centre.distance_to(Vector3(keep_near[0], keep_near[1], keep_near[2])) < float(keep_near[3]):
+					in_box = false
+				var on_bone := bones.is_empty() and prefix == ""
+				if not on_bone and per > 0 and sk != null:
+					for v in tri:
+						var best := 0
+						for k in per:
+							if ww[v * per + k] > ww[v * per + best]:
+								best = k
+						var bn := sk.get_bone_name(bw[v * per + best])
+						if bones.has(bn) or (prefix != "" and bn.begins_with(prefix)):
+							on_bone = true
+				if in_box and on_bone:
+					dropped += 1
+				else:
+					keep.append_array(PackedInt32Array(tri))
+			arr[Mesh.ARRAY_INDEX] = keep
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, mi.mesh.surface_get_format(s) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
+			out.surface_set_material(s, mi.mesh.surface_get_material(s))
+		mi.mesh = out
+		print("prep_gear: cut %d triangles from %s" % [dropped, mi.name])
 
 
 ## Shrink every texture to max_px and wash the colour ones toward grey.

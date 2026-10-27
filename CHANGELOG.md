@@ -12,6 +12,7 @@ Plain English, newest on top. One entry per milestone.
   - **Floating droid:** a white dome with one big lens on four little legs.
   - **Cargo droid:** a boxy hauler on two tank treads, with goggle eyes.
   - **Assassin droid:** a tall plated humanoid with a visor and a pistol in its right hand.
+  - **The assassin droid carries a real pistol.** The gun the generator fused into its hand is cut away in prep, and it holds the new blaster pistol model on its hand bone. **T-89** in the pit now uses the same model, with empty hands and a relaxed idle.
   - **The assassin droid walks.** Hyper3D rigged it with walk, run, idle and death clips: it walks or runs to keep up, stands ready when still, and falls backward when destroyed.
   - Every droid variant tints its model (rust, black, tan, olive, blue, bone, gunmetal, copper) and keeps its glowing eyes, which still go dark when it breaks.
 - **Droids follow more calmly.** A droid holds its ground until you are a few metres away (`follow.leash`: floating 4 m, cargo 5 m, assassin 6 m), then walks to its spot beside or behind you and stops. It no longer shuffles every time you move.

@@ -11,6 +11,7 @@ const FRAMES := [["idle", 0.5], ["walk", 0.0], ["walk", 0.26], ["walk", 0.52], [
 var _kind := "assassin"
 var _variant := "bone"
 var _look: Node3D
+var _close := false            ## close=1: frame the right hand (the pistol) instead
 
 
 func _init() -> void:
@@ -19,6 +20,8 @@ func _init() -> void:
 			_kind = a.substr(5)
 		elif a.begins_with("variant="):
 			_variant = a.substr(8)
+		elif a == "close=1":
+			_close = true
 	DisplayServer.window_set_size(CELL)
 	root.size = CELL
 	var env := Environment.new()
@@ -51,7 +54,10 @@ func _init() -> void:
 	var cam := Camera3D.new()
 	root.add_child(cam)
 	cam.fov = 40.0
-	cam.look_at_from_position(Vector3(4.2, 1.7, -1.6), Vector3(0, 1.0, 0.3))
+	if _close:
+		cam.look_at_from_position(Vector3(0.9, 1.6, -1.5), Vector3(0.45, 1.05, -0.15))
+	else:
+		cam.look_at_from_position(Vector3(4.2, 1.7, -1.6), Vector3(0, 1.0, 0.3))
 	cam.make_current()
 	_shoot.call_deferred()
 
@@ -74,7 +80,7 @@ func _shoot() -> void:
 		if img.get_size() != CELL:
 			img.resize(CELL.x, CELL.y)
 		sheet.blit_rect(img, Rect2i(Vector2i.ZERO, CELL), Vector2i(i * CELL.x, 0))
-	var p := ProjectSettings.globalize_path("res://docs/lookdev/gear/09_%s_clips.png" % _kind)
+	var p := ProjectSettings.globalize_path("res://docs/lookdev/gear/09_%s_clips%s.png" % [_kind, "_close" if _close else ""])
 	sheet.save_png(p)
 	print("droid_walk: wrote ", p, " (rigged: %s)" % (ap != null))
 	quit()
