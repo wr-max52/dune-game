@@ -1,0 +1,39 @@
+{
+  "note": "The sound library (issue #16): every sound a system asks for by key, and the music. SFX are synthesized by tools/audio/make_game_sfx.py (original, nothing to license). Music is free tracks from pixabay.com/music (Pixabay Content License, no attribution needed), re-encoded by tools/audio/rip_music.sh. A stream may be a list (one is picked at random). Volumes in dB, distances in metres; pitch is a random range.",
+  "sfx": {
+    "coin_gain":    { "stream": "res://assets/audio/sfx/coin_gain.wav", "volume_db": -8.0, "pitch": [0.98, 1.04] },
+    "coin_spend":   { "stream": "res://assets/audio/sfx/coin_spend.wav", "volume_db": -10.0, "pitch": [0.96, 1.02] },
+    "jet_loop":     { "stream": "res://assets/audio/sfx/jet_loop.wav", "volume_db": -12.0 },
+    "ship_engine":  { "stream": "res://assets/audio/sfx/ship_engine.wav", "volume_db": -12.0 },
+    "speeder_engine": { "stream": "res://assets/audio/sfx/ship_engine.wav", "volume_db": -14.0, "unit_size": 8.0, "max_distance": 80.0 },
+    "ship_laser":   { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -10.0, "pitch": [0.92, 1.08], "unit_size": 30.0, "max_distance": 600.0 },
+    "ship_missile": { "stream": "res://assets/audio/sfx/ship_missile.wav", "volume_db": -6.0, "pitch": [0.95, 1.05], "unit_size": 40.0, "max_distance": 800.0 },
+    "ship_hit":     { "stream": "res://assets/audio/sfx/ship_hit.wav", "volume_db": -6.0, "pitch": [0.85, 1.1], "unit_size": 40.0, "max_distance": 800.0 },
+    "ship_boom":    { "stream": "res://assets/audio/sfx/ship_boom.wav", "volume_db": -2.0, "pitch": [0.85, 1.05], "unit_size": 80.0, "max_distance": 2000.0 },
+    "speeder_laser": { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -12.0, "pitch": [1.1, 1.25], "unit_size": 10.0, "max_distance": 150.0 },
+    "droid_beep": {
+      "stream": [
+        "res://assets/audio/sfx/droid_beep_1.wav",
+        "res://assets/audio/sfx/droid_beep_2.wav",
+        "res://assets/audio/sfx/droid_beep_3.wav",
+        "res://assets/audio/sfx/droid_beep_4.wav"
+      ],
+      "volume_db": -10.0, "pitch": [0.9, 1.15], "unit_size": 3.0, "max_distance": 30.0
+    },
+    "droid_hum":    { "stream": "res://assets/audio/sfx/droid_hum.wav", "volume_db": -20.0, "unit_size": 1.5, "max_distance": 12.0 }
+  },
+  "max_one_shots": 24,
+  "music": {
+    "volume_db": -12.0,
+    "ambient": [
+      "res://assets/audio/music/ambient1.mp3",
+      "res://assets/audio/music/ambient2.mp3",
+      "res://assets/audio/music/ambient3.mp3"
+    ],
+    "battle": { "stream": "res://assets/audio/music/battle.mp3", "start": 30.0 },
+    "space":  { "stream": "res://assets/audio/music/space.mp3", "start": 0.0 },
+    "fade": 4.0,
+    "battle_fade_in": 1.5,
+    "battle_hold": 15.0
+  }
+}

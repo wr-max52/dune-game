@@ -191,6 +191,7 @@ func _player3d(key: String, stream_path: String, c: Dictionary) -> AudioStreamPl
 	a.unit_size = float(c.get("unit_size", 6.0))
 	a.max_distance = float(c.get("max_distance", 60.0))
 	a.position.y = 1.4
+	a.bus = Sound.SFX_BUS
 	add_child(a)
 	_sfx[key] = a
 	return a
@@ -356,6 +357,7 @@ func fire_at(point: Vector3, dt: float) -> bool:
 		return false
 	shots_fired += 1
 	play_sfx("rifle")
+	Sound.battle()           # issue #16: NPCs only ever shoot at the player
 	NoiseEvents.emit(origin, float(weapon_cfg.get("noise_radius", 50.0)), "shot_guard")
 	return true
 

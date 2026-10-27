@@ -44,6 +44,15 @@ Known gaps:
   fewer polygons.
 - Seams are cut, not capped, so a ragged edge can show at the guard's waist.
 - No character builder in settings yet (added since: see Character builder).
+## Sound FX library and music (2026-10-27, issue #16)
+
+- **Music, all the time.** Three ambient tracks cycle with slow cross-fades. When an NPC opens fire on you, the battle track cuts in (from 30 s into the recording) and holds for 15 s after the last shot. Cross the edge of space and the space track takes over; dive back under and the ambient comes back. The music carries on across launches and landings.
+- **New sounds:** the jetpack roars while it burns; your ship's engine drones in flight (pitch follows the throttle and boost), in the port's sky and in space; ship guns, missiles, hits and explosions in every dogfight; the speeder's engine and lasers; coins whenever your credits go up or down (paid, bribed, bought, sold, robbed); the sparring remote hums and chirps like a little droid.
+- **The energy blade is quieter** (its one-shots down 7 dB, the hum down 8 dB).
+- **F11 > Sound:** music and effects volume (saved per machine).
+- One small library, `Sound` (`src/systems/audio/sound.gd`, data in `content/look/sound.json`): systems ask for a sound by key. New effects are synthesized by `tools/audio/make_game_sfx.py`; the music is free Pixabay tracks, re-encoded by `tools/audio/rip_music.sh`.
+- Tests: test_sound.
+
 ## The 80s HUD (2026-10-27, issue #52)
 
 - A glowing retro HUD over everything: one phosphor colour, a monospaced font (Anonymous Pro, SIL OFL), dark glass panels with a lit rim. RetroSkin restyles every panel, label and button as it appears, so no screen had to be rebuilt; text that means something (her lines, warnings) keeps its colour.

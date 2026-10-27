@@ -9,6 +9,7 @@ extends CanvasLayer
 ##   Character the player's outfit from the kit pieces (CharacterBuilder, issue #48)
 ##   Flags     every world flag the content reads, on or off, plus custom ones
 ##   HUD       the 80s HUD's colour (issue #52) and every function key
+##   Sound     music and effects volume (issue #16)
 ##
 ## Everything writes to the same places the game does (WorldState, the npc's
 ## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
@@ -63,6 +64,7 @@ func _ready() -> void:
 	tabs.add_child(_character_tab())
 	tabs.add_child(_flags_tab())
 	tabs.add_child(_hud_tab())
+	tabs.add_child(_sound_tab())
 	var h := HBoxContainer.new()
 	v.add_child(h)
 	for b in [["Save now", _save], ["Close", close]]:
@@ -479,6 +481,19 @@ func _hud_tab() -> Control:
 		var what := Label.new()
 		what.text = k[1]
 		h.add_child(what)
+	return v.get_parent()
+
+
+## Issue #16: the music and the effects each get a volume, saved per machine.
+func _sound_tab() -> Control:
+	var v := _tab("Sound")
+	_section(v, "VOLUME  (0 .. 100)")
+	for bus in [[Sound.MUSIC_BUS, "Music"], [Sound.SFX_BUS, "Effects"]]:
+		var s := _slider(0, 100)
+		s.value = roundf(Sound.volume(bus[0]) * 100.0)
+		s.value_changed.connect(func(x): Sound.set_volume(bus[0], x / 100.0))
+		_row(v, bus[1], s)
+		_refreshers.append(func(): s.set_value_no_signal(roundf(Sound.volume(bus[0]) * 100.0)))
 	return v.get_parent()
 
 

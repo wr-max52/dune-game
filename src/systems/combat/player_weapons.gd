@@ -387,6 +387,7 @@ func _build_sfx() -> void:
 		"blade_clash": sounds.get("blade_clash", ""), "blade_deflect": sounds.get("blade_deflect", ""),
 	}
 	var lk: Dictionary = CharacterKit._read_json(LOOK_PATH)
+	var blade_vol: Dictionary = lk.get("blade_volume", {})
 	for id in ["pistol_blaster", "rifle_blaster"]:
 		map["shot_" + id] = lk.get(id, {}).get("sound", "")
 	for k in map:
@@ -395,8 +396,10 @@ func _build_sfx() -> void:
 			continue
 		var p := AudioStreamPlayer.new()
 		p.stream = load(path)
-		p.volume_db = -6.0
+		# Issue #16: the blade sat on top of everything; its sounds are a step down.
+		p.volume_db = float(blade_vol.get("db", -13.0)) if k.begins_with("blade") else -6.0
 		p.max_polyphony = 4
+		p.bus = Sound.SFX_BUS
 		add_child(p)
 		_sfx[k] = p
 	var hum_path := str(sounds.get("blade_hum", ""))
@@ -408,7 +411,8 @@ func _build_sfx() -> void:
 			s.loop_end = int(s.get_length() * s.mix_rate)
 		_hum = AudioStreamPlayer.new()
 		_hum.stream = s
-		_hum.volume_db = -16.0
+		_hum.volume_db = float(blade_vol.get("hum_db", -24.0))
+		_hum.bus = Sound.SFX_BUS
 		add_child(_hum)
 
 

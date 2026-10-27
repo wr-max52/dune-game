@@ -22,6 +22,40 @@ Every significant technical choice, the alternative, and why. Newest on top.
 - **Colours are recoloured textures, like the locals'.** One texture per outfit,
   so a variant is written once and fits all its pieces; a piece with its own
   texture (the player's head) has its own variants, looked up first.
+## 2026-10-27 — The sound library and the music (issue #16)
+
+- **One static library, `Sound`, lazy like GameFlow (no autoload).** The first call
+  puts one node under the tree root, so it outlives `change_scene_to_file()` and the
+  music does not restart on a launch or a landing. Callers say `Sound.play(key, at)`,
+  `Sound.loop(key, parent)`, `Sound.battle()`, `Sound.set_space(on)`. Alternative:
+  an autoload. Rejected: the project keeps nothing running that no scene asked for,
+  and the lazy node needs no project setting.
+- **Existing sounds stay where they were.** The blade, guns, steps and NPC sounds
+  keep their own players and data files; they only moved onto the SFX bus. The new
+  library covers what had no sound. Alternative: move every sound into
+  `content/look/sound.json`. Not worth the churn for this issue.
+- **Two buses (`default_bus_layout.tres`): Music and SFX.** The F11 panel sets each;
+  saved in `user://settings/sound.cfg`. Voices (Kokoro) stay on Master.
+- **Synthesized, not downloaded.** Every new effect is made by
+  `tools/audio/make_game_sfx.py` (standard library only, no numpy), like the blade
+  and NPC sounds before it: nothing to license, nothing to attribute, and re-runnable.
+  The free libraries the issue lists (Kenney, Sonniss, 99Sounds, ...) stay an option
+  for a later pass if a sound needs more than synthesis gives.
+- **Music is free tracks from Pixabay** (https://pixabay.com/music/, the Pixabay
+  Content License: free to use, no attribution needed), downloaded by the owner
+  (Ambient1-3, Battle, Space),
+  loudness-matched and re-encoded to 160 kb/s MP3 by `tools/audio/rip_music.sh`
+  (this machine's ffmpeg has no Vorbis encoder; Godot loops MP3 natively).
+- **Battle music is triggered by an NPC's shot, not by alarm state.** Every NPC that
+  fires only fires at the player (locals and troopers ignore each other), so
+  `NpcBody.fire_at` calls `Sound.battle()`. The track starts and loops at 30 s.
+  Priority: space > battle > ambient.
+- **Coin sounds watch `WorldState.credits`** each frame instead of hooking every
+  place credits change (jobs, bribes, payouts, vendors, the pit's fine). One
+  check catches all of them, including ones added later.
+- **Dogfight shots became events.** `dogfight.gd` adds `shot` events (and a position
+  on `missile`), and `DogfightView.on_event` plays them, so the stand-alone space
+  scene and the fight in the town's sky sound the same.
 
 ## 2026-10-27 — Space is the town's own sky (issue #46)
 
