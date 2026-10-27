@@ -244,6 +244,15 @@ if [ ! -f test_results/garrison_trace.txt ]; then
   exit 1
 fi
 echo "CI: garrison trace present ($(wc -l < test_results/garrison_trace.txt) lines)"
+# The port's locals (Townsfolk): five walkers and four stall keepers; shoot one and
+# every local fights, the merchants from behind their counters.
+echo "CI: generating locals trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/locals_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/locals_trace.txt ]; then
+  echo "CI: ERROR -- locals trace was not generated" >&2
+  exit 1
+fi
+echo "CI: locals trace present ($(wc -l < test_results/locals_trace.txt) lines)"
 # Issue #15: names. The town's guards, the town, its planet, your ship and the
 # jetpack named as they spawn; the same names after a save and for the same world
 # seed; the space fight's pilots named each sortie; a crowd of 5,000 all unique.

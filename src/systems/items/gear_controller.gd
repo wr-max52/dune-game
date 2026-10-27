@@ -41,6 +41,12 @@ var lowest_floor := 0.0
 ## Ground height under (x, z), when the scene has terrain (the town's desert).
 ## Unset: the town's lowest floor stands in for the ground everywhere.
 var ground_at := Callable()
+## Whether the stall at a vendor marker trades right now: (marker: String) -> bool.
+## Unset: always open. The town's locals close a stall while they fight, or for good
+## once its keeper is dead (Townsfolk.vendor_open).
+var vendor_open := Callable()
+## What a closed stall says: (marker: String) -> String ("" = the "closed" label).
+var closed_line := Callable()
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
 var _last_safe := Vector3.ZERO
@@ -203,6 +209,9 @@ func prompt_text() -> String:
 		var item: Dictionary = content.get_item(str(focus.node.pickup.get("item", "")))
 		return _l("pick_up") % _shown(item, str(focus.node.pickup.get("item", "")))
 	var v: Dictionary = focus.cfg
+	if not is_open(v):
+		var said: String = closed_line.call(str(v.get("marker", ""))) if closed_line.is_valid() else ""
+		return said if said != "" else _l("closed") % str(v.get("label", "vendor")).to_lower()
 	var sell_id := _sellable(v)
 	if sell_id != "":
 		var it: Dictionary = content.get_item(sell_id)
@@ -265,7 +274,14 @@ func _take(node) -> String:
 	return "picked_up"
 
 
+## False while the stall's keeper will not deal (see vendor_open).
+func is_open(v: Dictionary) -> bool:
+	return not vendor_open.is_valid() or bool(vendor_open.call(str(v.get("marker", ""))))
+
+
 func _trade(v: Dictionary) -> String:
+	if not is_open(v):
+		return ""
 	var sell_id := _sellable(v)
 	if sell_id != "":
 		var it: Dictionary = content.get_item(sell_id)

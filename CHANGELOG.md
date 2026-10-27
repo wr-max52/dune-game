@@ -2,6 +2,31 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Locals on foot (2026-10-26)
+
+What works now:
+- **The locals are people, not statues.** Nine live locals, run by a new
+  director (`Townsfolk`) the way the garrison runs the troopers, on the same body,
+  senses, pathing and brain:
+  - **Five walk loops:** three through the house lanes and alleys (two in the west
+    houses, one in the east) and two shoppers up and down the market.
+  - **Four keep a stall:** two merchants, the gear trader and the fence, each
+    behind a counter facing the aisle. They look around but never leave it.
+- **Hurt one and they all fight.** Shooting any local raises the locals' own alarm
+  (not the Remnant's: the gate stays calm). Every local in town fights back with a
+  holdout pistol: walkers take cover and close in on a leash, merchants duck behind
+  the counter and shoot over it without leaving the stall. Locals standing drops
+  (-10 for the fight, -8 per local killed). Get away and they calm down but
+  remember your face for 4 minutes; get downed and they let the Remnant have you.
+- **No trade mid-fight.** A stall will not deal while the locals are fighting, or
+  ever again once its keeper is dead ("Not selling to you.").
+- **The market is a street of stalls.** Two rows of six stalls face each other
+  across an 8 m aisle; each is a waist-high counter on the aisle side and a back
+  panel, the keeper standing between them.
+- **Placeholder looks.** Every local uses the existing "local" CharacterKit figure;
+  the profile's `archetype` is the one field the character art pass will change
+  (`content/core/soldiers/local_resident.json`, `local_merchant.json`, `local_fence.json`).
+
 ## F11 demo settings (2026-10-26)
 
 What works now:

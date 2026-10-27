@@ -41,8 +41,8 @@ func _all(node: Node, cls: String, out: Array) -> Array:
 func test_decor_adds_no_collision() -> void:
 	var on = _demo(true)
 	var off = _demo(false)
-	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), 114, "one body per box with look on")
-	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), 114, "and with look off")
+	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), 126, "one body per box with look on")
+	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), 126, "and with look off")
 	assert_eq(_count(on.decor, "CollisionObject3D"), 0, "decor has no colliders")
 	assert_eq(_count(on.decor, "CollisionShape3D"), 0, "decor has no shapes")
 
