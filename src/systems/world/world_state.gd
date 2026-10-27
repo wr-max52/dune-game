@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Static, like GameFlow, so it survives scene changes (town -> flight -> town)
 ## without an autoload. Systems write to it when something actually happens
-## (a fight won, shots fired in the street, a job accepted); the bartender only
+## (a fight won, shots fired in the street, a job accepted); the cantina owner only
 ## ever reads it. That is what keeps her rumors true: a rumor is shown to her
 ## only when its conditions hold here (see rumors()).
 ##
@@ -114,13 +114,13 @@ static func on_player_fired(in_range: bool) -> void:
 		change_standing("locals", -1)
 
 
-## M15: the gate checkpoint. Every outcome lands here so the bartender (and any
+## M15: the gate checkpoint. Every outcome lands here so the cantina owner (and any
 ## later system) reads it from one place.
 static func on_gate_bribe(price: int) -> void:
 	credits = maxi(0, credits - price)
 	bump("gate_bribes")
 	set_flag("bribed_gate")
-	log_event("Paid off the east gate (%d cr)." % price)
+	log_event("Paid off the front gate (%d cr)." % price)
 
 
 ## A Remnant guard died. `all_down`: that was the last one at the gate.
@@ -131,7 +131,7 @@ static func on_guard_killed(delta: int, all_down: bool) -> void:
 	if all_down:
 		set_flag("gate_guards_down")
 		set_flag("gate_checkpoint_up", false)
-		log_event("The east gate checkpoint is down. Nobody is on it.")
+		log_event("The front gate checkpoint is down. Nobody is on it.")
 
 
 ## Knocked out at the gate and dragged to the pit: they help themselves to a
@@ -183,7 +183,7 @@ static func board() -> Array:
 	return _board
 
 
-## A job as the bartender shows it. A smuggling job comes back with its text
+## A job as the cantina owner shows it. A smuggling job comes back with its text
 ## and pay filled in from the drop she has lined up.
 static func job(id: String) -> Dictionary:
 	for j in board():
@@ -192,7 +192,7 @@ static func job(id: String) -> Dictionary:
 	return {}
 
 
-## Jobs the bartender can offer at this trust tier, not yet taken.
+## Jobs the cantina owner can offer at this trust tier, not yet taken.
 static func open_jobs(tier: String) -> Array:
 	var out: Array = []
 	for j in board():

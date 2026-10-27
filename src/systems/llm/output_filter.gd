@@ -1,6 +1,6 @@
 class_name OutputFilter
 extends RefCounted
-## Last line of defense on what the bartender says (M12). Pure.
+## Last line of defense on what the cantina owner says (M12). Pure.
 ##
 ## - Franchise terms (the shared IP blocklist) are rewritten as outlander talk.
 ## - Admitting to being an AI / model / program, or talking about prompts and

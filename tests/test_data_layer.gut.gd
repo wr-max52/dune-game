@@ -29,25 +29,25 @@ func test_all_weapons_present_by_id() -> void:
 	assert_eq(pistol.get("visible_bolt"), true, "pistol is a visible-bolt weapon")
 
 
-func test_bartender_is_the_only_llm_npc() -> void:
+func test_cantina_owner_is_the_only_llm_npc() -> void:
 	content.load_from()
 	var llm_count := 0
 	for id in content.npcs:
 		if content.get_npc(id).get("kind") == "llm":
 			llm_count += 1
-	assert_eq(llm_count, 1, "exactly one LLM-driven npc (the bartender)")
-	var bartender: Dictionary = content.get_npc("bartender")
-	assert_eq(bartender.get("kind"), "llm", "bartender is LLM-driven")
+	assert_eq(llm_count, 1, "exactly one LLM-driven npc (the cantina owner)")
+	var cantina_owner: Dictionary = content.get_npc("cantina_owner")
+	assert_eq(cantina_owner.get("kind"), "llm", "cantina owner is LLM-driven")
 	var expected := PackedStringArray(["give_rumor", "set_disposition", "offer_drink", "call_guards"])
-	var tools: Array = bartender.get("tools", [])
+	var tools: Array = cantina_owner.get("tools", [])
 	for tool in expected:
 		assert_true(tools.has(tool), "tool present: " + str(tool))
 	assert_eq(tools.size(), int(expected.size()), "no tools outside the allowed set")
 
 
-func test_bartender_persona_prompt_is_loaded() -> void:
+func test_cantina_owner_persona_prompt_is_loaded() -> void:
 	content.load_from()
-	var prompt: String = content.get_persona("bartender")
+	var prompt: String = content.get_persona("cantina_owner")
 	assert_gt(prompt.length(), 50, "persona prompt text is loaded")
 
 

@@ -95,7 +95,7 @@ cover picker and player health.
 - Every grammar reference resolves.
 - No franchise name in the library, and franchise and rude words are rejected.
 - Names in the real scenes: guards, nameplates, the town and planet, your ship,
-  the jetpack, pilots each sortie, and the bartender's briefing
+  the jetpack, pilots each sortie, and the cantina owner's briefing
   (`test_results/names_trace.txt`).
 
 **Not done, honestly:**
@@ -267,7 +267,7 @@ look kit, and gear added from data alone.
 **What is real and proven by tests:** the body's gait/jump/land/crouch states, view
 toggle spam, camera wall collision, swap spam, blaster hits on range targets, the
 3-hit sword chain landing hits, timed deflections sent back into the remote, street
-shots changing WorldState (`test_results/m11_body_trace.txt`). The bartender's whole
+shots changing WorldState (`test_results/m11_body_trace.txt`). The cantina owner's whole
 pipe: player text reaches the model fenced, rumors/jobs/secrets only from the
 briefing, trust clamps, menu prices, meta/IP filtering, fallback, circuit breaker,
 first-token timeout with a beat, stalled streams, canned-but-true offline answers,
@@ -283,7 +283,7 @@ server (`test_results/m12_bar_trace.txt`).
 - **The M10 dogfight frame-budget test is timing sensitive:** it can read just over
   50 ms on a loaded CPU (seen once at 54 ms, passing on rerun).
 - **Her confidant secret is a draft** marked "PRODUCT OWNER TO WRITE" in
-  `content/core/npcs/bartender_card.json`. The whole card is a first draft.
+  `content/core/npcs/cantina_owner_card.json`. The whole card is a first draft.
 - **The visit summary** (2 to 3 facts written by the model when you leave) only runs
   when a model is up; offline she remembers only what the game wrote.
 - **Bundling llama-server in an export build** is not done; the sidecar uses the
@@ -297,8 +297,8 @@ server (`test_results/m12_bar_trace.txt`).
   no collision, so bolts pass through them.
 - **The Kenney blasters are still toy shapes** (rounded blocks), even retinted. Building our own blaster models from parts, like the energy sword, is the planned fix.
 - **No crosshair spread feedback or hit markers.**
-- **The old M6 scaffold** (`bartender_ai.gd`, `ollama_client.gd`) is kept only for the
-  M6/M7/M8 traces; the game uses `bartender_brain.gd`.
+- **The old M6 scaffold** (`cantina_owner_ai.gd`, `ollama_client.gd`) is kept only for the
+  M6/M7/M8 traces; the game uses `npc_brain.gd`.
 - **Reviewed in software GL only** (`docs/m11/`); re-shoot on the Mac with
   `tools/m11/shoot_m11.sh`.
 
@@ -311,7 +311,7 @@ collision; the pit pad launches the dogfight and the player comes back to the pi
 after it (`tests/test_flow.gut.gd`).
 
 **Stubbed / deferred, honestly:**
-- **NPCs are static capsules.** No AI, no collision. The bartender and fixer are not
+- **NPCs are static capsules.** No AI, no collision. The cantina owner and fixer are not
   yet wired to their M6/M5 systems inside the town.
 - **No navmesh.** The bot walks authored routes.
 - **Residential is a uniform grid.** The art pass will vary it.
@@ -362,7 +362,7 @@ The vertical slice now hangs together in one playthrough
 (`scenes/m8_playthrough.gd` / `test_results/m8_playthrough.txt`): walk + FPV/TPV toggle,
 a trooper sealing to cover, the 4-trooper squad spreading, a timed-deflection duel with
 the duelist, the mission loop to COMPLETE, a typed-default voice turn to the LLM
-bartender, and a save/load round-trip of the four named things. A performance report
+cantina owner, and a save/load round-trip of the four named things. A performance report
 (`test_results/m8_perf_report.txt`) shows the worst frame under the 50ms budget across
 the whole session. The GUT "1 orphan" artifact has been **cleared** (it was a
 `queue_free` on a detached test node; now `free`). The suite is 0 orphans.
@@ -379,12 +379,12 @@ the whole session. The GUT "1 orphan" artifact has been **cleared** (it was a
   outstanding.** World streaming is a load-cost model, not a rendered 3D walk (M4), and
   combat/movement are logic + traces, not rendered fights (M2/M3/M5).
 - **Take-cover-against-marked-surfaces (movement)** remains deferred.
-- **The bartender runs a scripted client in CI; live Ollama inference is the manual +
+- **The cantina owner runs a scripted client in CI; live Ollama inference is the manual +
   recorded path.** Kokoro voice and the whisper STT are optional runtimes -- typed input
   is the dependency-free default.
 - **Cloud LLM fallback** is an interface + stub only; no API key ever enters the client.
 
-**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+**Model risk (watch):** Qwen3 4B Q4 is the planned cantina owner model. If tool-calling
 quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
 that supports tool calls. Documented, not yet measured.
 
@@ -400,8 +400,8 @@ the human-facing guide to running and recording the finished slice.
 ## After M7 (2026-10-25) -- superseded by the notes above.
 
 **What is real and proven by tests:** everything in M1-M6, plus voice input on top of
-the M6 bartender (M7). A push-to-talk routes a captured request to the same
-`bartender.respond()`; **typed is the default and dependency-free path**, whisper is an
+the M6 cantina owner (M7). A push-to-talk routes a captured request to the same
+`cantina owner.respond()`; **typed is the default and dependency-free path**, whisper is an
 optional upgrade that degrades to typed when its runtime/model is absent; a captured
 request is read but never executed as a command (no `TOOL=cut_power` in the trace); an
 allowed tool still applies; and each turn records a latency.
@@ -424,7 +424,7 @@ allowed tool still applies; and each turn records a latency.
 test bolt). It is a warning, not a test failure -- `ci.sh` exits 0 and "All tests
 passed" shows. Tracked for M8 cleanup.
 
-**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+**Model risk (watch):** Qwen3 4B Q4 is the planned cantina owner model. If tool-calling
 quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
 that supports tool calls. Documented, not yet measured.
 
@@ -443,11 +443,11 @@ a covering trooper with health/death (M2), the energy blade with stamina, timed
 deflection, and a duelist enemy (M3), chunk streaming with no >50ms frame-cost over
 the port->desert walk plus a data-driven outpost (M4), the full mission loop
 (fixer -> contract -> fight -> crate -> payout) with a save/load round-trip of the
-four named things plus the 4-trooper squad coordinator (M5), and the bartender LLM
+four named things plus the 4-trooper squad coordinator (M5), and the cantina owner LLM
 conversation (M6). Each milestone ships a headless trace or log plus GUT assertions.
 
 **Stubbed / deferred, honestly:**
-- **The bartender talks to a scripted client in CI, not a live model.** The
+- **The cantina owner talks to a scripted client in CI, not a live model.** The
   conversation logic (read-but-never-execute text, 4-tool guardrails, fallback,
   memory) is the real thing and is proven headless; the model on the other end of the
   client is a canned stand-in. Live Ollama inference is a manual + recorded path
@@ -458,7 +458,7 @@ conversation (M6). Each milestone ships a headless trace or log plus GUT asserti
 - **The Ollama HTTP post is a documented stub.** Request-building and
   response-parsing are live code tested on canned JSON; the actual `/api/chat` call is
   a TODO wiring step, not run in CI.
-- **Voice-in (M7)** is not started; the bartender takes typed text only. M7 adds
+- **Voice-in (M7)** is not started; the cantina owner takes typed text only. M7 adds
   push-to-talk with measured latency.
 - **World streaming is still a load-cost model, not a rendered 3D walk** (M8).
 - **Combat/movement are logic + traces, not rendered fights** (M8).
@@ -470,7 +470,7 @@ conversation (M6). Each milestone ships a headless trace or log plus GUT asserti
 test bolt). It is a warning, not a test failure -- `ci.sh` exits 0 and "All tests
 passed" shows. Tracked for M8 cleanup.
 
-**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+**Model risk (watch):** Qwen3 4B Q4 is the planned cantina owner model. If tool-calling
 quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
 that supports tool calls. Documented, not yet measured.
 
@@ -494,9 +494,9 @@ headless trace or log plus GUT assertions.
 
 **Stubbed / deferred, honestly:**
 - **The mission loop is a headless simulation, not a rendered fight or a live AI
-  agent.** The bot feeds the state machine a fixed event sequence; the bartender
+  agent.** The bot feeds the state machine a fixed event sequence; the cantina owner
   conversation is a deterministic stub, not real inference. Real LLM inference (the
-  bartender, M6) is a manual + recorded check.
+  cantina owner, M6) is a manual + recorded check.
 - **World streaming is still a load-cost model, not a rendered 3D walk.** M4 proved
   the per-frame work stays under the 50ms budget and a walk crosses the boundary; the
   3D greybox and a recorded real frame time are M8.
@@ -513,7 +513,7 @@ headless trace or log plus GUT assertions.
 test bolt). It is a warning, not a test failure -- `ci.sh` exits 0 and "All tests
 passed" shows. Tracked for M8 cleanup.
 
-**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+**Model risk (watch):** Qwen3 4B Q4 is the planned cantina owner model. If tool-calling
 quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model
 that supports tool calls. Documented, not yet measured.
 
@@ -545,7 +545,7 @@ or log plus GUT assertions.
 - **Take-cover-against-marked-surfaces (movement)** was deferred; the squad "not all in
   the open" coordinator is still outstanding (note: M4 delivered streaming + the outpost,
   and M5 will carry the 4-trooper squad with the mission loop).
-- **Bot playthrough (M5)** talks to a deterministic stub for the bartender; real LLM
+- **Bot playthrough (M5)** talks to a deterministic stub for the cantina owner; real LLM
   inference remains a manual + recorded check.
 - **Cloud LLM fallback** is an interface + stub only; no API key ever enters the
   client. A backend proxy design is documented, not wired.
@@ -555,7 +555,7 @@ or log plus GUT assertions.
 bolt). It is a warning, not a test failure -- `ci.sh` exits 0 and "All tests passed"
 shows. Tracked for M8 cleanup.
 
-**Model risk (watch):** Qwen3 4B Q4 is the planned bartender model. If tool-calling
+**Model risk (watch):** Qwen3 4B Q4 is the planned cantina owner model. If tool-calling
 quality or speed on the dev machine is poor, the fallback is a 1-2B instruct model that
 supports tool calls. Documented, not yet measured.
 

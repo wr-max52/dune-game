@@ -114,7 +114,7 @@ func test_you_can_win() -> void:
 	assert_true(_b("FIGHT_FLAG_FIGHT"))
 	assert_true(_b("FIGHT_FLAG_DOWN"))
 	assert_true(_b("FIGHT_CHECKPOINT_FLAG_CLEARED"), "the checkpoint is no longer up")
-	assert_true(_b("FIGHT_RUMOR_FIGHT"), "the bartender has heard")
+	assert_true(_b("FIGHT_RUMOR_FIGHT"), "the cantina owner has heard")
 	assert_true(_b("FIGHT_RUMOR_DEAD"))
 	assert_true(_b("FIGHT_OUTSIDE"), "and the gate is yours")
 

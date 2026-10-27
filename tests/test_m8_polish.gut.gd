@@ -2,7 +2,7 @@ extends GutTest
 ## M8: the polish pass. This proves the vertical slice hangs TOGETHER: a single
 ## headless playthrough threads every system -- walk + camera toggle, a trooper
 ## sealing to cover, a timed-deflection duel with the duelist, the mission loop to
-## COMPLETE, a typed voice turn to the LLM bartender, and a save round-trip -- and a
+## COMPLETE, a typed voice turn to the LLM cantina owner, and a save round-trip -- and a
 ## performance report proves no frame exceeded the 50ms budget.
 ##
 ## Two generated logs are read here (ci.sh generates both first):

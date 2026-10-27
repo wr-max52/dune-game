@@ -7,7 +7,7 @@
   "reserved": [
    {
     "name": "Oda Vell",
-    "key": "npc:bartender"
+    "key": "npc:cantina_owner"
    }
   ]
  },

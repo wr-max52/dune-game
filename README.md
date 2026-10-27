@@ -2,7 +2,7 @@
 
 The smallest playable build that proves the concept: a frontier desert spaceport
 days after an empire collapses. Land, roam a port district, talk to locals, take a
-contract into the desert, fight, return, get paid. One LLM-driven bartender.
+contract into the desert, fight, return, get paid. One LLM-driven cantina owner.
 
 This is a **vertical slice**, not the full game.
 
@@ -51,8 +51,8 @@ layer. Generic terms only: "energy blade", "blaster", "imperial remnant", "troop
 
 `PLAN.md` holds the milestones in build order, with status and the "done means"
 for each. M0-M12 are done (M10 is starfighter flight and dogfights; M11 the
-player's body and hand weapons; M12 the live LLM bartender,
-`docs/bartender/BARTENDER_PLAN.md`; M13 the jetpack; M14 flying the ship from the
+player's body and hand weapons; M12 the live LLM cantina owner,
+`docs/cantina_owner/CANTINA_OWNER_PLAN.md`; M13 the jetpack; M14 flying the ship from the
 port to space and back). N1 is the naming system: everything that spawns gets a
 generated, unique name (`docs/names/NAMING.md`). `LAUNCH.md` is how to run and
 record the slice, fly the ship, fight in space and use the jetpack. `docs/ADDING_SHIPS.md` is how to add ships, guns, AI pilots and fights

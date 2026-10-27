@@ -1,12 +1,12 @@
 extends GutTest
-## M12: the bartender's pure parts: reply parsing (streamed and final), the
+## M12: the cantina owner's pure parts: reply parsing (streamed and final), the
 ## output filter, the action validator, the prompt builder, the relationship.
 
 var card: Dictionary
 
 
 func before_all() -> void:
-	card = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/npcs/bartender_card.json"))
+	card = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/npcs/cantina_owner_card.json"))
 
 
 # ---- ReplyParser

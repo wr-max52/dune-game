@@ -1,5 +1,5 @@
 extends GutTest
-## M12: the live bartender, from the headless trace (scenes/m12_bar_trace.gd).
+## M12: the live cantina owner, from the headless trace (scenes/m12_bar_trace.gd).
 ## Part 1 runs scripted providers through the real pipe; part 2 runs the same
 ## brain over real HTTP against tools/llm/mock_llm_server.py (ci.sh starts it
 ## when python3 exists; those tests are skipped otherwise).
@@ -96,9 +96,9 @@ func test_conversation_never_blocks_a_frame() -> void:
 	assert_lt(float(t.get("CONVO_WORST_FRAME_MS", 999)), 50.0)
 
 
-func test_memory_is_saved_v2() -> void:
+func test_memory_is_saved() -> void:
 	assert_eq(t.get("SAVED"), "true")
-	assert_eq(int(t.get("SAVE_VERSION", 0)), 2)
+	assert_eq(int(t.get("SAVE_VERSION", 0)), 3, "v3: the Cantina Owner rename (#47)")
 	assert_eq(t.get("SAVED_TRUST_MATCHES"), "true")
 	assert_true(str(t.get("SAVED_KNOWN")).contains("r_checkpoint"))
 	assert_eq(t.get("SAVED_JOB"), "active")

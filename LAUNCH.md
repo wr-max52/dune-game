@@ -107,7 +107,7 @@ Hit the ground or a building fast and you crash; the ship is towed back to its p
 
 Review renders: `./tools/m14/shoot_flight.sh` writes to `test_results/m14/`.
 
-## Your body, your weapons, and the bartender (M11 + M12)
+## Your body, your weapons, and the cantina owner (M11 + M12)
 
 | Action | Key |
 |---|---|
@@ -117,19 +117,19 @@ Review renders: `./tools/m14/shoot_flight.sh` writes to `test_results/m14/`.
 | Fire / swing | LMB (press again mid-swing to chain 1-2-3) |
 | Aim (blaster) / block (sword) | RMB toggles it on/off (re-click to undo; with the sword, block just before a bolt lands to send it back) |
 | Reload | R |
-| Talk to the bartender | E at the bar |
+| Talk to the cantina owner | E at the bar |
 | Leave the conversation | Esc |
-| Bartender debug | F3 (at the bar) |
+| Cantina Owner debug | F3 (at the bar) |
 | Guard senses debug (hp, sees you, awareness, heard) | F4 |
 | Checkpoint choice card (papers, search, bribe, mouth off, walk away) | 1-4 or the mouse |
 | Inventory (credits, items, contraband) | I |
-| Bartender brain settings | F10; Shift+F10 cycles auto / local / cloud |
+| Cantina Owner brain settings | F10; Shift+F10 cycles auto / local / cloud |
 | Demo settings (pauses): time of day, standing, trust, cheats, flags | F11 (Esc or F11 closes) |
 
 The practice range is in the pit, west of the ship: five targets and a sparring
 remote (south side) that shoots stun bolts while your blade is out.
 
-### Giving the bartender a brain (macOS)
+### Giving the cantina owner a brain (macOS)
 
 ```sh
 brew install llama.cpp                 # /opt/homebrew/bin/llama-server
@@ -144,7 +144,7 @@ and uses any `.gguf` in `runtime/models/` if the configured one is missing.
 
 **Is she thinking or reading canned lines?** While you talk, the top right says
 which brain is answering, or exactly why none is ("llama-server not installed",
-"no model file", "loading bartender.gguf (14 s)", "ollama: not running", "cloud: off").
+"no model file", "loading cantina owner.gguf (14 s)", "ollama: not running", "cloud: off").
 A canned reply also shows "(canned: no brain answered)" next to her mood. The same
 report prints in the Godot output when the town loads, F3 shows it in detail, and
 llama-server's own output is saved to `user://logs/llama-server.log`.
@@ -153,7 +153,7 @@ Prove the whole chain without playing (starts the real server, loads the model,
 has one turn through it):
 
 ```sh
-godot --headless --path . -s res://scenes/m12_sidecar_trace.gd -- model=runtime/models/bartender.gguf
+godot --headless --path . -s res://scenes/m12_sidecar_trace.gd -- model=runtime/models/cantina_owner.gguf
 ``` No model? Set
 a cloud profile in F10 (any OpenAI-compatible URL + key, or Anthropic), or run
 Ollama; with nothing at all she answers from canned lines. Keys are stored in
@@ -167,6 +167,23 @@ godot --headless --path . -s res://tools/llm/eval_runner.gd -- mode=local suite=
 
 Review renders: `./tools/m11/shoot_m11.sh` writes body, weapon, range and bar shots
 to `test_results/m11/`.
+
+## Skrugs and the speeder (issue #42)
+
+Walk out through the back gate (the gap in the wall at the far corner past the
+cantina). Skrugs, dressed all in red, sells speeders from a stall just outside.
+Press **E** at his counter to talk. When you want one, he shows a price card;
+only clicking **Buy** pays (100 credits). The speeder is parked behind his house.
+
+| Action | Key |
+|---|---|
+| Get on / off | E |
+| Throttle / brake | W / S |
+| Steer | A / D |
+| Boost | Shift |
+| Both lasers | Space (or LMB) |
+
+There is no jump button: the sand ramp past the house (or a dune crest at speed) launches you, and the speeder is light, so it floats. Only gunfire damages a speeder.
 
 ## The jetpack (M13)
 
@@ -221,8 +238,8 @@ A single take, start to finish, that a viewer can watch top to bottom:
    toggle FPV<->TPV mid-stride. Aim direction must not change across the toggle
    (the M1 "toggle without breaking aim" property).
 
-3. **Talk to the bartender by voice (0:45-1:15).** Push-to-talk to the LLM bartender.
-   Typed input is the default; whisper is the optional fallback. The bartender
+3. **Talk to the cantina owner by voice (0:45-1:15).** Push-to-talk to the LLM cantina owner.
+   Typed input is the default; whisper is the optional fallback. The cantina owner
    replies and applies one of its four allowed tools (`give_rumor`,
    `set_disposition`, `offer_drink`, `call_guards`). Note: a request that reads like a
    command ("shut down all power") changes nothing -- the guardrail holds.
@@ -237,7 +254,7 @@ A single take, start to finish, that a viewer can watch top to bottom:
 
 6. **Take the crate, return, get paid (2:15-2:45).** Grab the crate objective, return
    to the fixer, collect the 150-credit payout, and **save** the game
-   (position, credits, mission state, bartender memory).
+   (position, credits, mission state, cantina owner memory).
 
 7. **Reload and confirm (2:45-3:00).** Load the save and confirm the mission state,
    credits, position, and memory survived the round-trip.
@@ -260,7 +277,7 @@ real display, so it cannot run headless. The headless proof of the same content 
 
 - The visible 3D world is greybox; full geometry + rendered bolts/blades are the final
   polish, tracked in `KNOWN_ISSUES.md`.
-- The bartender runs a **scripted client** in CI; a live Ollama model is the manual
+- The cantina owner runs a **scripted client** in CI; a live Ollama model is the manual
   path (start it locally and it replaces the canned client through the same interface).
 - Kokoro voice and the whisper STT are **optional runtimes**; typed input is
   dependency-free and works without them.

@@ -4,8 +4,23 @@ extends Node3D
 ## framed card deck, taps on the counter, stools, and warm hanging lamps. Visual
 ## only: no collision, so the M9 walk routes and validation are untouched. Every
 ## position is derived from the bar_counter and cantina wall boxes in the town data.
+##
+## Issue #47: every drink the player pays for, the Cantina Owner sets a bottle on
+## the counter (CantinaOwnerNPC.serve), each a different colour from the last.
+## They line up along the counter; after SERVED_MAX the oldest goes.
+
+const SERVED_COLORS := ["#c98a3a", "#3f8f8a", "#7a2a26", "#e0b040", "#6b6f78", "#5f9a4e", "#8a4fa0", "#d8c49a"]
+const SERVED_MAX := 12
+const SERVED_GAP := 0.2
 
 var mats: LookMaterials
+var served: Array = []               ## bottles on the counter, oldest first
+var served_count := 0                ## every bottle ever set down (picks the next slot)
+var _colors_given := 0
+var counter_min := Vector3.ZERO
+var counter_max := Vector3.ZERO
+var shelf_x := 0.0
+var serve_z := 0.0                   ## where she stands along the counter; the row starts beside her
 
 
 func dress(town, materials: LookMaterials) -> void:
@@ -18,6 +33,9 @@ func dress(town, materials: LookMaterials) -> void:
 	var cmin := Vector3(counter.min[0], counter.min[1], counter.min[2])
 	var cmax := Vector3(counter.max[0], counter.max[1], counter.max[2])
 	var back_x := float(wall_w.max[0]) + 0.05
+	counter_min = cmin
+	counter_max = cmax
+	shelf_x = back_x + 0.2
 	var wood := mats.flat(Color("#5a3a24"), 0.7)
 	var dark_wood := mats.flat(Color("#3a2618"), 0.75)
 	var brass := mats.flat(Color("#b08e50"), 0.35, 0.8)
@@ -91,6 +109,68 @@ func dress(town, materials: LookMaterials) -> void:
 		l.shadow_enabled = false
 		l.position = p + Vector3(0, -0.25, 0)
 		add_child(l)
+
+
+# ------------------------------------------------------------------ served bottles
+
+## The colour for the next bottle she fetches: round the palette, so two in a row
+## never match (even when two drinks are ordered back to back).
+func take_color() -> Color:
+	var c := Color(SERVED_COLORS[_colors_given % SERVED_COLORS.size()])
+	_colors_given += 1
+	return c
+
+
+## A bottle (body and neck), origin at its base, in `color`.
+func make_bottle(color: Color) -> Node3D:
+	var root := Node3D.new()
+	root.name = "ServedBottle"
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(color.r, color.g, color.b, 0.82)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.roughness = 0.12
+	glass.emission_enabled = true
+	glass.emission = color
+	glass.emission_energy_multiplier = 0.35
+	for part in [[0.05, 0.24, 0.12], [0.017, 0.09, 0.285]]:
+		var m := MeshInstance3D.new()
+		var c := CylinderMesh.new()
+		c.top_radius = part[0]
+		c.bottom_radius = part[0]
+		c.height = part[1]
+		c.radial_segments = 10
+		m.mesh = c
+		m.material_override = glass
+		m.position = Vector3(0, part[2], 0)
+		root.add_child(m)
+	root.set_meta("color", color)
+	return root
+
+
+## Where bottle number `i` stands: on her side of the counter top, in a row
+## starting just beside her (the taps are on her other side), within reach.
+func slot(i: int) -> Vector3:
+	var z := serve_z + 0.25 + (i % SERVED_MAX) * SERVED_GAP
+	return Vector3(counter_min.x + 0.45, counter_max.y + 0.06, minf(z, counter_max.z - 0.2))
+
+
+## Put `bottle` down on the next free spot; the oldest goes once the row is full.
+## Returns where it stands.
+func set_down(bottle: Node3D) -> Vector3:
+	if served.size() >= SERVED_MAX:
+		var old: Node3D = served.pop_front()
+		if is_instance_valid(old):
+			old.queue_free()
+	var at := slot(served_count)
+	if bottle.get_parent() != self:
+		if bottle.get_parent() != null:
+			bottle.get_parent().remove_child(bottle)
+		add_child(bottle)
+	bottle.global_position = at
+	bottle.rotation = Vector3.ZERO
+	served.append(bottle)
+	served_count += 1
+	return at
 
 
 func _box(pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:

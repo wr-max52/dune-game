@@ -1,6 +1,6 @@
 extends SceneTree
 ## Review renders for M11/M12: the player's body, weapons in both cameras, the
-## range and the bartender. Saves PNGs to test_results/m11/.
+## range and the cantina owner. Saves PNGs to test_results/m11/.
 ##
 ## Needs a real renderer: ./tools/m11/shoot_m11.sh [shots=a,b] [size=1280x720]
 ## Each shot is a little script: set up the player, wait some frames, save.
@@ -199,7 +199,7 @@ func _oda_close() -> int:
 	_place(Vector3(-76.5, 0, 0), -PI * 0.5)
 	rig_node.set_first_person(false)
 	_draw("")
-	var her: Vector3 = demo.bartender.global_position
+	var her: Vector3 = demo.cantina_owner.global_position
 	_cut(her + Vector3(1.9, 1.55, 0.9), her + Vector3(0, 1.15, 0))
 	return 50
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Get the bartender's local brain (M12): checks for llama-server and downloads the
-# model into runtime/models/bartender.gguf (git-ignored).
+# Get the cantina owner's local brain (M12): checks for llama-server and downloads the
+# model into runtime/models/cantina_owner.gguf (git-ignored).
 #
 #   ./tools/llm/fetch_runtime.sh            # the default (30B-class MoE, ~18 GB)
 #   MODEL=small ./tools/llm/fetch_runtime.sh   # a 4B model (~2.5 GB) for quick tests
 #   MODEL_URL=https://.../any.gguf ./tools/llm/fetch_runtime.sh
 #
-# Model choice is config, not code: the bake-off (docs/bartender/BARTENDER_PLAN.md,
+# Model choice is config, not code: the bake-off (docs/cantina_owner/CANTINA_OWNER_PLAN.md,
 # section 8) decides. These URLs were current when written; check for newer
 # releases before the bake-off, since this moves monthly.
 set -euo pipefail
@@ -17,7 +17,7 @@ case "${MODEL:-default}" in
   *)     URL_DEFAULT="https://huggingface.co/unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF/resolve/main/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf" ;;
 esac
 URL="${MODEL_URL:-$URL_DEFAULT}"
-OUT="runtime/models/bartender.gguf"
+OUT="runtime/models/cantina_owner.gguf"
 
 if command -v llama-server >/dev/null 2>&1; then
   echo "fetch_runtime: llama-server found at $(command -v llama-server)"

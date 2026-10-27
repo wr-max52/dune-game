@@ -1,11 +1,11 @@
-# Bartender Push (M10): make her actually work
+# Cantina Owner Push (M10): make her actually work
 
 > **Status (2026-10-26):** M10.0 to M10.5 shipped as **M12** (M10 was taken by
 > flight), together with M11 (body + weapons). M10.6, the model bake-off and tuning
 > her voice from transcripts, is next and needs the Mac. See CHANGELOG.md and
 > KNOWN_ISSUES.md.
 
-**Goal:** walk into the cantina, press E, type anything, and get a fast, in-character reply from a bartender who knows what is happening in town, stays neutral in the war, remembers you, and slowly lets you in on her secrets. Local model by default, any cloud key as a switch, canned lines as the floor. She never dead-ends and never hangs.
+**Goal:** walk into the cantina, press E, type anything, and get a fast, in-character reply from a cantina owner who knows what is happening in town, stays neutral in the war, remembers you, and slowly lets you in on her secrets. Local model by default, any cloud key as a switch, canned lines as the floor. She never dead-ends and never hangs.
 
 **Product owner decisions (2026-10-26):**
 
@@ -23,11 +23,11 @@
 M6 is marked DONE, but nothing has ever talked to a real model:
 
 - `ollama_client.gd::_post()` returns `""`. Live HTTP was never wired.
-- `bartender_ai.respond()` **never sends the player's text to the model.** It pops the next canned response. Even with HTTP wired, she would be answering a question nobody asked.
+- `cantina_owner_ai.respond()` **never sends the player's text to the model.** It pops the next canned response. Even with HTTP wired, she would be answering a question nobody asked.
 - No conversation history. Each turn is a fresh system prompt with no messages.
 - The persona is five sentences: no name, no secrets, no knowledge of the world.
 - No world state exists: no faction standing, no rumors, no trust. `memory` is a loose Dictionary.
-- No in-world interaction. The town (M9) has `bar_front` and `bartender` markers, but the bartender is a capsule.
+- No in-world interaction. The town (M9) has `bar_front` and `cantina owner` markers, but the cantina owner is a capsule.
 - `kokoro_voice.synthesize()` returns null.
 - `llm_client.pop_next()` is synchronous, so a real call would freeze the game.
 
@@ -40,7 +40,7 @@ M6 is marked DONE, but nothing has ever talked to a real model:
 ## 1. Architecture
 
 ```
- Player types ──> DialogueUI ──> BartenderBrain ──> PromptBuilder ──> LLMService ──> Provider chain
+ Player types ──> DialogueUI ──> NpcBrain ──> PromptBuilder ──> LLMService ──> Provider chain
                       ^               │                 ^   ^                         1. local llama-server (sidecar)
                       │               │                 │   │                         2. Ollama (if running)
                       │               v                 │   │                         3. cloud (user's API key)
@@ -70,13 +70,13 @@ M6 is marked DONE, but nothing has ever talked to a real model:
 | `src/systems/llm/reply_parser.gd` | RefCounted, pure | Pulls the partial `say` text out of a streaming JSON reply, then parses the final object. |
 | `src/systems/llm/action_validator.gd` | RefCounted, pure | Clamps and validates proposed actions against the world. |
 | `src/systems/llm/output_filter.gd` | RefCounted, pure | Catches franchise names, "as an AI" and similar after generation. |
-| `src/systems/llm/bartender_ai.gd` | rewrite | Turn orchestration: build, call, stream, filter, validate, apply, remember. |
+| `src/systems/llm/cantina_owner_ai.gd` | rewrite | Turn orchestration: build, call, stream, filter, validate, apply, remember. |
 | `src/systems/world/world_state.gd` | autoload | Faction standing, town flags, rumor pool, mission board, time of day. Saved. |
 | `src/systems/npc/relationship.gd` | RefCounted, pure | Trust (0 to 100), tier, mood, known facts, conversation summary. Saved. |
 | `src/ui/dialogue_panel.tscn/.gd` | UI | Typed input, streamed subtitle, leave with Esc. |
 | `src/ui/llm_settings_panel.tscn/.gd` | UI | Provider order, URLs, model names, masked key, a "Test" button. |
 | `src/ui/llm_debug_overlay.gd` | UI | F3: provider, model, time to first token, total time, tokens, raw JSON, the full prompt. |
-| `content/core/npcs/bartender_card.json` | data | Persona card: voice, history, rules, secrets by tier. Replaces the .txt. |
+| `content/core/npcs/cantina_owner_card.json` | data | Persona card: voice, history, rules, secrets by tier. Replaces the .txt. |
 | `content/core/rumors/*.json` | data | Rumors with conditions, so they're true to world state. |
 | `content/core/llm/defaults.json` | data | Shipped default config (no keys). |
 | `content/core/llm/reply_schema.json` | data | JSON schema for her reply. Fed to llama-server as a grammar. |
@@ -132,7 +132,7 @@ Order comes from config. The default:
 | 3 failures in 60 s on one provider | Circuit opens: skip it for 2 minutes. |
 | Every provider down | Canned lines, plus a quiet "LLM offline" dot in the corner. |
 
-The player should never see an error string. They see a bartender who is busy for a second.
+The player should never see an error string. They see a cantina owner who is busy for a second.
 
 ### The sidecar (`sidecar.gd`)
 
@@ -150,9 +150,9 @@ The player should never see an error string. They see a bartender who is busy fo
 {
   "chain": ["local", "ollama", "cloud"],
   "profiles": {
-    "local":  { "type": "openai_compat", "base_url": "http://127.0.0.1:8088/v1", "model": "bartender",
+    "local":  { "type": "openai_compat", "base_url": "http://127.0.0.1:8088/v1", "model": "cantina_owner",
                 "sidecar": { "enabled": true, "bin": "/opt/homebrew/bin/llama-server",
-                             "model_path": "res://../runtime/models/bartender.gguf", "port": 8088 } },
+                             "model_path": "res://../runtime/models/cantina_owner.gguf", "port": 8088 } },
     "ollama": { "type": "openai_compat", "base_url": "http://127.0.0.1:11434/v1", "model": "qwen3:30b-a3b" },
     "cloud":  { "type": "openai_compat", "base_url": "https://openrouter.ai/api/v1", "model": "<any>",
                 "api_key_env": "DUNE_LLM_KEY", "enabled": false }
@@ -228,7 +228,7 @@ The player should never see an error string. They see a bartender who is busy fo
 
 - `trust`, `tier` (stranger 0 to 19, regular 20 to 49, trusted 50 to 79, confidant 80+), `mood` (game owned, nudged by the model's mood tag and by world events), `known_rumors`, `hinted_secrets`, `facts` (short strings the game writes from validated actions, like "paid tab" or "took the escort job").
 - **Summary:** when you leave the bar (or when history goes over 8 turns), one background call summarizes the visit into 2 or 3 facts. It runs off the critical path, uses the same chain, and is skipped if offline.
-- All of it is saved through `save_system` (replacing the loose `bartender_memory`). Bump the save `version` to 2 with a migration.
+- All of it is saved through `save_system` (replacing the loose `npc_memory`). Bump the save `version` to 2 with a migration.
 
 ---
 
@@ -266,7 +266,7 @@ The player should never see an error string. They see a bartender who is busy fo
 - **Covering latency:** the moment you hit Enter she does a "thinking" beat: an idle animation (wiping a glass) and, if the first token takes over 900 ms, a short stall bark from data ("Mm.", "Go on.", a slow pour sound). It feels like a person, not a spinner.
 - **Job offers** open the game's accept/decline card. **Drinks** charge credits through the game. **Trust** changes are silent (no "+1 trust" popup, which would break the spell), but the debug overlay shows them.
 - **Debug overlay (F3):** provider used, model, ms to first token, ms total, tokens in/out, fallbacks taken, raw JSON, dropped actions and why, and a "copy prompt" button. You'll live in this while tuning.
-- **Transcripts:** every turn goes to `user://logs/bartender/YYYY-MM-DD.jsonl` (prompt hash, reply, actions, provider, timings; no keys). This is the raw material for tuning her.
+- **Transcripts:** every turn goes to `user://logs/cantina_owner/YYYY-MM-DD.jsonl` (prompt hash, reply, actions, provider, timings; no keys). This is the raw material for tuning her.
 
 ---
 
@@ -292,7 +292,7 @@ She can only be an info broker if there's info. Smallest version that's true to 
 `tools/llm/eval_runner.gd` runs headless against any configured provider:
 `godot --headless --script tools/llm/eval_runner.gd -- --provider local --suite all`
 
-It writes `docs/bartender/evals/<date>_<provider>_<model>.md` with a pass rate per category and p50/p95 timings.
+It writes `docs/cantina_owner/evals/<date>_<provider>_<model>.md` with a pass rate per category and p50/p95 timings.
 
 | Suite | Cases (about) | Pass condition |
 |---|---|---|
@@ -331,7 +331,7 @@ Model choice is config, not code. Pick by gauntlet score + latency on the produc
 | M10.0 | Truth | PLAN.md/KNOWN_ISSUES updated to say M6 was scaffold. This plan merged. `.gitignore` for `runtime/`. | Docs only. |
 | M10.1 | The pipe | `llm_service`, `openai_compat_provider`, `sse_stream`, `llm_config`, `scripted_provider`. Debug overlay v0 (provider + timings). | Headless trace: a live streamed reply from llama-server prints token deltas. Unit tests for SSE parsing and request building on canned bytes. Game never blocks (frame time test during a request). |
 | M10.2 | Backups | `sidecar.gd`, health checks, chain, timeouts, circuit breaker, `anthropic_provider`, settings panel with a Test button and key storage. | The `chaos` suite passes. Switching local to cloud in the panel works without a restart. Key never appears in logs (test greps the transcript files). |
-| M10.3 | The brain | `prompt_builder`, `reply_schema.json`, `reply_parser` (streaming `say`), `action_validator`, `output_filter`, `relationship.gd`, the `bartender_ai` rewrite, persona card v1. **The player's text actually reaches the model.** | Unit tests for every pure part. `format`, `jailbreak`, `meta` and `ip_names` suites at 90% or more on local. |
+| M10.3 | The brain | `prompt_builder`, `reply_schema.json`, `reply_parser` (streaming `say`), `action_validator`, `output_filter`, `relationship.gd`, the `cantina_owner_ai` rewrite, persona card v1. **The player's text actually reaches the model.** | Unit tests for every pure part. `format`, `jailbreak`, `meta` and `ip_names` suites at 90% or more on local. |
 | M10.4 | The world | `world_state` autoload, `locals` faction, rumor data (12 to start), mission board hookup, trust tiers + secrets, save v2 with migration. | `grounding` and `secrets` at 100%. `barometer` and `memory` at 80% or more. Save round-trip includes the relationship. |
 | M10.5 | The bar | Interaction at `bar_front`, dialogue panel with real streaming, thinking beat + stall barks, job card, drinks, transcripts, warm-up on town entry. | Product owner plays: walk in, talk 10 turns, take a job, come back after it, and she remembers. First token p50 under 800 ms on the laptop. |
 | M10.6 | Bake-off + tune | Run all candidates. Pick one. Tune the persona from transcripts. Write the 5 golden conversations. | Full gauntlet report committed. Product owner reads the golden conversations and signs off on her voice. |

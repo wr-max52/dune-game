@@ -1,5 +1,5 @@
 extends GutTest
-## Why is the bartender dumb? The sidecar and the service must always be able to
+## Why is the cantina owner dumb? The sidecar and the service must always be able to
 ## say, in words, and a second health check must never swallow the first one's
 ## callback (that once meant llama-server was never started).
 
@@ -62,7 +62,7 @@ func test_second_health_check_waits_instead_of_dropping() -> void:
 
 func test_schema_numbers_are_integers_on_the_wire() -> void:
 	# llama-server rejected "maxItems": 3.0 with HTTP 400, so every turn was canned.
-	var b := BartenderBrain.new()
+	var b := NpcBrain.new()
 	var p := OpenAICompatProvider.new("local", { "base_url": "http://x/v1", "grammar": true })
 	var body := str(p.build_request([], { "schema": b.builder.schema }).body)
 	assert_true(body.contains("\"maxItems\":3"), body.substr(0, 300))
@@ -72,7 +72,7 @@ func test_schema_numbers_are_integers_on_the_wire() -> void:
 func test_say_is_first_in_alphabetical_order() -> void:
 	# llama-server orders grammar keys alphabetically; "say" must still come first
 	# so the subtitle can stream before the rest of the reply.
-	var b := BartenderBrain.new()
+	var b := NpcBrain.new()
 	var keys: Array = b.builder.schema.properties.keys()
 	var sorted := keys.duplicate()
 	sorted.sort()

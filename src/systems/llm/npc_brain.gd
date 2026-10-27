@@ -1,6 +1,9 @@
-class_name BartenderBrain
+class_name NpcBrain
 extends RefCounted
-## The bartender's turn logic (M12). Replaces the M6 scaffold (bartender_ai.gd,
+## An AI character's turn logic (M12; shared since #42). One brain per character,
+## built from that character's card (the Cantina Owner's by default, Skrugs's at
+## the outpost): who they are, what they may do, their canned lines. Originally
+## the cantina owner's turn logic (M12). Replaces the M6 scaffold (cantina_owner_ai.gd,
 ## kept only for the M6/M7 traces): this one actually sends the player's words to
 ## a model, streams the answer, and turns the model's proposals into game effects
 ## only after they pass the validator.
@@ -18,13 +21,14 @@ signal line_delta(text_so_far: String)        ## streamed, filtered subtitle
 signal line_done(turn: Dictionary)            ## final { say, mood, kept, dropped, ... }
 signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
+signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal ended(reason: String)
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
-const CARD_PATH := "res://content/core/npcs/bartender_card.json"
+const CARD_PATH := "res://content/core/npcs/cantina_owner_card.json"   ## the default card
 const BRIEF_PATH := "res://content/core/llm/world_briefing.json"
 const SCHEMA_PATH := "res://content/core/llm/reply_schema.json"
-const LOG_DIR := "user://logs/bartender"
+const LOG_ROOT := "user://logs"         ## transcripts go to <root>/<card id>/
 const BARK_AFTER_MS := 900
 
 var llm: LLMService
@@ -38,7 +42,7 @@ var insults := 0
 var busy := false
 var talking := false
 var log_transcripts := true
-var log_dir := LOG_DIR
+var log_dir := LOG_ROOT + "/cantina_owner"
 var last_turn: Dictionary = {}       ## for the debug overlay
 var turns: Array = []                ## every finished turn this session (tests read it)
 
@@ -55,13 +59,20 @@ var _rng := RandomNumberGenerator.new()
 var _summary_id := -1
 
 
-func _init(service: LLMService = null) -> void:
-	card = _read(CARD_PATH)
+func _init(service: LLMService = null, card_path: String = CARD_PATH) -> void:
+	card = _read(card_path)
+	log_dir = LOG_ROOT + "/" + id()
 	builder = PromptBuilder.new(card, _read(BRIEF_PATH), _read(SCHEMA_PATH))
 	filter = OutputFilter.new(card)
 	_rng.seed = 7
 	if service != null:
 		attach(service)
+
+
+## The card's id ("cantina_owner", "skrugs"): the key for this character's
+## relationship in the save and for their transcript folder.
+func id() -> String:
+	return str(card.get("id", "npc"))
 
 
 func attach(service: LLMService) -> void:
@@ -153,7 +164,10 @@ func say(text: String) -> bool:
 	if llm == null:
 		_finish_turn({ "ok": false, "text": "", "provider": "none", "fell_back_from": [], "error": "no llm" })
 		return true
-	_turn_id = llm.chat(_messages, { "schema": builder.schema })
+	var opts := { "schema": builder.schema }
+	if card.has("temperature"):
+		opts["temperature"] = float(card.temperature)
+	_turn_id = llm.chat(_messages, opts)
 	return true
 
 
@@ -270,6 +284,8 @@ func _apply(kept: Array) -> Array:
 					rel.trust_this_visit += int(a.delta)
 			"pour_drink":
 				_pour(a)
+			"offer_speeder":
+				sale_offered.emit({ "id": a.id, "name": a.name, "price": int(a.price) })
 			"call_guards":
 				rel.banned_until = WorldState.clock + 90.0
 				rel.add_trust(-5, "threatened you in your own bar")
@@ -316,10 +332,15 @@ func accept_job(id: String) -> bool:
 
 # ------------------------------------------------------------------ offline
 
-## A real answer without a model: keyword topic + true data.
+## A real answer without a model: keyword topic + true data. Only topics whose
+## action this character has (no job board at Skrugs's stall, no drinks).
 func canned_reply(text: String) -> Dictionary:
 	var c: Dictionary = card.get("canned", {})
 	var topic := _topic(text)
+	var can: Array = builder.actions()
+	var needs := { "smuggle": "offer_job", "job": "offer_job", "drink": "pour_drink", "buy": "offer_speeder", "rumor": "share_rumor" }
+	if needs.has(topic) and not can.has(needs[topic]):
+		topic = ""
 	match topic:
 		"rumor":
 			var rs := WorldState.rumors(rel.tier(), rel.known_rumors, 1)
@@ -340,6 +361,8 @@ func canned_reply(text: String) -> Dictionary:
 			return { "say": _pick(c.get("war", ["Both sides drink here."])), "actions": [] }
 		"drink":
 			return { "say": "Dust ale. You look like a dust ale.", "actions": [{ "type": "pour_drink", "name": "dust ale" }] }
+		"buy":
+			return { "say": _pick(c.get("sell", ["Yours for the price on the board."])), "actions": [{ "type": "offer_speeder" }] }
 		"bye":
 			return { "say": _pick(c.get("bye", ["Go on."])), "actions": [{ "type": "end_conversation" }] }
 	return { "say": _pick(c.get("default", ["Hold on."])), "actions": [] }
@@ -348,7 +371,7 @@ func canned_reply(text: String) -> Dictionary:
 func _topic(text: String) -> String:
 	var low := text.to_lower()
 	var tw: Dictionary = card.get("topic_words", {})
-	for topic in ["bye", "smuggle", "job", "rumor", "drink", "war"]:
+	for topic in ["bye", "buy", "smuggle", "job", "rumor", "drink", "war"]:
 		for w in tw.get(topic, []):
 			if low.contains(str(w)):
 				return topic

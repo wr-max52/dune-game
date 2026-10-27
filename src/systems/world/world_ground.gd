@@ -42,10 +42,10 @@ func setup(world_cfg: Dictionary, town = null, content = null,
 		_add_landmark(lm, content)
 
 
-func add_box(id: String, kind: String, mn: Vector3, mx: Vector3, rise: String = "") -> void:
+func add_box(id: String, kind: String, mn: Vector3, mx: Vector3, rise: String = "", visual: bool = true) -> void:
 	if SKIP_KINDS.has(kind):
 		return
-	boxes.append({ "id": id, "kind": kind, "min": mn, "max": mx, "rise": rise })
+	boxes.append({ "id": id, "kind": kind, "min": mn, "max": mx, "rise": rise, "visual": visual })
 
 
 func _add_landmark(lm: Dictionary, content) -> void:
@@ -66,8 +66,12 @@ func _add_landmark(lm: Dictionary, content) -> void:
 				# Axis-aligned footprint that covers the rotated building.
 				var hx := (absf(cos(yaw)) * s.x + absf(sin(yaw)) * s.z) * 0.5
 				var hz := (absf(sin(yaw)) * s.x + absf(cos(yaw)) * s.z) * 0.5
+				# Issue #42: a building may be a ramp ("rise": the side its top slopes up
+				# to, in the world frame; ramps are ground, not obstacles) and may skip
+				# the placeholder box when something else dresses it ("visual": false).
 				add_box(str(lm.get("id", "")) + "/" + str(b.get("id", "")), "solid",
-					Vector3(c.x - hx, base, c.z - hz), Vector3(c.x + hx, base + s.y, c.z + hz))
+					Vector3(c.x - hx, base, c.z - hz), Vector3(c.x + hx, base + s.y, c.z + hz),
+					str(b.get("rise", "")), bool(b.get("visual", true)))
 
 
 ## The desert's mesas and hoodoos (content/look/desert_landforms.json, the data

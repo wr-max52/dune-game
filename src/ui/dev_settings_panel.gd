@@ -9,7 +9,7 @@ extends CanvasLayer
 ##   Flags     every world flag the content reads, on or off, plus custom ones
 ##
 ## Everything writes to the same places the game does (WorldState, the npc's
-## Relationship, the look), so the bartender, rumors and checkpoint react as if
+## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
 ## it had happened in play.
 
 const MOODS := ["wary", "warm", "amused", "irritated"]
@@ -211,12 +211,12 @@ func _standing_tab() -> Control:
 	return v.get_parent()
 
 
-## Named people the player has a Relationship with. Only the bartender so far;
+## Named people the player has a Relationship with. Only the cantina owner so far;
 ## add the next one here when an npc gets a Relationship.
 func _individuals() -> Array:
 	var out: Array = []
 	if demo != null and demo.bar != null and demo.bar.brain != null:
-		out.append({ "label": str(demo.bar.brain.card.get("name", "Bartender")), "rel": demo.bar.brain.rel })
+		out.append({ "label": str(demo.bar.brain.card.get("name", "Cantina Owner")), "rel": demo.bar.brain.rel })
 	return out
 
 

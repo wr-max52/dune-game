@@ -3194,14 +3194,14 @@
    "role": "interact"
   },
   {
-   "id": "bartender",
+   "id": "cantina_owner",
    "pos": [
     -82,
     0,
     0
    ],
    "role": "npc",
-   "npc": "bartender"
+   "npc": "cantina_owner"
   },
   {
    "id": "fixer",
@@ -3226,7 +3226,7 @@
     0,
     0
    ],
-   "note": "A local on a bar stool, facing the bartender."
+   "note": "A local on a bar stool, facing the cantina owner."
   },
   {
    "id": "patron_2",
@@ -3241,7 +3241,7 @@
     0,
     0
    ],
-   "note": "A local on a bar stool, facing the bartender."
+   "note": "A local on a bar stool, facing the cantina owner."
   },
   {
    "id": "patron_3",
@@ -3256,7 +3256,7 @@
     0,
     0
    ],
-   "note": "A local on a bar stool, facing the bartender."
+   "note": "A local on a bar stool, facing the cantina owner."
   },
   {
    "id": "trooper_gate_n",

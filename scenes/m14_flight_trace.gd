@@ -217,7 +217,7 @@ func _run() -> void:
 	# ---------------------------------------------------------------- 3. back in the sky
 	_phase = "sky"
 	out("LANDMARKS", pilot.ground.columns.size())
-	out("OUTPOST_IN_SKY_SCENE", pilot.scenery.landmark_boxes().size())
+	out("OUTPOST_IN_SKY_SCENE", pilot.scenery.landmark_boxes().filter(func(b): return str(b.id).begins_with("outpost/")).size())
 	out("REENTRY_COLLIDER_NOT_FOLLOWING", demo.terrain._target == null)
 	out("REENTRY_PILOTING", pilot.piloting)
 	out("REENTRY_STATE", pilot.atmo.state_label())

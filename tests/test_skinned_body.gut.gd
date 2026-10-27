@@ -69,9 +69,9 @@ func test_trooper_keeps_its_rifle_in_hand() -> void:
 
 
 func test_oda_wears_her_model_and_it_follows_the_wipe() -> void:
-	var oda := BartenderNPC.new()
+	var oda := CantinaOwnerNPC.new()
 	add_child_autofree(oda)
-	assert_true(oda.body.has_meta("skin"), "the bartender wears a rigged model")
+	assert_true(oda.body.has_meta("skin"), "the cantina owner wears a rigged model")
 	if not oda.body.has_meta("skin"):
 		return
 	var skin: SkinnedBody = oda.body.get_meta("skin")

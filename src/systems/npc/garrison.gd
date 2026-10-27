@@ -397,7 +397,7 @@ func _handle(events: Array) -> void:
 					WorldState.inventory.remove(str(id), n)
 					confiscated.append(str(id))
 					names.append(str(content.get_item(str(id)).get("label", id)))
-				WorldState.log_event("The east gate confiscated %s." % ", ".join(names).to_lower())
+				WorldState.log_event("The front gate confiscated %s." % ", ".join(names).to_lower())
 				hud.toast("Confiscated: " + ", ".join(names), 3.0)
 			"hostile":
 				_raise("gate")

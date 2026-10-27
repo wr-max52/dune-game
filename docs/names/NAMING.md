@@ -47,12 +47,12 @@ A thing's data says how it is named, in a `naming` block. Code never picks a kin
 
 | Thing | Data | Key | Shown |
 |---|---|---|---|
-| Gate guards (any soldier) | `soldiers/*.json` `naming` (kind, `titles` list, `nameplate_range`) | `npc:<town>/<marker>` | floating over them within 8 m; F4 debug line; the bartender knows them |
+| Gate guards (any soldier) | `soldiers/*.json` `naming` (kind, `titles` list, `nameplate_range`) | `npc:<town>/<marker>` | floating over them within 8 m; F4 debug line; the cantina owner knows them |
 | Pilots in space | `ships/*.json` `naming` (kind, titles, `callsign`) | `pilot:<encounter>/<sortie>/<id>` | the kill banner: `Kill · "Wasp" Lieutenant Selma Sakete` |
 | Your ship | `ships/interceptor.json` `naming.vessel` | `vessel:player/<ship>` | the board prompt, the flight HUD, the same name in space |
 | The jetpack | `items/jetpack.json` `naming` (equipment, class) | `item:<id>` | pick up / buy / sell prompts: `Jetpack (Embry XR-76 Skylark)` |
-| The town and planet | `worlds/port_desert.json` `naming` | `town:<id>`, `planet:<world>` | a place card on arrival, the space banner, "Leaving <planet>...", the bartender's briefing |
-| The bartender | authored ("Oda Vell") | `npc:bartender` | reserved in `config.json`, so it is never generated for anyone else |
+| The town and planet | `worlds/port_desert.json` `naming` | `town:<id>`, `planet:<world>` | a place card on arrival, the space banner, "Leaving <planet>...", the cantina owner's briefing |
+| The cantina owner | authored ("Oda Vell") | `npc:cantina_owner` | reserved in `config.json`, so it is never generated for anyone else |
 
 Each sortie brings new pilots, keyed by a sortie counter in WorldState.
 

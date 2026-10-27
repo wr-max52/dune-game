@@ -9,7 +9,7 @@ extends SceneTree
 ## desert outpost, defeat the 4 troopers and 1 duelist, take the crate, return to
 ## the fixer, get paid. It then runs the save system and proves the four things the
 ## spec names survive a save/load: player position, credits, mission state, and
-## bartender memory.
+## cantina owner memory.
 ##
 ## The squad coordinator is exercised too, so the trace also shows "4 troopers do
 ## not all stand in the open."
@@ -64,7 +64,7 @@ func _build() -> void:
 	save.new_game()
 	save.set_player_position(Vector3.ZERO)
 	save.set_mission(mission.to_save())
-	save.remember_in_bartender("player_name", "Rider")
+	save.remember_in_cantina_owner("player_name", "Rider")
 
 	squad = Squad.new()
 	squad.cover_nodes = cover
@@ -157,10 +157,10 @@ func _load_roundtrip(saved: bool) -> void:
 	_log("RELOAD_COMPLETE=%s" % str(m2.is_complete()))
 	_log("RELOAD_KILLS=%d" % m2.enemies_defeated)
 	_log("RELOAD_PAYOUT=%d" % m2.payout)
-	# Player position and credits and bartender memory: prove they survive too.
+	# Player position and credits and cantina owner memory: prove they survive too.
 	_log("RELOAD_POS=%s" % str(restored.get_player_position()))
 	_log("RELOAD_CREDITS=%d" % restored.get_credits())
-	_log("RELOAD_MEMORY=%s" % str(restored.get_bartender_memory().get("player_name", "")))
+	_log("RELOAD_MEMORY=%s" % str(restored.get_npc_memory().get("player_name", "")))
 
 
 func _log(event: String) -> void:

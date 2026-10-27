@@ -322,7 +322,7 @@ func answer(choice_id: String) -> bool:
 			_bark("confiscated")
 			_emit({ "type": "confiscate", "items": found.map(func(it): return str(it.id)) })
 			_emit({ "type": "flag", "name": "contraband_confiscated" })
-			_emit({ "type": "standing", "delta": int(deltas.get("handed_over", -2)), "why": "The east gate confiscated contraband.", "cooldown": "" })
+			_emit({ "type": "standing", "delta": int(deltas.get("handed_over", -2)), "why": "The front gate confiscated contraband.", "cooldown": "" })
 			found = []
 			_clear()
 		"bribe_keep":
@@ -422,7 +422,7 @@ func _go_hostile(why: String) -> void:
 	_emit({ "type": "hostile", "why": why })
 	_emit({ "type": "flag", "name": "gate_fight" })
 	_emit({ "type": "standing", "delta": int(cfg.get("standing", {}).get("fight", -10)),
-		"why": "A firefight broke out at the east gate.", "cooldown": "gate_fight" })
+		"why": "A firefight broke out at the front gate.", "cooldown": "gate_fight" })
 
 
 func _bark(key: String) -> void:

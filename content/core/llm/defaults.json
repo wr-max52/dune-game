@@ -5,13 +5,13 @@
     "local": {
       "type": "openai_compat",
       "base_url": "http://127.0.0.1:8088/v1",
-      "model": "bartender",
+      "model": "cantina_owner",
       "health_url": "http://127.0.0.1:8088/health",
       "grammar": true,
       "sidecar": {
         "enabled": true,
         "bin": "/opt/homebrew/bin/llama-server",
-        "model_path": "runtime/models/bartender.gguf",
+        "model_path": "runtime/models/cantina_owner.gguf",
         "port": 8088,
         "ctx_size": 8192,
         "extra_args": ["-ngl", "99", "--jinja", "--cache-reuse", "256", "--parallel", "1"]

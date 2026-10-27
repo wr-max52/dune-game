@@ -41,7 +41,7 @@
       "wraps": "#26211f", "mantle": "#7a3b1e", "sash": "#a8322a", "bandage": "#cdbb9c",
       "mask": "#d9ccb4", "mask_line": "#c9a058", "boots": "#1c1817", "gloves": "#2a2220", "under": "#26211f"
     },
-    "bartender": {
+    "cantina_owner": {
       "height": 1.74, "bulk": 1.0,
       "vest": "#4a2e22", "shirt": "#b9a98a", "apron": "#2e2620", "wrap": "#7a3b1e", "trousers": "#3a302a",
       "towel": "#c9b896", "prosthetic": "#6b6660", "prosthetic_glow": "#7fd0c8", "lens": "#e0a050", "mask": "#3c3a36",
