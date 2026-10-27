@@ -6,11 +6,7 @@
       "id": "pit_jetpack",
       "item": "jetpack",
       "marker": "player_spawn",
-      "offset": [
-        19.0,
-        6.0,
-        9.5
-      ],
+      "offset": [19.0, 6.0, 9.5],
       "reach": 2.0
     },
     {
@@ -18,14 +14,62 @@
       "item": "unmarked_cells",
       "count": 3,
       "marker": "desert_exit",
-      "offset": [
-        22.0,
-        0.0,
-        16.0
-      ],
+      "offset": [22.0, 0.0, 16.0],
       "reach": 2.0,
       "note": "A smuggler's drop outside the east gate: three cases of unmarked cells. Worth 90 cr to the fence, if you can get them past the checkpoint."
     }
   ],
-  "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of the pit's north-east ramp, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved)."
+  "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of the pit's north-east ramp, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved).",
+  "drops": {
+    "note": "Hiding places for Oda's smuggling run (board/bar_board.json, j_smuggle_run). Each run picks one area (never the same one twice in a row) and one spot in it. Oda only names the area, so the player has to search it. A spot is an offset from the area's marker. ground: snap the drop to the desert terrain. Drops have no glow ring, so they are hard to spot.",
+    "areas": [
+      {
+        "id": "east_desert",
+        "hint": "out in the sand past the east gate",
+        "marker": "desert_exit",
+        "ground": true,
+        "spots": [
+          [28, 0, -22],
+          [12, 0, -44],
+          [40, 0, 34],
+          [18, 0, 58]
+        ]
+      },
+      {
+        "id": "back_desert",
+        "hint": "in the dunes outside the back gap in the west wall",
+        "marker": "back_gap",
+        "ground": true,
+        "spots": [
+          [-12, 0, -9],
+          [-26, 0, 12],
+          [-44, 0, 2],
+          [-34, 0, -12]
+        ]
+      },
+      {
+        "id": "alleys",
+        "hint": "tucked in one of the alleys between the houses",
+        "marker": "resident_w",
+        "spots": [
+          [-78, 0, -12],
+          [-26, 0, 12],
+          [13, 0, 0],
+          [-52, 0, 120],
+          [-13, 0, 96]
+        ]
+      },
+      {
+        "id": "rooftops",
+        "hint": "up on one of the low house roofs. Bring something that flies",
+        "marker": "resident_w",
+        "spots": [
+          [19.5, 3.5, -12],
+          [-45.5, 3.5, 0],
+          [-32.5, 3.5, 108],
+          [-71.5, 3.5, 96]
+        ]
+      }
+    ]
+  }
 }

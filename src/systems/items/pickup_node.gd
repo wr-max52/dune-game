@@ -24,6 +24,14 @@ func setup(kit: ItemKit, entry: Dictionary, item_cfg: Dictionary, at: Vector3) -
 	_lift = float(style.get("lift", 0.75))
 	_visual = kit.build(str(item_cfg.get("look", item_cfg.get("id", ""))))
 	add_child(_visual)
+	position = at
+	if bool(entry.get("hidden", false)):
+		# A smuggler's drop: sits still in the sand, no glow. You have to look.
+		_spin = 0.0
+		_bob = 0.0
+		_lift = 0.0
+		_place()
+		return
 	var ring := MeshInstance3D.new()
 	ring.name = "Glow"
 	var torus := TorusMesh.new()
@@ -41,7 +49,6 @@ func setup(kit: ItemKit, entry: Dictionary, item_cfg: Dictionary, at: Vector3) -
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ring.position = Vector3(0, 0.03, 0)
 	add_child(ring)
-	position = at
 	_place()
 
 

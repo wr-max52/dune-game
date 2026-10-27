@@ -1,0 +1,9 @@
+{
+  "id": "holocrystals",
+  "label": "Holocrystals",
+  "kind": "contraband",
+  "contraband": true,
+  "value": 20,
+  "look": "crystal_case",
+  "note": "IP-neutral. Data crystals with somebody's ledgers on them. The Remnant confiscates them at the gate; the fence pays full value. Not worn (no slot). One of the goods Oda lines up for the smuggling run."
+}
