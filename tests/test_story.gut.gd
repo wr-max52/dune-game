@@ -1,0 +1,328 @@
+extends GutTest
+## Issue #64: the main story line. T-89 sends you to Oda, Oda sends you to the
+## range, two smuggling runs (her jetpack with the first if she is amused or
+## warm), Skrugs and a bounty at one of the three Remnant outposts, the fleet in
+## orbit (the ships unlock; winning pays 5000), then smuggling runs and bounty
+## contracts on repeat. Also: the three outposts, the town's Remnant coming back
+## behind the barracks, the garrison leaving town after the fleet, and "Reset
+## story" in the settings.
+
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const TownDemo := preload("res://scenes/town_demo.gd")
+const TownLayout := preload("res://src/systems/world/town_layout.gd")
+
+var content
+
+
+func before_each() -> void:
+	WorldState.reset()
+	ShipSalesman.greeted = false
+	content = CoreContent.new()
+	content.load_from()
+
+
+func after_each() -> void:
+	WorldState.reset()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _offers(id: String) -> bool:
+	return WorldState.open_jobs("confidant").any(func(j): return str(j.id) == id)
+
+
+## Pick up Oda's drop and sell it all to the fence, as GearController does.
+func _smuggle_run() -> void:
+	assert_true(WorldState.accept_job("j_smuggle_run"), "the run can be taken")
+	var drop := WorldState.smuggle_drop()
+	assert_true(WorldState.inventory.pick_up(drop))
+	var fence: Dictionary = content.get_vendor("fence")
+	var item: Dictionary = content.get_item(str(drop.item))
+	for i in int(drop.count):
+		WorldState.credits += WorldState.inventory.sell(str(drop.item), item, fence)
+		WorldState.on_contraband_sold()
+
+
+func _bounty_run() -> int:
+	assert_true(_offers("j_bounty"), "a contract is on offer")
+	var j := WorldState.job("j_bounty")
+	assert_true(str(j.text).contains(str(WorldState.bounty.name)), "she names the officer")
+	assert_true(str(j.text).contains(Story.outpost_label(str(WorldState.bounty.outpost))), "and the outpost")
+	assert_true(WorldState.accept_job("j_bounty"))
+	assert_false(WorldState.bounty_target().is_empty(), "the officer is out there")
+	assert_false(_offers("j_bounty"), "one contract at a time")
+	WorldState.on_bounty_killed()
+	assert_true(WorldState.bounty_collectable(), "the fence owes you")
+	assert_false(_offers("j_bounty"), "not until it is collected")
+	var c0 := WorldState.credits
+	var pay := WorldState.collect_bounty()
+	assert_eq(WorldState.credits, c0 + pay, "the fence pays")
+	return pay
+
+
+# ---- the story, start to finish ------------------------------------------------
+
+func test_the_whole_story_in_order() -> void:
+	assert_eq(Story.chapter(), "meet_oda", "a new game starts with T-89")
+	assert_false(Story.ships_unlocked(), "the ships are locked")
+	assert_false(_offers("j_smuggle_run"), "no smuggling yet")
+	assert_false(_offers("j_bounty"))
+
+	var t89 := Story.beat("t89")
+	assert_true(str(t89.say).contains("Oda"), "T-89 sends you to Oda")
+	assert_eq(Story.beat("t89").say, Story.chapter_cfg().remind, "and reminds you after")
+
+	var oda := Story.beat("cantina_owner")
+	assert_eq(Story.chapter(), "range", "talking to her is meeting her")
+	assert_true(str(oda.say).to_lower().contains("range"), "she sends you to the range")
+	assert_eq(str(oda.job), "")
+	WorldState.on_range_cleared()
+	assert_eq(Story.chapter(), "smuggle_1")
+
+	oda = Story.beat("cantina_owner")
+	assert_eq(str(oda.job), "j_smuggle_run", "the first run comes with its job card")
+	_smuggle_run()
+	assert_eq(Story.chapter(), "smuggle_2", "selling the drop ends the first run")
+	oda = Story.beat("cantina_owner")
+	assert_eq(str(oda.job), "j_smuggle_run", "a second, normal run")
+	_smuggle_run()
+	assert_eq(Story.chapter(), "bounty")
+
+	oda = Story.beat("cantina_owner")
+	assert_true(str(oda.say).contains("Skrugs"), "she tells you about the speeder merchant")
+	assert_eq(str(oda.job), "j_bounty", "and the bounty")
+	assert_eq(str(WorldState.bounty.outpost), Story.OUTPOSTS[0], "the first bounty is at the nearest outpost")
+	assert_eq(_bounty_run(), int(Story.bounty_cfg().first_pay))
+	assert_eq(Story.chapter(), "fleet", "collecting it moves the story on")
+	assert_false(Story.ships_unlocked(), "not until she tells you")
+
+	oda = Story.beat("cantina_owner")
+	assert_true(str(oda.say).contains("keys"), "the pilots leave their keys in the ships")
+	assert_true(Story.ships_unlocked())
+	assert_true(_offers("j_patrol_bounty"), "the patrol job opens with the ships")
+
+	var c0 := WorldState.credits
+	WorldState.on_flight_returned({ "outcome": "complete", "payout": 150 })
+	assert_eq(WorldState.credits, c0 + 5000, "the fleet pays 5000")
+	assert_true(Story.remnant_hostile(), "the Remnant turn hostile")
+	assert_false(Story.town_garrison(), "and leave town")
+	assert_eq(Story.chapter(), "free")
+
+	# Free play: bounties and smuggling on repeat.
+	oda = Story.beat("cantina_owner")
+	assert_eq(str(oda.job), "j_bounty")
+	var outposts := []
+	for i in 6:
+		Story.beat("cantina_owner")
+		outposts.append(str(WorldState.bounty.outpost))
+		var pay := _bounty_run()
+		assert_between(pay, 900, 1600, "a lot of money")
+		assert_true(_offers("j_smuggle_run"), "smuggling still runs")
+	for i in range(1, outposts.size()):
+		assert_ne(outposts[i], outposts[i - 1], "never the same outpost twice running")
+		assert_true(Story.OUTPOSTS.has(outposts[i]))
+	_smuggle_run()
+	assert_eq(Story.chapter(), "free", "the last chapter never ends")
+
+
+func test_a_later_flight_pays_as_before() -> void:
+	var c0 := WorldState.credits
+	WorldState.on_flight_returned({ "outcome": "complete", "payout": 150 })
+	assert_eq(WorldState.credits, c0 + 150, "outside the fleet chapter a sortie pays its own payout")
+	assert_false(Story.remnant_hostile())
+
+
+func test_jetpack_only_when_amused_or_warm_and_once() -> void:
+	Story.skip_to("smuggle_1")
+	assert_eq(Story.on_owner_mood("wary"), "")
+	assert_eq(Story.on_owner_mood("irritated"), "")
+	assert_false(WorldState.inventory.has("jetpack"))
+	assert_true(Story.brief("cantina_owner").contains("jetpack"), "her briefing says she might lend it")
+	assert_ne(Story.on_owner_mood("amused"), "", "amused: she lends it")
+	assert_true(WorldState.inventory.has("jetpack"))
+	assert_eq(Story.on_owner_mood("warm"), "", "once")
+	assert_eq(WorldState.inventory.count("jetpack"), 1)
+
+
+func test_jetpack_not_outside_the_first_run() -> void:
+	Story.skip_to("smuggle_2")
+	assert_eq(Story.on_owner_mood("warm"), "")
+	assert_false(WorldState.inventory.has("jetpack"))
+
+
+func test_story_survives_a_save() -> void:
+	Story.skip_to("bounty")
+	Story.beat("cantina_owner")
+	WorldState.accept_job("j_bounty")
+	var b := WorldState.bounty.duplicate()
+	WorldState.from_save(JSON.parse_string(JSON.stringify(WorldState.to_save())))
+	assert_eq(Story.chapter(), "bounty")
+	assert_eq(str(WorldState.bounty_target().get("name", "")), str(b.name), "the contract is still out")
+	assert_true(bool(WorldState.story.told), "and she does not repeat her intro")
+
+
+func test_beats_only_for_their_teller() -> void:
+	assert_true(Story.beat("skrugs").is_empty())
+	Story.skip_to("range")
+	assert_true(Story.beat("t89").is_empty(), "T-89 is done once you have met her")
+
+
+# ---- data ----------------------------------------------------------------------
+
+func test_three_outposts_further_and_further_out_the_front_gate() -> void:
+	var world: Dictionary = content.world_for_town("port_town")
+	var town := TownLayout.new()
+	assert_true(town.load_town("port_town"))
+	var gate := town.marker_pos("gate")
+	var dists := []
+	var looks := {}
+	for id in Story.OUTPOSTS:
+		var lm: Array = world.landmarks.filter(func(l): return str(l.get("location", "")) == id)
+		assert_eq(lm.size(), 1, "%s is in the world" % id)
+		var at := Vector3(float(lm[0].at[0]), 0, float(lm[0].at[2]))
+		assert_gt(at.x, gate.x + 50.0, "%s is out the front gate" % id)
+		dists.append(at.distance_to(gate))
+		var loc: Dictionary = content.get_location(id)
+		assert_eq((loc.buildings as Array).size(), 1, "one building")
+		assert_false(str(loc.get("ship", "")) == "", "a cargo ship parked")
+		assert_true(content.ships.has(str(loc.ship)))
+		for p in ["guard_a", "guard_b", "target", "ship", "patrol"]:
+			assert_true(loc.points.has(p), "%s has %s" % [id, p])
+		looks[JSON.stringify([loc.buildings, loc.ship, loc.look])] = true
+	assert_lt(dists[0], dists[1])
+	assert_lt(dists[1], dists[2], "each further out")
+	assert_gt(dists[0], 100.0, "further out than Skrugs's post")
+	assert_eq(looks.size(), 3, "each a little different")
+
+
+func test_target_and_trooper_profiles() -> void:
+	var t: Dictionary = content.get_soldier("bounty_target")
+	assert_eq(str(t.faction), "imperial_remnant")
+	assert_eq(str(t.archetype), "remnant_marked", "the target is red")
+	assert_gt(int(t.hp), int(content.get_soldier("outpost_trooper").hp))
+	assert_ne(NameHooks.person(Story.target_naming(), "npc:bounty/test"), "", "targets get names")
+
+
+# ---- the town ------------------------------------------------------------------
+
+func _town() -> Node:
+	var t = TownDemo.new()
+	t.use_look = false
+	t.nav_async = false
+	add_child_autofree(t)
+	return t
+
+
+func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var o: RemnantOutposts = t.outposts
+	assert_not_null(o, "the town builds the outposts")
+	assert_eq(o.outposts.size(), 3)
+	assert_eq(o.guards.size(), 6, "two troopers each")
+	for g in o.guards:
+		assert_true(t.garrison.members.has(g), "they answer to the garrison")
+	var outpost_droids: Array = t.droids.remnant.filter(func(u): return u.spec.has("outpost")) if t.droids != null else []
+	if t.droids != null:
+		assert_eq(outpost_droids.size(), 3, "an assassin droid each")
+	assert_null(o.target, "no target without a contract")
+	Story.skip_to("bounty")
+	Story.beat("cantina_owner")
+	WorldState.accept_job("j_bounty")
+	await wait_physics_frames(2)
+	assert_not_null(o.target, "the contract puts the officer at the outpost")
+	var at: Dictionary = o.outpost(str(WorldState.bounty.outpost))
+	assert_lt(o.target.global_position.distance_to(at.origin), 30.0, "at the outpost it names")
+	assert_true(t.garrison.members.has(o.target))
+	o.target.process_mode = Node.PROCESS_MODE_INHERIT
+	o.target.apply_damage(9999.0)
+	await wait_physics_frames(2)
+	assert_true(WorldState.bounty_collectable(), "killing them makes the bounty collectable")
+	assert_eq(o.bounty_kills, 1)
+	assert_true(t.garrison.respawns.filter(func(r): return r.has("outpost") and str(r.post).ends_with("target")).is_empty(),
+		"the target never comes back")
+
+
+func test_town_troopers_come_back_behind_the_barracks() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var g = t.npc("trooper_yard_a")
+	assert_not_null(g)
+	var n0: int = t.garrison.members.size()
+	g.apply_damage(9999.0)
+	await wait_physics_frames(2)
+	assert_eq(t.garrison.respawns.size(), 1, "queued")
+	var r: Dictionary = t.garrison.respawns[0]
+	assert_almost_eq(float(r.t) - t.garrison._clock, 60.0, 1.0, "a minute later")
+	assert_eq(r.at, t.town.marker_pos("remnant_respawn"), "behind the barracks")
+	t.garrison._clock = float(r.t) + 0.1
+	await wait_physics_frames(2)
+	assert_eq(t.garrison.respawned, 1)
+	assert_eq(t.garrison.members.size(), n0 + 1, "a new trooper joined")
+	var back: NpcBody = t.garrison.members[t.garrison.members.size() - 1]
+	assert_eq(back.post_pos, g.post_pos, "and walks back to the dead one's post")
+	assert_lt(back.global_position.distance_to(t.town.marker_pos("remnant_respawn")), 3.0)
+
+
+func test_after_the_fleet_the_town_is_free_and_outposts_shoot_on_sight() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var town_troopers: int = t.npcs.filter(func(n): return not n.has_meta("outpost")).size()
+	assert_gt(town_troopers, 0)
+	Story.skip_to("fleet")
+	WorldState.on_flight_returned({ "outcome": "complete", "payout": 0 })
+	await wait_physics_frames(3)
+	assert_eq(t.npcs.filter(func(n): return is_instance_valid(n) and not n.has_meta("outpost")).size(), 0, "the garrison left town")
+	assert_eq(t.garrison.members.size(), 6, "the outposts keep theirs")
+	assert_false(WorldState.has_flag("gate_checkpoint_up"))
+	if t.droids != null:
+		assert_true(t.droids.remnant.all(func(u): return u.spec.has("outpost")), "the town's droids went too")
+	assert_true(t.garrison.respawn_rule.call(t.outposts.guards[0]).has("delay"), "outpost troopers still come back")
+	# A dead outpost trooper: a few minutes, not a minute.
+	var r: Dictionary = t.respawn_rule(t.outposts.guards[0])
+	assert_eq(float(r.delay), float(Story.remnant_cfg().outpost_respawn_s))
+	assert_gte(float(r.delay), 120.0)
+
+
+func test_a_new_town_after_the_fleet_has_no_garrison() -> void:
+	Story.skip_to("free")
+	var t = _town()
+	await wait_physics_frames(2)
+	assert_eq(t.npcs.filter(func(n): return not n.has_meta("outpost")).size(), 0)
+	assert_eq(t.garrison.members.size(), 6)
+
+
+func test_ships_locked_until_oda_says() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var p = t._player
+	var home: Vector3 = t.pilot.home
+	p.global_position = Vector3(home.x + 4.0, p.global_position.y, home.z)
+	await wait_physics_frames(2)
+	if t.pilot.nearest_berth() < 0:
+		pass_test("no berth in reach in the greybox (layout)")
+		return
+	assert_false(t.pilot.board(), "locked")
+	WorldState.set_flag("ships_unlocked")
+	assert_true(t.pilot.board(), "the keys are in it")
+
+
+func test_reset_story_starts_over() -> void:
+	Story.skip_to("free")
+	WorldState.credits = 9000
+	WorldState.inventory.add("jetpack")
+	WorldState.hangar = "courier"
+	WorldState.standing["locals"] = 80
+	var names := WorldState.names
+	var panel := DevSettingsPanel.new()
+	add_child_autofree(panel)
+	panel.reset_story(false)
+	assert_eq(Story.chapter(), "meet_oda")
+	assert_eq(WorldState.credits, 60)
+	assert_false(WorldState.inventory.has("jetpack"), "equipment gone")
+	assert_eq(WorldState.hangar, "")
+	assert_eq(WorldState.droids.owned.size(), 0, "droids gone")
+	assert_eq(int(WorldState.standing.locals), int(WorldState.DEFAULT_STANDING.locals), "standing back to the start")
+	assert_false(Story.ships_unlocked())
+	assert_false(Story.remnant_hostile())
+	assert_eq(WorldState.names, names, "names are kept")
+	assert_false(ShipSalesman.greeted, "T-89 says hello again")

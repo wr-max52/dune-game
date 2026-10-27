@@ -242,6 +242,8 @@ func prompt_text() -> String:
 	if not is_open(v):
 		var said: String = closed_line.call(str(v.get("marker", ""))) if closed_line.is_valid() else ""
 		return said if said != "" else _l("closed") % str(v.get("label", "vendor")).to_lower()
+	if bool(v.get("bounties", false)) and WorldState.bounty_collectable():
+		return str(Story.bounty_cfg().get("collect", "%s %d")) % [str(WorldState.bounty.name), int(WorldState.bounty.pay)]
 	var sell_id := _sellable(v)
 	if sell_id != "":
 		var it: Dictionary = content.get_item(sell_id)
@@ -274,7 +276,7 @@ func _sellable(v: Dictionary) -> String:
 # ------------------------------------------------------------------ actions
 
 ## Act on whatever is in reach. Returns what happened: "picked_up", "sold",
-## "bought", "cant_afford", or "" for nothing.
+## "bought", "cant_afford", "bounty" (paid one out), or "" for nothing.
 func interact() -> String:
 	if focus.is_empty() and player != null:
 		focus = _find_focus()
@@ -314,6 +316,13 @@ func is_open(v: Dictionary) -> bool:
 func _trade(v: Dictionary) -> String:
 	if not is_open(v):
 		return ""
+	if bool(v.get("bounties", false)) and WorldState.bounty_collectable():
+		# Issue #64: the fence pays Oda's bounties.
+		var who := str(WorldState.bounty.name)
+		var pay := WorldState.collect_bounty()
+		if hud != null:
+			hud.toast(str(Story.bounty_cfg().get("collected", "%d %s")) % [pay, who], 4.0)
+		return "bounty"
 	var sell_id := _sellable(v)
 	if sell_id != "":
 		var it: Dictionary = content.get_item(sell_id)
@@ -324,6 +333,8 @@ func _trade(v: Dictionary) -> String:
 		WorldState.log_event(_l("event_sold") % str(it.get("label", sell_id)).to_lower())
 		_packs.erase(sell_id)
 		sync_gear()
+		if bool(it.get("contraband", false)):
+			WorldState.on_contraband_sold()     # issue #64: a smuggling run done?
 		if hud != null:
 			hud.toast(_l("sold") % [str(it.get("label", sell_id)), price])
 		return "sold"

@@ -34,6 +34,30 @@
         -60
       ],
       "yaw_deg": 0
+    },
+    {
+      "id": "remnant_outpost_near",
+      "kind": "location",
+      "location": "remnant_outpost_near",
+      "at": [250, 0, 40],
+      "yaw_deg": 180,
+      "clear": 45
+    },
+    {
+      "id": "remnant_outpost_mid",
+      "kind": "location",
+      "location": "remnant_outpost_mid",
+      "at": [430, 0, -160],
+      "yaw_deg": 200,
+      "clear": 45
+    },
+    {
+      "id": "remnant_outpost_far",
+      "kind": "location",
+      "location": "remnant_outpost_far",
+      "at": [720, 0, 110],
+      "yaw_deg": 170,
+      "clear": 45
     }
   ],
   "atmosphere": {

@@ -13,6 +13,7 @@ var content
 
 func before_each() -> void:
 	WorldState.reset()
+	Story.skip_to("smuggle_1")                 # issue #64: the story opens the run
 	content = CoreContent.new()
 	content.load_from()
 
@@ -54,7 +55,7 @@ func test_goods_are_contraband_the_fence_buys() -> void:
 
 func test_offer_names_the_goods_and_the_area() -> void:
 	var j := _offered()
-	assert_false(j.is_empty(), "Oda offers the run from the start")
+	assert_false(j.is_empty(), "Oda offers the run once the story reaches it")
 	assert_false(str(j.text).contains("%"), "the text is filled in")
 	assert_true(str(j.text).contains(str(WorldState.smuggle.hint)), "she says where")
 	var value := int(content.get_item(str(WorldState.smuggle.item)).value)

@@ -1,0 +1,21 @@
+{
+  "note": "Issue #25: how bodies fall (src/systems/anim/ragdoll.gd). Speeds are m/s, gravity m/s^2 (the game's 20). kick is the push of the killing blow away from whoever landed it, scaled by its damage up to kick_max; kick_up lifts it a little so the body leaves its feet. knee_buckle pushes the knees forward so legs fold. friction and bounce act where a particle touches the world (collision_mask). It sleeps once nothing moves faster than sleep_speed for sleep_after seconds, or after max_seconds. Dropped weapons are thrown with the hand's speed plus weapon_toss.",
+  "gravity": 20.0,
+  "air_drag": 0.02,
+  "iterations": 8,
+  "kick_per_damage": 0.12,
+  "kick_min": 1.5,
+  "kick_max": 4.5,
+  "kick_up": 0.35,
+  "kick_rest": 0.15,
+  "knee_buckle": 1.4,
+  "friction": 0.6,
+  "bounce": 0.15,
+  "collision_mask": 1,
+  "sleep_speed": 0.15,
+  "sleep_after": 0.5,
+  "max_seconds": 6.0,
+  "weapon_toss": 1.5,
+  "weapon_spin": 6.0,
+  "weapon_rest_seconds": 20.0
+}

@@ -29,6 +29,10 @@ static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
 static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, out }
+static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
+static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
+static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
+static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -51,6 +55,10 @@ static func reset() -> void:
 	inventory = Inventory.new()
 	names = NameBook.new()
 	smuggle = {}
+	droids = DroidRoster.new()
+	hangar = ""
+	story = {}
+	bounty = {}
 
 
 # ------------------------------------------------------------------ writes
@@ -154,11 +162,33 @@ static func on_flight_returned(arrival: Dictionary) -> void:
 		change_standing("imperial_remnant", -15, "A Remnant patrol in orbit was shot to pieces.")
 		change_standing("locals", 4)
 		change_standing("smuggler", 5)
-		credits += int(arrival.get("payout", 0))
+		if Story.chapter() == "fleet":
+			# Issue #64: the Remnant fleet. The locals' purse, and the garrison leaves town.
+			credits += Story.fleet_reward()
+			set_flag("remnant_fleet_beaten")
+			log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
+			Story.event("fleet_beaten")
+		else:
+			credits += int(arrival.get("payout", 0))
 		_complete_jobs("flight_complete")
 	else:
 		set_flag("ship_limped_home")
 		log_event("A ship came back into the pit trailing smoke.")
+
+
+## Issue #64: every target on the range down at once (any time; the record is
+## the bet's business).
+static func on_range_cleared() -> void:
+	bump("range_clears")
+	Story.event("range_cleared")
+
+
+## Issue #64: something contraband went to the fence. The run is over once the
+## drop was picked up and nothing contraband is left on you or your droids.
+static func on_contraband_sold() -> void:
+	if smuggle_drop().is_empty() and not carrying_contraband():
+		bump("smuggle_sold")
+		Story.event("smuggle_sold")
 
 
 static func on_range_record(seconds: float) -> void:
@@ -188,7 +218,12 @@ static func board() -> Array:
 static func job(id: String) -> Dictionary:
 	for j in board():
 		if str(j.get("id", "")) == id:
-			return _smuggle_job(j) if str(j.get("kind", "")) == "smuggle" else j
+			match str(j.get("kind", "")):
+				"smuggle":
+					return _smuggle_job(j)
+				"bounty":
+					return _bounty_job(j)
+			return j
 	return {}
 
 
@@ -200,6 +235,8 @@ static func open_jobs(tier: String) -> Array:
 			continue
 		if str(j.get("kind", "")) == "smuggle" and not smuggle_ready():
 			continue
+		if str(j.get("kind", "")) == "bounty" and not (bounty_ready() and Story.bounties_open()):
+			continue
 		if _conditions_hold(j.get("requires", {}), tier):
 			out.append(job(str(j.id)))
 	return out
@@ -208,6 +245,8 @@ static func open_jobs(tier: String) -> Array:
 static func accept_job(id: String) -> bool:
 	if str(job(id).get("kind", "")) == "smuggle":
 		return _start_smuggle(job(id))
+	if str(job(id).get("kind", "")) == "bounty":
+		return _start_bounty(job(id))
 	if job(id).is_empty() or jobs_taken.has(id):
 		return false
 	jobs_taken[id] = "active"
@@ -252,8 +291,10 @@ static func smuggle_ready() -> bool:
 	return smuggle_drop().is_empty() and not carrying_contraband()
 
 
+## Pockets or a cargo droid (issue #51): the gate never finds what a droid
+## carries, but Oda still waits until it is sold.
 static func carrying_contraband() -> bool:
-	for id in inventory.item_ids():
+	for id in inventory.item_ids() + droids.all_cargo().keys():
 		if bool(_item(str(id)).get("contraband", false)):
 			return true
 	return false
@@ -319,6 +360,93 @@ static func _item(id: String) -> Dictionary:
 	return _items[id]
 
 
+# ------------------------------------------------------------------ bounties (issue #64)
+
+## Oda's other repeating job (kind "bounty"): a named Remnant officer at one of
+## the three desert outposts (Story.OUTPOSTS). Taking it puts them there
+## (RemnantOutposts spawns whoever bounty_target() names); killing them makes the
+## bounty collectable at the fence. One at a time.
+
+## No contract out and none waiting to be paid.
+static func bounty_ready() -> bool:
+	return not ["out", "dead"].has(str(bounty.get("state", "")))
+
+
+## The officer to put at an outpost, or {} when there is none to hunt.
+static func bounty_target() -> Dictionary:
+	return bounty if str(bounty.get("state", "")) == "out" else {}
+
+
+## The fence has a bounty to pay out.
+static func bounty_collectable() -> bool:
+	return str(bounty.get("state", "")) == "dead"
+
+
+static func on_bounty_killed() -> void:
+	if str(bounty.get("state", "")) != "out":
+		return
+	bounty.state = "dead"
+	bump("bounties_killed")
+	change_standing("imperial_remnant", -5)
+	change_standing("locals", 3)
+	log_event(str(Story.bounty_cfg().get("event_killed", "%s was found dead.")) % str(bounty.name))
+
+
+## Paid at the fence. Returns the credits, or 0 when nothing is owed.
+static func collect_bounty() -> int:
+	if not bounty_collectable():
+		return 0
+	var pay := int(bounty.pay)
+	credits += pay
+	bump("bounties_paid")
+	bounty = { "run": int(bounty.run), "outpost": str(bounty.outpost), "state": "" }
+	Story.event("bounty_paid")
+	return pay
+
+
+static func _bounty_job(j: Dictionary) -> Dictionary:
+	if str(bounty.get("state", "")) == "":
+		_roll_bounty()
+	var out := j.duplicate()
+	var cfg := Story.bounty_cfg()
+	out["text"] = str(cfg.get("offer", "%s %s %s %d")) % [str(bounty.name), Story.outpost_label(str(bounty.outpost)),
+		str(bounty.crime), int(bounty.pay)]
+	out["pays"] = int(bounty.pay)
+	return out
+
+
+## The next contract: a fresh name, a crime, one of the three outposts (the first
+## one is the nearest), and the pay (the story's first bounty pays less).
+static func _roll_bounty() -> void:
+	var cfg := Story.bounty_cfg()
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var run := int(bounty.get("run", 0)) + 1
+	var key := "npc:bounty/%d" % run
+	var crimes: Array = cfg.get("crimes", ["They did something unforgivable."])
+	var span: Array = cfg.get("pay", [900, 1600])
+	var first := count("bounties_paid") == 0
+	var last := str(bounty.get("outpost", ""))
+	var choices := Story.OUTPOSTS.filter(func(o): return o != last)
+	var who := NameHooks.person(Story.target_naming(), key)
+	bounty = {
+		"run": run, "key": key, "name": who if who != "" else "the officer",
+		"crime": str(crimes[rng.randi() % crimes.size()]),
+		"outpost": Story.OUTPOSTS[0] if first else str(choices[rng.randi() % choices.size()]),
+		"pay": int(cfg.get("first_pay", 600)) if first else rng.randi_range(int(span[0]), int(span[1])),
+		"state": "rolled",
+	}
+
+
+static func _start_bounty(j: Dictionary) -> bool:
+	if j.is_empty() or str(bounty.get("state", "")) != "rolled":
+		return false
+	bounty.state = "out"
+	bump("bounties_taken")
+	log_event("Took a contract on " + str(bounty.name) + ".")
+	return true
+
+
 # ------------------------------------------------------------------ rumors
 
 static func all_rumors() -> Array:
@@ -352,9 +480,11 @@ static func rumors(tier: String, known: Array = [], limit: int = 4) -> Array:
 const TIERS := ["stranger", "regular", "trusted", "confidant"]
 
 
-## requires: { flags: [..], not_flags: [..], tier: "regular",
+## requires: { flags: [..], not_flags: [..], tier: "regular", story: "<chapter reached>",
 ##   standing: { faction: [min, max] }, counters: { name: min }, time: [..] }
 static func _conditions_hold(req: Dictionary, tier: String) -> bool:
+	if req.has("story") and not Story.reached(str(req.story)):
+		return false
 	for f in req.get("flags", []):
 		if not flags.has(str(f)):
 			return false
@@ -401,6 +531,10 @@ static func to_save() -> Dictionary:
 		"inventory": inventory.to_save(),
 		"names": names.to_save(),
 		"smuggle": smuggle.duplicate(true),
+		"droids": droids.to_save(),
+		"hangar": hangar,
+		"story": story.duplicate(),
+		"bounty": bounty.duplicate(),
 	}
 
 
@@ -419,6 +553,11 @@ static func from_save(d: Dictionary) -> void:
 	names = NameBook.new()
 	names.from_save(d.get("names", {}))
 	smuggle = d.get("smuggle", {}).duplicate(true)
+	droids = DroidRoster.new()
+	droids.from_save(d.get("droids", {}))
+	hangar = str(d.get("hangar", ""))
+	story = d.get("story", {}).duplicate()
+	bounty = d.get("bounty", {}).duplicate()
 
 
 static func _read_json(path: String) -> Variant:

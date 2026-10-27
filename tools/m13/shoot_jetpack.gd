@@ -28,6 +28,7 @@ func _initialize() -> void:
 		if a.begins_with("shots="):
 			_only = a.substr(6).split(",")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	Disclaimers.launch_shown = true     # the launch notice would cover every shot
 	demo = load("res://scenes/town_demo.gd").new()
 	demo.preset = "golden"
 	demo.with_bar = false

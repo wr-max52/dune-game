@@ -52,6 +52,56 @@ How to see it:
   - `test_planets`: every size, every type, the style parser, the station, a new
     planet from a config.
   - `test_planets_trace`, backed by `scenes/planets_trace.gd`: the whole trip.
+## The main story line and three Remnant outposts (2026-10-27, issue #64)
+
+- **A main quest.** T-89 in the pit sends you to Oda. Oda sends you to the practice range (knock all five targets down), then gives you two smuggling runs. On the first one she lends you her old jetpack if she is amused or warm. Then she tells you about Skrugs's speeders and a bounty on a Remnant officer at a desert outpost. Kill the officer and the fence in the market pays the bounty.
+- **The Remnant fleet.** After the bounty, Oda tells you about a Remnant fleet in orbit, and the port's ships unlock ("the pilots leave their keys in them"). Until then, boarding a ship says it is locked. Win the space fight and you get 5000 credits.
+- **After the fleet.** The garrison leaves town. What is left of the Remnant holds the desert outposts and shoots on sight. Oda keeps offering smuggling runs and bounty contracts on repeat. Each contract names a red Remnant officer and their crime and puts them at one of the outposts. Kill them, then collect a big payout from the fence.
+- **Three Remnant outposts** out the front gate, near (about 150 m), mid (about 360 m) and far (about 620 m). Each has one dark grey, black and red building, a parked cargo ship, two troopers and an assassin droid. Each is a little different: the building's size, the ship, a comms mast, a lookout tower. Dead troopers and droids come back after 3 minutes.
+- **Respawns in town.** Until the fleet is beaten, a Remnant trooper or droid killed in town comes back behind the barracks a minute later and walks back to its post.
+- **Reset story** (F11, Story tab). Starts again from the beginning: credits, gear, droids, the bought ship, flags, standing and what every character thinks of you. Names are kept. The Story tab also shows the current chapter and can skip to any chapter.
+- Story text lives in `content/core/story/main.json`; the code is `src/systems/flow/story.gd` and `src/systems/world/remnant_outposts.gd`. New tests are in `tests/test_story.gut.gd`.
+
+## Gear and droid models, ragdoll deaths (2026-10-27, issue #25)
+
+- **New Hyper3D models** (prompts written against `docs/ART_DIRECTION.md`, kept in `docs/items/HYPER3D_PROMPTS.md`):
+  - **Pistol:** a chunky gunmetal blaster with copper and orange trim, in place of the Kenney blaster.
+  - **Rifle:** a chunky gunmetal energy rifle with red panels, in place of the Kenney repeater. First and third person.
+  - **Jetpack:** a heavy yellow pack with twin tanks. The flames still burn from under its nozzles.
+  - **Cargo cases (the smuggling loot):** one strapped trunk model, stretched to each cargo's size and tinted to its colour, with its glowing status strip.
+  - **Floating droid:** a white dome with one big lens on four little legs.
+  - **Cargo droid:** a boxy hauler on two tank treads, with goggle eyes.
+  - **Assassin droid:** a tall plated humanoid with a visor and a pistol in its right hand.
+  - **The assassin droid carries a real pistol.** The gun the generator fused into its hand is cut away in prep, and it holds the new blaster pistol model on its hand bone. **T-89** in the pit now uses the same model, with empty hands and a relaxed idle.
+  - **The assassin droid walks.** Hyper3D rigged it with walk, run, idle and death clips: it walks or runs to keep up, stands ready when still, and falls backward when destroyed.
+  - Every droid variant tints its model (rust, black, tan, olive, blue, bone, gunmetal, copper) and keeps its glowing eyes, which still go dark when it breaks.
+- **Droids follow more calmly.** A droid holds its ground until you are a few metres away (`follow.leash`: floating 4 m, cargo 5 m, assassin 6 m), then walks to its spot beside or behind you and stops. It no longer shuffles every time you move.
+- **The energy sword stays code-built.** It is already the laser sword (an igniting yellow blade over a forged spine with a brass guard). Four Hyper3D attempts could not hold a long, thin sword together.
+- **Ragdoll deaths.** Troopers and locals no longer tip over like a plank. They crumple: knees buckle, the body falls away from whoever landed the killing shot, rolls to a stop on the sand and rests. The rifle flies out of their hands and clatters to the ground. The player does the same when knocked out at the gate, and stands back up in the pit.
+- Tuning in `content/look/ragdoll.json`; model placement in `content/look/gear_models.json` (prep: `tools/look/prep_gear.gd`) and each droid kind's `look` in `content/core/droids/droids.json`.
+- Review stills: `docs/lookdev/gear/` (`05_droids.png`, `06_ragdoll.png`, `08_items.png`). Tests: test_ragdoll.
+
+## T-89, the ship salesman, and the empty pad (2026-10-27, issue #58)
+
+- **An empty landing pad in the pit.** The courier's bay is now a bare round pad inside its painted ring. The round freighter and the gunship stay parked; the courier is still for sale.
+- **T-89** stands in the pit near where you start: a droid on the assassin droid's frame, but with no gun, and nothing hurts him. Every time the game starts he says a quick hello and offers the tutorial.
+- **The tutorial** is nine short pages: walking, your weapons (you already carry them; he explains them), blocking bolts with the blade, holstering at the gate, E and the gear keys, flying the ship, space, F1 and F11, and his ship shop. Say no and he leaves you alone. Press E beside him to run it again.
+- **Buying a ship:** press E beside T-89. He sells every ship that flies in the atmosphere, cheapest first: the Lanner courier (900 cr), the Kestrel (1200 cr), the Albatross (1800 cr) and the Frigatebird (2400 cr). The ship you buy lands on the empty pad, and you can board and fly it like any other parked ship. The pad holds one ship at a time. He buys it back for 60% of the price, but not while you are flying it.
+- Data: `content/core/npcs/t89.json` (his lines, tutorial pages, prices, look). The bought ship is saved with the world (`WorldState.hangar`).
+- Tests: test_ship_salesman. test_town_layout, test_town_decor and test_ship_fleet are updated for the empty pad. Review shots: `tools/review/t89_shot.gd`.
+
+## Companion droids (2026-10-27, issue #51)
+
+- **Three kinds, each with several looks:** the floating droid (the range remote's shape), a tall, skeletal assassin droid with a pistol and deadly aim, and a cargo droid: a small box on wheels. All are placeholder shapes for now (`src/systems/droids/droid_kit.gd`). None of them talk; they beep, each kind in its own voice (new sounds from `tools/audio/make_game_sfx.py`).
+- **Up to three at a time.** They follow you on foot. They vanish while you fly the ship and come back beside you when you climb out. They show as droids in the inventory (I), but nothing a cargo droid carries is listed there.
+- **The droid merchant** in the market (stall `vendor_4`) sells floating and cargo droids for 50 cr and assassin droids for 100 cr. They buy them back for 40 cr and 90 cr. A sold droid leaves.
+- **Cargo droid:** press E beside it to stash items or unload them. The gate searches your pockets, never the droid, so it is a smuggler's best friend. Oda still waits until the goods are sold before she lines up another drop.
+- **Taming the range remote:** block or deflect five of its bolts in a row and it follows you home. Oda passes this on as a rumour.
+- **Wrecks in the desert:** now and then a broken droid turns up far out in the sand, one of each kind at most, never close to another one. The assassin lies flat like it is dead. Press E and stay beside it for 10 seconds to fix it; it resets and follows you.
+- **At the cap:** a fourth droid (a wreck or the range remote) asks which droid to sell at the merchant's price to make room.
+- **The Remnant's droids:** a black, red-eyed assassin droid and a floating droid patrol the main street. They turn on you whenever the garrison would, sound the alarm, and fight. Shooting them provokes them; destroying one costs Remnant standing. Your own assassin droid shoots back at them, and at troopers while the alarm is up.
+- Data: `content/core/droids/droids.json` (kinds, variants, prices, tuning, words). Saved with the world (`WorldState.droids`).
+- Tests: test_droids.
 
 ## Bug fixes and hardening (2026-10-27, issue #55)
 

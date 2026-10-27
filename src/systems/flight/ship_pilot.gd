@@ -185,19 +185,45 @@ func _gather_berths() -> void:
 	for i in parked.size():
 		var v: Node3D = parked[i]
 		var id := ship_id if i == 0 else str(v.get_meta("ship_id", ship_id))
-		var b := {
-			"ship_id": id, "cfg": ship_cfg if i == 0 else content.get_ship(id), "visual": v,
-			"home": v.global_position, "home_yaw": v.rotation.y, "clearance": atmo.clearance,
-		}
-		var acc := [null]
-		TownDecor._merge_aabb(v, Transform3D.IDENTITY, acc)
-		if acc[0] != null:
-			b.clearance = maxf(0.3, -(acc[0] as AABB).position.y)
 		var box_id := str(pad.get("town_box", "ship")) if i == 0 else str(v.get_meta("box_id", ""))
-		_disable_box(box_id)
-		b.hull = _build_hull(v, acc[0], box_id, b.clearance)
-		b.hull.on_damage = _on_hull_hit.bind(i)
-		berths.append(b)
+		add_berth(v, id, box_id)
+
+
+## A parked ship becomes one you can board: its data, model, hull and home bay.
+## Issue #58: also how a ship bought from T-89 joins once it is on the spare pad.
+## Returns its berth index.
+func add_berth(v: Node3D, id: String, box_id: String) -> int:
+	var i := berths.size()
+	var b := {
+		"ship_id": id, "cfg": ship_cfg if i == 0 else content.get_ship(id), "visual": v,
+		"home": v.global_position, "home_yaw": v.rotation.y, "clearance": atmo.clearance,
+	}
+	var acc := [null]
+	TownDecor._merge_aabb(v, Transform3D.IDENTITY, acc)
+	if acc[0] != null:
+		b.clearance = maxf(0.3, -(acc[0] as AABB).position.y)
+	_disable_box(box_id)
+	b.hull = _build_hull(v, acc[0], box_id, b.clearance)
+	b.hull.on_damage = _on_hull_hit.bind(i)
+	berths.append(b)
+	return i
+
+
+## Issue #58: the last berth leaves (sold back to T-89): its model goes, and you
+## fly the pit pad's ship again if it was the one you last flew. Not while you sit
+## in it. Returns true when it went.
+func remove_last_berth() -> bool:
+	var i := berths.size() - 1
+	if i <= 0 or (piloting and berth == i):
+		return false
+	if berth == i:
+		_use_berth(0)
+	var v: Node3D = berths[i].visual
+	berths.remove_at(i)
+	if demo.decor != null:
+		demo.decor.parked_ships.erase(v)
+	v.queue_free()
+	return true
 
 
 ## Fly berth `i` from now on: its data, model, hull and home bay. It is parked
@@ -308,7 +334,7 @@ func nearest_berth() -> int:
 
 func board() -> bool:
 	var i := nearest_berth()
-	if i < 0:
+	if i < 0 or not Story.ships_unlocked():
 		return false
 	if i != berth:
 		_use_berth(i)
@@ -548,6 +574,9 @@ func _on_foot() -> void:
 		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
 		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
 			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
+		if not Story.ships_unlocked():
+			# Issue #64: the port's ships fly once Oda tells you about the fleet.
+			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line("ship_locked")]
 	_foot_prompt.visible = near
 	if near and _just("interact"):
 		board()

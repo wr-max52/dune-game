@@ -1,0 +1,87 @@
+{
+  "id": "main",
+  "note": "Issue #64: the main story line. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
+  "chapters": [
+    {
+      "id": "meet_oda",
+      "teller": "t89",
+      "done_on": "met_oda",
+      "intro": "One more thing, pilot: walk up to the cantina at the far end of town and talk to Oda Vell. Nothing happens in this port without her hearing about it first.",
+      "remind": "Oda Vell is waiting at the cantina, at the far end of town. Go and talk to her."
+    },
+    {
+      "id": "range",
+      "teller": "cantina_owner",
+      "done_on": "range_cleared",
+      "intro": "New face, and you want work. First show me you can hit something. There's a practice range down in the landing pit: knock all five targets flat, then come back.",
+      "remind": "The range is in the pit. All five targets down, then we talk."
+    },
+    {
+      "id": "smuggle_1",
+      "teller": "cantina_owner",
+      "done_on": "smuggle_sold",
+      "job": "j_smuggle_run",
+      "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it.",
+      "remind": "The drop's still out there, or still in your pockets. Get it to the fence.",
+      "jetpack_line": "You know what, I like you. Take my old jetpack. It'll get you over a wall the gate can't see past. Space in the air, G to take it off.",
+      "jetpack_hint": "You are warming to the player. If they make you laugh or you like them, you lend them your old jetpack for this run: say so in a few words."
+    },
+    {
+      "id": "smuggle_2",
+      "teller": "cantina_owner",
+      "done_on": "smuggle_sold",
+      "job": "j_smuggle_run",
+      "intro": "The fence says you're quick. There's another drop. Same deal: find it, sell it, don't get searched.",
+      "remind": "One more drop for the fence. Then I'll have something bigger."
+    },
+    {
+      "id": "bounty",
+      "teller": "cantina_owner",
+      "done_on": "bounty_paid",
+      "job": "j_bounty",
+      "intro": "Two things. If you need to cross the desert, Skrugs sells speeders outside the back gate; he's loud, but they run. And there's a bounty on a Remnant officer holed up at one of their outposts out the front gate. Kill them and the fence pays.",
+      "remind": "The bounty's still open. Do it, then collect from the fence in the market."
+    },
+    {
+      "id": "fleet",
+      "teller": "cantina_owner",
+      "done_on": "fleet_beaten",
+      "intro": "That made noise. The Remnant has a fleet up in orbit now, and the locals will pay five thousand to see it gone. The pilots in this port always leave their keys in their ships. Take one up.",
+      "remind": "The fleet's still up there. Any ship in the pit will fly: the keys are in them."
+    },
+    {
+      "id": "free",
+      "teller": "cantina_owner",
+      "done_on": "",
+      "intro": "You did it. The garrison's gone; what's left of them hides in the desert outposts. There's always another drop for the fence, and now and then somebody wants a Remnant dead.",
+      "remind": ""
+    }
+  ],
+  "fleet_reward": 5000,
+  "ship_locked": "Locked. The keys aren't yours to take yet.",
+  "jetpack_toast": "Oda gave you her old jetpack.",
+  "bounty": {
+    "first_pay": 600,
+    "pay": [900, 1600],
+    "collect": "[E] Collect the bounty on %s  (+%d cr)",
+    "collected": "The fence pays %d cr for %s.",
+    "killed_toast": "%s is dead. Collect the bounty from the fence.",
+    "target_title": "Remnant officer",
+    "offer": "There's a price on %s, a Remnant officer at the %s. %s Kill them and the fence pays %d.",
+    "event_killed": "%s, a Remnant officer, was found dead at an outpost in the desert.",
+    "crimes": [
+      "They burned a water hauler's tanks so a whole street went dry for a week.",
+      "They shot a fisherman's boy for walking past the gate after curfew.",
+      "They sold the town's medicine to the highest bidder and kept the money.",
+      "They ordered a cantina full of people locked in while their troopers looted the street.",
+      "They hanged three locals for a theft their own sergeant committed.",
+      "They sealed a mine with the crew still in it rather than pay them.",
+      "They taxed a widow's stall until she starved, then took the stall."
+    ]
+  },
+  "remnant": {
+    "town_respawn_s": 60.0,
+    "town_respawn_marker": "remnant_respawn",
+    "outpost_respawn_s": 180.0
+  }
+}

@@ -14,6 +14,7 @@ var went: Array = []
 func before_each() -> void:
 	GameFlow.reset()
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64: the story unlocks the ships
 	went = []
 	GameFlow.change_scene = func(path: String) -> void: went.append(path)
 
