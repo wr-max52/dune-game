@@ -43,7 +43,7 @@ const ROLE_COLORS := {
 @export var with_bar := true          ## M12: the live bartender (needs use_look)
 @export var with_gear := true         ## M13: pickups, the gear trader, the jetpack (works in greybox too)
 @export var with_desert := true       ## the terrain around the town (collider in greybox too)
-@export var terrain_resolution := 400 ## mesh vertices per side (look only)
+@export var terrain_resolution := 320 ## mesh vertices per side (look only; issue #46: was 400)
 @export var with_landforms := true    ## mesas, hoodoos, boulders (look only)
 @export var with_ship := true         ## M14: the pit's ship is flyable (E boards it instead of quick-launching)
 @export var with_npcs := true         ## NPCs on foot: trooper posts with a "soldier" profile get a body, pathing and senses
@@ -79,6 +79,7 @@ var town_name := ""                   ## issue #15: this town's generated name (
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
+var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 
 
 func _ready() -> void:
@@ -129,6 +130,7 @@ func _ready() -> void:
 			_build_ship()
 		if with_npcs:
 			_build_npcs()
+		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
 		dev_settings.name = "DevSettings"
@@ -366,6 +368,23 @@ func _build_npcs() -> void:
 		if gear != null:
 			gear.vendor_open = townsfolk.vendor_open
 			gear.closed_line = townsfolk.closed_line
+
+
+## Issue #46: the world's "detail" tiers, and what they may switch off: the
+## people (bodies, the bartender, and the brains that run them) and the small
+## props (lamps, banners, boulders). ShipPilot feeds it the viewer's altitude.
+func _build_detail() -> void:
+	var cc := CoreContent.new()
+	cc.load_from()
+	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
+	detail = AltitudeDetail.new()
+	detail.setup(world.get("detail", {}), look)
+	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), bartender, garrison, townsfolk])
+	if decor != null:
+		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
+	if landforms != null:
+		detail.add_group("props", [landforms.get_node_or_null("Boulders")])
+	add_child(detail)
 
 
 func npc(post_id: String) -> NpcBody:

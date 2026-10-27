@@ -1,11 +1,13 @@
 extends SceneTree
 ## M14 trace (headless): the whole loop, town -> sky -> space -> sky -> town, with
-## real physics and the real scenes. Writes test_results/m14_flight_trace.txt
+## real physics and the real scene. Writes test_results/m14_flight_trace.txt
 ## (KEY=value lines) for tests/test_m14_flight.gut.gd.
 ##
 ##   1. Board the ship in the pit, lift off, climb out of the atmosphere (timed).
-##   2. The space scene takes the hand-off; dive at the planet to come back.
-##   3. Arrive in the port's sky, still flying. Fly a circuit over the town and the
+##   2. Issue #46: space is the town's own sky. The pad's fight starts around the
+##      ship, in this scene (no scene change, no jump); a bot flies and shoots for
+##      a while, then dives back below the edge, which breaks the fight off.
+##   3. Still flying, over the same ground. Fly a circuit over the town and the
 ##      desert, land in the desert, get out, walk, get back in.
 ##   4. Fly into a mesa: crash, the ship is towed to its pad, you stand beside it.
 ##      (The trace runs in the greybox, where the desert's landforms are not built;
@@ -102,6 +104,7 @@ func _run() -> void:
 	# ---------------------------------------------------------------- 1. up
 	_phase = "up"
 	await make_town()
+	pilot.ground.add_landforms(DesertLandforms.load_data(), demo.desert_site().floor)
 	out("DESERT_BUILT", demo.terrain != null and pilot.scenery != null)
 	out("GROUND_IS_THE_DESERT", absf(pilot.ground.terrain.height_at(700, 500) - demo.terrain.height_at(700, 500)) < 0.001)
 	out("DESERT_EXTENT", int(pilot.ground.terrain.extent))
@@ -144,49 +147,82 @@ func _run() -> void:
 	# Climb: nose up 80 degrees, full throttle and boost, until space.
 	var want := sin(deg_to_rad(80.0))
 	var max_alt := 0.0
+	out("DETAIL_TIER_ON_PAD", demo.detail.tier)
+	var space_at := Vector3.ZERO
 	for i in 60 * 90:
 		var fy: float = pilot.atmo.flight.forward().y
 		pilot.set_external_command({ "pitch": clampf((want - fy) * 4.0, -1.0, 1.0), "throttle": 1.0, "boost": true })
 		await physics_frame
 		max_alt = maxf(max_alt, pilot.atmo.altitude())
 		if pilot.space_time >= 0.0 or pilot.atmo.state == AtmoFlight.State.CRASHED:
+			space_at = pilot.atmo.position()
 			break
-	await frames(60)
 	out("SPACE_SECONDS", snappedf(pilot.space_time, 0.1))
 	out("SPACE_ALTITUDE", int(pilot.atmo.space_altitude))
 	out("TOP_SPEED_IN_CLIMB", int(pilot.atmo.speed()))
-	out("SCENE_AFTER_CLIMB", went.back() if not went.is_empty() else "")
-	out("FLOW_MODE", GameFlow.mode)
-	out("FLOW_ENCOUNTER", GameFlow.encounter_id)
+	out("DETAIL_TIER_AT_SPACE", demo.detail.tier)
+	out("DETAIL_HIDDEN_AT_SPACE", ",".join(PackedStringArray(demo.detail.hidden_groups())))
+	out("PEOPLE_HIDDEN_AT_SPACE", not demo.get_node("Markers").visible)
 
-	# ---------------------------------------------------------------- 2. space
-	_measure = false                   # loading a scene is a load, not a frame
-	var fight = load("res://scenes/flight/dogfight_demo.gd").new()
-	fight.autopilot = true
-	get_root().add_child(fight)
-	await frames(3)
-	out("SPACE_ENCOUNTER", fight.encounter_id)
-	var me: Dictionary = fight.df.get_ship(fight.df.player_id)
-	me.flight.position = fight.planet_center + Vector3(0, fight.planet_radius + 400.0, 0)
-	fight._check_reentry()
-	out("SCENE_AFTER_DIVE", went.back() if not went.is_empty() else "")
-	out("ARRIVAL_MODE", str(GameFlow.arrival.get("mode", "")))
-	out("ARRIVAL_OUTCOME", str(GameFlow.arrival.get("outcome", "")))
-	fight.queue_free()
+	# ---------------------------------------------------------------- 2. space, same scene
+	_phase = "space"
+	var fight: SpaceFight = pilot.fight
+	out("SCENE_AFTER_CLIMB", went.back() if not went.is_empty() else "")
+	out("TOWN_STILL_LOADED", is_instance_valid(demo) and demo.is_inside_tree())
+	out("FIGHT_STARTED", fight != null)
+	out("SPACE_ENCOUNTER", fight.encounter_id if fight != null else "")
+	out("FIGHT_IN_TOWN_SCENE", fight != null and fight.get_parent() == demo)
+	var me = fight.player_flight() if fight != null else null
+	out("FIGHT_STARTS_AT_SHIP_M", snappedf(me.position.distance_to(space_at), 0.1) if me != null else -1)
+	var allies: Array = fight.df.alive_on("player").filter(func(sh): return not sh.is_player) if fight != null else []
+	out("WINGMAN_BESIDE_M", int(allies[0].flight.position.distance_to(me.position)) if not allies.is_empty() and me != null else -1)
+	# The fighter AI flies the ship for 10 s (as the M10 trace's bot pilot does):
+	# the fight runs here, in the town, and the town's ship follows it.
+	var max_step := 0.0
+	var last: Vector3 = pilot.atmo.position()
+	if fight != null:
+		fight.df.set_player_autopilot(true)
+	for i in 60 * 10:
+		await physics_frame
+		max_step = maxf(max_step, pilot.atmo.position().distance_to(last))
+		last = pilot.atmo.position()
+		if pilot.fight == null:
+			break
+	out("SPACE_WAVES_SEEN", fight.df.stats.waves if is_instance_valid(fight) and fight.df != null else -1)
+	out("SPACE_SHOTS", fight.df.stats.shots if is_instance_valid(fight) and fight.df != null else -1)
+	out("SHIP_FOLLOWS_FIGHT", pilot.fight != null and pilot.atmo.position().distance_to(pilot.fight.player_flight().position) < 0.01)
+	out("VISUAL_FOLLOWS_FIGHT", pilot.fight != null and pilot.visual.global_position.distance_to(pilot.atmo.position()) < 0.01)
+	# Dive: nose down, full throttle, until the fight lets go.
+	if is_instance_valid(fight) and pilot.fight != null:
+		fight.df.set_player_autopilot(false)
+	var dive_from: Vector3 = pilot.atmo.position()
+	for i in 60 * 60:
+		var fy: float = pilot.atmo.flight.forward().y
+		pilot.set_external_command({ "pitch": clampf((-0.8 - fy) * 4.0, -1.0, 1.0), "throttle": 1.0 })
+		await physics_frame
+		max_step = maxf(max_step, pilot.atmo.position().distance_to(last))
+		last = pilot.atmo.position()
+		if pilot.fight == null:
+			break
 	await frames(2)
+	var down: Vector3 = pilot.atmo.position()
+	out("SPACE_MAX_STEP_M", snappedf(max_step, 0.1))
+	out("SCENE_AFTER_DIVE", went.back() if not went.is_empty() else "")
+	out("FIGHT_OUTCOME", str(pilot.fight_log.back().outcome) if not pilot.fight_log.is_empty() else "")
+	out("FIGHT_CLEARED", pilot.fight == null and demo.get_node_or_null("SpaceFight") == null)
+	out("BACK_DOWN_ALTITUDE", int(pilot.atmo.altitude()))
+	out("BACK_DOWN_DRIFT_M", int(Vector2(down.x - dive_from.x, down.z - dive_from.z).length()))
+	out("BACK_DOWN_FROM_PAD_M", int(Vector2(down.x - pilot.pad.center.x, down.z - pilot.pad.center.z).length()))
 
 	# ---------------------------------------------------------------- 3. back in the sky
 	_phase = "sky"
-	_measure = false
-	await make_town()
-	pilot.ground.add_landforms(DesertLandforms.load_data(), demo.desert_site().floor)
 	out("LANDMARKS", pilot.ground.columns.size())
 	out("OUTPOST_IN_SKY_SCENE", pilot.scenery.landmark_boxes().size())
 	out("REENTRY_COLLIDER_NOT_FOLLOWING", demo.terrain._target == null)
-	_measure = true
 	out("REENTRY_PILOTING", pilot.piloting)
 	out("REENTRY_STATE", pilot.atmo.state_label())
 	out("REENTRY_ALTITUDE", int(pilot.atmo.altitude()))
+	out("SPACE_REARMED", not pilot.atmo.reached_space)
 	var c: Vector3 = pilot.pad.center
 	# Dive back to the port: 300 m over the town.
 	var dive := await fly_to(Vector3(c.x, 300, c.z), 0.8, 120.0,

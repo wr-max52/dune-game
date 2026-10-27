@@ -81,13 +81,27 @@ camera behind the ship.
 | Chase / cockpit view | V |
 
 The HUD shows speed, throttle, boost, altitude, height above ground and climb rate.
-The bar on the right fills toward the **edge of space (8,000 m)**: pull the nose up
-to about 80 degrees, full throttle, boost, and you are there in roughly 33 seconds.
-The sky goes black on the way. At the edge the screen fades into the space battle.
+The bar on the right fills toward the **edge of space (4,000 m)**: pull the nose up
+to about 80 degrees, full throttle, boost, and you are there in roughly 18 seconds.
+The sky goes black on the way. There is no loading and no fade: space is the
+port's own sky (issue #46).
 
-In space, **dive at the planet** to come back down: you arrive in the port's sky,
-still flying. Win the fight and, if you do not dive within 25 s, you come back down
-anyway. Lose the fighter and you are back on foot beside the pad.
+At the edge, raiders arrive and the pad's fight starts right where you are, your
+wingman beside you:
+
+| Action | Key |
+|---|---|
+| Guns | LMB or Space |
+| Seeker missile (once locked) | RMB or X |
+| Next target | T |
+
+Win and you are paid on the spot. **Dive** more than 250 m back below the edge to
+break the fight off; either way you keep flying, over the same ground you flew up
+from. Lose the fighter and it is towed back to the pad, you beside it. Climb out
+again for another sortie. **F11 → World** switches the space dogfight off (and on).
+
+The higher you fly, the less is drawn: lighting effects, then the people, then the
+shadows and small props go, and come back as you descend.
 
 Hit the ground or a building fast and you crash; the ship is towed back to its pad.
 

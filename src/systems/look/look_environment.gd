@@ -20,6 +20,8 @@ var env: Environment
 var sky_mat: ShaderMaterial
 var sun_dir := Vector3(0, 0.15, -1)
 var lamp_level := 0.0
+var suppressed := {}                 ## issue #46: feature -> true, held off (set_suppressed)
+var _wanted := {}                    ## what the preset asks for: ssao, ssil, sdfgi, volumetric, shadows
 var _tracked: Array[ShaderMaterial] = []
 var _lamps: Array[Light3D] = []
 var _lamp_mats: Array[StandardMaterial3D] = []
@@ -238,14 +240,39 @@ func _apply_values(p: Dictionary) -> void:
 	env.adjustment_contrast = float(post["contrast"])
 	env.adjustment_saturation = float(post["saturation"])
 	env.adjustment_brightness = float(post["brightness"])
-	env.ssao_enabled = bool(post["ssao"])
-	env.ssil_enabled = bool(post["ssil"])
-	env.sdfgi_enabled = bool(post["sdfgi"])
+	_wanted = { "ssao": bool(post["ssao"]), "ssil": bool(post["ssil"]), "sdfgi": bool(post["sdfgi"]),
+		"volumetric": bool(vol["enabled"]), "shadows": true }
+	_apply_quality()
 
 	lamp_level = float(p.get("lamps", 0.0))
 	_apply_lamps()
 	for m in _tracked:
 		m.set_shader_parameter("sun_dir", sun_dir)
+
+
+## Issue #46: render features held off from outside, whatever the preset wants:
+## AltitudeDetail drops the expensive ones high in the sky ("ssao", "ssil",
+## "sdfgi", "volumetric", "shadows"). Pass [] to give them all back.
+func set_suppressed(features: Array) -> void:
+	var next := {}
+	for f in features:
+		next[str(f)] = true
+	if next == suppressed:
+		return
+	suppressed = next
+	_apply_quality()
+
+
+func _apply_quality() -> void:
+	if env == null:
+		return
+	var on := func(k: String) -> bool: return bool(_wanted.get(k, true)) and not suppressed.has(k)
+	env.ssao_enabled = on.call("ssao")
+	env.ssil_enabled = on.call("ssil")
+	env.sdfgi_enabled = on.call("sdfgi")
+	env.volumetric_fog_enabled = on.call("volumetric")
+	if sun != null:
+		sun.shadow_enabled = on.call("shadows")
 
 
 func _apply_lamps() -> void:

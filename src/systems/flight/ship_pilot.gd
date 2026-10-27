@@ -13,9 +13,14 @@ extends Node
 ##     (a ship at 300 m/s would rebuild it every frame); coming in to land it is
 ##     built under the ship in the background (DesertTerrain.prefetch), so getting
 ##     out finds ground there,
-##   - crossing the edge of space hands off to the pad's space encounter
-##     (GameFlow.ascend); coming back down (arrival "reentry") starts you in the sky
-##     above the port, still flying,
+##   - issue #46: crossing the edge of space keeps you in this scene, over the same
+##     ground. With GameFlow.space_dogfight() on, the pad's encounter starts right
+##     there (SpaceFight) and flies your ship until it is won, lost, or you dive
+##     `space_exit_margin` back below the edge; then normal flight takes over where
+##     the fight left you. A lost fighter is towed home like a crash. Climbing out
+##     again starts another sortie.
+##   - (an arrival "reentry" from the stand-alone flight scene still starts you in
+##     the sky above the port, still flying),
 ##   - a crash tows the ship back to its pad and puts you beside it.
 ##
 ## The headless trace drives it with board(), takeoff(), land(), exit_ship() and
@@ -30,6 +35,8 @@ const CRASH_TOW_TIME := 2.5
 signal boarded
 signal exited
 signal left_atmosphere
+signal fight_started
+signal fight_ended(outcome: String)
 
 var demo                         ## the town scene (town_demo.gd)
 var content
@@ -65,6 +72,10 @@ var _foot_prompt: Label          ## "[E] Board" while standing at the ship
 var hull: StaticBody3D           ## the ship's own collision: solid while parked, off in flight
 var vessel_name := ""            ## issue #15: the ship's own name (same key as in space)
 var planet_name := ""
+var fight: SpaceFight            ## issue #46: the space encounter in progress, or null
+var kit: ShipKit                 ## built once at load (on the town's materials) for every fight
+var fight_log: Array = []        ## { outcome, payout, at } per sortie, for traces and tests
+var space_exit_margin := 250.0   ## metres below the edge that break off a running fight
 
 
 func setup(town_scene) -> void:
@@ -101,6 +112,7 @@ func _ready() -> void:
 	ship_cfg = content.get_ship(ship_id)
 	atmo = AtmoFlight.new()
 	atmo.setup(ship_cfg, ground)
+	space_exit_margin = GameFlow.setting("space_exit_margin", space_exit_margin)
 	_find_pad_shape()
 	_take_visual()
 	_build_hull()
@@ -130,7 +142,8 @@ func _ready() -> void:
 	hud.vessel_name = vessel_name
 	_foot_prompt.visible = false
 	layer.add_child(_foot_prompt)
-	var look: Dictionary = ShipKit.new().looks.get(str(ship_cfg.get("look", "")), {})
+	kit = ShipKit.new(demo._flat_mats())
+	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
 	chase.fit_to(float(look.get("length", 9.0)))
 	if str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
@@ -354,6 +367,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_stick.y = clampf(_stick.y - event.relative.y * 0.004, -1.0, 1.0)
 	if InputMap.has_action("toggle_view") and event.is_action_pressed("toggle_view"):
 		chase.toggle_mode()
+	if fight != null and InputMap.has_action("flight_next_target") and event.is_action_pressed("flight_next_target"):
+		fight.next_target()
 
 
 func _physics_process(dt: float) -> void:
@@ -375,6 +390,8 @@ func _on_foot() -> void:
 		return
 	if sky != null:
 		sky.update_for(ground.altitude(p.global_position), p.global_position)
+	if demo.detail != null:
+		demo.detail.update_for(ground.altitude(p.global_position))
 	var near: bool = can_board() and not p.locked
 	_foot_prompt.visible = near
 	if near and _just("interact"):
@@ -396,8 +413,12 @@ func _seated(dt: float) -> void:
 			float(_external.get("roll", 0.0)), _throttle, _boost)
 	if st == AtmoFlight.State.LIFTOFF or st == AtmoFlight.State.FLYING or st == AtmoFlight.State.LANDING:
 		flight_time += dt
-	for e in atmo.step(dt):
-		_on_event(e)
+	if fight != null:
+		_fight_step(dt)
+	else:
+		for e in atmo.step(dt):
+			_on_event(e)
+		_rearm_space()
 	_sync_visual()
 	var s := atmo.position()
 	player().global_position = s
@@ -406,6 +427,8 @@ func _seated(dt: float) -> void:
 		demo.terrain.prefetch(s)           # ground to step out onto, built in the background
 	if sky != null:
 		sky.update_for(atmo.altitude(), s)
+	if demo.detail != null:
+		demo.detail.update_for(atmo.altitude())
 	if demo._rig != null:
 		demo._rig.set_override(chase.update(dt, atmo.transform()), 72.0)
 	_update_hud()
@@ -451,29 +474,113 @@ func _on_event(e: Dictionary) -> void:
 				visual.visible = false
 			_crash_fx(e.at)
 		"reached_space":
-			space_time = flight_time
+			if space_time < 0.0:
+				space_time = flight_time
 			_leave_atmosphere()
 
 
+## Issue #46: out of the atmosphere, still in this scene, over the same ground.
+## No fade and no scene change: the sky is already black up here.
 func _leave_atmosphere() -> void:
-	if ascending:
-		return
 	ascending = true
-	hud.toast(GameFlow.label("leaving_planet") % planet_name if planet_name != "" else GameFlow.label("leaving_atmosphere"), 3.0)
 	left_atmosphere.emit()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	if not is_inside_tree():
-		GameFlow.ascend(null, pad)
+	if GameFlow.space_dogfight() and start_fight():
+		hud.toast(GameFlow.label("contact"), 6.0)
+	else:
+		hud.toast(GameFlow.label("in_orbit"), 5.0)
+
+
+## Start the pad's encounter around the ship as it flies now. False if there is
+## none (or one is already running).
+func start_fight() -> bool:
+	if fight != null:
+		return false
+	var f := SpaceFight.new()
+	demo.add_child(f)
+	if not f.begin(content, str(pad.get("encounter", "")), atmo.transform(), atmo.speed(), 1, kit):
+		f.queue_free()
+		return false
+	fight = f
+	fight_started.emit()
+	return true
+
+
+## One frame of the fight: the director flies the player's ship from the same
+## command the keys (or a bot) give normal flight, and the town ship follows it.
+func _fight_step(dt: float) -> void:
+	var cmd: Dictionary = atmo._command.duplicate()
+	if _external.is_empty():
+		cmd["fire"] = _held("flight_fire")
+		cmd["missile"] = _held("flight_missile")
+	else:
+		cmd["fire"] = bool(_external.get("fire", false))
+		cmd["missile"] = bool(_external.get("missile", false))
+	var events: Array = fight.step(dt, cmd)
+	var f = fight.player_flight()
+	if f != null:
+		atmo.flight.position = f.position
+		atmo.flight.basis = f.basis
+		atmo.flight.speed = f.speed
+	for e in events:
+		match str(e.type):
+			"wave":
+				hud.toast("Wave %d" % int(e.index), 2.5)
+			"kill":
+				if fight != null and e.by == fight.df.player_id:
+					hud.toast("Kill  ·  " + str(e.who) if str(e.get("who", "")) != "" else "Kill", 2.0)
+			"complete":
+				end_fight("complete")
+				return
+			"failed":
+				end_fight("failed")
+				return
+	if atmo.altitude() < atmo.space_altitude - space_exit_margin:
+		end_fight("left")
+
+
+## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash
+## does), "left" (dived out early) just ends it. Normal flight picks up where the
+## fight left the ship.
+func end_fight(outcome: String) -> void:
+	if fight == null:
 		return
-	var tw := create_tween()
-	tw.tween_method(hud.set_fade, 0.0, 1.0, float(GameFlow.setting("fade_time", 0.6)))
-	tw.tween_callback(func(): GameFlow.ascend(get_tree(), pad))
+	var pay := fight.payout() if outcome == "complete" else 0
+	var at := atmo.position()
+	fight.queue_free()
+	fight = null
+	fight_log.append({ "outcome": outcome, "payout": pay, "at": at })
+	if outcome != "left":
+		WorldState.on_flight_returned({ "pad": str(pad.get("id", "")), "encounter": str(pad.get("encounter", "")),
+			"outcome": outcome, "payout": pay, "mode": "orbit" })
+	match outcome:
+		"complete":
+			var t := GameFlow.label("orbit_complete")
+			hud.toast(t % pay if t.contains("%d") else t, 6.0)
+		"left":
+			hud.toast(GameFlow.label("orbit_broke_off"), 3.0)
+	if outcome == "failed":
+		atmo._crash(at, "space")
+		_on_event({ "type": "crashed", "at": at, "what": "space" })
+		hud.toast(GameFlow.label("orbit_failed"), 4.0)
+	else:
+		var throttle := clampf(float(atmo._command.get("throttle", 0.6)), 0.0, 1.0)
+		atmo.place_flying(at, atmo.flight.forward(), atmo.flight.speed, throttle)
+	fight_ended.emit(outcome)
+
+
+## Back under the edge of space (and no fight running): the next climb out is a
+## new sortie.
+func _rearm_space() -> void:
+	if atmo.reached_space and atmo.altitude() < atmo.space_altitude - space_exit_margin:
+		atmo.reached_space = false
+		ascending = false
 
 
 func _tow_home() -> void:
 	if visual != null:
 		visual.visible = true
 	atmo.reached_space = false
+	ascending = false
 	atmo.park(home, home_yaw)
 	_set_hull(true)
 	_sync_visual()

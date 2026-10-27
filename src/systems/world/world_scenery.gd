@@ -64,7 +64,14 @@ func _build_landmark_colliders() -> void:
 ## corners cover it and its seam never flickers.
 func _build_skirt(sand: Material = null) -> void:
 	var r0 := terrain.extent * 0.97
-	var rings := [r0, terrain.extent * 1.5, 14000.0, 24000.0, 40000.0, 60000.0, 100000.0]
+	# Issue #46: out to the horizon seen from three times the edge of space, and no
+	# further: on a smaller planet the rest is round the curve and never drawn.
+	var horizon := terrain.curve_from + sqrt(2.0 * terrain.planet_radius * ground.space_altitude() * 3.0)
+	var rings := [r0, terrain.extent * 1.5]
+	for r in [14000.0, 24000.0, 40000.0, 60000.0, 100000.0]:
+		if r < horizon:
+			rings.append(r)
+	rings.append(horizon)
 	var seg := 96
 	var base := terrain.skirt_height - 1.0
 	var st := SurfaceTool.new()

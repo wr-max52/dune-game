@@ -2,6 +2,34 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — Space is the town's own sky (issue #46)
+
+- **One scene, not two.** The space fight runs inside the town scene (`SpaceFight`,
+  the same pure `dogfight.gd` director) instead of `change_scene_to_file` to
+  `dogfight_demo.tscn` and back. Alternative: keep two scenes and hide the load
+  (a loading screen, or background-loading the next scene). Rejected: it still
+  throws away the town's state, and you cannot come down where you went up
+  without re-creating the whole port.
+- **The fight flies your ship while it runs.** On reaching space the director's
+  player ship takes the town ship's transform and speed; each frame ShipPilot
+  copies it back onto the AtmoFlight model, so the parked model, chase camera, sky
+  and HUD need no second path. Alternative: one flight model for both. Rejected
+  for now: the atmosphere and space blocks of each ship are tuned separately.
+- **The encounter is placed, not re-authored.** `SpaceFight.placed()` moves the
+  encounter's spawns onto the ship and turns them by its heading; `Dogfight` got a
+  `wave_yaw` so waves arrive ahead. Encounter JSON is unchanged.
+- **The stand-alone space scene stays.** `dogfight_demo.tscn` still runs on its own
+  (F6, the M10 trace, review renders), and the GameFlow pad launch still works for
+  a quick-launch pad. Only the town ship stopped using it.
+- **Detail by altitude, from data.** The lag was most likely SDFGI: it rebuilds its
+  cascades as the camera moves, and a ship moves hundreds of metres a second. Tiers
+  in the world JSON switch render features off (through `LookEnvironment`, so the
+  L key cannot bring them back mid-flight) and hide and pause node groups. The
+  thresholds are first guesses, to tune on the Mac.
+- **A smaller planet, the same desert.** Planet radius halved and the skirt cut at
+  the horizon. The 6 km desert was kept: two mesas sit near its edge, and the
+  flight and walking traces use it.
+
 ## 2026-10-26 — Locals are mix-and-match: one model, three parts, six colours
 
 - **One rigged model, split in prep.** Generated with Hyper3D Rodin from a prompt

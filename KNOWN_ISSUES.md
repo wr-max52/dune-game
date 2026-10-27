@@ -143,6 +143,26 @@ nav source geometry and obstructions, and the soldier data.
 - **Not played by a human yet.** The F4 line is the way to tune it on the Mac.
   Sight range, fov, reaction time and forget time are first guesses.
 
+## After issue #46, seamless flight (2026-10-27)
+
+**What is real and proven by tests:** no scene change on the way up or down; the
+fight starts where the ship is, runs in the town scene, and ends won, lost or
+broken off in place; the dogfight toggle; detail tiers switching on the climb
+(`test_results/m14_flight_trace.txt`, `tests/test_space_fight.gut.gd`).
+
+**Not done, honestly:**
+- **Not flown or measured on the Mac.** The frame times are from the headless
+  trace, which draws nothing. Whether SDFGI really was the lag, and where the tier
+  thresholds should sit, needs a session with the FPS counter.
+- **Raiders do not follow you down.** A fight you dive out of is removed at once; the
+  raiders do not chase you into the atmosphere, they just vanish.
+- **The town is still there in space.** At 4 km the port is a speck, but it is
+  still in the scene (just with less detail). A much bigger world would need real
+  streaming.
+- **The space backdrop is the town sky.** The stand-alone scene's big planet
+  sphere is not drawn above the port; you see the curving sand skirt and the
+  stars instead.
+
 ## After M14 (2026-10-26) -- still current; the guard notes above add to it.
 
 **What is real and proven by tests:** the whole port-to-space loop with real physics

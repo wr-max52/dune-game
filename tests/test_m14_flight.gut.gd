@@ -1,8 +1,9 @@
 extends GutTest
 ## M14: the whole loop from the headless trace (scenes/m14_flight_trace.gd, real
-## physics, real scenes): board in the pit, lift off, climb out of the atmosphere
-## into the space encounter, dive back down into the port's sky, fly a circuit,
-## land in the desert and walk, crash and be towed home, land back on the pad.
+## physics, real scene): board in the pit, lift off, climb out of the atmosphere
+## into the space encounter (issue #46: in the town's own sky, no scene change),
+## dive back down, fly a circuit, land in the desert and walk, crash and be towed
+## home, land back on the pad.
 
 const Reader := preload("res://tests/trace_reader.gd")
 var t: Dictionary
@@ -75,21 +76,50 @@ func test_takeoff_to_space_takes_15_to_22_seconds() -> void:
 	assert_gt(int(t.get("TOP_SPEED_IN_CLIMB", 0)), 300, "thin air: much faster near the top")
 
 
-func test_space_takes_the_hand_off() -> void:
-	assert_eq(t.get("SCENE_AFTER_CLIMB"), "res://scenes/flight/dogfight_demo.tscn")
-	assert_eq(t.get("FLOW_MODE"), "ascent")
-	assert_eq(t.get("FLOW_ENCOUNTER"), "orbital_skirmish")
+## Issue #46: space is the town's own sky. Nothing is unloaded or reloaded, the
+## fight starts where the ship is, and the ship never jumps.
+func test_space_is_the_same_scene() -> void:
+	assert_eq(t.get("SCENE_AFTER_CLIMB"), "", "no scene change on the way up")
+	_true("TOWN_STILL_LOADED")
+	_true("FIGHT_STARTED", "the dogfight toggle is on by default")
+	_true("FIGHT_IN_TOWN_SCENE")
 	assert_eq(t.get("SPACE_ENCOUNTER"), "orbital_skirmish", "the space battle is the pad's encounter")
 
 
-func test_diving_at_the_planet_comes_back_flying() -> void:
-	assert_eq(t.get("SCENE_AFTER_DIVE"), "res://scenes/town_demo.tscn")
-	assert_eq(t.get("ARRIVAL_MODE"), "reentry")
-	assert_eq(t.get("ARRIVAL_OUTCOME"), "left", "left before the fight was won: no payout")
-	_true("REENTRY_PILOTING", "you arrive in the cockpit")
+func test_the_fight_starts_where_you_are() -> void:
+	assert_lt(float(t.get("FIGHT_STARTS_AT_SHIP_M", 999)), 1.0, "the fight picks the ship up where it is")
+	assert_between(int(t.get("WINGMAN_BESIDE_M", -1)), 10, 200, "the wingman is alongside, not across the map")
+	assert_gt(int(t.get("SPACE_WAVES_SEEN", 0)), 0, "raiders arrive")
+	assert_gt(int(t.get("SPACE_SHOTS", 0)), 0, "and the guns work")
+	_true("SHIP_FOLLOWS_FIGHT", "the town's ship is the one the fight flies")
+	_true("VISUAL_FOLLOWS_FIGHT")
+
+
+func test_no_jump_anywhere_in_space() -> void:
+	assert_lt(float(t.get("SPACE_MAX_STEP_M", 999)), 20.0, "never more than a frame's flight between frames")
+
+
+func test_diving_out_breaks_off_and_keeps_flying() -> void:
+	assert_eq(t.get("SCENE_AFTER_DIVE"), "", "no scene change on the way down either")
+	assert_eq(t.get("FIGHT_OUTCOME"), "left", "dived out before it was won: no payout")
+	_true("FIGHT_CLEARED", "the raiders and their HUD go with it")
+	_true("REENTRY_PILOTING", "still in the cockpit")
 	assert_eq(t.get("REENTRY_STATE"), "FLYING")
 	assert_gt(int(t.get("REENTRY_ALTITUDE", 0)), 2000)
-	assert_between(float(t.get("DIVE_TO_PORT_SECONDS", 0)), 5.0, 90.0)
+	_true("SPACE_REARMED", "the next climb out is a new sortie")
+	assert_between(float(t.get("DIVE_TO_PORT_SECONDS", 0)), 0.0, 90.0, "you come down over the port, not kilometres off")
+
+
+func test_same_part_of_the_planet() -> void:
+	assert_lt(int(t.get("BACK_DOWN_FROM_PAD_M", 99999)), 6000, "you come down over the desert you flew up from")
+
+
+## Issue #46: the higher you fly, the less is drawn and run.
+func test_detail_drops_with_altitude() -> void:
+	assert_eq(int(t.get("DETAIL_TIER_ON_PAD", 9)), -1, "full detail on the ground")
+	assert_eq(int(t.get("DETAIL_TIER_AT_SPACE", -1)), 2, "the top tier at the edge of space")
+	assert_eq(t.get("DETAIL_HIDDEN_AT_SPACE"), "people,props")
+	_true("PEOPLE_HIDDEN_AT_SPACE")
 
 
 func test_flying_around_the_map() -> void:

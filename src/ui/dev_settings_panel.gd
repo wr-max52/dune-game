@@ -166,6 +166,12 @@ func _world_tab() -> Control:
 	credits.value_changed.connect(func(x): WorldState.credits = int(x))
 	_row(v, "Credits", credits)
 	_refreshers.append(func(): credits.set_value_no_signal(WorldState.credits))
+	# Issue #46: whether flying out of the atmosphere starts the pad's space fight.
+	var dogfight := CheckBox.new()
+	dogfight.text = "Flying to space starts a dogfight"
+	dogfight.toggled.connect(func(on): GameFlow.set_space_dogfight(on))
+	_row(v, "", dogfight)
+	_refreshers.append(func(): dogfight.set_pressed_no_signal(GameFlow.space_dogfight()))
 	return v.get_parent()
 
 

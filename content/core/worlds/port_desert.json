@@ -9,7 +9,7 @@
   "terrain": {
     "extent": 6000.0,
     "skirt_height": 4.0,
-    "planet_radius": 120000.0,
+    "planet_radius": 60000.0,
     "curve_from": 6000.0
   },
   "landmarks": [
@@ -31,5 +31,14 @@
     "sky_black_at": 3500.0,
     "space_altitude": 4000.0
   },
-  "note": "IP-neutral. The world around the port, for flying: where the desert ends and the planet curves away, the landmarks set in it, and the height where the atmosphere ends. The desert's shape is the town's DesertTerrain (src/systems/look/desert_terrain.gd) and its mesas and hoodoos are content/look/desert_landforms.json; this file does not repeat them. terrain.extent = the desert's half-size (its own extent wins when the desert is built); beyond it the ground is skirt_height falling away on a sphere of planet_radius from curve_from. Altitude is measured above that curved surface, so space_altitude is the same everywhere. Colours: content/look/world.json."
+  "detail": {
+    "note": "Issue #46: less to draw (and run) the higher you fly. Read by src/systems/world/altitude_detail.gd. Each tier holds once the viewer is 'above' that many metres over sea level and lets go 'hysteresis' metres lower. off: render features (sdfgi, ssil, ssao, volumetric, shadows). hide: node groups the town registers (people = bodies, the bartender and their brains; props = lamps, banners, boulders). SDFGI goes first: it rebuilds whenever a fast camera moves, which is what made flying laggy.",
+    "hysteresis": 40.0,
+    "tiers": [
+      { "above": 60.0, "off": ["sdfgi", "ssil"], "hide": [] },
+      { "above": 500.0, "off": ["ssao", "volumetric"], "hide": ["people"] },
+      { "above": 1500.0, "off": ["shadows"], "hide": ["props"] }
+    ]
+  },
+  "note": "IP-neutral. The world around the port, for flying: where the desert ends and the planet curves away, the landmarks set in it, and the height where the atmosphere ends. The desert's shape is the town's DesertTerrain (src/systems/look/desert_terrain.gd) and its mesas and hoodoos are content/look/desert_landforms.json; this file does not repeat them. terrain.extent = the desert's half-size (its own extent wins when the desert is built); beyond it the ground is skirt_height falling away on a sphere of planet_radius from curve_from. Altitude is measured above that curved surface, so space_altitude is the same everywhere. Issue #46: planet_radius halved (120 km to 60 km), a smaller world whose horizon curves in sooner, so less of it is ever drawn. Colours: content/look/world.json."
 }

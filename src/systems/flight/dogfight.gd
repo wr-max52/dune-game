@@ -39,6 +39,9 @@ var player_id := -1
 var player_target_id := -1
 var arena_center := Vector3.ZERO
 var arena_radius := 1500.0
+## Issue #46: the heading (radians about +Y) waves arrive from, so a fight that
+## starts in the port's sky meets them ahead of the player. 0 = from -Z, as before.
+var wave_yaw := 0.0
 
 var wave_index := -1
 var _wave_timer := 0.0
@@ -325,7 +328,7 @@ func _spawn_wave(idx: int) -> void:
 	for i in n:
 		# Fan the wave out on an arc ahead of the anchor so it arrives as a formation.
 		var ang := (float(i) - (n - 1) * 0.5) * 0.28
-		var dir := Vector3(sin(ang), 0.08 * (i % 3 - 1), -cos(ang))
+		var dir := Vector3(sin(ang), 0.08 * (i % 3 - 1), -cos(ang)).rotated(Vector3.UP, wave_yaw)
 		var pos := anchor + dir * dist
 		spawn_ship(group[i], TEAM_HOSTILE, pos, anchor - pos, str(w.get("pilot", "")), false)
 	stats.waves += 1
