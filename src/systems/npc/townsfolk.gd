@@ -1,0 +1,277 @@
+class_name Townsfolk
+extends Node
+## The port's own people: the director for every NpcBody whose soldier profile is
+## in the "locals" faction, the way Garrison runs the Remnant troopers. Same pieces
+## (GuardBrain per body, a TownAlarm for the lot), different rules:
+##
+##   calm      residents and shoppers walk their loops (marker "patrol" routes);
+##             merchants and the fence mind their stall and look around
+##   alarm     raised when the player hurts or kills any local. Every local in town
+##             fights: walkers take cover and close in on their leash, merchants
+##             (profile combat.hold_ground) duck behind the counter and shoot over
+##             it, never leaving the stall
+##   after     calm again when the player flees or is downed; the locals remember
+##             the face for memory_s and start again on sight
+##
+## Their own alarm, not the garrison's: shooting a local does not call the Remnant,
+## and a gate fight does not turn the market on you. While the locals are up in
+## arms (or the stall keeper is dead) a vendor will not trade (vendor_open).
+##
+## Who does what comes from the profile's "role": "local" (walks a loop),
+## "merchant" (holds a stall). Numbers: content/core/soldiers/local_*.json and
+## the town's "locals" block; barks: content/core/dialogue/locals_lines.json.
+
+const LINES_PATH := "res://content/core/dialogue/locals_lines.json"
+
+var demo
+var town
+var player: CharacterBody3D
+var members: Array = []           ## every local NpcBody
+var brains: Dictionary = {}       ## NpcBody -> GuardBrain
+var alarm: TownAlarm
+var cfg: Dictionary = {}          ## the town's "locals" block
+var lines: Dictionary = {}
+var claimed: Dictionary = {}      ## NpcBody -> Vector3 its cover spot
+
+## Numbers the traces read.
+var barks_said: Array = []
+var alarm_t := -1.0               ## game seconds when the alarm last went up
+var kills := 0
+
+var _rng := RandomNumberGenerator.new()
+var _attacked := false
+var _clock := 0.0
+var _last_key := ""
+var _last_key_t := -100.0
+
+
+## `all` = every local NpcBody in town.
+func setup(town_demo, all: Array) -> void:
+	demo = town_demo
+	town = demo.town
+	player = demo._player
+	members = all
+	_rng.seed = 11
+	cfg = town.data.get("locals", {}) if town.data is Dictionary else {}
+	alarm = TownAlarm.new(cfg.get("alarm", {}))
+	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
+	var i := 0
+	for g in members:
+		var b := GuardBrain.new(g.profile, 211 + i * 37)
+		var m: Dictionary = town.get_marker(g.post_id)
+		var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
+		b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
+		b.set_post_facing(g.post_facing)
+		brains[g] = b
+		g.died.connect(_on_local_died.bind(g))
+		g.hit_by.connect(_on_local_hit.bind(g))
+		i += 1
+	if player != null and player.has_signal("downed"):
+		player.downed.connect(_on_player_downed)
+
+
+func _physics_process(dt: float) -> void:
+	if alarm == null or player == null:
+		return
+	_clock += dt
+	var alive := _alive()
+	var ppos := _player_pos()
+	var seen := false
+	var noticed := false
+	var nearest := INF
+	for g in alive:
+		seen = seen or g.perception.visible
+		noticed = noticed or g.perception.noticed
+		if ppos != Vector3.INF:
+			nearest = minf(nearest, g.global_position.distance_to(ppos))
+	# A face they remember starts it again.
+	if not alarm.active() and alarm.remembers() and noticed and ppos != Vector3.INF:
+		_raise("remembered")
+	if _attacked:
+		_raise("attacked")
+	_attacked = false
+	alarm.update(dt, { "seen": seen, "player_pos": ppos, "nearest_dist": nearest, "alive": alive.size() })
+	_handle(alarm.drain())
+	for g in alive:
+		var b: GuardBrain = brains[g]
+		if alarm.active():
+			b.engage()
+			b.alarm_pos = alarm.last_known
+		else:
+			b.alarm_pos = Vector3.INF
+		_run_brain(g, dt, ppos)
+
+
+func _run_brain(g: NpcBody, dt: float, ppos: Vector3) -> void:
+	var b: GuardBrain = brains[g]
+	g.brief(b, ppos, player.velocity if ppos != Vector3.INF else Vector3.ZERO)
+	b.update(dt)
+	if b.want_cover:
+		b.want_cover = false
+		b.cover = _pick_cover(g, b)
+	g.carry_out(b, dt)
+	if b.bark != "":
+		_say(g, b.bark)
+
+
+func _raise(why: String) -> void:
+	if not alarm.raise(why, _player_pos()):
+		return
+	_handle(alarm.drain())
+	if why != "remembered":
+		WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("raise_standing", -10)),
+			"Someone opened fire on the port's own people.")
+
+
+func _handle(events: Array) -> void:
+	for e in events:
+		match str(e.type):
+			"alarm":
+				alarm_t = _clock
+				for g in _alive():
+					g.perception.awareness = 1.0
+					g.perception.noticed = true
+				_say(_lead(_alive()), "alarm")
+			"standing":
+				WorldState.change_standing("locals", int(e.delta), "Someone shot up the port's locals and got away.")
+			"flag":
+				WorldState.set_flag("fled_locals_fight")
+			"calm":
+				for g in _alive():
+					var b: GuardBrain = brains[g]
+					if str(e.why) == "downed":
+						b.stand_down()
+					else:
+						b.calm()
+				claimed.clear()
+
+
+## True when the stall at `marker` is open for trade: its keeper (the local posted
+## there, if any) is alive and the locals are not fighting. A stall with nobody
+## posted at it is always open.
+func vendor_open(marker: String) -> bool:
+	for g in members:
+		if g.post_id == marker:
+			return not g.dead and not alarm.active()
+	return true
+
+
+## What a closed stall's keeper says ("" if none is posted there, or they are
+## dead). The same line every frame: the prompt asks each frame.
+func closed_line(marker: String) -> String:
+	var list: Array = lines.get("shop_closed", [])
+	for g in members:
+		if g.post_id == marker and not g.dead and not list.is_empty():
+			return str(list[absi(hash(marker)) % list.size()])
+	return ""
+
+
+# ------------------------------------------------------------------ cover
+
+## A free cover spot within the profile's cover_search_radius (none for a merchant:
+## radius 0). Spots come from the garrison's grid when the town has one; without it
+## the locals fight in the open. Same "returning our own spot means none" rule.
+func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
+	var c: Dictionary = g.profile.get("combat", {})
+	var reach := float(c.get("cover_search_radius", 0.0))
+	var garrison = demo.get("garrison")
+	if reach <= 0.0 or garrison == null:
+		return Vector3.INF
+	var threat: Vector3 = b.target_pos if b.visible else b.last_seen
+	if threat == Vector3.INF:
+		threat = b.alarm_pos
+	if threat == Vector3.INF:
+		return Vector3.INF
+	var taken: Array = []
+	for other in claimed:
+		if other != g and not other.dead:
+			taken.append(claimed[other])
+	var mine: Array = []
+	for sp in garrison.spots_near(g.global_position, reach):
+		var p: Vector3 = sp.pos
+		if Vector2(p.x - g.global_position.x, p.z - g.global_position.z).length() <= reach:
+			mine.append(sp)
+	var i := CoverPicker.pick(g.global_position, threat, mine, taken,
+		float(c.get("cover_min_threat_dist", 5.0)), float(c.get("cover_max_threat_dist", 30.0)))
+	if i < 0:
+		claimed.erase(g)
+		return Vector3.INF
+	var at: Vector3 = mine[i].pos
+	if claimed.has(g) and (claimed[g] as Vector3).distance_to(at) < 1.2 and g.global_position.distance_to(at) < 1.5:
+		claimed.erase(g)
+		return Vector3.INF
+	claimed[g] = at
+	return at
+
+
+# ------------------------------------------------------------------ events
+
+func _on_local_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
+	brains[g].notify_hit()
+	if shooter == player:
+		_attacked = true
+
+
+func _on_local_died(g: NpcBody) -> void:
+	kills += 1
+	claimed.erase(g)
+	if g.last_hit_by == player:
+		WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),
+			"A local was killed in the street.")
+		_attacked = true
+	var left := _alive()
+	if not left.is_empty():
+		_say(_nearest(left, g.global_position), "man_down")
+
+
+func _on_player_downed() -> void:
+	if alarm.active():
+		_say(_lead(_alive()), "downed")
+	alarm.stand_down()
+	_handle(alarm.drain())
+
+
+# ------------------------------------------------------------------ helpers
+
+func _player_pos() -> Vector3:
+	if player == null or not is_instance_valid(player) or player.get("piloting") == true or player.get("is_downed") == true:
+		return Vector3.INF
+	return player.global_position
+
+
+func _alive() -> Array:
+	var out: Array = []
+	for g in members:
+		if is_instance_valid(g) and not g.dead:
+			out.append(g)
+	return out
+
+
+func _lead(among: Array) -> NpcBody:
+	if among.is_empty() or player == null:
+		return null
+	return _nearest(among, player.global_position)
+
+
+func _nearest(among: Array, at: Vector3) -> NpcBody:
+	var best: NpcBody = null
+	var bd := INF
+	for g in among:
+		var d: float = g.global_position.distance_to(at)
+		if d < bd:
+			bd = d
+			best = g
+	return best
+
+
+func _say(g: NpcBody, key: String) -> void:
+	var list: Array = lines.get(key, [])
+	if g == null or list.is_empty():
+		return
+	if key == _last_key and _clock - _last_key_t < 1.5:
+		return
+	_last_key = key
+	_last_key_t = _clock
+	barks_said.append(key)
+	var shout_keys: Array = NpcBody.sound_cfg().get("shout_keys", [])
+	g.say(str(list[_rng.randi() % list.size()]), 2.6, shout_keys.has(key))

@@ -72,8 +72,8 @@ func test_every_waypoint_reached() -> void:
 
 func test_built_everything() -> void:
 	var s := _trace_summary()
-	assert_eq(int(s.get("boxes", 0)), 114)   # M15: + two checkpoint barricades
-	assert_eq(int(s.get("markers", 0)), 12)
+	assert_eq(int(s.get("boxes", 0)), 126)   # locals: market stall back panels
+	assert_eq(int(s.get("markers", 0)), 16)
 
 
 func test_frame_budget() -> void:

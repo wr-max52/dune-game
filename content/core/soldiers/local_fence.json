@@ -1,0 +1,14 @@
+{
+  "id": "local_fence",
+  "base": "local_merchant",
+  "label": "Fence",
+  "note": "The fence's stall keeper. A merchant who has had to defend the stock before: a little tougher, a little better armed. Only the blocks below differ from local_merchant.json.",
+  "hp": 55,
+  "weapon": {
+    "damage": 9,
+    "rate": 0.2
+  },
+  "combat": {
+    "aim_error_deg": 2.8
+  }
+}

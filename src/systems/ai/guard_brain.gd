@@ -139,6 +139,13 @@ func calm() -> void:
 	_say("lost", 0.0)
 
 
+## Post it facing `yaw`, and glance around that way while it stands there (a
+## merchant at a stall; a fixed post otherwise glances around world +Z).
+func set_post_facing(yaw: float) -> void:
+	post_facing = yaw
+	_look_base = yaw
+
+
 ## Straight back to the loop, no searching (the player was dragged off).
 func stand_down() -> void:
 	state = State.RETURN

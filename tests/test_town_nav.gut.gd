@@ -40,7 +40,7 @@ func test_obstructions_are_blocking_boxes_except_stood_on() -> void:
 	for b in TownNav.obstruction_boxes(town):
 		ids.append(str(b.id))
 	assert_true(ids.has("barracks_hall"), "buildings are cleared")
-	assert_true(ids.has("stall_r1_6"), "so are crates and stalls")
+	assert_true(ids.has("stall_n6"), "so are crates and stalls")
 	assert_false(ids.has("watchtower"), "the tower top keeps its floor (a post stands there)")
 	assert_false(ids.has("ramp_ne"), "ramps are walked on")
 	assert_false(ids.has("ground_east"), "floors are walked on")
@@ -88,7 +88,7 @@ func test_soldier_markers_name_real_profiles() -> void:
 			var s: Dictionary = cc.get_soldier(str(m.soldier))
 			assert_false(s.is_empty(), "%s names soldier %s" % [m.id, m.soldier])
 			assert_true(s.has("perception") and s.has("nav"), "%s's profile has senses and pathing" % m.id)
-	assert_eq(live, 5, "the gate guards, the tower sentry and the barracks pair are live")
+	assert_eq(live, 14, "the gate guards, the tower sentry, the barracks pair and the nine locals are live")
 
 
 func test_noise_events() -> void:

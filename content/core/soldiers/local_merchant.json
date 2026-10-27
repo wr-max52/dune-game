@@ -1,0 +1,24 @@
+{
+  "id": "local_merchant",
+  "base": "local_resident",
+  "label": "Merchant",
+  "role": "merchant",
+  "note": "A market stall keeper. A local who never leaves the stall: when the locals fight, they duck behind the counter and shoot over it, like the tower sentry holds its tower. Only the blocks below differ from local_resident.json.",
+  "hp": 45,
+  "perception": {
+    "fov_deg": 160.0,
+    "footstep_range": 0.0
+  },
+  "combat": {
+    "hold_ground": true,
+    "hold_radius": 0.0,
+    "cover_search_radius": 0.0,
+    "hide_min_s": 1.0,
+    "hide_max_s": 2.2
+  },
+  "patrol": {
+    "pause_s": 8.0,
+    "look_around_deg": 35.0,
+    "look_every_s": 3.5
+  }
+}

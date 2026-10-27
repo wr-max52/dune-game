@@ -46,7 +46,7 @@ const ROLE_COLORS := {
 @export var with_ship := true         ## M14: the pit's ship is flyable (E boards it instead of quick-launching)
 @export var with_npcs := true         ## NPCs on foot: trooper posts with a "soldier" profile get a body, pathing and senses
 @export var nav_async := true         ## bake the navmesh on a worker thread (traces may bake in place)
-@export var npc_brains := true        ## M15: guards think (patrol, challenge, fight). Off = bodies hold their posts
+@export var npc_brains := true        ## M15: guards and locals think (patrol, challenge, fight). Off = bodies hold their posts
 
 var town := TownLayout.new()
 var look: LookEnvironment
@@ -69,8 +69,10 @@ var landforms: DesertLandforms
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 var nav: TownNav                      ## the walkable surface NPCs path on
-var npcs: Array = []                  ## NpcBody, one per soldier marker
+var npcs: Array = []                  ## NpcBody, one per Remnant soldier marker (the garrison)
 var garrison: Garrison                ## M15: runs every trooper in town (null with npc_brains off)
+var locals: Array = []                ## NpcBody, one per marker whose profile is in the "locals" faction
+var townsfolk: Townsfolk              ## runs every local (null with npc_brains off)
 var town_name := ""                   ## issue #15: this town's generated name ("" when its world names none)
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
@@ -305,8 +307,10 @@ func _build_nav() -> void:
 	nav.build(town, nav_async)
 
 
-## One NpcBody per marker that names a soldier profile. Placed and facing the way
-## the statue used to (the gate for a trooper post); senses watch the player.
+## One NpcBody per marker that names a soldier profile. Placed facing the marker's
+## "face" point if it has one (a merchant faces the aisle), else the way the statue
+## used to (the gate for a trooper post); senses watch the player. Profiles in the
+## "locals" faction go to Townsfolk, the rest to the Garrison.
 func _build_npcs() -> void:
 	var cc := CoreContent.new()
 	cc.load_from()
@@ -322,6 +326,8 @@ func _build_npcs() -> void:
 			continue
 		var here := town.marker_pos(str(m.id))
 		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
+		if m.has("face"):
+			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
 		var npc := NpcBody.new()
 		npc.post_id = str(m.id)
 		npc.setup(soldier, here, atan2(face.x - here.x, face.z - here.z), _flat_mats() if use_look else null)
@@ -332,7 +338,7 @@ func _build_npcs() -> void:
 		npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
 		npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
 		root.add_child(npc)
-		npcs.append(npc)
+		(locals if npc.faction == "locals" else npcs).append(npc)
 		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
 		built_markers += 1
 	if npc_brains and not npcs.is_empty():
@@ -341,10 +347,18 @@ func _build_npcs() -> void:
 		add_child(garrison)
 		garrison.setup(self, npcs)
 		garrison.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+	if npc_brains and not locals.is_empty():
+		townsfolk = Townsfolk.new()
+		townsfolk.name = "Townsfolk"
+		add_child(townsfolk)
+		townsfolk.setup(self, locals)
+		if gear != null:
+			gear.vendor_open = townsfolk.vendor_open
+			gear.closed_line = townsfolk.closed_line
 
 
 func npc(post_id: String) -> NpcBody:
-	for n in npcs:
+	for n in npcs + locals:
 		if n.post_id == post_id:
 			return n
 	return null

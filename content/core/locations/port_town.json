@@ -701,183 +701,364 @@
    ]
   },
   {
-   "id": "stall_r1_1",
+   "id": "stall_n1",
    "zone": "market",
    "kind": "cover",
    "min": [
     40,
     0,
-    -30
+    -34
    ],
    "max": [
     44,
     1.1,
-    -29
+    -33
+   ],
+   "note": "Market stalls: two rows facing each other across the aisle (z -42..-34). Each is a waist-high counter on the aisle side and a back panel; the merchant stands between them."
+  },
+  {
+   "id": "stall_n1_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    40,
+    0,
+    -30.4
+   ],
+   "max": [
+    44,
+    2.6,
+    -30
    ]
   },
   {
-   "id": "stall_r1_2",
+   "id": "stall_n2",
    "zone": "market",
    "kind": "cover",
    "min": [
     48,
     0,
-    -30
+    -34
    ],
    "max": [
     52,
     1.1,
-    -29
+    -33
    ]
   },
   {
-   "id": "stall_r1_3",
+   "id": "stall_n2_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    48,
+    0,
+    -30.4
+   ],
+   "max": [
+    52,
+    2.6,
+    -30
+   ]
+  },
+  {
+   "id": "stall_n3",
    "zone": "market",
    "kind": "cover",
    "min": [
     56,
     0,
-    -30
+    -34
    ],
    "max": [
     60,
     1.1,
-    -29
+    -33
    ]
   },
   {
-   "id": "stall_r1_4",
+   "id": "stall_n3_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    56,
+    0,
+    -30.4
+   ],
+   "max": [
+    60,
+    2.6,
+    -30
+   ]
+  },
+  {
+   "id": "stall_n4",
    "zone": "market",
    "kind": "cover",
    "min": [
     64,
     0,
-    -30
+    -34
    ],
    "max": [
     68,
     1.1,
-    -29
+    -33
    ]
   },
   {
-   "id": "stall_r1_5",
+   "id": "stall_n4_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    64,
+    0,
+    -30.4
+   ],
+   "max": [
+    68,
+    2.6,
+    -30
+   ]
+  },
+  {
+   "id": "stall_n5",
    "zone": "market",
    "kind": "cover",
    "min": [
     72,
     0,
-    -30
+    -34
    ],
    "max": [
     76,
     1.1,
-    -29
+    -33
    ]
   },
   {
-   "id": "stall_r1_6",
+   "id": "stall_n5_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    72,
+    0,
+    -30.4
+   ],
+   "max": [
+    76,
+    2.6,
+    -30
+   ]
+  },
+  {
+   "id": "stall_n6",
    "zone": "market",
    "kind": "cover",
    "min": [
     80,
     0,
-    -30
+    -34
    ],
    "max": [
     84,
     1.1,
-    -29
+    -33
    ]
   },
   {
-   "id": "stall_r2_1",
+   "id": "stall_n6_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    80,
+    0,
+    -30.4
+   ],
+   "max": [
+    84,
+    2.6,
+    -30
+   ]
+  },
+  {
+   "id": "stall_s1",
    "zone": "market",
    "kind": "cover",
    "min": [
     40,
     0,
-    -45
+    -43
    ],
    "max": [
     44,
     1.1,
-    -44
+    -42
    ]
   },
   {
-   "id": "stall_r2_2",
+   "id": "stall_s1_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    40,
+    0,
+    -46
+   ],
+   "max": [
+    44,
+    2.6,
+    -45.6
+   ]
+  },
+  {
+   "id": "stall_s2",
    "zone": "market",
    "kind": "cover",
    "min": [
     48,
     0,
-    -45
+    -43
    ],
    "max": [
     52,
     1.1,
-    -44
+    -42
    ]
   },
   {
-   "id": "stall_r2_3",
+   "id": "stall_s2_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    48,
+    0,
+    -46
+   ],
+   "max": [
+    52,
+    2.6,
+    -45.6
+   ]
+  },
+  {
+   "id": "stall_s3",
    "zone": "market",
    "kind": "cover",
    "min": [
     56,
     0,
-    -45
+    -43
    ],
    "max": [
     60,
     1.1,
-    -44
+    -42
    ]
   },
   {
-   "id": "stall_r2_4",
+   "id": "stall_s3_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    56,
+    0,
+    -46
+   ],
+   "max": [
+    60,
+    2.6,
+    -45.6
+   ]
+  },
+  {
+   "id": "stall_s4",
    "zone": "market",
    "kind": "cover",
    "min": [
     64,
     0,
-    -45
+    -43
    ],
    "max": [
     68,
     1.1,
-    -44
+    -42
    ]
   },
   {
-   "id": "stall_r2_5",
+   "id": "stall_s4_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    64,
+    0,
+    -46
+   ],
+   "max": [
+    68,
+    2.6,
+    -45.6
+   ]
+  },
+  {
+   "id": "stall_s5",
    "zone": "market",
    "kind": "cover",
    "min": [
     72,
     0,
-    -45
+    -43
    ],
    "max": [
     76,
     1.1,
-    -44
+    -42
    ]
   },
   {
-   "id": "stall_r2_6",
+   "id": "stall_s5_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    72,
+    0,
+    -46
+   ],
+   "max": [
+    76,
+    2.6,
+    -45.6
+   ]
+  },
+  {
+   "id": "stall_s6",
    "zone": "market",
    "kind": "cover",
    "min": [
     80,
     0,
-    -45
+    -43
    ],
    "max": [
     84,
     1.1,
-    -44
+    -42
+   ]
+  },
+  {
+   "id": "stall_s6_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    80,
+    0,
+    -46
+   ],
+   "max": [
+    84,
+    2.6,
+    -45.6
    ]
   },
   {
@@ -1962,27 +2143,60 @@
    "pos": [
     42,
     0,
-    -31
+    -31.7
    ],
-   "role": "ambient"
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    42,
+    0,
+    -38
+   ]
   },
   {
    "id": "vendor_2",
    "pos": [
     58,
     0,
-    -31
+    -31.7
    ],
-   "role": "ambient"
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    58,
+    0,
+    -38
+   ]
   },
   {
    "id": "vendor_3",
    "pos": [
     74,
     0,
-    -46
+    -44.3
    ],
-   "role": "ambient"
+   "role": "ambient",
+   "soldier": "local_fence",
+   "face": [
+    74,
+    0,
+    -38
+   ]
+  },
+  {
+   "id": "vendor_4",
+   "pos": [
+    50,
+    0,
+    -44.3
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    50,
+    0,
+    -38
+   ]
   },
   {
    "id": "resident_w",
@@ -1991,7 +2205,20 @@
     0,
     -54
    ],
-   "role": "ambient"
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_w"
+  },
+  {
+   "id": "resident_w_2",
+   "pos": [
+    -56.5,
+    0,
+    -41
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_w_2"
   },
   {
    "id": "resident_e",
@@ -2000,7 +2227,31 @@
     0,
     54
    ],
-   "role": "ambient"
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_e"
+  },
+  {
+   "id": "shopper_1",
+   "pos": [
+    38,
+    0,
+    -36.5
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_1"
+  },
+  {
+   "id": "shopper_2",
+   "pos": [
+    86,
+    0,
+    -52
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_2"
   }
  ],
  "routes": [
@@ -2235,6 +2486,128 @@
     ]
    ],
    "note": "East barracks trooper's loop between the hall and the yard wall."
+  },
+  {
+   "id": "stroll_resident_w",
+   "points": [
+    [
+     -4.5,
+     -54
+    ],
+    [
+     -4.5,
+     -48
+    ],
+    [
+     -30.5,
+     -48
+    ],
+    [
+     -30.5,
+     -60
+    ],
+    [
+     -4.5,
+     -60
+    ]
+   ],
+   "note": "A local's walk round the west houses: the lanes at z -48 and -60, the alleys at x -4.5 and -30.5."
+  },
+  {
+   "id": "stroll_resident_w_2",
+   "points": [
+    [
+     -56.5,
+     -41
+    ],
+    [
+     -56.5,
+     -34
+    ],
+    [
+     -82.5,
+     -34
+    ],
+    [
+     -82.5,
+     -48
+    ],
+    [
+     -56.5,
+     -48
+    ]
+   ],
+   "note": "A second west local: the street along the houses' north edge and back through the alleys."
+  },
+  {
+   "id": "stroll_resident_e",
+   "points": [
+    [
+     -4.5,
+     54
+    ],
+    [
+     -4.5,
+     48
+    ],
+    [
+     -30.5,
+     48
+    ],
+    [
+     -30.5,
+     60
+    ],
+    [
+     -4.5,
+     60
+    ]
+   ],
+   "note": "The east houses' local, mirroring stroll_resident_w."
+  },
+  {
+   "id": "stroll_market_1",
+   "points": [
+    [
+     38,
+     -36.5
+    ],
+    [
+     88,
+     -36.5
+    ],
+    [
+     88,
+     -26
+    ],
+    [
+     38,
+     -26
+    ]
+   ],
+   "note": "A shopper: down the aisle (north half), back behind the north stalls."
+  },
+  {
+   "id": "stroll_market_2",
+   "points": [
+    [
+     86,
+     -52
+    ],
+    [
+     36,
+     -52
+    ],
+    [
+     36,
+     -39.5
+    ],
+    [
+     86,
+     -39.5
+    ]
+   ],
+   "note": "A shopper: the back lane by the shops, then up the aisle (south half) the other way."
   }
  ],
  "chunks": [
@@ -2261,5 +2634,16 @@
    "raise_standing": -10
   },
   "klaxon_marker": "trooper_tower"
+ },
+ "locals": {
+  "note": "The port's own people. They mind their business until you hurt one; then every local in town fights you (merchants and the fence from behind their counters, never leaving the stall). Same alarm rules as the garrison, its own alarm: shooting a local does not call the Remnant, and the other way round.",
+  "alarm": {
+   "disengage_dist": 45.0,
+   "disengage_unseen_s": 10.0,
+   "memory_s": 240.0,
+   "fled_standing": -3,
+   "raise_standing": -10,
+   "killed_standing": -8
+  }
  }
 }

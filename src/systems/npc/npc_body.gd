@@ -370,6 +370,50 @@ func reloading() -> bool:
 	return weapon_actor != null and weapon_actor.weapon != null and weapon_actor.weapon.get("_reloading") == true
 
 
+# ------------------------------------------------------------------ the brain (M15)
+
+## The fighter pattern, the half before update(): what this body knows, written
+## into its GuardBrain. `at` / `vel` are the target's feet and velocity (INF when
+## there is nobody to fight). A calm brain turns toward footsteps or a shot it
+## just heard. Garrison and Townsfolk both run their bodies through this.
+func brief(b: GuardBrain, at: Vector3, vel: Vector3) -> void:
+	b.pos = global_position
+	b.facing = rotation.y
+	b.hp_frac = float(health.hp) / maxf(1.0, float(max_health))
+	b.arrived = arrived()
+	b.visible = perception.visible
+	b.target_pos = at
+	b.target_vel = vel
+	b.target_chest = target_chest_height()
+	b.last_seen = perception.last_seen_pos
+	b.heard_pos = perception.heard_pos
+	b.reloading = reloading()
+	if perception.heard and not perception.visible:
+		b.investigate(perception.heard_pos)
+
+
+## The half after update(): the brain's outputs onto the body (walk, face, crouch,
+## aim, fire). Cover and barks stay with the director.
+func carry_out(b: GuardBrain, dt: float) -> void:
+	if b.go_to == Vector3.INF:
+		if command.go_to != Vector3.INF:
+			stop()
+	else:
+		go_to(b.go_to, b.sprint)
+	command.sprint = b.sprint
+	command.crouch = b.crouch
+	if b.face != Vector3.INF:
+		face_point(b.face)
+	else:
+		clear_face()
+	aim_point = b.aim
+	if b.fire and b.aim != Vector3.INF:
+		if fire_at(b.aim, dt):
+			b.on_shot()
+	else:
+		hold_fire(dt)
+
+
 ## A line over the guard's head for a few seconds (barks; the HUD may also show it).
 func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	if _speech == null:
@@ -377,7 +421,7 @@ func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	_speech.text = text
 	_speech.visible = text != ""
 	_speech_left = seconds
-	if text == "":
+	if text == "" or not bool(profile.get("radio_voice", true)):
 		return
 	# Under the words, helmet-radio chatter (no speech engine: the line is on screen).
 	var v: Dictionary = sound_cfg().get("voice", {})

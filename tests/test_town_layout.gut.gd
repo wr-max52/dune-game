@@ -39,9 +39,9 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 114)   # M15: + two checkpoint barricades at the gate
-	assert_eq(t.markers().size(), 18)
-	assert_eq(t.routes().size(), 8)   # M15: + the gate guards' and the barracks troopers' patrol loops
+	assert_eq(t.boxes().size(), 126)   # locals: market stalls get back panels (two facing rows of six)
+	assert_eq(t.markers().size(), 22)   # locals: five walkers and four stall keepers
+	assert_eq(t.routes().size(), 13)   # M15: + the troopers' patrol loops; locals: + five walkers' loops
 	assert_eq(t.zones().size(), 8)
 
 
@@ -112,7 +112,7 @@ func test_catches_overlap() -> void:
 
 
 func test_catches_outside_zone() -> void:
-	var errs := _bad(func(d): d.boxes[idx_of(d, "stall_r1_1")].min[0] = 30.0)
+	var errs := _bad(func(d): d.boxes[idx_of(d, "stall_n1")].min[0] = 30.0)
 	assert_true(_has_rule(errs, "V4"), "V4 caught: %s" % str(errs))
 
 

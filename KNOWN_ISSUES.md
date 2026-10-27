@@ -2,6 +2,27 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After locals on foot (2026-10-26)
+
+**What is real and proven by tests:** with real physics (`test_results/locals_trace.txt`):
+the five walkers walk their loops and the four stall keepers stay put facing the
+aisle; shooting a shopper raises the locals' alarm (the garrison's stays calm), every
+living local fights, the merchants shoot back without leaving the stall and the gear
+trader stops trading; shooting a west-houses resident brings in the east-houses one.
+
+**Not done, honestly:**
+- **No skins.** Every local is the same placeholder "local" figure, holding a pistol
+  it does not visibly have (the upper body poses as if holding a rifle).
+- **Locals and troopers ignore each other.** A local's stray bolt hurts a trooper
+  (and the other way round) but neither side fights the other over it; a firefight
+  in the market does not bring the Remnant.
+- **Locals have no flee or surrender.** "All locals fight" is literal: nobody runs.
+- **Dead locals come back** when the scene reloads, and a dead keeper's stall
+  reopens with them.
+- **Two of the four stall keepers do not trade** (vendor_1 and vendor_4 have no
+  vendor data yet).
+- **Not played by a human.** Numbers (hp 40-55, pistol damage 7-9) are first guesses.
+
 ## After M15 part 3, garrison, sound, crouching, smuggling (2026-10-26)
 
 **What is real and proven by tests:** with real physics (`test_results/garrison_trace.txt`):
