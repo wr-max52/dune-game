@@ -25,7 +25,8 @@ extends RefCounted
 ##   { type: "bribe", price }                 credits leave the player
 ##   { type: "flag", name }                   a WorldState flag
 ##   { type: "hostile", why }                 every guard fights
-##   { type: "calm", why }                    the fight is over (won, downed)
+##   { type: "calm", why }                    the fight is over (downed)
+##   { type: "gate_down" }                    every gate guard is down (not the town's fight)
 ##   { type: "confiscate", items }            the search took these item ids
 ##
 ## A search looks in your pockets (s.contraband: [{ id, label, count, value }]).
@@ -161,10 +162,12 @@ func update(dt: float, s: Dictionary) -> void:
 	memory_left = maxf(0.0, memory_left - dt)
 	var alive := int(s.get("guards_alive", 1))
 	if alive <= 0:
+		# Nobody left on the gate. That ends the gate, not the town's fight: the
+		# town alarm decides that (the sentry and the barracks may still be at it).
 		if state != State.IDLE:
 			_close_card()
 			if state == State.HOSTILE:
-				_emit({ "type": "calm", "why": "all_down" })
+				_emit({ "type": "gate_down" })
 			state = State.IDLE
 		return
 	if bool(s.get("attacked", false)) and state != State.HOSTILE:

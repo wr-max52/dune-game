@@ -19,7 +19,7 @@
     "hide_min_s": 1.6,
     "hide_max_s": 3.0,
     "cover_search_radius": 0.0,
-    "hold_radius": 2.3
+    "hold_radius": 2.5
   },
   "patrol": {
     "pause_s": 6.0,

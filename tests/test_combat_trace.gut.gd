@@ -126,7 +126,7 @@ func test_you_can_run() -> void:
 	assert_true(_b("FLEE_FLAG_FLED"))
 	assert_lt(_f("FLEE_STANDING_DELTA"), 0.0, "running costs standing too")
 	assert_true(_b("FLEE_SEARCHED"), "they search first")
-	assert_lt(_f("FLEE_FARTHEST_FROM_GATE_AFTER"), 30.0, "on a leash")
+	assert_lt(_f("FLEE_FARTHEST_FROM_GATE_AFTER"), 60.0, "on a leash (barracks troopers 55 m from their post)")
 	assert_gt(_f("FLEE_BACK_ON_PATROL_S"), 0.0, "then go back to their loops")
 	assert_true(_b("FLEE_REMEMBERED"), "and remember you when you come back")
 

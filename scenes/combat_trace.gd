@@ -150,43 +150,90 @@ func _arrive_from_desert(to: Vector3 = Vector3(104, 0, 1)) -> void:
 ## Hunt: shoot whoever shows; if nobody does, walk toward the nearest guard.
 func _hunt(seconds: float, heal: bool) -> float:
 	var cool := 0.0
-	var step_left := 0.0
+	var dry := 0                 ## shots in a row that did no damage
+	var flank := Vector3.INF     ## where to go when cover is soaking up the shots
+	var flank_left := 0.0
 	for f in int(seconds * 60.0):
 		if heal:
 			player.health.heal(100)
 		cool -= DT
-		var target: NpcBody = null
-		for g in _alive():
-			if _player_sees(g):
-				target = g
-				break
-		if target != null:
-			player.set_command(Vector2.ZERO, false, false, false)
-			if cool <= 0.0:
-				_shoot_at(target)
-				_hunt_shots += 1
-				cool = 0.18
+		if flank != Vector3.INF:
+			# Moving to a better angle: no shooting on the way (for at most 4 s).
+			flank_left -= DT
+			if _step_toward(flank) < 0.8 or flank_left <= 0.0:
+				flank = Vector3.INF
+				dry = 0
 		else:
-			var near: NpcBody = null
+			var target: NpcBody = null
 			for g in _alive():
-				if near == null or g.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
-					near = g
-			if near != null:
-				# A target up a tower cannot be walked to: head for a spot that sees it.
-				var goal: Vector3 = _vantage(near)
-				var p: PackedVector3Array = demo.nav.path(player.global_position, goal)
-				var to: Vector3 = p[1] if p.size() > 1 else goal
-				player.rotation.y = 0.0
-				var d := Vector3(to.x - player.global_position.x, 0, to.z - player.global_position.z)
-				player.set_command(Vector2(d.x, d.z).normalized(), false, false, false)
+				if _player_sees(g):
+					target = g
+					break
+			if target != null:
+				player.set_command(Vector2.ZERO, false, false, false)
+				if cool <= 0.0:
+					var hp0: int = target.health.hp
+					_shoot_at(target)
+					_hunt_shots += 1
+					cool = 0.18
+					await _frames(1)
+					dry = 0 if target.health.hp < hp0 or target.dead else dry + 1
+					if dry >= 6:
+						# Their cover is taking the hits: flank, like a player would.
+						flank = _flank_spot(target)
+						flank_left = 4.0
+						dry = 0
+			else:
+				var near: NpcBody = null
+				for g in _alive():
+					if near == null or g.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
+						near = g
+				if near != null:
+					# A target up a tower cannot be walked to: head for a spot that sees it.
+					_step_toward(_vantage(near))
 		await physics_frame
 		if _alive().is_empty():
 			return f * DT
 	return -1.0
 
+
+## One frame of walking along the navmesh toward `goal`. Returns the distance left.
+func _step_toward(goal: Vector3) -> float:
+	var p: PackedVector3Array = demo.nav.path(player.global_position, goal)
+	var to: Vector3 = p[1] if p.size() > 1 else goal
+	player.rotation.y = 0.0
+	var d := Vector3(to.x - player.global_position.x, 0, to.z - player.global_position.z)
+	player.set_command(Vector2(d.x, d.z).normalized() if d.length() > 0.05 else Vector2.ZERO, false, false, false)
+	return Vector2(goal.x - player.global_position.x, goal.z - player.global_position.z).length()
+
+
+## A reachable spot 8-20 m from `g`, away from here, with a clear line to its
+## crouched chest (so the cover it is behind is not in the way).
+func _flank_spot(g: NpcBody) -> Vector3:
+	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state
+	var best := Vector3.INF
+	var bd := INF
+	for r in [8.0, 12.0, 16.0, 20.0]:
+		for k in 16:
+			var a := TAU * k / 16.0
+			var spot: Vector3 = demo.nav.closest(Vector3(g.global_position.x + cos(a) * r, 0, g.global_position.z + sin(a) * r))
+			if spot == Vector3.INF or absf(spot.y - player.global_position.y) > 1.0 or spot.distance_to(player.global_position) < 4.0:
+				continue
+			var q := PhysicsRayQueryParameters3D.create(spot + Vector3(0, 1.5, 0), g.global_position + Vector3(0, 0.7, 0))
+			var hit: Dictionary = space.intersect_ray(q)
+			if not hit.is_empty() and hit.collider != g:
+				continue
+			var d := spot.distance_to(player.global_position)
+			if d < bd:
+				bd = d
+				best = spot
+	return best
+
+
 var _hunt_shots := 0
 var _vantage_for: NpcBody = null
 var _vantage_at := Vector3.INF
+var _vantage_age := 0.0          ## re-pick a firing spot that has not paid off
 
 
 ## Where to stand to see `g`: its own spot if the navmesh reaches it, else the
@@ -197,8 +244,10 @@ func _vantage(g: NpcBody) -> Vector3:
 	var reach: PackedVector3Array = demo.nav.path(player.global_position, g.global_position)
 	if reach.size() > 1 and reach[reach.size() - 1].distance_to(g.global_position) < 1.5:
 		return g.global_position
-	if _vantage_for == g and _vantage_at != Vector3.INF:
+	if _vantage_for == g and _vantage_at != Vector3.INF and _vantage_age < 6.0:
+		_vantage_age += DT
 		return _vantage_at
+	_vantage_age = 0.0
 	var best := Vector3.INF
 	var bd := INF
 	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state
@@ -208,7 +257,9 @@ func _vantage(g: NpcBody) -> Vector3:
 			var spot: Vector3 = demo.nav.closest(Vector3(g.global_position.x + cos(a) * r, 0, g.global_position.z + sin(a) * r))
 			if spot == Vector3.INF or spot.y > 1.0:
 				continue
-			var q := PhysicsRayQueryParameters3D.create(spot + Vector3(0, 1.5, 0), g.global_position + Vector3(0, 1.2, 0))
+			# Aim the test low (0.9 m, about a crouched chest) so the spot clears
+			# roof edges with a margin, not by a hair.
+			var q := PhysicsRayQueryParameters3D.create(spot + Vector3(0, 1.5, 0), g.global_position + Vector3(0, 0.9, 0))
 			var hit: Dictionary = space.intersect_ray(q)
 			if not hit.is_empty() and hit.collider != g:
 				continue
@@ -499,7 +550,7 @@ func _fight_and_win() -> void:
 	player.revive(0.0)
 	# Fight back like a player who shoots well (and, being a bot, cannot be dropped).
 	_hunt_shots = 0
-	var won_t := await _hunt(60.0, true)
+	var won_t := await _hunt(120.0, true)   # five troopers in cover take a while
 	kv("WON", _alive().is_empty())
 	kv("WON_AFTER_S", snappedf(won_t, 0.01))
 	kv("PLAYER_SHOTS", _hunt_shots)

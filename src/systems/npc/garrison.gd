@@ -312,7 +312,7 @@ func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
 	var reach := float(c.get("cover_search_radius", 28.0))
 	var side := signf(g.global_position.x - gate_pos.x)
 	var mine: Array = []
-	for sp in spots:
+	for sp in _spots_near(g.global_position, reach):
 		var sp_pos: Vector3 = sp.pos
 		if signf(sp_pos.x - gate_pos.x) == side and Vector2(sp_pos.x - g.global_position.x, sp_pos.z - g.global_position.z).length() <= reach:
 			mine.append(sp)
@@ -327,6 +327,38 @@ func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
 		return Vector3.INF
 	claimed[g] = p
 	return p
+
+
+## Spots within `r` of `p`, from an 8 m grid (the town has ~2,900 spots; a full
+## scan per cover request, five troopers asking every couple of seconds, made
+## frame spikes).
+const GRID := 8.0
+var _grid: Dictionary = {}
+var _grid_of: Array = []
+
+
+func _cell(x: float, z: float) -> Vector2i:
+	return Vector2i(floori(x / GRID), floori(z / GRID))
+
+
+func _spots_near(p: Vector3, r: float) -> Array:
+	if not is_same(_grid_of, spots):   # identity, not a 2,900-entry compare
+		_grid.clear()
+		for sp in spots:
+			var c := _cell((sp.pos as Vector3).x, (sp.pos as Vector3).z)
+			if not _grid.has(c):
+				_grid[c] = []
+			_grid[c].append(sp)
+		_grid_of = spots
+	var out: Array = []
+	var lo := _cell(p.x - r, p.z - r)
+	var hi := _cell(p.x + r, p.z + r)
+	for cx in range(lo.x, hi.x + 1):
+		for cz in range(lo.y, hi.y + 1):
+			var c := Vector2i(cx, cz)
+			if _grid.has(c):
+				out.append_array(_grid[c])
+	return out
 
 
 ## Drop spots the navmesh cannot reach, a slice a frame once the mesh is in

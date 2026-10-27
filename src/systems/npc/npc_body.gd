@@ -412,7 +412,7 @@ func _physics_process(delta: float) -> void:
 	if _last_pos != Vector3.INF:
 		walked_m += NpcLocomotion._flat(global_position - _last_pos).length()
 	_last_pos = global_position
-	_animate(delta, move)
+	_animate_lod(delta, move)
 	_tick_steps()
 	_debug_line()
 	_update_nameplate()
@@ -464,7 +464,14 @@ func _turn(dt: float, move: Vector3) -> void:
 	rotation.y = facing
 
 
+var _was_crouched := false
+
+
 func _sense(dt: float) -> void:
+	# Standing up from cover: the last look was from behind it. Look again now.
+	if _was_crouched and not bool(command.crouch):
+		perception.force_ray()
+	_was_crouched = bool(command.crouch)
 	var tpos := Vector3.INF
 	# A player in a ship's seat is not someone on foot to watch.
 	if target != null and is_instance_valid(target) and target.is_inside_tree() \
@@ -571,6 +578,33 @@ func _fall(dt: float) -> void:
 
 
 # ------------------------------------------------------------------ look
+
+## Animation level of detail: a rigged body is the most expensive thing an NPC
+## does each frame, and nobody sees a trooper across town (or from a ship 8 km
+## up). Full rate near the player, a quarter rate past anim_near, none past
+## anim_far. Gameplay (movement, senses, firing) always runs at full rate.
+const ANIM_NEAR := 40.0
+const ANIM_FAR := 150.0
+var anim_frames := 0           ## how many times the body was actually posed (tests)
+var _anim_acc := 0.0
+var _anim_tick := 0
+
+
+func _animate_lod(dt: float, move: Vector3) -> void:
+	var d := 0.0
+	if target != null and is_instance_valid(target):
+		d = global_position.distance_to(target.global_position)
+	if d > ANIM_FAR:
+		_anim_acc = 0.0
+		return
+	_anim_acc += dt
+	_anim_tick += 1
+	if d > ANIM_NEAR and _anim_tick % 4 != 0:
+		return
+	_animate(_anim_acc, move)
+	_anim_acc = 0.0
+	anim_frames += 1
+
 
 func _animate(dt: float, move: Vector3) -> void:
 	_flinch = maxf(0.0, _flinch - dt * 4.0)

@@ -315,14 +315,14 @@ func test_papers_can_turn_into_a_spot_search() -> void:
 	assert_eq(never.state, Checkpoint.State.CLEARED)
 
 
-func test_all_guards_down_ends_it() -> void:
+func test_all_guards_down_ends_the_gate_not_the_fight() -> void:
 	var c := _cp()
 	_tick(c, DT, { "attacked": true })
 	var ev := _tick(c, DT, { "guards_alive": 0 })
-	assert_true(_types(ev).has("calm"))
+	assert_true(_types(ev).has("gate_down"))
+	assert_false(_types(ev).has("calm"), "the town alarm decides when the fight is over")
 	assert_eq(c.state, Checkpoint.State.IDLE)
-	assert_true(_tick(c, 1.0, { "guards_alive": 0 }).is_empty(), "nobody left to care")
-
+	assert_true(_tick(c, 1.0, { "guards_alive": 0 }).is_empty(), "said once, then nothing")
 
 func test_downed_player_stands_them_down() -> void:
 	var c := _cp()

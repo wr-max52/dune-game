@@ -99,7 +99,8 @@ func _sentry() -> void:
 	player.revive(30.0)
 	await _hold(8.0)
 	kv("SENTRY_SHOTS", s.shots_fired)
-	kv("SENTRY_STAYED", s.global_position.distance_to(at) < 1.5 and s.global_position.y > 11.0)
+	# It may step to the rim (hold_radius) but never off the tower.
+	kv("SENTRY_STAYED", Vector2(s.global_position.x - at.x, s.global_position.z - at.z).length() < float(s.profile.combat.hold_radius) + 0.5 and s.global_position.y > 11.0)
 
 
 func _sound() -> void:
