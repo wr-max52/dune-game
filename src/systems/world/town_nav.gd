@@ -13,6 +13,7 @@ extends Node3D
 ## so nothing paths out into the desert yet.
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
+const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
 
 ## Bake settings. Agent sizes are whole multiples of the cells so nothing gets
 ## rounded (Godot warns when they do). Radius 0.5 is the 0.4 capsule plus margin.
@@ -65,7 +66,9 @@ static func obstruction_boxes(town) -> Array:
 	var blocking: Array = town.data.get("blocking_kinds", ["wall", "solid", "cover", "counter", "ship"])
 	var out: Array = []
 	for b in town.boxes():
-		if not (str(b.kind) in blocking):
+		# The stair tower and lookout are walked through, not into, but their
+		# helix is not on the navmesh: guards keep out of the whole footprint.
+		if not (str(b.kind) in blocking) and not (str(b.kind) in ["spiral", "lookout"]):
 			continue
 		var stood_on := false
 		for m in town.markers():
@@ -78,10 +81,15 @@ static func obstruction_boxes(town) -> Array:
 	return out
 
 
-## Every box as 12 triangles (36 vertices), in world space.
+## Every box as 12 triangles (36 vertices), in world space. The round pit is a
+## hollow shell, so it gives its real triangles instead (its box would be a lid).
 static func box_faces(town) -> PackedVector3Array:
 	var faces := PackedVector3Array()
 	for b in town.boxes():
+		if str(b.kind) == "bowl":
+			for m in PitBowl.parts(b, town).values():
+				faces.append_array((m as ArrayMesh).get_faces())
+			continue
 		var xf: Transform3D
 		var half: Vector3
 		if str(b.kind) == "ramp":

@@ -18,6 +18,8 @@ extends Node3D
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const Greybox := preload("res://src/systems/world/greybox.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
+const StairTower := preload("res://src/systems/world/stair_tower.gd")
+const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
 const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
@@ -181,9 +183,16 @@ func _build_boxes() -> void:
 		if b.kind == "ramp":
 			var rt := TownLayout.ramp_transform(b)
 			node = Greybox.make_box(b.id, rt.center, rt.size, color, rt.basis)
+		elif b.kind == "spiral":
+			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.tower_parts(b)), color)
+		elif b.kind == "bowl":
+			node = Greybox.make_trimesh(b.id, StairTower.merged(PitBowl.parts(b, town)), color)
+		elif b.kind == "lookout":
+			var tower: Dictionary = town.get_box(str(b.get("stair", "")))
+			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.lookout_parts(b, tower)), color)
 		else:
 			var cs := Greybox.center_size(b)
-			node = Greybox.make_box(b.id, cs[0], cs[1], color)
+			node = Greybox.make_box(b.id, cs[0], cs[1], color, Basis.IDENTITY, str(b.get("shape", "")) == "round")
 		root.add_child(node)
 		built_boxes += 1
 
@@ -217,9 +226,11 @@ func _make_marker_visual(m: Dictionary) -> Node3D:
 			var holder := Node3D.new()      # the bar puts her here
 			holder.set_meta("feet", true)
 			return holder
-		var c := _kit().build(MARKER_ARCHETYPES.get(m.role, "local"))
+		var c := _kit().build(MARKER_ARCHETYPES.get(m.role, "local"), str(m.get("pose", "")))
 		c.set_meta("feet", true)
 		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
+		if m.has("face"):
+			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))   # e.g. bar patrons look at the bartender
 		var here := town.marker_pos(str(m.id))
 		c.rotation.y = atan2(face.x - here.x, face.z - here.z)
 		characters[str(m.id)] = c

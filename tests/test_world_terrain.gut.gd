@@ -76,7 +76,7 @@ func test_ground_finds_streets_roofs_and_ramps() -> void:
 	assert_almost_eq(ground.ground_at(40, 0), 0.0, 0.01, "the street")
 	assert_almost_eq(ground.ground_at(0.3, 0), -6.0, 0.01, "the pit floor (the ship's own box is skipped)")
 	var ramp: Dictionary = town.get_box("ramp_ne")
-	var mid := ground.ground_at((float(ramp.min[0]) + float(ramp.max[0])) * 0.5, 18.5)
+	var mid := ground.ground_at((float(ramp.min[0]) + float(ramp.max[0])) * 0.5, (float(ramp.min[2]) + float(ramp.max[2])) * 0.5)
 	assert_almost_eq(mid, -3.0, 0.2, "half way up the ramp")
 	var roof: Dictionary = town.get_box("watchtower")
 	var cx := (float(roof.min[0]) + float(roof.max[0])) * 0.5

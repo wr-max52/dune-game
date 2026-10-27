@@ -13,6 +13,7 @@ for b in B:
 for i in range(len(B)):
     for j in range(i+1,len(B)):
         a,b=B[i],B[j]
+        if a.get("hollow") or b.get("hollow"): continue
         if all(a["min"][k]<b["max"][k] and b["min"][k]<a["max"][k] for k in range(3)): E.append(f"overlap {a['id']} {b['id']}")
 def seg_box_dist(p,q,b):
     # sample distance from segment to rect
