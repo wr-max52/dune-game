@@ -43,7 +43,7 @@ func setup(town_demo, world_ground: WorldGround) -> void:
 func _ready() -> void:
 	var cc := CoreContent.new()
 	cc.load_from()
-	var world: Dictionary = cc.world_for_town("port_town")
+	var world: Dictionary = demo.world if "world" in demo and not demo.world.is_empty() else cc.world_for_town("port_town")
 	for lm in world.get("landmarks", []):
 		if str(lm.get("location", "")) == LOCATION:
 			var at := WorldGround._v3(lm.get("at", [0, 0, 0]))

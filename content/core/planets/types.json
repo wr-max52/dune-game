@@ -1,0 +1,106 @@
+{
+  "id": "types",
+  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava, gas or the asteroid's own rock), and falling off the deck kills you (you wake by the bay). sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
+  "home": "port_desert",
+  "detail": {
+    "hysteresis": 40.0,
+    "tiers": [
+      { "above": 60.0, "off": ["sdfgi", "ssil"], "hide": [] },
+      { "above": 500.0, "off": ["ssao", "volumetric"], "hide": ["people"] },
+      { "above": 1500.0, "off": ["shadows"], "hide": ["props"] }
+    ]
+  },
+  "types": {
+    "sand": {
+      "label": "sand desert",
+      "ground": "terrain",
+      "default_style": "desert",
+      "sand": {},
+      "rock": {},
+      "sky": {},
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 3500.0, "space_altitude": 4000.0 },
+      "body": { "radius": 7000.0, "color": "#c9a175", "dark": "#8a6a4c" },
+      "arrival": { "altitude": 2600.0, "distance": 3250.0 },
+      "fall_text": ""
+    },
+    "snow": {
+      "label": "snow world",
+      "ground": "terrain",
+      "default_style": "snowy",
+      "sand": { "sand_light": "#f4f7fb", "sand_mid": "#d6e0ea", "sand_shadow": "#8c9aae", "glitter": 1.6 },
+      "rock": { "rock_a": "#6e747c", "rock_b": "#9aa2ab", "rock_dark": "#3c4148", "dust": "#e8eef5" },
+      "sky": { "sky": { "zenith": "#5d7ea8", "horizon": "#dfe8f2", "ground": "#c8d2de", "cloud_color": "#f2f6fa", "cloud_cover": 0.55 },
+               "fog": { "color": "#d8e2ee" }, "volumetric": { "albedo": "#eef3f8" } },
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 3500.0, "space_altitude": 4000.0 },
+      "body": { "radius": 6500.0, "color": "#e8eef5", "dark": "#9aa8b8" },
+      "arrival": { "altitude": 2600.0, "distance": 3250.0 },
+      "fall_text": ""
+    },
+    "red_desert": {
+      "label": "red desert",
+      "ground": "terrain",
+      "default_style": "desert",
+      "sand": { "sand_light": "#d9845a", "sand_mid": "#b0532f", "sand_shadow": "#5e2a1e" },
+      "rock": { "rock_a": "#8a3a24", "rock_b": "#b85a36", "rock_dark": "#4a1f16", "dust": "#d98a62" },
+      "sky": { "sky": { "zenith": "#8a5a50", "horizon": "#e8a07a", "ground": "#a85a3c", "cloud_color": "#f0b090" },
+               "fog": { "color": "#d9906a" }, "volumetric": { "albedo": "#e8a888" } },
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 3500.0, "space_altitude": 4000.0 },
+      "body": { "radius": 6500.0, "color": "#b85a36", "dark": "#5e2a1e" },
+      "arrival": { "altitude": 2600.0, "distance": 3250.0 },
+      "fall_text": ""
+    },
+    "water": {
+      "town_naming": "town_float",
+      "label": "ocean world",
+      "ground": "platform",
+      "default_style": "pastel",
+      "surface": { "kind": "water", "depth": 160.0, "color": "#1d4f6e", "deep": "#0b2235", "emission": 0.0, "roughness": 0.08, "metallic": 0.2 },
+      "sky": { "sky": { "zenith": "#3f78b0", "horizon": "#b8d8e8", "ground": "#2a5a78", "cloud_cover": 0.5 },
+               "fog": { "color": "#a8c8dc" } },
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 3000.0, "space_altitude": 3500.0 },
+      "body": { "radius": 6500.0, "color": "#2a6a90", "dark": "#0b2235" },
+      "arrival": { "altitude": 2200.0, "distance": 2800.0 },
+      "fall_text": "You went over the edge and into the sea."
+    },
+    "lava": {
+      "town_naming": "town_float",
+      "label": "lava world",
+      "ground": "platform",
+      "default_style": "metallic",
+      "surface": { "kind": "lava", "depth": 160.0, "color": "#2a0d06", "deep": "#120502", "glow": "#ff5a14", "emission": 2.4, "roughness": 0.85, "metallic": 0.0 },
+      "sky": { "sky": { "zenith": "#3a1c18", "horizon": "#b8502a", "ground": "#4a1a0e", "cloud_color": "#6a3a30", "cloud_cover": 0.7 },
+               "fog": { "color": "#7a3a24" }, "volumetric": { "albedo": "#a85a3a" } },
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 3000.0, "space_altitude": 3500.0 },
+      "body": { "radius": 6000.0, "color": "#5a1a0a", "dark": "#ff5a14" },
+      "arrival": { "altitude": 2200.0, "distance": 2800.0 },
+      "fall_text": "You went over the edge and into the lava."
+    },
+    "gas": {
+      "town_naming": "town_float",
+      "label": "gas giant",
+      "ground": "platform",
+      "default_style": "pastel",
+      "surface": { "kind": "gas", "depth": 220.0, "color": "#d8a8c8", "deep": "#8a5a98", "emission": 0.0, "layers": 4 },
+      "sky": { "sky": { "zenith": "#7a6aa8", "horizon": "#f0c8d8", "ground": "#b088b8", "cloud_color": "#f8dce8", "cloud_cover": 0.8 },
+               "fog": { "color": "#e0b8d0" }, "volumetric": { "albedo": "#f0d0e0" } },
+      "atmosphere": { "upper_start": 300.0, "cloud_deck": 1250.0, "sky_black_at": 4000.0, "space_altitude": 4500.0 },
+      "body": { "radius": 12000.0, "color": "#d8a8c8", "dark": "#8a5a98" },
+      "arrival": { "altitude": 2800.0, "distance": 3200.0 },
+      "fall_text": "You went over the edge and down into the clouds."
+    },
+    "asteroid": {
+      "town_naming": "town_station",
+      "label": "asteroid station",
+      "ground": "platform",
+      "default_style": "metallic",
+      "surface": { "kind": "rock", "depth": 40.0, "radius": 260.0, "color": "#38383c", "deep": "#1c1c20", "debris": 40 },
+      "sky": { "sun": { "color": "#f4f4f6", "elevation_deg": 42.0, "energy": 2.6 }, "ambient": { "energy": 0.85 },
+               "sky": { "zenith": "#26282c", "horizon": "#6a6d72", "ground": "#3a3c40", "sun_glow": "#d8d8d8", "cloud_cover": 0.0, "planet_visibility": 1.0, "energy": 0.8 },
+               "fog": { "color": "#5a5d62", "density": 0.00004, "sky_affect": 0.1 }, "volumetric": { "enabled": false } },
+      "atmosphere": { "upper_start": 0.0, "cloud_deck": 200.0, "sky_black_at": 900.0, "space_altitude": 700.0 },
+      "body": { "radius": 600.0, "color": "#6a6a6e", "dark": "#2e2e32" },
+      "arrival": { "altitude": 520.0, "distance": 900.0 },
+      "fall_text": "You drifted off the edge of the station."
+    }
+  }
+}

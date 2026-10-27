@@ -2,6 +2,39 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After P1, the planet generator (2026-10-27)
+
+**What is real and proven by tests:**
+- Every town size from 1 to 100 validates (two seeds each), and every planet type
+  builds. The style parser handles presets and plain words, and the port is
+  unchanged.
+- The trip is proven in `test_results/planets_trace.txt`, with real physics in the
+  real town scene:
+  - port to the asteroid station by flying into it;
+  - arriving flying the same ship;
+  - the size-1 town (cantina, door guard, merchant out back, its own owner);
+  - landing on the bay;
+  - walking through the gate shield, falling off the edge and waking by the bay;
+  - glass solid to people and ships;
+  - flying home.
+
+**Not done, honestly:**
+- **The game always starts on the home planet.** Save on the station, quit, and
+  you load in the port; the save does not remember which planet you were on.
+- **Generated towns are plainer than the port.** They have no pit bowl (the bays
+  are flat pads), no stair tower, stage or alley cables, and no fixer. Their
+  layout is a tidy grid of lots, not the port's crooked lanes.
+- **The port's extras stay in the port:** the practice range, Skrugs's speeders,
+  the jetpack pickup and the outpost. Merchants in generated towns stand at their
+  stalls but do not trade yet: no vendor data is generated for them.
+- **Element surfaces are simple:** a flat sea or lava plane (lava glows and lights
+  the keel) and flat cloud decks. No waves, no lava flow, no swimming.
+- **The asteroid has no gravity of its own**, and its rock is solid to ships only
+  as a simple column.
+- **Planets are placed by hand** (`at`). Nothing stops two overlapping, and only
+  planets that name each other through `near` are visible from each other.
+- **Reviewed in software rendering only** (`docs/planets/`).
+
 ## After the sound library and music (2026-10-27, issue #16)
 
 **What is real and proven by tests (`test_sound`):** every sound and track the

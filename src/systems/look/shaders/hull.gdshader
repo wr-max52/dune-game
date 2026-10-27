@@ -8,6 +8,8 @@ uniform vec4 scorch : source_color = vec4(0.08, 0.07, 0.07, 1.0);
 uniform vec4 sand : source_color = vec4(0.79, 0.58, 0.35, 1.0);
 uniform vec4 marking : source_color = vec4(0.42, 0.12, 0.12, 1.0);
 uniform float panel_size = 4.0;
+uniform float metal_scale = 1.0;        // issue #45: town styles
+uniform float rough_add = 0.0;
 uniform float sand_y = 2.0;
 uniform float marking_y = -1000.0;
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
@@ -54,6 +56,6 @@ void fragment() {
 	alb = mix(alb, sand.rgb, drift);
 
 	ALBEDO = alb;
-	METALLIC = mix(0.55, 0.0, max(drift, burn));
-	ROUGHNESS = mix(0.5, 0.95, max(drift, burn)) + seam * 0.1;
+	METALLIC = clamp(mix(0.55, 0.0, max(drift, burn)) * metal_scale, 0.0, 1.0);
+	ROUGHNESS = clamp(mix(0.5, 0.95, max(drift, burn)) + seam * 0.1 + rough_add, 0.0, 1.0);
 }

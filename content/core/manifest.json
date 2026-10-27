@@ -14,6 +14,7 @@
   "vendors": ["gear_trader", "fence"],
   "pickups": ["port_town"],
   "worlds": ["port_desert"],
+  "planets": ["port_desert", "grit_station"],
   "names": ["config", "people", "craft", "places", "tongues", "kinds"],
   "notes": "All names and labels live in this layer only. Code references entries by id."
 }

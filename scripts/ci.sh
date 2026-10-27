@@ -275,6 +275,17 @@ if [ ! -f test_results/names_trace.txt ]; then
 fi
 echo "CI: names trace present ($(wc -l < test_results/names_trace.txt) lines)"
 
+# Issue #45: planets. Fly from the port to the asteroid station in its sky, land
+# in its generated size-1 town, walk out through the gate's shield, fall off the
+# edge and wake by the bay, find the glass solid, and fly home.
+echo "CI: generating planets trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/planets_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/planets_trace.txt ]; then
+  echo "CI: ERROR -- planets trace was not generated" >&2
+  exit 1
+fi
+echo "CI: planets trace present ($(wc -l < test_results/planets_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

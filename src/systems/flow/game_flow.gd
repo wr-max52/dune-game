@@ -37,6 +37,10 @@ static var mode := ""                     ## M14: how this flight started: "pad"
 static var change_scene: Callable = Callable()
 ## Issue #46: null = the data's "space_dogfight"; a bool once a menu (F11) sets it.
 static var dogfight_override: Variant = null
+## Issue #45: the planet the town scene builds ("" = the home planet), and the ship
+## the player flew in on from another planet ("" = none: the pad's own ship).
+static var planet_id := ""
+static var flown_ship := ""
 
 static var _data: Dictionary = {}
 
@@ -140,6 +144,9 @@ static func take_arrival() -> Dictionary:
 static func arrival_text(a: Dictionary) -> String:
 	if a.is_empty():
 		return ""
+	if str(a.get("mode", "")) == "travel":
+		var t := label("arrive_planet")
+		return t % str(a.get("name", "")) if t.contains("%s") else t
 	if str(a.get("mode", "")) == "reentry" and str(a.get("outcome", "")) != "complete":
 		return label("arrive_reentry")
 	if str(a.get("outcome", "")) == "complete":
@@ -157,6 +164,32 @@ static func reset() -> void:
 	mode = ""
 	change_scene = Callable()
 	dogfight_override = null
+	planet_id = ""
+	flown_ship = ""
+
+
+# ------------------------------------------------------------------ planets (issue #45)
+
+## The planet the town scene is (or is about to be) built for.
+static func current_planet_id() -> String:
+	return planet_id if planet_id != "" else PlanetGen.home_id()
+
+
+static func planet() -> Dictionary:
+	return PlanetGen.build(current_planet_id())
+
+
+## Fly from this planet to `to`: the town scene reloads as that planet, and the
+## ship you flew (`ship_id`) arrives in its sky, still flying, above its bay. The
+## same scene file every time: a planet is data, not a scene.
+static func travel(tree: SceneTree, to: String, ship_id: String = "", name: String = "") -> void:
+	var from := current_planet_id()
+	planet_id = to
+	flown_ship = ship_id
+	in_flight = false
+	arrival = { "mode": "travel", "from": from, "to": to, "ship": ship_id, "name": name,
+		"pad": str(data().get("pads", {}).keys()[0]) if not data().get("pads", {}).is_empty() else "" }
+	_go(tree, str(data().get("default_port_scene", "res://scenes/town_demo.tscn")))
 
 
 static func _go(tree: SceneTree, path: String) -> void:

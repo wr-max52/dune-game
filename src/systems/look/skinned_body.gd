@@ -60,7 +60,33 @@ static func dress(body: Node3D, cfg: Dictionary) -> SkinnedBody:
 	sb._fit(cfg)
 	sb._bind(body, cfg.get("bones", {}))
 	sb._hide_primitives(body)
+	if cfg.has("tint"):
+		sb.tint(cfg.tint)
 	return sb
+
+
+## Issue #45: a variant of a model without a new model: every surface's colour
+## multiplied by "albedo", and anything that glows (goggles, a prosthetic) glowing
+## "emission" instead. Materials are copied, so the original keeps its look.
+func tint(t: Dictionary) -> void:
+	var alb := Color(str(t.get("albedo", "#ffffff")))
+	var has_em := t.has("emission")
+	var em := Color(str(t.get("emission", "#ffffff")))
+	for mi in _meshes(model):
+		var m := mi as MeshInstance3D
+		if m.mesh == null:
+			continue
+		for i in m.mesh.get_surface_count():
+			var src = m.get_surface_override_material(i)
+			if src == null:
+				src = m.mesh.surface_get_material(i)
+			if not src is BaseMaterial3D:
+				continue
+			var c := (src as BaseMaterial3D).duplicate() as BaseMaterial3D
+			c.albedo_color = c.albedo_color * alb
+			if has_em and c.emission_enabled:
+				c.emission = em
+			m.set_surface_override_material(i, c)
 
 
 static func _find_skeleton(n: Node) -> Skeleton3D:

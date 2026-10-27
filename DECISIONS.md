@@ -2,6 +2,52 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — P1, the planet generator (issue #45)
+
+- **A planet is data, and so is its town.** A config file becomes a town layout
+  in the port's own format (boxes, markers, routes, zones), a world dict and a
+  style. The town scene builds whatever `GameFlow.planet()` says. Travel reloads
+  the same scene as another planet. Alternative: a scene per planet. Rejected:
+  every new planet would be a scene plus wiring, and the issue asks for "mostly
+  boilerplate with configurations".
+- **Generate in the port's conventions, not a new format.** TownGen emits the
+  cantina's ids, the pad's `ship` box, the gate markers, the market's stall pairs
+  and the residential zone names the decor already understands. The validator,
+  decor, bar, garrison, townsfolk, nav and ship pilot needed no new code paths for
+  generated towns. The port stays hand-built: its planet config names
+  `port_town` and `port_desert`.
+- **Size is area, not a building count.** The area inside the walls is
+  (size / 50) ^ 2.32 of the port's, so 100 is 5x. Counts of guards, stalls,
+  residents and bays scale with that area. The minimums make size 1 the issue's
+  "cantina, one guard at the door, one merchant out back". Layout is blocks along
+  a main street, then a lot grid that keeps a lane clear of every block, so towns
+  are valid by construction. All 100 sizes are tested.
+- **Styles restyle materials, not buildings.** Every town material is made by
+  LookMaterials, so the style is a filter there: walls, bands, paving, hull metal,
+  props and cloth. Plaster and hull shaders gained finish settings (metallic,
+  roughness), with defaults that leave the port as it was. Metal styles draw walls
+  with the hull shader. Free words go through a small vocabulary (colours, shades,
+  finishes, materials) in data. Alternative: per-building style variants.
+  Rejected: every new style would mean touching every building.
+- **Platforms instead of terrain for element worlds.** Water, lava, gas and
+  asteroids put the town on a deck with a hull underneath, so nothing can fall
+  through.
+  - The glass rises from the existing perimeter walls and is solid to the player
+    and to ships through WorldGround. The gate's shield has no collision.
+  - The deck's own fall replaces the fall guard: fade, a line, wake by the bay,
+    nothing taken.
+  - The ship's ground over the void is the surface far below, and it may only land
+    on the town's floors.
+- **Neighbours are where their config says.** A planet's `at` is where it hangs
+  in its `near` planet's sky. The way back is computed from the same numbers, so
+  one line places both directions. Flying within a body's radius plus 400 m
+  travels. The ship you flew is parked on the other planet's pad, and its twin bay
+  in the port is skipped, so you never see two of one ship.
+- **The station's owner is a variant, not a new model.** Character archetypes can
+  name a `base` and list only what differs. A `tint` on the model multiplies every
+  surface colour and swaps the glow colour, so Ilka is Oda's rig and mesh with
+  copied, tinted materials.
+
 ## 2026-10-27 — The port's fleet: every parked ship is flyable (issue #43)
 
 - **Agentic models for the interceptor and speeder.** Hyper3D's agentic (n-gon) mode,

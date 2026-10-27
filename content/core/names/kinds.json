@@ -206,6 +206,48 @@
    "min_len": 4,
    "max_len": 28
   },
+  "town_station": {
+   "note": "A settlement bolted to an asteroid (issue #45: the asteroid planet type names its town with this).",
+   "patterns": [
+    [
+     "{station_prefix} {station_word}",
+     6
+    ],
+    [
+     "{~hard:cap} {station_word}",
+     3
+    ],
+    [
+     "{station_word} {#2-19}",
+     1
+    ],
+    [
+     "{station_prefix}{town_suffix}",
+     2
+    ]
+   ],
+   "min_len": 4,
+   "max_len": 26
+  },
+  "town_float": {
+   "note": "A town on a platform over a sea, lava or cloud (issue #45: water, lava and gas planets).",
+   "patterns": [
+    [
+     "{float_prefix} {station_word}",
+     5
+    ],
+    [
+     "{float_prefix}{town_suffix}",
+     3
+    ],
+    [
+     "{~astral:cap} {station_word}",
+     2
+    ]
+   ],
+   "min_len": 4,
+   "max_len": 26
+  },
   "planet": {
    "note": "A world.",
    "patterns": [

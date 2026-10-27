@@ -99,7 +99,15 @@ func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 ## Somewhere a ship may set down: inside the desert (beyond it there is sand to
 ## see but nothing to walk on).
 func landable(x: float, z: float) -> bool:
-	return terrain == null or terrain.in_desert(x, z)
+	if terrain == null or terrain.in_desert(x, z):
+		return true
+	# Issue #45: a platform town (no desert): only on its own floors and roofs.
+	for b in boxes:
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		if x >= mn.x and x <= mx.x and z >= mn.z and z <= mx.z and str(b.kind) in ["floor", "roof", "ship"]:
+			return true
+	return false
 
 
 ## The world's atmosphere settings (where space starts, etc.).
