@@ -47,8 +47,8 @@ func test_every_local_has_a_locals_profile() -> void:
 	var walkers := 0
 	var keepers := 0
 	for m in _town().markers():
-		if str(m.get("role", "")) != "ambient":
-			continue
+		if str(m.get("role", "")) != "ambient" or not m.has("soldier"):
+			continue            # a live local; bar patrons are set dressing, not soldiers
 		var p: Dictionary = cc.get_soldier(str(m.get("soldier", "")))
 		assert_false(p.is_empty(), "%s names a soldier profile" % m.id)
 		assert_eq(str(p.get("faction", "")), "locals", "%s is a local" % m.id)
@@ -78,8 +78,8 @@ func test_stalls_face_each_other() -> void:
 	var t := _town()
 	var aisle_z := []
 	for m in t.markers():
-		if not m.has("face"):
-			continue
+		if not (m.has("face") and m.has("soldier")):
+			continue            # stall keepers only (bar patrons face the bartender)
 		var p := t.marker_pos(str(m.id))
 		var face := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
 		aisle_z.append(face.z)
@@ -100,7 +100,7 @@ func test_stalls_face_each_other() -> void:
 		assert_eq(z, aisle_z[0], "one shared aisle")
 	var north := 0
 	for m in t.markers():
-		if m.has("face"):
+		if m.has("face") and m.has("soldier"):
 			north += 1 if float(m.pos[2]) > float(m.face[2]) else 0
 	assert_true(north > 0 and north < 4, "keepers on both sides of the aisle")
 

@@ -126,10 +126,13 @@ func validate() -> Array:
 				if not inside:
 					errs.append("V4 outside zone: " + str(b.id))
 
-	# V5 no 3D overlap (strict, so touching is fine)
+	# V5 no 3D overlap (strict, so touching is fine). A "hollow" box (the round
+	# pit) is a shell other boxes sit inside, so it is left out.
 	var bs := boxes()
 	for i in bs.size():
 		for j in range(i + 1, bs.size()):
+			if bs[i].get("hollow", false) or bs[j].get("hollow", false):
+				continue
 			if _aabb_overlap(bs[i], bs[j]):
 				errs.append("V5 overlap: %s / %s" % [bs[i].id, bs[j].id])
 

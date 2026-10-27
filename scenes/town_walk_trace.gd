@@ -13,7 +13,7 @@ const FALL_Y := -10.0
 
 var _demo
 var _layout
-var _route_ids := ["spawn_to_cantina", "cantina_to_gate", "gate_to_cantina", "backgap_to_cantina"]
+var _route_ids := ["spawn_to_cantina", "cantina_to_gate", "gate_to_cantina", "backgap_to_cantina", "cantina_to_lookout"]
 var _route_i := -1
 var _points: Array = []
 var _wp := 0

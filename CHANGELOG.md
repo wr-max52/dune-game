@@ -2,6 +2,52 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Town art pass 2: neighbourhoods, barracks, market (2026-10-26)
+
+What works now:
+- **No more grid of boxes.** The two residential districts are laid out by
+  `tools/town/gen_neighborhoods.py` (fixed seed) along crooked lanes, with a
+  small square and a cistern in each. Beside the market: small huts packed
+  close together. Beside the barracks: tall towers with bridges between the roofs
+  (walkable, with rails and lit edges, and a door where each one lands).
+- **A building kit** (`src/systems/world/town_buildings.gd`): round domed huts,
+  block huts, stepped huts, barrel-vault huts, block towers and round towers.
+  Every building has the same rounded sci-fi door (arched frame, recessed
+  sliding panel, a glowing light bar and status light), a simple window (a
+  porthole on round walls), and a short + tall antenna relay on the roof. A few
+  variants are repeated to make the neighbourhoods. Round buildings collide as
+  cylinders.
+- **The barracks match:** the hall is buttressed with three big doors and
+  windows between, a block stands on its roof, and a bunk tower is bridged to it.
+  The watchtower and the market shops use the same doors, windows and relays.
+- **Every market stall is different and shaded:** a slanted sheet, a peaked tent
+  or two parasols over the vendor, a dressed table, and its own wares (pottery,
+  produce, bolts of cloth, salvaged tech, water cans, spice sacks with a balance).
+  Strings of bulbs cross the lane.
+- **Street decor:** cables with pennants strung between the huts (and some
+  towers), barrels, crates and jars by the doors, lamp posts down the main street.
+  Lanterns, windows and string lights glow at dusk; no new omni lights.
+- **The cantina is a proper hall:** the ceiling is 9 m (was 5), with beams, lit
+  pilasters, an arched portal and a glowing lunette over the door. A round stage
+  stands in the middle (lit rim, speakers, a mic, a lighting ring hung from the
+  ceiling, nobody on it); tables and the walk routes go round it. Three locals
+  sit on the bar stools facing the bartender.
+- **A stair tower behind the bar:** go round the end of the bar and in at the
+  tower door, then up a spiral ramp (5 turns, a real slope you walk) to a round
+  lookout room 15 m up, open on all sides over the town, with a dome and an
+  antenna relay. Built from one generator (`src/systems/world/stair_tower.gd`)
+  for both collision and looks. The walk trace climbs it.
+- **A bigger, round spaceport:** the pit is a 56 m circle (was 36 x 44 m) with
+  straight ramps out east and west, a curb and wall lights. Four bays: your ship
+  (you still spawn beside it), plus three parked colour variants of it: red
+  accents, gold hull with blue accents, gold hull with red accents
+  (`content/look/ships.json`). Painted bay rings, light posts, fuel pods, and
+  crate stacks, barrels, cans and carts scattered at odd angles. The round wall
+  is a `bowl` box (`src/systems/world/pit_bowl.gd`, "hollow": other boxes sit
+  inside it).
+- The alley and rooftop smuggling drops were moved to fit the new streets.
+- Parts are batched as MultiMeshes (one per mesh + material).
+
 ## Locals on foot (2026-10-26)
 
 What works now:

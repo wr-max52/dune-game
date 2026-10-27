@@ -1,7 +1,8 @@
 extends GutTest
 ## M9 addendum D5: the decor layer is visual only. It must not add collision, must
 ## dress every box it has a rule for, keep its lamps tracked and few, and stay out
-## of market and character art.
+## of character art. Art pass 2: buildings come from the building kit and market
+## stalls get canopies and wares.
 
 const TownDemo := preload("res://scenes/town_demo.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
@@ -41,8 +42,9 @@ func _all(node: Node, cls: String, out: Array) -> Array:
 func test_decor_adds_no_collision() -> void:
 	var on = _demo(true)
 	var off = _demo(false)
-	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), 126, "one body per box with look on")
-	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), 126, "and with look off")
+	var n: int = on.town.boxes().size()
+	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), n, "one body per box with look on")
+	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), n, "and with look off")
 	assert_eq(_count(on.decor, "CollisionObject3D"), 0, "decor has no colliders")
 	assert_eq(_count(on.decor, "CollisionShape3D"), 0, "decor has no shapes")
 
@@ -67,21 +69,85 @@ func test_lamps_are_tracked_and_capped() -> void:
 		assert_true(d.look._lamps.has(l), "%s is tracked by LookEnvironment" % l.name)
 
 
-func test_no_market_or_character_art() -> void:
+func test_cloth_is_banners_and_awnings_no_character_art() -> void:
 	var d = _demo(true)
-	var cloth := 0
+	var banners := 0
 	for mi in _all(d.decor, "MeshInstance3D", []):
 		var m = mi.material_override
 		if m is StandardMaterial3D and m.backlight_enabled:   # LookMaterials.cloth
-			cloth += 1
-			assert_eq(mi.get_meta("decor", ""), "banner", "%s is cloth but not a banner" % mi.name)
-	assert_eq(cloth, 2, "exactly the two watchtower banners")
+			var kind := str(mi.get_meta("decor", ""))
+			assert_true(kind in ["banner", "awning"], "%s is cloth but not a banner or awning" % mi.name)
+			if kind == "banner":
+				banners += 1
+	assert_eq(banners, 2, "exactly the two watchtower banners")
 	for n in _all(d, "Node3D", []):
 		assert_false(n.get_script() == CharacterKit, "no CharacterKit nodes")
 		assert_false(str(n.name).begins_with("Hooded"), "no hooded figures")
 	# Markers stay capsules.
 	for v in d.get_node("Markers").get_children():
 		assert_true((v as MeshInstance3D).mesh is CapsuleMesh, "%s is a capsule" % v.name)
+
+
+func test_buildings_drawn_by_the_kit() -> void:
+	var d = _demo(true)
+	var looks := 0
+	for b in d.town.boxes():
+		var look := str(b.get("look", ""))
+		if look == "" or look == "stall" or look == "stall_back":
+			continue          # the market dresses these, not the building kit
+		looks += 1
+		var mi: MeshInstance3D = d.get_node("Town/%s/Mesh" % b.id)
+		assert_false(mi.visible, "%s: the greybox stand-in is hidden" % b.id)
+	var built := 0
+	for k in d.decor.kit.built:
+		built += int(d.decor.kit.built[k])
+	assert_eq(built, looks, "every box with a look is drawn")
+	for k in ["hut_round", "hut_block", "hut_stepped", "hut_long", "tower_block", "tower_round", "bridge", "hall", "shop"]:
+		assert_gt(int(d.decor.kit.built.get(k, 0)), 0, "at least one %s" % k)
+	# Batched: one MultiMesh per (mesh, material), many parts in each.
+	var mms := _all(d.decor, "MultiMeshInstance3D", [])
+	var parts := 0
+	for m in mms:
+		parts += (m as MultiMeshInstance3D).multimesh.instance_count
+	assert_gt(parts, 4000, "a lot of parts")
+	assert_gt(float(parts) / mms.size(), 6.0, "drawn in far fewer batches")
+
+
+func test_round_buildings_have_round_collision() -> void:
+	var d = _demo(false)
+	var round := 0
+	for b in d.town.boxes():
+		var shape: Shape3D = (d.get_node("Town/%s" % b.id).get_child(1) as CollisionShape3D).shape
+		if str(b.get("shape", "")) == "round":
+			round += 1
+			assert_true(shape is CylinderShape3D, "%s collides as a cylinder" % b.id)
+			assert_almost_eq((shape as CylinderShape3D).radius, (float(b.max[0]) - float(b.min[0])) * 0.5, 0.01)
+		else:
+			assert_false(shape is CylinderShape3D, "%s stays a box" % b.id)
+	assert_gt(round, 5, "some buildings are round")
+
+
+func test_market_stalls_have_shade_and_wares_and_differ() -> void:
+	var d = _demo(true)
+	var market = d.decor.market
+	var stalls: Array = []
+	for b in d.town.boxes():
+		if str(b.get("look", "")) == "stall":
+			stalls.append(str(b.id))
+	assert_eq(stalls.size(), 12, "twelve stalls")
+	stalls.sort()
+	for id in stalls:
+		assert_true(market.wares.has(id), "%s has wares on its table" % id)
+		assert_true(market.canopies.has(id), "%s has a shade canopy" % id)
+	for i in range(1, stalls.size()):
+		var a: String = stalls[i - 1]
+		var b: String = stalls[i]
+		var same: bool = market.wares[a] == market.wares[b] and market.canopies[a] == market.canopies[b]
+		assert_false(same, "%s and %s look different" % [a, b])
+		assert_ne(market.wares[a], market.wares[b], "%s and %s sell different things" % [a, b])
+	assert_gte(market.awnings.size(), 12, "canopy cloth on every stall")
+	for a in market.awnings:
+		assert_gt((a as Node3D).global_position.y, 2.2, "canopies clear a standing head")
 
 
 func test_presets_switch() -> void:
@@ -104,7 +170,11 @@ func test_town_shots_load() -> void:
 
 func test_port_ship_is_the_flight_ship_and_fits_its_box() -> void:
 	var d = _demo(true)
-	assert_eq(d.decor.parked_ships.size(), 1, "one ship parked in the pit")
+	assert_eq(d.decor.parked_ships.size(), 4, "the player's ship and three parked variants")
+	var looks := {}
+	for s in d.decor.parked_ships:
+		looks[str(s.get_meta("look_id"))] = true
+	assert_eq(looks.size(), 4, "every ship in the pit looks different")
 	var ship: Node3D = d.decor.parked_ships[0]
 	# Same model as the dogfight: the player ship's look from the pad's encounter.
 	var content = preload("res://src/systems/dataload/core_content.gd").new()
