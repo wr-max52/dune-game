@@ -170,10 +170,18 @@ func _run() -> void:
 	# Down onto the bay.
 	var h: Vector3 = pilot.home
 	var back := await fly_to(Vector3(h.x, 60, h.z), 0.3, 120.0,
-		func(): return Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 8.0)
-	for i in 120:
-		pilot.set_external_command({ "throttle": 0.0 })
-		await physics_frame
+		func(): return Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 40.0)
+	# Settle over the bay: creep in slowly, stop, and again until right over it.
+	for pass in 4:
+		await fly_to(Vector3(h.x, 50, h.z), 0.08, 30.0,
+			func(): return Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 4.0)
+		for i in 600:
+			pilot.set_external_command({ "throttle": 0.0 })
+			await physics_frame
+			if pilot.atmo.speed() < 0.5:
+				break
+		if Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 6.0:
+			break
 	out("REACHED_BAY", back >= 0.0)
 	out("LAND_ON_BAY", pilot.land())
 	for i in 60 * 30:

@@ -75,6 +75,7 @@ func test_land_on_the_bay_and_walk_the_deck() -> void:
 	_true("LAND_ON_BAY")
 	assert_eq(t.get("LANDED_STATE"), "PARKED")
 	_true("LANDED_ON_DECK")
+	assert_lt(float(t.get("LANDED_FROM_BAY_M", 99)), 12.0, "on its bay")
 	_true("EXIT_AT_STATION")
 	_true("ON_DECK")
 
