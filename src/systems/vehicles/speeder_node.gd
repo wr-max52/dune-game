@@ -7,8 +7,8 @@ extends Node3D
 ##   E beside it   -- ride (E again to get off; you step off to the left)
 ##   W / S         -- throttle / brake and reverse
 ##   A / D         -- steer
-##   Shift         -- boost          Space -- hop
-##   LMB           -- twin lasers    V     -- chase / close camera
+##   Shift         -- boost
+##   Space or LMB  -- both lasers at once   V -- chase / close camera
 ##
 ## `rideable = false` is the one on Skrugs's display pad: it just sits there.
 ## Bolts hit the hull (a StaticBody child; bolts call apply_damage on its parent):
@@ -17,6 +17,7 @@ extends Node3D
 
 const ChaseCamera := preload("res://src/systems/camera/chase_camera.gd")
 const WeaponActor := preload("res://src/systems/combat/weapon_actor.gd")
+const Weapon := preload("res://src/systems/combat/weapon.gd")
 
 signal mounted
 signal dismounted
@@ -31,7 +32,6 @@ var hull: StaticBody3D
 var visual: Node3D
 var chase = ChaseCamera.new()
 var gun: WeaponActor
-var muzzle_side := 0                  ## alternates left / right barrel
 var shots := 0
 var log_events: Array = []            ## every HoverModel event, for traces and tests
 
@@ -144,7 +144,7 @@ func dismount() -> bool:
 	return true
 
 
-## A bot's command for this frame and on: { throttle, steer, boost, hop, fire }.
+## A bot's command for this frame and on: { throttle, steer, boost, fire }.
 ## Pass {} to give control back to the keys.
 func set_external_command(c: Dictionary) -> void:
 	_external = c
@@ -185,12 +185,11 @@ func _ride(dt: float) -> void:
 			return
 		var throttle := _axis("move_back", "move_forward")
 		var steer := _axis("move_left", "move_right")
-		model.set_command(throttle, steer, _held("sprint_mod") or _held("flight_boost"), _just("jump"))
-		fire = _held("fire") or _held("flight_fire")
+		model.set_command(throttle, steer, _held("sprint_mod") or _held("flight_boost"))
+		fire = _held("jump") or _held("fire") or _held("flight_fire")
 	else:
 		model.set_command(float(_external.get("throttle", 0.0)), float(_external.get("steer", 0.0)),
-			bool(_external.get("boost", false)), bool(_external.get("hop", false)))
-		_external["hop"] = false
+			bool(_external.get("boost", false)))
 		fire = bool(_external.get("fire", false))
 	for e in model.step(dt):
 		log_events.append(e)
@@ -210,12 +209,15 @@ func _ride(dt: float) -> void:
 func _fire(dt: float, trigger: bool) -> void:
 	if gun == null:
 		return
-	var before := gun.shots_fired
-	var b := model.transform().basis
-	muzzle_side = 1 - muzzle_side
-	var origin := model.position + b * Vector3(-0.55 if muzzle_side == 0 else 0.55, 0.25, -2.4)
-	gun.fire_at(origin + model.forward() * 60.0, origin, dt, trigger)
-	if gun.shots_fired > before:
+	# The weapon keeps the rate and the ammo; one trigger pull fires both barrels
+	# together, left and right.
+	if gun.weapon.start_firing(dt, trigger) == Weapon.Result.SHOT:
+		var b := model.transform().basis
+		for side in [-0.55, 0.55]:
+			var origin := model.position + b * Vector3(side, 0.25, -2.4)
+			gun._make_bolt(model.forward(), origin, float(gun.weapon.config.get("damage", 18.0)),
+				float(gun.weapon.config.get("bolt_speed", 90.0)))
+			gun.shots_fired += 1
 		shots += 1
 
 
@@ -401,7 +403,7 @@ func _build_hud() -> void:
 	help.position = Vector2(-420, -90)
 	help.size = Vector2(840, 28)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.text = "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [Space] Hop   [LMB] Lasers   [E] Get off"
+	help.text = "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [Space / LMB] Lasers   [E] Get off"
 	help.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	help.add_theme_constant_override("outline_size", 4)
 	_hud.add_child(help)

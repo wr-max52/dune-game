@@ -61,7 +61,7 @@ func test_it_speeds_up_and_boosts_faster() -> void:
 
 func test_it_launches_off_a_ramp_and_lands_unhurt() -> void:
 	var m := _model()
-	var ev := _drive(m, 4.0, 1.0)     # straight down -z: up the ramp and off its end
+	var ev := _drive(m, 6.0, 1.0)     # straight down -z: up the ramp and off its end
 	var types := ev.map(func(e): return str(e.type))
 	assert_has(types, "launch", "the ground fell away at the ramp's end")
 	assert_has(types, "landed")
@@ -72,14 +72,14 @@ func test_it_launches_off_a_ramp_and_lands_unhurt() -> void:
 	assert_eq(m.hp, m.max_hp, "no fall damage")
 
 
-func test_it_hops() -> void:
+func test_it_is_light_and_has_no_jump_button() -> void:
+	assert_lte(float(cfg.gravity), 10.0, "a light sled: low gravity")
+	assert_false(cfg.has("hop_speed"), "no jump button: ramps do the jumping")
 	var m := _model()
-	m.set_command(0.0, 0.0, false, true)
-	var ev := m.step(1.0 / 60.0)
-	assert_true(m.airborne)
-	ev.append_array(_drive(m, 1.5, 0.0))
-	assert_false(m.airborne, "and comes back down")
-	assert_eq(m.hp, m.max_hp)
+	var ev := _drive(m, 6.0, 1.0)
+	var landed: Array = ev.filter(func(e): return str(e.type) == "landed")
+	assert_false(landed.is_empty())
+	assert_gt(float(landed[0].air_time), 0.8, "it floats off the ramp")
 
 
 func test_buildings_stop_it_but_never_hurt_it() -> void:
@@ -205,6 +205,24 @@ func test_ride_it_and_get_off() -> void:
 	assert_false(p.piloting)
 	assert_true(p.visible)
 	assert_lt(p.global_position.distance_to(s.model.position), 5.0, "stepped off beside it")
+
+
+func test_space_fires_both_lasers_at_once() -> void:
+	var t = _town()
+	var post: SpeederPost = t.speeder_post
+	WorldState.credits = 100
+	post.buy()
+	var s: SpeederNode = post.speeders[0]
+	await wait_frames(1)
+	var p = t._player
+	p.global_position = s.model.position + Vector3(1.5, -1.0, 0)
+	assert_true(s.mount())
+	var bolts_before := t.get_tree().get_nodes_in_group("bolts").size()
+	s.set_external_command({ "fire": true })
+	s._physics_process(1.0 / 60.0)
+	assert_eq(s.gun.shots_fired, 2, "one pull, two bolts")
+	assert_eq(t.get_tree().get_nodes_in_group("bolts").size() - bolts_before, 2, "left and right")
+	s.dismount()
 
 
 func test_a_bolt_on_the_hull_damages_it() -> void:

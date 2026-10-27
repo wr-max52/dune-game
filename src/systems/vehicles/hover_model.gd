@@ -7,7 +7,9 @@ extends RefCounted
 ## a floor, the top of a ramp), easing toward that height at `follow_rate`. When
 ## the ground drops away faster than that in one step (more than `launch_gap`: the
 ## end of a ramp, a dune crest at speed) it leaves the ground with the vertical
-## speed it had and flies ballistic until it comes down. Space hops.
+## speed it had and flies ballistic until it comes down. There is no jump button:
+## ramps and crests do the jumping, and low gravity makes it float like the light
+## sled it is.
 ##
 ## Buildings stop it (WorldGround.hit) with a small bounce. Nothing it does to
 ## itself hurts it: no fall or crash damage. Only gunfire does, through
@@ -29,7 +31,7 @@ var events: Array = []               ## this step's: { type, ... }
 var air_time := 0.0                  ## of the current (or last) jump
 var top_height := 0.0                ## highest clearance over the ground on the last jump
 
-var _cmd := { "throttle": 0.0, "steer": 0.0, "boost": false, "hop": false }
+var _cmd := { "throttle": 0.0, "steer": 0.0, "boost": false }
 var _last_ride := NAN                ## the ride height last step (NAN: none yet)
 var _ground_rate := 0.0              ## how fast the ground under it was rising, m/s
 
@@ -94,8 +96,8 @@ func place(at: Vector3, yaw_rad: float) -> void:
 
 
 ## throttle -1..1 (back..forward), steer -1..1 (left..right).
-func set_command(throttle: float, steer: float, boost: bool = false, hop: bool = false) -> void:
-	_cmd = { "throttle": clampf(throttle, -1.0, 1.0), "steer": clampf(steer, -1.0, 1.0), "boost": boost, "hop": hop }
+func set_command(throttle: float, steer: float, boost: bool = false) -> void:
+	_cmd = { "throttle": clampf(throttle, -1.0, 1.0), "steer": clampf(steer, -1.0, 1.0), "boost": boost }
 
 
 ## Gunfire. Returns true if this shot destroyed it.
@@ -120,7 +122,6 @@ func step(dt: float) -> Array:
 	_drive(dt)
 	_move(dt)
 	_hover(dt)
-	_cmd.hop = false
 	return events
 
 
@@ -167,14 +168,8 @@ func _hover(dt: float) -> void:
 	var ride := ground_height() + p("hover_height", 1.05)
 	var rate := 0.0 if is_nan(_last_ride) else (ride - _last_ride) / maxf(dt, 0.0001)
 	_last_ride = ride
-	if not airborne and bool(_cmd.hop):
-		airborne = true
-		vy = p("hop_speed", 7.5)
-		air_time = 0.0
-		top_height = 0.0
-		events.append({ "type": "hop" })
 	if airborne:
-		vy -= p("gravity", 22.0) * dt
+		vy -= p("gravity", 9.0) * dt
 		position.y += vy * dt
 		air_time += dt
 		top_height = maxf(top_height, position.y - ride)
@@ -193,7 +188,7 @@ func _hover(dt: float) -> void:
 		air_time = 0.0
 		top_height = before - ride
 		events.append({ "type": "launch", "vy": vy, "speed": speed })
-		vy -= p("gravity", 22.0) * dt
+		vy -= p("gravity", 9.0) * dt
 		position.y += vy * dt
 		return
 	_ground_rate = rate

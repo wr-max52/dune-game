@@ -181,10 +181,9 @@ only clicking **Buy** pays (100 credits). The speeder is parked behind his house
 | Throttle / brake | W / S |
 | Steer | A / D |
 | Boost | Shift |
-| Hop | Space |
-| Twin lasers | LMB |
+| Both lasers | Space (or LMB) |
 
-The sand ramp past the house launches you. Only gunfire damages a speeder.
+There is no jump button: the sand ramp past the house (or a dune crest at speed) launches you, and the speeder is light, so it floats. Only gunfire damages a speeder.
 
 ## The jetpack (M13)
 
