@@ -23,6 +23,17 @@
         -1900
       ],
       "yaw_deg": 30
+    },
+    {
+      "id": "skrugs_post",
+      "kind": "location",
+      "location": "skrugs_post",
+      "at": [
+        -135,
+        0,
+        -60
+      ],
+      "yaw_deg": 0
     }
   ],
   "atmosphere": {

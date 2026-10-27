@@ -4,7 +4,7 @@
   "npcs": ["fixer", "cantina_owner"],
   "weapons": ["pistol_blaster", "rifle_blaster", "energy_blade", "ship_cannon", "ship_missile"],
   "factions": ["imperial_remnant", "smuggler", "locals"],
-  "locations": ["outpost", "port_town"],
+  "locations": ["outpost", "port_town", "skrugs_post"],
   "missions": ["crate_retrieval"],
   "ships": ["interceptor", "remnant_fighter", "remnant_heavy"],
   "pilots": ["rookie", "veteran", "ace"],

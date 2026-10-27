@@ -1,0 +1,42 @@
+{
+  "id": "speeder",
+  "label": "Speeder",
+  "note": "Issue #42: the one speeder Skrugs sells. Read by src/systems/vehicles/hover_model.gd (how it moves) and speeder_node.gd (how it looks, its hull and guns). It rides `hover_height` above whatever is under it (sand, floors, ramp tops) and turns ballistic when the ground drops away faster than it can follow (`launch_gap` in one frame): off the end of a ramp or over a dune crest. No fall or crash damage: only gunfire hurts it.",
+  "hover_height": 1.05,
+  "follow_rate": 14.0,
+  "launch_gap": 0.45,
+  "gravity": 22.0,
+  "hop_speed": 7.5,
+  "max_speed": 36.0,
+  "boost_speed": 52.0,
+  "reverse_speed": 9.0,
+  "accel": 16.0,
+  "brake": 34.0,
+  "coast_drag": 6.0,
+  "turn_rate_deg": 110.0,
+  "turn_rate_fast_deg": 62.0,
+  "air_turn_scale": 0.35,
+  "boost_time": 3.5,
+  "boost_recharge": 0.45,
+  "body_radius": 1.3,
+  "bump_bounce": 0.25,
+  "health": 120,
+  "board_reach": 3.2,
+  "look": {
+    "length": 4.6,
+    "hull": "#c9a46a",
+    "trim": "#8e3a26",
+    "metal": "#4a4c52",
+    "seat": "#3a2a20",
+    "glow": "#7fe0d0"
+  },
+  "laser": {
+    "damage": 18,
+    "rate": 0.16,
+    "mag": 40,
+    "reload": 1.6,
+    "bolt_speed": 90,
+    "range": 140,
+    "color": "#7fe0d0"
+  }
+}

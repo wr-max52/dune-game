@@ -79,6 +79,8 @@ var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
+var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
+@export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
 
 
 func _ready() -> void:
@@ -129,6 +131,8 @@ func _ready() -> void:
 			_build_ship()
 		if with_npcs:
 			_build_npcs()
+		if with_speeders and pilot != null:
+			_build_speeder_post()
 		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
@@ -371,6 +375,17 @@ func _build_npcs() -> void:
 			gear.closed_line = townsfolk.closed_line
 
 
+## Issue #42: Skrugs's speeder stall outside the back gate. Skrugs joins the bar's
+## conversation host when there is one (a test that builds the bar later calls
+## speeder_post.attach_host itself).
+func _build_speeder_post() -> void:
+	speeder_post = SpeederPost.new()
+	speeder_post.setup(self, pilot.ground)
+	add_child(speeder_post)
+	if bar != null:
+		speeder_post.attach_host(bar)
+
+
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
 ## people (bodies, the cantina owner, and the brains that run them) and the small
 ## props (lamps, banners, boulders). ShipPilot feeds it the viewer's altitude.
@@ -380,7 +395,8 @@ func _build_detail() -> void:
 	var world: Dictionary = cc.world_for_town(str(town.data.get("id", "")))
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
-	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk])
+	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk,
+		speeder_post.skrugs if speeder_post != null else null])
 	if decor != null:
 		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
 	if landforms != null:
