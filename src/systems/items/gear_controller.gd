@@ -44,7 +44,6 @@ var ground_at := Callable()
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
 var _last_safe := Vector3.ZERO
-var _first_person := false
 
 
 func setup(p_content, p_town, p_player: CharacterBody3D, p_rig: Node = null, p_location: String = "port_town") -> void:
@@ -353,22 +352,23 @@ func _mount_worn(id: String, item: Dictionary) -> void:
 		chest = avatar
 	chest.add_child(worn)
 	worn.transform = items.on_back_transform(look_id)
-	_first_person = not _first_person      # force the view pass below to apply
 	_update_worn_view()
 
 
 ## First person: the worn pack casts a shadow but is not drawn (like the body).
+## Checked per mesh every tick rather than on a cached view flag: the flag could
+## fall out of step with the meshes and leave the pack's shoulder straps drawn
+## right beside the first-person camera.
 func _update_worn_view() -> void:
+	if worn == null:
+		return
 	var fp := false
 	if rig_node != null and "rig" in rig_node and rig_node.rig != null:
 		fp = rig_node.rig.is_first_person()
-	if fp == _first_person or worn == null:
-		_first_person = fp
-		return
-	_first_person = fp
 	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if fp else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for m in PlayerAvatar._meshes_under(worn):
-		if not str(m.get_parent().get_parent().name).begins_with("Flames") and m.get_parent().name != "Flames":
+		if not str(m.get_parent().get_parent().name).begins_with("Flames") and m.get_parent().name != "Flames" \
+				and (m as GeometryInstance3D).cast_shadow != mode:
 			(m as GeometryInstance3D).cast_shadow = mode
 
 
