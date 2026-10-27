@@ -97,7 +97,7 @@ func _physics_process(delta: float) -> void:
 		controller.set_command(Vector2.ZERO, false, false, false)
 	elif not use_external_command:
 		var dir_in := Vector2(
-			Input.get_axis(move_actions[2], move_actions[3]),
+			-Input.get_axis(move_actions[2], move_actions[3]),
 			-Input.get_axis(move_actions[0], move_actions[1])
 		)
 		controller.set_command(
