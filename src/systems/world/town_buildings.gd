@@ -1,7 +1,8 @@
 extends RefCounted
 ## Building kit for the port town (town art pass 2). Draws a box that has a
 ## `look` in port_town.json as one of a few building variants, on top of the
-## box's own collision. Visual only: it never adds collision or moves a box.
+## box's own collision. It never moves a box; the only collision it adds is the
+## props' (issue #55, below).
 ##
 ## Every building shares the same small parts, so the town reads as one place:
 ##   - a rounded sci-fi door (arched frame, recessed panel, a glowing light bar)
@@ -15,6 +16,10 @@ extends RefCounted
 ##
 ## Parts are not nodes: each (mesh, material) pair is gathered and drawn as one
 ## MultiMesh by `flush`, so a hundred buildings cost a few dozen draw calls.
+##
+## Issue #55: props you would bump into or climb on (antennas, parapets, door
+## clutter, roof blocks; the decor's lamp posts and pit clutter) are put while
+## `solid` is on, and `flush` gives each one a box collider in one "Props" body.
 
 const DOOR_LIGHT := Color("#58e6d4")
 const BEACON := Color("#ff4a32")
@@ -36,7 +41,10 @@ var panel: Material
 var metal: Material
 var seam: Material
 
+var solid := false            ## issue #55: while on, `put` parts also collide (see flush)
+var solids := 0               ## colliders the last flush made (tests, review)
 var _groups := {}             ## "mesh:mat" -> [mesh, mat, Array[Transform3D]]
+var _solids: Array = []       ## [Transform3D, Vector3 size] per solid part
 var _meshes := {}
 var _xf := Transform3D.IDENTITY   ## the building being drawn: local +X is its door side
 var _rng := RandomNumberGenerator.new()
@@ -71,6 +79,26 @@ func put(mesh: Mesh, mat: Material, world: Transform3D) -> void:
 	if not _groups.has(key):
 		_groups[key] = [mesh, mat, []]
 	_groups[key][2].append(world)
+	if solid:
+		_add_solid(mesh, world)
+
+
+## The part's bounding box, turned with it. Wisps (a lattice bar, a cable stay)
+## are left out: nobody stands on those, and they would only snag.
+func _add_solid(mesh: Mesh, world: Transform3D) -> void:
+	var a := mesh.get_aabb()
+	var size := a.size * world.basis.get_scale()
+	if size.x * size.y * size.z < 0.002:
+		return
+	_solids.append([Transform3D(world.basis.orthonormalized(), world * a.get_center()), size])
+
+
+## Put with `solid` on for just this part.
+func solid_part(mesh: Mesh, mat: Material, pos: Vector3, basis: Basis = Basis.IDENTITY) -> void:
+	var was := solid
+	solid = true
+	part(mesh, mat, pos, basis)
+	solid = was
 
 
 ## Draw everything queued so far as MultiMeshes under `parent`.
@@ -91,6 +119,19 @@ func flush(parent: Node3D) -> int:
 		parent.add_child(mmi)
 		n += xfs.size()
 	_groups.clear()
+	solids = _solids.size()
+	if not _solids.is_empty():
+		var body := StaticBody3D.new()
+		body.name = "Props"
+		for sp in _solids:
+			var cs := CollisionShape3D.new()
+			var shape := BoxShape3D.new()
+			shape.size = sp[1]
+			cs.shape = shape
+			cs.transform = sp[0]
+			body.add_child(cs)
+		parent.add_child(body)
+		_solids.clear()
 	return n
 
 
@@ -209,6 +250,8 @@ func window(at: Transform3D, w: float = 1.2, h: float = 0.7, round: bool = false
 ## both on one plinth. `pos` is on the roof (local frame), `tall` the tall mast's height.
 func antennas(pos: Vector3, tall: float = 3.2, yaw: float = 0.0) -> void:
 	var at := Transform3D(Basis(Vector3.UP, yaw), pos)
+	var was := solid
+	solid = true
 	_at(at, box(0.9, 0.3, 1.5), trim, Vector3(0, 0.15, 0))
 	# Short: dish mast.
 	_at(at, cyl(0.045, 0.065, 1.3, 6), metal, Vector3(0, 0.95, -0.42))
@@ -221,15 +264,16 @@ func antennas(pos: Vector3, tall: float = 3.2, yaw: float = 0.0) -> void:
 		_at(at, box(0.6, 0.04, 0.04), metal, Vector3(0, 0.3 + tall * f + 0.12, 0.4))
 	_at(at, box(0.2, 0.34, 0.2), trim, Vector3(0, 0.3 + tall * 0.32, 0.4))
 	_at(at, ball(0.08, 0.16, false, 8), beacon_glow, Vector3(0, 0.36 + tall, 0.4))
+	solid = was
 
 
 ## Low wall around a flat roof, so the roof reads as a terrace.
 func parapet(w: float, d: float, y: float, h: float, mat: Material) -> void:
 	var t := 0.22
-	part(box(w, h, t), mat, Vector3(0, y + h * 0.5, d * 0.5 - t * 0.5))
-	part(box(w, h, t), mat, Vector3(0, y + h * 0.5, -d * 0.5 + t * 0.5))
-	part(box(t, h, d - 2 * t), mat, Vector3(w * 0.5 - t * 0.5, y + h * 0.5, 0))
-	part(box(t, h, d - 2 * t), mat, Vector3(-w * 0.5 + t * 0.5, y + h * 0.5, 0))
+	solid_part(box(w, h, t), mat, Vector3(0, y + h * 0.5, d * 0.5 - t * 0.5))
+	solid_part(box(w, h, t), mat, Vector3(0, y + h * 0.5, -d * 0.5 + t * 0.5))
+	solid_part(box(t, h, d - 2 * t), mat, Vector3(w * 0.5 - t * 0.5, y + h * 0.5, 0))
+	solid_part(box(t, h, d - 2 * t), mat, Vector3(-w * 0.5 + t * 0.5, y + h * 0.5, 0))
 
 
 func _at(at: Transform3D, mesh: Mesh, mat: Material, pos: Vector3, basis: Basis = Basis.IDENTITY) -> void:
@@ -315,9 +359,9 @@ func _look_hut_stepped(b: Dictionary, lx: float, lz: float, h: float) -> void:
 	var ux := lx * 0.48
 	var uz := lz * 0.62
 	var cx := -lx * 0.22
-	part(frustum(ux, uz, 2.4, 0.08), mat, Vector3(cx, h + 1.2, 0))
-	part(box(ux * 0.92 + 0.3, 0.18, uz * 0.92 + 0.3), trim, Vector3(cx, h + 2.49, 0))
-	part(box(0.22, 0.45, lz * (1.0 - LEAN)), mat, Vector3(lx * 0.5 * (1.0 - LEAN) - 0.11, h + 0.22, 0))
+	solid_part(frustum(ux, uz, 2.4, 0.08), mat, Vector3(cx, h + 1.2, 0))
+	solid_part(box(ux * 0.92 + 0.3, 0.18, uz * 0.92 + 0.3), trim, Vector3(cx, h + 2.49, 0))
+	solid_part(box(0.22, 0.45, lz * (1.0 - LEAN)), mat, Vector3(lx * 0.5 * (1.0 - LEAN) - 0.11, h + 0.22, 0))
 	var dz := clampf(lz * 0.18, 0.0, lz * 0.5 - 1.0)
 	door(on_wall(wall_at(lx * 0.5, 1.2, h, LEAN) - 0.02, 0, dz))
 	window(on_wall(cx + ux * 0.5 * 0.96, h + 1.3, 0), 1.0, 0.55)
@@ -372,7 +416,7 @@ func _look_tower_block(b: Dictionary, lx: float, lz: float, h: float) -> void:
 		window(on_wall(hx, wy, lz * (0.22 if f % 2 == 0 else -0.22)), 1.3, 0.75)
 		window(Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(lx * (0.18 if f % 2 == 1 else -0.18), wy, hz)), 1.3, 0.75)
 		f += 1
-	part(box(1.8, 1.3, 1.5), trim, Vector3(-lx * 0.22, h + 0.65, lz * 0.22))     # roof hatch block
+	solid_part(box(1.8, 1.3, 1.5), trim, Vector3(-lx * 0.22, h + 0.65, lz * 0.22))     # roof hatch block
 	antennas(Vector3(-lx * 0.25, h, -lz * 0.2), 4.0 + _rng.randf() * 1.8, PI * 0.5)
 
 
@@ -389,7 +433,7 @@ func _look_tower_round(b: Dictionary, lx: float, lz: float, h: float) -> void:
 		part(ring(r - 0.1, r + 0.3, y - 0.11, y + 0.11, 32), mat, Vector3.ZERO)
 		y += FLOOR_H
 	part(ring(r - 0.25, r + 0.08, h, h + 0.6, 32), mat, Vector3.ZERO)
-	part(cyl(r * 0.35, r * 0.4, 1.0, 16), trim, Vector3(r * 0.2, h + 0.5, 0))
+	solid_part(cyl(r * 0.35, r * 0.4, 1.0, 16), trim, Vector3(r * 0.2, h + 0.5, 0))
 	door(on_round(r - 0.04, 0, 0.0), 1.15)
 	window(on_round(r - 0.02, 1.8, 0.75), 0.0, 0.0, true)
 	var f := 1
@@ -500,8 +544,8 @@ func _look_cistern(b: Dictionary, lx: float, _lz: float, h: float) -> void:
 	part(cyl(r * 0.95, r, h, 20), mat, Vector3(0, h * 0.5, 0))
 	part(ring(r - 0.15, r + 0.08, h, h + 0.12, 20), trim, Vector3.ZERO)
 	part(cyl(r - 0.15, r - 0.15, 0.04, 20), mats.flat(Color("#1d4a4c"), 0.15, 0.2), Vector3(0, h - 0.08, 0))
-	part(cyl(0.06, 0.08, 1.4, 6), metal, Vector3(-r + 0.25, h + 0.7, 0))
-	part(box(0.55, 0.08, 0.08), metal, Vector3(-r + 0.5, h + 1.3, 0))
+	solid_part(cyl(0.06, 0.08, 1.4, 6), metal, Vector3(-r + 0.25, h + 0.7, 0))
+	solid_part(box(0.55, 0.08, 0.08), metal, Vector3(-r + 0.5, h + 1.3, 0))
 
 
 ## Barrels, crates and jars against the wall beside the door (huts only).
@@ -512,6 +556,8 @@ func _door_clutter(wall_x: float, door_z: float, lz: float) -> void:
 	if absf(z) > lz * 0.5 - 0.3:
 		return
 	var x := wall_x + 0.32
+	var was := solid
+	solid = true
 	match _rng.randi() % 3:
 		0:
 			part(cyl(0.28, 0.3, 0.8, 12), mats.flat(Color("#6a5848").lerp(LookMaterials.CLOTH_TEAL, _rng.randf() * 0.4), 0.7, 0.3), Vector3(x, 0.4, z))
@@ -524,6 +570,7 @@ func _door_clutter(wall_x: float, door_z: float, lz: float) -> void:
 			var jar := mats.plaster(-1000.0, -1000.0, LookMaterials.CLOTH_TEAL, Color("#b07a52"))
 			part(ball(0.26, 0.7, false, 12), jar, Vector3(x, 0.35, z))
 			part(ball(0.2, 0.5, false, 12), jar, Vector3(x + 0.05, 0.25, z + signf(z - door_z) * 0.45))
+	solid = was
 
 
 # ---------------------------------------------------------------- the cantina

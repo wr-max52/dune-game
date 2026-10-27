@@ -1,5 +1,5 @@
 extends GutTest
-## M9 addendum D5: the decor layer is visual only. It must not add collision, must
+## M9 addendum D5: the decor layer is visual (issue #55: plus its props' colliders), must
 ## dress every box it has a rule for, keep its lamps tracked and few, and stay out
 ## of character art. Art pass 2: buildings come from the building kit and market
 ## stalls get canopies and wares.
@@ -39,14 +39,48 @@ func _all(node: Node, cls: String, out: Array) -> Array:
 	return out
 
 
-func test_decor_adds_no_collision() -> void:
+## Issue #55: the decor's only collision is its props' (one "Props" body); the
+## town's own boxes are untouched.
+func test_decor_collision_is_only_its_props() -> void:
 	var on = _demo(true)
 	var off = _demo(false)
 	var n: int = on.town.boxes().size()
 	assert_eq(_count(on.get_node("Town"), "StaticBody3D"), n, "one body per box with look on")
 	assert_eq(_count(off.get_node("Town"), "StaticBody3D"), n, "and with look off")
-	assert_eq(_count(on.decor, "CollisionObject3D"), 0, "decor has no colliders")
-	assert_eq(_count(on.decor, "CollisionShape3D"), 0, "decor has no shapes")
+	var props: Node = on.decor.get_node("Buildings/Props")
+	assert_eq(_count(on.decor, "CollisionObject3D"), 1, "decor has one body: the props")
+	assert_eq(_count(props, "CollisionShape3D"), on.decor.kit.solids, "one box per solid prop")
+	assert_eq(_count(on.decor, "CollisionShape3D"), on.decor.kit.solids, "and no other shapes")
+
+
+func test_props_are_solid() -> void:
+	var d = _demo(true)
+	var space: PhysicsDirectSpaceState3D = d.get_world_3d().direct_space_state
+	var props: StaticBody3D = d.decor.get_node("Buildings/Props")
+	assert_gt(d.decor.kit.solids, 200, "lamp posts, antennas, parapets, clutter")
+	# Walk sideways into the first street lamp post: the ray stops on the props body.
+	var street: Dictionary = {}
+	for z in d.town.zones():
+		if str(z.id) == "main_street":
+			street = z
+	var post := Vector3(float(street.min[0]) + 4.0, 1.0, float(street.min[1]) + 0.6)
+	await wait_physics_frames(2)
+	var q := PhysicsRayQueryParameters3D.create(post + Vector3(2.0, 0, 0), post)
+	var hit := space.intersect_ray(q)
+	assert_false(hit.is_empty(), "the lamp post is in the way")
+	if not hit.is_empty():
+		assert_eq(hit.collider, props, "and it is a prop")
+	# Antennas on a roof: something to stand on above the building's own box.
+	var top := 0
+	for c in props.get_children():
+		var cs := c as CollisionShape3D
+		for b in d.town.boxes():
+			if str(b.get("look", "")) != "" and cs.position.y > float(b.max[1]) \
+					and cs.position.x > float(b.min[0]) and cs.position.x < float(b.max[0]) \
+					and cs.position.z > float(b.min[2]) and cs.position.z < float(b.max[2]):
+				top += 1
+				break
+	assert_gt(top, 50, "roof props collide")
 
 
 func test_every_box_has_a_material_when_look_on() -> void:

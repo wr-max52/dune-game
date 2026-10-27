@@ -22,6 +22,10 @@ extends Node
 ##   - (an arrival "reentry" from the stand-alone flight scene still starts you in
 ##     the sky above the port, still flying),
 ##   - a crash tows the ship back to its pad and puts you beside it,
+##   - issue #55: the ship's guns fire from the moment you sit down (LMB / Space),
+##     in the air as in space; the hull (and shield) from its data takes bolts
+##     wherever it is, and the garrison shoots it once it lifts off inside town.
+##     A hull shot to nothing goes down like a crash and is towed home.
 ##   - issue #43: every ship parked in the pit is flyable. Each is a berth (its ship
 ##     data, model, hull and home bay); E beside any parked one boards it, and that
 ##     ship's own stats, guns and Shift ability fly from then on. The one you left
@@ -32,6 +36,9 @@ extends Node
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const ChaseCamera := preload("res://src/systems/camera/chase_camera.gd")
+const ShipDefense := preload("res://src/systems/flight/ship_defense.gd")
+const ShipLoadout := preload("res://src/systems/flight/ship_loadout.gd")
+const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const CRASH_TOW_TIME := 2.5
@@ -74,7 +81,10 @@ var _cam_far := 4000.0
 var _rig_was_fp := false
 var _boost := false
 var _foot_prompt: Label          ## "[E] Board" while standing at the ship
-var hull: StaticBody3D           ## the ship's own collision: solid while parked, off in flight
+var hull: ShipHull               ## the ship's own collision: solid parked and flying (bolts hit it)
+var defense                      ## issue #55: ShipDefense, the flown ship's shield and hull
+var guns                         ## issue #55: ShipLoadout, its guns in the air
+var shots := 0                   ## bolts the guns fired in the air (traces, tests)
 var vessel_name := ""            ## issue #15: the ship's own name (same key as in space)
 var planet_name := ""
 var fight: SpaceFight            ## issue #46: the space encounter in progress, or null
@@ -174,6 +184,7 @@ func _gather_berths() -> void:
 		var box_id := str(pad.get("town_box", "ship")) if i == 0 else str(v.get_meta("box_id", ""))
 		_disable_box(box_id)
 		b.hull = _build_hull(v, acc[0], box_id, b.clearance)
+		b.hull.on_damage = _on_hull_hit.bind(i)
 		berths.append(b)
 
 
@@ -192,6 +203,8 @@ func _use_berth(i: int) -> void:
 	atmo.clearance = b.clearance
 	atmo.park(visual.global_position, visual.rotation.y)
 	_sync_visual()
+	defense = ShipDefense.new(ship_cfg)
+	guns = ShipLoadout.new(ship_cfg, content)
 	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
 	hud.vessel_name = vessel_name
 	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
@@ -201,7 +214,7 @@ func _use_berth(i: int) -> void:
 ## A box around the ship, in the ship's own frame, that travels with it: you can
 ## walk up to (not through) a parked ship wherever it landed. Sized from the model,
 ## or from the pad's box in the greybox.
-func _build_hull(v: Node3D, model_box, box_id: String, clear: float) -> StaticBody3D:
+func _build_hull(v: Node3D, model_box, box_id: String, clear: float) -> ShipHull:
 	var size := Vector3(9.0, 2.5, 8.0)
 	var center := Vector3.ZERO
 	if model_box != null:
@@ -215,7 +228,7 @@ func _build_hull(v: Node3D, model_box, box_id: String, clear: float) -> StaticBo
 			var sn := absf(sin(v.rotation.y))
 			size = Vector3(c * w.x + sn * w.z, w.y, sn * w.x + c * w.z)
 			center = Vector3(0, w.y * 0.5 - clear, 0)
-	var body := StaticBody3D.new()
+	var body := ShipHull.new()
 	body.name = "ShipHull"
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -291,6 +304,7 @@ func board() -> bool:
 	piloting = true
 	_foot_prompt.visible = false
 	p.piloting = true
+	p.vehicle = self
 	p.locked = true
 	p.velocity = Vector3.ZERO
 	p.visible = false
@@ -320,6 +334,7 @@ func exit_ship() -> bool:
 	var spot := _exit_spot()
 	piloting = false
 	p.piloting = false
+	p.vehicle = null
 	p.locked = false
 	p.process_mode = Node.PROCESS_MODE_INHERIT
 	p.visible = true
@@ -347,7 +362,6 @@ func exit_ship() -> bool:
 func takeoff() -> bool:
 	if not piloting or not atmo.takeoff():
 		return false
-	_set_hull(false)
 	flight_time = 0.0
 	return true
 
@@ -369,6 +383,7 @@ func reenter() -> void:
 		# Seat the player without the reach check: they arrive in the cockpit.
 		piloting = true
 		p.piloting = true
+		p.vehicle = self
 		_ground_follow(null)
 		p.locked = true
 		p.visible = false
@@ -393,7 +408,6 @@ func reenter() -> void:
 	atmo.place_flying(at, facing, 0.0, 0.6)
 	atmo.flight.speed = atmo.flight.cruise_speed(0.6) * atmo.air_scale()
 	_throttle = 0.6
-	_set_hull(false)
 	chase._primed = false
 	hud.visible = true
 	hud.toast(GameFlow.arrival_text(demo._arrival), 5.0)
@@ -489,6 +503,8 @@ func _seated(dt: float) -> void:
 		for e in atmo.step(dt):
 			_on_event(e)
 		_rearm_space()
+		_fire_guns(dt, _held("flight_fire") if _external.is_empty() else bool(_external.get("fire", false)))
+		defense.step(dt)
 	_sync_visual()
 	var s := atmo.position()
 	player().global_position = s
@@ -657,6 +673,7 @@ func _tow_home() -> void:
 	atmo.park(home, home_yaw)
 	_set_hull(true)
 	_sync_visual()
+	defense = ShipDefense.new(ship_cfg)       # patched up at the pad
 	if piloting:
 		exit_ship()
 	hud.toast(GameFlow.label("towed"), 4.0)
@@ -677,6 +694,7 @@ func _update_hud() -> void:
 		"boost": f.boost_left / maxf(f.boost_time(), 0.001),
 		"agl": atmo.agl(), "altitude": atmo.altitude(), "climb": v.y,
 		"space_fraction": atmo.space_fraction(), "state": atmo.state_label(),
+		"hull": defense.hull_hp(), "hull_max": defense.hull_max(), "shield": int(defense.shield),
 	})
 	var tip := ""
 	match atmo.state:
@@ -687,6 +705,68 @@ func _update_hud() -> void:
 		AtmoFlight.State.LANDING:
 			tip = GameFlow.label("landing")
 	hud.set_prompt(tip)
+
+
+# ------------------------------------------------------------------ guns and hull (issue #55)
+
+## Issue #55: in town the garrison treats your ship as hostile from the moment it
+## lifts off until it is back on the ground (or gone to space).
+func hostile_in_town() -> bool:
+	return piloting and fight == null and atmo.state != AtmoFlight.State.PARKED \
+		and atmo.state != AtmoFlight.State.CRASHED and TownNav.in_town(demo.town, atmo.position())
+
+
+## What the troopers' eyes and bolts hit while you fly.
+func hull_body() -> CollisionObject3D:
+	return hull
+
+
+func threat_velocity() -> Vector3:
+	return atmo.flight.velocity()
+
+
+## The guns, in the air or still on the pad: the primary group (cannons) as real
+## bolts, the same ones the troopers and the speeder fire. Seekers stay a space
+## weapon (nothing down here to lock).
+func _fire_guns(dt: float, trigger: bool) -> void:
+	if guns == null or atmo.state == AtmoFlight.State.CRASHED:
+		return
+	var v: Vector3 = atmo.flight.velocity() if atmo.state != AtmoFlight.State.PARKED else Vector3.ZERO
+	var volley := false
+	for s in guns.fire(dt, atmo.transform(), v, trigger, false):
+		if str(s.kind) != "bolt":
+			continue
+		var b = BoltScene.instantiate()
+		var vel: Vector3 = s.velocity
+		b.direction = vel.normalized()
+		b.speed = vel.length()
+		b.damage = float(s.damage)
+		b.range_m = float(s.range)
+		b.shooter = hull
+		b.sweep = true
+		b.stylize = true
+		b.streak_length = 2.4
+		b.streak_radius = 0.07
+		b.color = Color("#ff6a3a")
+		demo.add_child(b)
+		b.global_position = s.origin
+		shots += 1
+		volley = true
+	if volley:
+		Sound.play("ship_cannon", atmo.position())
+
+
+## A bolt hit berth `i`'s hull. Only the ship you are flying keeps score; a hull
+## shot to nothing goes down like a crash (and is towed home).
+func _on_hull_hit(amount: float, i: int) -> void:
+	if i != berth or not piloting or fight != null or atmo.state == AtmoFlight.State.CRASHED:
+		return
+	defense.apply_damage(amount)
+	if defense.is_alive():
+		return
+	var at := atmo.position()
+	atmo._crash(at, "shot_down")
+	_on_event({ "type": "crashed", "at": at, "what": "shot_down" })
 
 
 # ------------------------------------------------------------------ helpers

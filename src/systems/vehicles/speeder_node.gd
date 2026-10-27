@@ -102,6 +102,7 @@ func mount() -> bool:
 	var p := player()
 	riding = true
 	p.piloting = true
+	p.vehicle = self
 	p.locked = true
 	p.velocity = Vector3.ZERO
 	p.visible = false
@@ -128,6 +129,7 @@ func dismount() -> bool:
 		_engine.stop()
 	var spot := _exit_spot()
 	p.piloting = false
+	p.vehicle = null
 	p.locked = false
 	p.process_mode = Node.PROCESS_MODE_INHERIT
 	p.visible = true
@@ -152,6 +154,21 @@ func dismount() -> bool:
 ## Pass {} to give control back to the keys.
 func set_external_command(c: Dictionary) -> void:
 	_external = c
+
+
+## Issue #55: ridden inside town, the garrison treats it as hostile and shoots
+## the hull. Out in the desert nobody minds it.
+func hostile_in_town() -> bool:
+	return riding and model.alive() and demo != null and TownNav.in_town(demo.get("town"), model.position)
+
+
+## What the troopers' eyes and bolts hit while you ride.
+func hull_body() -> CollisionObject3D:
+	return hull
+
+
+func threat_velocity() -> Vector3:
+	return model.forward() * model.speed
 
 
 ## Bolts land here (the hull's parent). Riding or parked, the hull takes it.

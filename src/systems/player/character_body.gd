@@ -24,6 +24,9 @@ var locked := false
 ## M14: true while the player is in a ship's seat. ShipPilot sets it (and disables
 ## this node); prompts on foot (the bar, gear) check it so E means "roll" up there.
 var piloting := false
+## Issue #55: while piloting, the SpeederNode or ShipPilot you are in (null on
+## foot). The garrison asks it whether it is a threat in town and where its hull is.
+var vehicle: Node = null
 var hits_taken := 0
 
 ## M15: health. Regenerates after regen_delay_s without a hit; `downed` at zero.

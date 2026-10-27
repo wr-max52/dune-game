@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Bug fixes and hardening (2026-10-27, issue #55)
+
+- **Vehicles in town are hostile.** Ride a speeder into town, or lift a ship off inside it, and the garrison treats it as a threat. The first trooper to notice it sounds the alarm, and the troopers shoot its hull. Out in the desert nobody minds it. Speeder or ship lasers that hit a trooper count as the player's shots.
+- **The ship has a hull in the air.** Its hull and shield come from its data and show on the flight HUD. A hull shot to nothing goes down like a crash and is towed home. The hull box stays solid in flight so bolts can hit it.
+- **Ship guns in the atmosphere.** LMB fires the cannons as soon as you sit down, whether you are on the pad or in the air. Seekers stay a space weapon.
+- **Solid props.** Lamp posts, bay light posts, fuel pods, pit clutter, door-side barrels and crates, rooftop antennas, parapets and roof blocks now collide. Each one has a box in a single `Props` body. You bump into them and can stand on them. The town's own boxes and the nav are unchanged.
+- **Brighter cantina.** The hanging lamps reach further, and four warm fill lights hang under the roof. They are on by day too.
+- Tests: test_vehicle_threat. test_town_decor and the m14 flight trace are updated (the hull is now solid in flight).
+
 ## The port's fleet (2026-10-27, issue #43)
 
 - Four flyable ships from Hyper3D replace the placeholder colour variants in the pit. Each has its own stats, guns and Shift ability:
