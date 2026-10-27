@@ -121,6 +121,7 @@ func _ready() -> void:
 		camera.current = true
 		show_shot("gate_approach")
 	else:
+		Sound.start_music()      # issue #16: carries on across launches and landings
 		_spawn_player()
 		_build_launch_pads()
 		_world_from_scene()

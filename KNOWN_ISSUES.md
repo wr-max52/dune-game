@@ -2,6 +2,27 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the sound library and music (2026-10-27, issue #16)
+
+**What is real and proven by tests (`test_sound`):** every sound and track the
+library names loads; the music picks space over battle over ambient; battle holds
+15 s after the last shot, starts 30 s in and loops back there; the ambient tracks
+cycle; credits in and out each make a coin sound; the blade is quieter.
+
+**Not done, honestly:**
+- **Not listened to by a human yet.** Volumes, pitches and fade times are first
+  guesses; tune them in `content/look/sound.json`.
+- **There are no droids yet** except the sparring remote; it is the only thing that
+  beeps. A new droid gets `Sound.loop("droid_hum", self)` and `Sound.play("droid_beep", pos)`.
+- **Engine sound is one loop for every ship** (pitch only). The speeder borrows it,
+  pitched up.
+- **Every ship in a dogfight is heard,** each shot its own player (capped at 24 at
+  once). A big fight may sound busy.
+- **Loading a save can make a coin sound** if it changes your credits while a scene
+  is already running.
+- **Other things still have no sound:** the town ship's landing gear and crashes, UI
+  clicks, ambient town noise.
+
 ## After locals on foot (2026-10-26)
 
 **What is real and proven by tests:** with real physics (`test_results/locals_trace.txt`):
@@ -199,7 +220,7 @@ paths.
 - **No weapons in the atmosphere.** The ship's guns fire in space only.
 - **Ships rest level** wherever they land, held up by the highest point under them,
   so a slope can leave one side hanging.
-- **No landing gear, engine sound, contrails, re-entry glow or camera shake.**
+- **No landing gear, contrails, re-entry glow or camera shake.** (Engine sound: issue #16.)
 - **The ship's position is not saved.** A new session starts with it on the pad; a
   ship left in the desert comes back to the pad.
 - **One way up, one way down.** The same encounter every ascent, and the same
@@ -248,7 +269,7 @@ look kit, and gear added from data alone.
 **Not done, honestly:**
 - **The pack is a stand-in** (two tanks, a plate, two nozzles). The `scene` hook in
   `content/look/items.json` takes a real model with no code change.
-- **No sound** for the thruster, no dust kicked up, no heat shimmer, no camera shake.
+- No dust kicked up (the thruster has sound since issue #16), no heat shimmer, no camera shake.
 - **No flight pose.** The body uses its normal airborne/fall pose under the pack.
 - **No fall damage.** The player has no health yet, so a 17 m drop is free.
 - **Rooftops are reachable** with the pack. Nothing breaks, but nothing was designed

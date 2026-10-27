@@ -24,6 +24,7 @@ var remote: Node3D
 var remote_shots := 0
 var remote_hits := 0
 var _remote_cd := 2.0
+var _chirp_cd := 3.0                      ## issue #16: seconds to the remote's next idle chirp
 var _first_down_at := -1.0
 var _time := 0.0
 var _mats: LookMaterials
@@ -44,6 +45,9 @@ func _ready() -> void:
 		remote = _build_remote()
 		add_child(remote)
 		remote.global_position = _v3(spec.remote.pos)
+		var hum = Sound.loop("droid_hum", remote)   # issue #16: droids sound like droids
+		if hum != null:
+			hum.autoplay = true
 
 
 ## Is a world position inside the sanctioned range (the pit)?
@@ -83,6 +87,11 @@ func _physics_process(dt: float) -> void:
 	if to_p.length() > 0.1:
 		remote.look_at(remote.global_position + to_p, Vector3.UP)
 	var active := to_p.length() <= float(r.get("range", 14.0))
+	_chirp_cd -= dt
+	if _chirp_cd <= 0.0:
+		_chirp_cd = randf_range(4.0, 9.0)
+		if to_p.length() <= 20.0:
+			Sound.play("droid_beep", remote.global_position)
 	if bool(r.get("only_when_blade_out", true)):
 		active = active and blade_out.is_valid() and bool(blade_out.call())
 	(remote.get_node("Eye") as MeshInstance3D).material_override.emission_energy_multiplier = 4.0 if active else 0.6
@@ -112,6 +121,8 @@ func fire_remote() -> Node:
 	add_child(b)
 	b.global_position = origin
 	remote_shots += 1
+	if randf() < 0.35:
+		Sound.play("droid_beep", origin)
 	return b
 
 
@@ -156,6 +167,7 @@ func _build_remote() -> Node3D:
 
 func _on_remote_hit() -> void:
 	remote_hits += 1
+	Sound.play("droid_beep", remote.global_position)
 	var tw := remote.create_tween()
 	tw.tween_property(remote, "rotation:z", remote.rotation.z + TAU, 0.5)
 

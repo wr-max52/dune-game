@@ -15,6 +15,7 @@ var weapons: PlayerWeapons
 var _steps: AudioStreamPlayer
 var _land: AudioStreamPlayer
 var _jump: AudioStreamPlayer
+var _jet: AudioStreamPlayer        ## issue #16: the jetpack's roar while it burns
 var _hurt_flash: ColorRect
 var _hurt_left := 0.0
 
@@ -46,6 +47,10 @@ func _ready() -> void:
 	_jump = _player_for(str(sounds.get("jump", "")), -14.0)
 	player.landed.connect(func(): if _land: _land.play())
 	player.jumped.connect(func(): if _jump: _jump.play())
+	_jet = Sound.loop("jet_loop", self)
+	if _jet != null:
+		player.jet_started.connect(_jet.play)
+		player.jet_stopped.connect(_jet.stop)
 	player.hurt.connect(_on_hurt)
 	var layer := CanvasLayer.new()
 	layer.layer = 3
@@ -63,6 +68,7 @@ func _player_for(path: String, db: float) -> AudioStreamPlayer:
 	var a := AudioStreamPlayer.new()
 	a.stream = load(path)
 	a.volume_db = db
+	a.bus = Sound.SFX_BUS
 	add_child(a)
 	return a
 
