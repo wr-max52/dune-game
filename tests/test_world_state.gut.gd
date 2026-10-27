@@ -69,12 +69,33 @@ func test_world_save_round_trip() -> void:
 	assert_eq(int(WorldState.standing.locals), 17)
 
 
+## Issue #47: a save from before the rename keeps everything the Cantina Owner
+## knew (her relationship, the loose memory, her reserved name).
+func test_save_v2_bartender_becomes_the_cantina_owner() -> void:
+	var S = load("res://src/systems/save/save_system.gd")
+	var v2 := { "version": 2, "credits": 9, "bartender_memory": { "player_name": "Rider" },
+		"relationships": { "bartender": { "trust": 41, "facts": ["owes for two ales"] } },
+		"world": { "names": { "by_key": { "npc:bartender": "Oda Vell", "npc:port_town/resident_e": "Tam" } } } }
+	var d: Dictionary = S.migrate(v2)
+	assert_eq(int(d.version), 3)
+	assert_eq(int(d.relationships.cantina_owner.trust), 41, "her trust in the player survives")
+	assert_false(d.relationships.has("bartender"))
+	assert_eq(str(d.npc_memory.player_name), "Rider")
+	assert_false(d.has("bartender_memory"))
+	assert_eq(str(d.world.names.by_key["npc:cantina_owner"]), "Oda Vell", "she keeps her name")
+	assert_false(d.world.names.by_key.has("npc:bartender"))
+	assert_eq(str(d.world.names.by_key["npc:port_town/resident_e"]), "Tam", "other names untouched")
+	var again: Dictionary = S.migrate(d)
+	assert_eq(int(again.relationships.cantina_owner.trust), 41, "migrating twice changes nothing")
+
+
 func test_save_v1_migrates() -> void:
 	var S = load("res://src/systems/save/save_system.gd")
-	var v1 := { "player_position": [0, 0, 0], "credits": 5, "mission": {}, "npc_memory": { "player_name": "Rider" }, "version": 1 }
+	var v1 := { "player_position": [0, 0, 0], "credits": 5, "mission": {}, "bartender_memory": { "player_name": "Rider" }, "version": 1 }
 	var d: Dictionary = S.migrate(v1)
-	assert_eq(int(d.version), 2)
+	assert_eq(int(d.version), 3)
 	assert_true(str(d.relationships.cantina_owner.facts).contains("Rider"))
+	assert_false(d.has("bartender_memory"))
 	var s = S.new()
 	s.new_game()
 	s.set_relationship("cantina_owner", { "trust": 33 })

@@ -17,6 +17,7 @@ var anim := BodyAnimator.new()
 var act := Act.IDLE
 var look_at_target: Node3D
 var glass: Node3D
+var dressing: CantinaDressing    ## the back bar and counter (null in the greybox)
 var _t := 0.0
 var _act_left := 0.0
 var _talk_energy := 0.0
@@ -35,6 +36,19 @@ func _init(materials: LookMaterials = null) -> void:
 func set_act(a: int, seconds: float = 0.0) -> void:
 	act = a
 	_act_left = seconds
+
+
+## TalkSpot's hook (issue #42): the same acts by name.
+func act_named(n: String, seconds: float = 0.0) -> void:
+	match n:
+		"thinking":
+			set_act(Act.THINKING, seconds)
+		"talking":
+			set_act(Act.TALKING, seconds)
+		"pouring":
+			set_act(Act.POURING, seconds)
+		_:
+			set_act(Act.IDLE, seconds)
 
 
 ## Pulse while words stream in (drives the nods and gestures).

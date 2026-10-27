@@ -24,7 +24,6 @@ const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const CantinaOwnerNPC := preload("res://src/systems/npc/cantina_owner_npc.gd")
-const BarScene := preload("res://src/systems/npc/bar_scene.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const SHOTS_PATH := "res://content/look/town_shots.json"
@@ -415,7 +414,7 @@ func _attach_body() -> void:
 
 ## `scripted` = CI providers (no network); `save_path` "" = do not persist.
 func _build_bar(scripted = null, save_path: String = "user://save.json") -> void:
-	bar = BarScene.new()
+	bar = ConversationHost.new()
 	bar.name = "Bar"
 	bar.autosave = save_path != ""
 	if save_path != "":

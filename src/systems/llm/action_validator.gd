@@ -27,6 +27,10 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 		var t := str(a.get("type", ""))
 		var why := ""
 		var out: Dictionary = a.duplicate()
+		var allowed: Array = briefing.get("allowed", [])
+		if not allowed.is_empty() and not allowed.has(t):
+			dropped.append({ "action": a, "why": "not something this character does" })
+			continue
 		match t:
 			"share_rumor":
 				if not (briefing.get("rumors", []) as Array).has(str(a.get("id", ""))):
@@ -56,6 +60,14 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["id"] = id
 					out["name"] = str(menu[id].name)
 					out["price"] = int(menu[id].price)      # the game's price, never the model's
+			"offer_speeder":
+				var sale: Dictionary = briefing.get("sale", {})
+				if sale.is_empty():
+					why = "nothing for sale"
+				else:
+					out["id"] = str(sale.get("id", ""))
+					out["name"] = str(sale.get("name", ""))
+					out["price"] = int(sale.get("price", 0))      # the game's price, never the model's
 			"refuse_topic", "end_conversation":
 				pass
 			"call_guards":

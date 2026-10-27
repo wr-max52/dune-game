@@ -13,6 +13,23 @@ extends RefCounted
 
 const MAX_HISTORY := 8
 
+## Issue #42: what each action means to the model. A character is only told about
+## the actions on their card ("actions"), so the Cantina Owner never hears of
+## selling speeders and Skrugs never hears of a job board.
+const ACTION_DOCS := {
+	"share_rumor": '{"type": "share_rumor", "id": "<rumor id>"}  when you pass a rumor on',
+	"offer_job": '{"type": "offer_job", "id": "<job id>"}  when you offer a job from your board',
+	"hint_secret": '{"type": "hint_secret", "id": "<secret id>"}  when you let a secret slip',
+	"pour_drink": '{"type": "pour_drink", "name": "<drink from the menu>"}  when they order',
+	"offer_speeder": '{"type": "offer_speeder"}  when they want to buy (the game shows them the price and asks them to confirm; you never take money yourself)',
+	"trust": '{"type": "trust", "delta": -3..2, "why": "<short reason>"}  how this exchange changed your trust in them',
+	"refuse_topic": '{"type": "refuse_topic"}  when you will not talk about something',
+	"end_conversation": '{"type": "end_conversation"}  when you are done with them',
+	"call_guards": '{"type": "call_guards"}  only if they threaten you or keep insulting you',
+}
+## A card with no "actions" list gets the Cantina Owner's set (the M12 default).
+const DEFAULT_ACTIONS := ["share_rumor", "offer_job", "hint_secret", "pour_drink", "trust", "refuse_topic", "end_conversation", "call_guards"]
+
 var card: Dictionary = {}
 var world_text: Dictionary = {}
 var schema: Dictionary = {}
@@ -50,25 +67,31 @@ func persona_message() -> Dictionary:
 	var menu: PackedStringArray = []
 	for d in card.get("drinks", []):
 		menu.append("%s (%s): %d credits, %s" % [d.name, d.id, int(d.price), d.get("note", "")])
-	lines.append("YOUR MENU:\n- " + "\n- ".join(menu))
+	if not menu.is_empty():
+		lines.append("YOUR MENU:\n- " + "\n- ".join(menu))
+	var sale: Dictionary = card.get("sale", {})
+	if not sale.is_empty():
+		lines.append("WHAT YOU SELL: %s for %d credits. %s" % [sale.get("name", ""), int(sale.get("price", 0)), sale.get("note", "")])
 	return { "role": "system", "content": "\n\n".join(lines) }
+
+
+## The actions this character may take (their card's "actions").
+func actions() -> Array:
+	return card.get("actions", DEFAULT_ACTIONS)
 
 
 ## The static rules + reply contract message.
 func rules_message() -> Dictionary:
 	var r: PackedStringArray = []
 	r.append("RULES:\n- " + "\n- ".join(PackedStringArray(card.get("rules", []))))
+	var docs: PackedStringArray = []
+	for a in actions():
+		if ACTION_DOCS.has(a):
+			docs.append("- " + str(ACTION_DOCS[a]))
 	r.append("""REPLY FORMAT: answer with ONE JSON object and nothing else, keys in this order:
 {"say": "<what you say out loud, at most 3 sentences>", "then": [ ... actions, at most 3 ... ], "tone": "wary|warm|amused|irritated|scared|sad"}
 Actions you may take (use ids from YOUR BRIEFING only):
-- {"type": "share_rumor", "id": "<rumor id>"}  when you pass a rumor on
-- {"type": "offer_job", "id": "<job id>"}  when you offer a job from your board
-- {"type": "hint_secret", "id": "<secret id>"}  when you let a secret slip
-- {"type": "pour_drink", "name": "<drink from the menu>"}  when they order
-- {"type": "trust", "delta": -3..2, "why": "<short reason>"}  how this exchange changed your trust in them
-- {"type": "refuse_topic"}  when you will not talk about something
-- {"type": "end_conversation"}  when you are done with them
-- {"type": "call_guards"}  only if they threaten you or keep insulting you
+""" + "\n".join(docs) + """
 Use "then": [] when nothing happens. "tone" is how you feel right now. Never put an id you were not given.""")
 	return { "role": "system", "content": "\n\n".join(r) }
 
@@ -139,7 +162,8 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 		drinks[str(d.id)] = { "name": d.name, "price": int(d.price) }
 	return {
 		"message": { "role": "system", "content": "YOUR BRIEFING (true right now):\n" + "\n".join(L) },
-		"ids": { "rumors": rumor_ids, "jobs": job_ids, "secrets": secret_ids, "drinks": drinks },
+		"ids": { "rumors": rumor_ids, "jobs": job_ids, "secrets": secret_ids, "drinks": drinks,
+			"allowed": actions(), "sale": card.get("sale", {}) },
 	}
 
 
@@ -167,6 +191,6 @@ func summary_messages(rel, history: Array) -> Array:
 	for h in history:
 		lines.append(("PLAYER: " if h.role == "user" else "YOU: ") + str(h.content))
 	return [
-		{ "role": "system", "content": "You are Oda Vell, a cantina owner, thinking back on a conversation. Write 2 or 3 short facts worth remembering about the player (what they want, what they did, what they promised), one per line, no numbering, under 12 words each. Facts only; nothing about yourself." },
+		{ "role": "system", "content": "You are " + str(card.get("name", "a townsperson")) + ", thinking back on a conversation. Write 2 or 3 short facts worth remembering about the player (what they want, what they did, what they promised), one per line, no numbering, under 12 words each. Facts only; nothing about yourself." },
 		{ "role": "user", "content": "\n".join(lines) },
 	]

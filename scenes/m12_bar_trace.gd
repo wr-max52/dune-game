@@ -19,7 +19,7 @@ const OUT := "res://test_results/m12_bar_trace.txt"
 const SAVE := "user://m12_trace_save.json"
 
 var demo
-var bar: BarScene
+var bar: ConversationHost
 var brain: NpcBrain
 var A: ScriptedProvider
 var B: ScriptedProvider

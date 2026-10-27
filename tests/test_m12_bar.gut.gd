@@ -96,9 +96,9 @@ func test_conversation_never_blocks_a_frame() -> void:
 	assert_lt(float(t.get("CONVO_WORST_FRAME_MS", 999)), 50.0)
 
 
-func test_memory_is_saved_v2() -> void:
+func test_memory_is_saved() -> void:
 	assert_eq(t.get("SAVED"), "true")
-	assert_eq(int(t.get("SAVE_VERSION", 0)), 2)
+	assert_eq(int(t.get("SAVE_VERSION", 0)), 3, "v3: the Cantina Owner rename (#47)")
 	assert_eq(t.get("SAVED_TRUST_MATCHES"), "true")
 	assert_true(str(t.get("SAVED_KNOWN")).contains("r_checkpoint"))
 	assert_eq(t.get("SAVED_JOB"), "active")
