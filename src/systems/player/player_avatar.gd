@@ -45,6 +45,10 @@ var _arm_meshes: Array = []
 var _other_meshes: Array = []
 var _kit_arms: Array = []          ## kit forearms shown in first person over a skin
 
+## First person draws no upper arm, so the forearm is stretched back past the
+## elbow (wrist end fixed) to run off-screen instead of ending in a floating stump.
+const FPV_FOREARM_STRETCH := 2.5
+
 
 func _init(materials: LookMaterials = null) -> void:
 	name = "Avatar"
@@ -225,6 +229,26 @@ func set_first_person(on: bool) -> void:
 		(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
+## Stretch a forearm in first person while its hand is on a grip; a hanging arm
+## stays its own length so it does not poke up into the view.
+func _stretch_forearm(side: String, on: bool) -> void:
+	var forearm := _forearm(joints[side + "_elbow"])
+	if forearm == null:
+		return
+	var k := FPV_FOREARM_STRETCH if on else 1.0
+	forearm.scale.y = k
+	forearm.position.y = -CharacterKit.FOREARM * (1.0 - 0.5 * k)
+
+
+## The kit's forearm segment: the elbow's cylinder a whole forearm long.
+static func _forearm(elbow: Node3D) -> MeshInstance3D:
+	for c in elbow.get_children():
+		if c is MeshInstance3D and (c as MeshInstance3D).mesh is CylinderMesh \
+				and is_equal_approx(((c as MeshInstance3D).mesh as CylinderMesh).height, CharacterKit.FOREARM):
+			return c
+	return null
+
+
 func _collect_meshes() -> void:
 	_arm_meshes.clear()
 	_other_meshes.clear()
@@ -314,6 +338,8 @@ func animate(dt: float, inp: Dictionary) -> void:
 
 
 func _place_weapon(upper: String, pitch: float) -> void:
+	_stretch_forearm("r", false)
+	_stretch_forearm("l", false)
 	for id in weapons:
 		(weapons[id] as Node3D).visible = (id == current and current != "")
 	if current == "" or not weapons.has(current):
@@ -337,9 +363,11 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	# through the view, reading as a second arm.
 	if grips.has("r"):
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), POLE_R)
+		_stretch_forearm("r", first_person)
 	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
 	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+		_stretch_forearm("l", first_person)
 
 
 func _ready_xf(id: String, _pitch: float) -> Transform3D:
