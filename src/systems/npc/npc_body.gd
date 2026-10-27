@@ -95,6 +95,10 @@ var _los_clear := false
 var _was_noticed := false
 var _flinch := 0.0
 var _fall_t := 0.0
+var _last_damage := 0.0
+## Issue #25: the body falls as a ragdoll (null in the greybox, which still tips over).
+var ragdoll: Ragdoll
+var dropped_weapon: RigidBody3D
 var _label: Label3D
 var _nameplate: Label3D
 var _shape: CollisionShape3D
@@ -605,6 +609,8 @@ func apply_damage_from(amount: float, shooter: Node) -> void:
 	if shooter is NpcBody and (shooter as NpcBody).faction == faction and faction != "":
 		return
 	last_hit_by = shooter
+	if shooter is Node3D and is_instance_valid(shooter):
+		last_hit_from = (shooter as Node3D).global_position
 	apply_damage(amount)
 	hit_by.emit(shooter, amount)
 
@@ -614,6 +620,7 @@ func apply_damage(amount: float) -> void:
 	if dead:
 		return
 	hits_taken += 1
+	_last_damage = amount
 	_flinch = 1.0
 	hurt.emit(amount)
 	health.apply_damage(amount)
@@ -624,6 +631,7 @@ func apply_damage(amount: float) -> void:
 func _on_death() -> void:
 	dead = true
 	stop()
+	var was_moving := velocity
 	velocity = Vector3.ZERO
 	# Out of the way: bolts, rays and the player pass through the body.
 	collision_layer = 0
@@ -631,13 +639,37 @@ func _on_death() -> void:
 	if _shape != null:
 		_shape.set_deferred("disabled", true)
 	play_sfx("death")
+	_go_limp(was_moving)
 	var st: AudioStreamPlayer3D = _sfx.get("steps")
 	if st != null:
 		st.stop()
 	died.emit()
 
 
+## Issue #25: let the look fall as a ragdoll, pushed away from whoever hit us last,
+## and throw the rifle out of its hands.
+func _go_limp(was_moving: Vector3) -> void:
+	if look_body == null or joints.is_empty() or not is_inside_tree():
+		return
+	var cfg := Ragdoll.load_config()
+	var kick := Ragdoll.kick_for(global_position, last_hit_from, _last_damage, cfg)
+	ragdoll = Ragdoll.new(joints, cfg)
+	ragdoll.start(was_moving, kick, get_world_3d().direct_space_state, [get_rid()])
+	if look_body.has_meta("weapon"):
+		var w: Node3D = look_body.get_meta("weapon")
+		look_body.remove_meta("weapon")
+		dropped_weapon = Ragdoll.drop(w, get_parent() as Node3D, was_moving + kick * 0.6, cfg)
+
+
 func _fall(dt: float) -> void:
+	if ragdoll != null:
+		var moving := not ragdoll.asleep
+		ragdoll.step(dt)
+		if moving and look_body.has_meta("skin"):
+			(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
+		_debug_line()
+		_update_nameplate()
+		return
 	_fall_t = minf(1.0, _fall_t + dt * 2.5)
 	var look := get_node_or_null("Look") as Node3D
 	if look != null:

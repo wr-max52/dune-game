@@ -14,6 +14,11 @@ and cross-faded end into start, so they repeat without a click.
   ship_boom.wav     a ship blowing up
   droid_beep_N.wav  the sparring remote's chirps (droid talk)
   droid_hum.wav     the sparring remote's hover hum (loop)
+  cargo_beep_N.wav  a cargo droid's low bloops (issue #51)
+  assassin_beep_N.wav  an assassin droid's clipped, falling ticks (issue #51)
+  droid_fix.wav     a ratchet and sparks: fixing a broken droid
+  droid_wake.wav    a rising boot-up sweep: a fixed droid wakes
+  droid_shot.wav    a droid's pistol bolt
 
 Run: python3 tools/audio/make_game_sfx.py
 Writes 16-bit mono WAVs to assets/audio/sfx/. Mapping in content/look/sound.json.
@@ -211,6 +216,74 @@ def droid_hum():
     save("droid_hum.wav", out, 0.5)
 
 
+def cargo_beep(idx):
+    # Low, round bloops that wobble: a box on wheels talking.
+    out = []
+    for _ in range(rng.randint(2, 4)):
+        n = n_of(rng.uniform(0.08, 0.18))
+        f0 = rng.uniform(220, 480)
+        ph, seg = 0.0, []
+        for i in range(n):
+            ph += f0 * (1 + 0.15 * math.sin(TAU * 18 * i / SR)) / SR
+            seg.append(math.sin(TAU * ph) + 0.4 * math.sin(TAU * ph * 3))
+        out += apply(seg, env(n, 0.01, 6.0)) + [0.0] * n_of(rng.uniform(0.02, 0.06))
+    save("cargo_beep_%d.wav" % idx, out, 0.55)
+
+
+def assassin_beep(idx):
+    # Short square-ish ticks that fall in pitch: cold and clipped.
+    out = []
+    for _ in range(rng.randint(2, 4)):
+        n = n_of(rng.uniform(0.03, 0.07))
+        f0 = rng.uniform(600, 1100)
+        ph, seg = 0.0, []
+        for i in range(n):
+            ph += f0 * (1 - 0.4 * i / n) / SR
+            seg.append(1.0 if math.sin(TAU * ph) > 0 else -1.0)
+        out += apply(lowpass(seg, 3000), env(n, 0.002, 20.0)) + [0.0] * n_of(rng.uniform(0.03, 0.09))
+    save("assassin_beep_%d.wav" % idx, out, 0.45)
+
+
+def droid_fix():
+    # A ratchet (clicks) with a few spark crackles.
+    n = n_of(1.2)
+    out = [0.0] * n
+    for k in range(14):
+        at = int(k * n / 14)
+        click = apply(highpass(noise(n_of(0.02)), 2000), env(n_of(0.02), 0.001, 120.0))
+        for i, v in enumerate(click):
+            if at + i < n:
+                out[at + i] += v
+    for _ in range(5):
+        at = rng.randint(0, n - n_of(0.05))
+        spark = apply(highpass(noise(n_of(0.05)), 4000), env(n_of(0.05), 0.001, 60.0))
+        for i, v in enumerate(spark):
+            out[at + i] += 0.6 * v
+    save("droid_fix.wav", out, 0.6)
+
+
+def droid_wake():
+    # A rising sweep and two chirps on top: powered back on.
+    n = n_of(0.8)
+    ph, sweep = 0.0, []
+    for i in range(n):
+        ph += (150 + 1400 * (i / n) ** 2) / SR
+        sweep.append(math.sin(TAU * ph))
+    out = apply(sweep, env(n, 0.05, 2.0))
+    out += ping(1800, 0.08, 40.0) + [0.0] * n_of(0.03) + ping(2400, 0.1, 30.0)
+    save("droid_wake.wav", out, 0.55)
+
+
+def droid_shot():
+    n = n_of(0.22)
+    ph, out = 0.0, []
+    for i in range(n):
+        ph += (1900 * math.exp(-i / SR * 22) + 260) / SR
+        out.append(math.sin(TAU * ph) * math.exp(-i / SR * 14))
+    crack = apply(highpass(noise(n), 2500), env(n, 0.001, 50.0))
+    save("droid_shot.wav", mix(out, scale(crack, 0.25)), 0.7)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     coin_gain()
@@ -224,3 +297,9 @@ if __name__ == "__main__":
     for k in range(1, 5):
         droid_beep(k)
     droid_hum()
+    for k in range(1, 4):
+        cargo_beep(k)
+        assassin_beep(k)
+    droid_fix()
+    droid_wake()
+    droid_shot()

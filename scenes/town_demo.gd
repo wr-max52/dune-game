@@ -86,6 +86,14 @@ var world: Dictionary = {}            ## its world (terrain, atmosphere, detail)
 var style: TownStyle                  ## its town style (metallic, snowy, pastel, words...)
 var platform: PlatformWorld           ## the deck, glass, shield and what lies below (platform planets only)
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
+@export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
+var droids: DroidController
+@export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
+var salesman: ShipSalesman
+@export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
+var outposts: RemnantOutposts
+var _town_withdrawn := false          ## issue #64: the garrison left town after the fleet was beaten
+var _respawned := 0
 
 
 func _ready() -> void:
@@ -158,6 +166,10 @@ func _ready() -> void:
 			_build_npcs()
 		if with_speeders and pilot != null and has_feature("speeders"):
 			_build_speeder_post()
+		if use_look and with_droids and gear != null:
+			_build_droids()
+		if with_salesman and gear != null:
+			_build_salesman()
 		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
@@ -223,6 +235,10 @@ func _build_boxes() -> void:
 		else:
 			var cs := Greybox.center_size(b)
 			node = Greybox.make_box(b.id, cs[0], cs[1], color, Basis.IDENTITY, str(b.get("shape", "")) == "round")
+		if b.kind == "pad":
+			for ch in node.get_children():       # issue #58: a painted plate, nothing to trip on
+				if ch is CollisionShape3D:
+					ch.disabled = true
 		root.add_child(node)
 		built_boxes += 1
 
@@ -343,6 +359,12 @@ func _is_live_npc(m: Dictionary) -> bool:
 	return with_npcs and not lookdev_mode and m.has("soldier")
 
 
+## Issue #64: a Remnant trooper post. After the fleet is beaten the garrison has
+## left town and these stay empty.
+func _is_remnant_post(m: Dictionary) -> bool:
+	return str(m.get("role", "")) == "trooper_post"
+
+
 func _build_nav() -> void:
 	nav = TownNav.new()
 	nav.name = "TownNav"
@@ -355,41 +377,37 @@ func _build_nav() -> void:
 ## used to (the gate for a trooper post); senses watch the player. Profiles in the
 ## "locals" faction go to Townsfolk, the rest to the Garrison.
 func _build_npcs() -> void:
-	var cc := CoreContent.new()
-	cc.load_from()
 	var root := Node3D.new()
 	root.name = "Npcs"
 	add_child(root)
 	for m in town.markers():
 		if not _is_live_npc(m):
 			continue
-		var soldier: Dictionary = cc.get_soldier(str(m.soldier))
-		if soldier.is_empty():
-			push_error("TownDemo: unknown soldier profile " + str(m.soldier))
+		if _is_remnant_post(m) and not Story.town_garrison():
 			continue
 		var here := town.marker_pos(str(m.id))
 		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
 		if m.has("face"):
 			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
-		var npc := NpcBody.new()
-		npc.post_id = str(m.id)
-		npc.setup(soldier, here, atan2(face.x - here.x, face.z - here.z), _flat_mats() if use_look else null)
-		npc.nav = nav
-		npc.bolt_parent = self
-		npc.target = _player
-		npc.assign_name("npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
-		npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
-		npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
-		root.add_child(npc)
-		(locals if npc.faction == "locals" else npcs).append(npc)
+		var npc := make_soldier(str(m.soldier), here, atan2(face.x - here.x, face.z - here.z), str(m.id),
+			"npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
+		if npc == null:
+			continue
 		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
 		built_markers += 1
+	if with_outposts and pilot != null:
+		outposts = RemnantOutposts.new()
+		outposts.setup(self, pilot.ground)
+		add_child(outposts)
+		outposts.build()
 	if npc_brains and not npcs.is_empty():
 		garrison = Garrison.new()
 		garrison.name = "Garrison"
 		add_child(garrison)
 		garrison.setup(self, npcs)
 		garrison.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+		garrison.respawn_rule = respawn_rule
+		garrison.spawner = respawn
 	if npc_brains and not locals.is_empty():
 		townsfolk = Townsfolk.new()
 		townsfolk.name = "Townsfolk"
@@ -398,6 +416,98 @@ func _build_npcs() -> void:
 		if gear != null:
 			gear.vendor_open = townsfolk.vendor_open
 			gear.closed_line = townsfolk.closed_line
+
+
+## One NpcBody from a soldier profile, standing at `here` facing `yaw`, its senses
+## on the player, named by `name_key`. It joins `npcs` (the Remnant) or `locals`
+## by its faction; the caller hands a Remnant body to the Garrison if it is up.
+func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String, name_key: String) -> NpcBody:
+	var cc := _content()
+	var soldier: Dictionary = cc.get_soldier(soldier_id)
+	if soldier.is_empty():
+		push_error("TownDemo: unknown soldier profile " + soldier_id)
+		return null
+	var npc := NpcBody.new()
+	npc.post_id = post_id
+	npc.setup(soldier, here, yaw, _flat_mats() if use_look else null)
+	npc.nav = nav
+	npc.bolt_parent = self
+	npc.target = _player
+	npc.assign_name(name_key)
+	npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
+	npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
+	var root := get_node_or_null("Npcs")
+	(root if root != null else self).add_child(npc)
+	(locals if npc.faction == "locals" else npcs).append(npc)
+	return npc
+
+
+var _cc: CoreContent
+func _content() -> CoreContent:
+	if _cc == null:
+		_cc = CoreContent.new()
+		_cc.load_from()
+	return _cc
+
+
+# ---------------------------------------------------------------- the Remnant (issue #64)
+
+## When a dead trooper comes back, and where (Garrison asks as each one dies).
+## Town troopers: behind the barracks a minute later, while the garrison holds
+## the town; they walk back to their post. Outpost troopers: at their post after
+## a few minutes. The bounty target never comes back. {} = stays dead.
+func respawn_rule(g: NpcBody) -> Dictionary:
+	if g.has_meta("bounty"):
+		return {}
+	var rc := Story.remnant_cfg()
+	var r := { "soldier": g.soldier_id, "post": g.post_id, "home": g.post_pos, "yaw": g.post_facing }
+	if g.has_meta("outpost"):
+		r.merge({ "delay": float(rc.get("outpost_respawn_s", 180.0)), "at": g.post_pos, "outpost": str(g.get_meta("outpost")) })
+		return r
+	var mk := str(rc.get("town_respawn_marker", "remnant_respawn"))
+	if not Story.town_garrison() or town.get_marker(mk).is_empty():
+		return {}
+	r.merge({ "delay": float(rc.get("town_respawn_s", 60.0)), "at": town.marker_pos(mk) })
+	return r
+
+
+## Bring one back (Garrison calls this when its time is up). Null = not now.
+func respawn(r: Dictionary) -> NpcBody:
+	var is_outpost := r.has("outpost")
+	if not is_outpost and not Story.town_garrison():
+		return null
+	_respawned += 1
+	var npc := make_soldier(str(r.soldier), r.at, float(r.yaw), str(r.post),
+		"npc:%s/%s#%d" % [str(town.data.get("id", "town")), str(r.post), _respawned])
+	if npc == null:
+		return null
+	npc.post_pos = r.home
+	npc.post_facing = float(r.yaw)
+	if is_outpost and outposts != null:
+		outposts.adopt(npc, str(r.outpost))
+		outposts.guards.append(npc)
+	elif str(npc.profile.get("role", "")) == "gate":
+		WorldState.set_flag("gate_checkpoint_up")
+		WorldState.set_flag("gate_guards_down", false)
+	return npc
+
+
+## The fleet is beaten: once the player is back on foot, the town's troopers and
+## droids are gone (the outposts keep theirs).
+func _withdraw_town_remnant() -> void:
+	if _town_withdrawn or Story.town_garrison() or (_player != null and _player.piloting):
+		return
+	_town_withdrawn = true
+	for n in npcs.duplicate():
+		if n.has_meta("outpost") or n.has_meta("bounty"):
+			continue
+		if garrison != null:
+			garrison.remove_member(n)
+		npcs.erase(n)
+		n.queue_free()
+	if droids != null:
+		droids.withdraw_town_remnant()
+	WorldState.set_flag("gate_checkpoint_up", false)
 
 
 ## Issue #42: Skrugs's speeder stall outside the back gate. Skrugs joins the bar's
@@ -409,6 +519,22 @@ func _build_speeder_post() -> void:
 	add_child(speeder_post)
 	if bar != null:
 		speeder_post.attach_host(bar)
+
+
+## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)
+## and the NPCs (the Remnant's droids answer to the garrison's alarm).
+func _build_droids() -> void:
+	droids = DroidController.new()
+	droids.setup(self, _player, gear)
+	add_child(droids)
+
+
+## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
+## the bar (the save says which ship is on the spare pad).
+func _build_salesman() -> void:
+	salesman = ShipSalesman.new()
+	salesman.setup(self, _player, gear)
+	add_child(salesman)
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
@@ -438,7 +564,7 @@ func npc(post_id: String) -> NpcBody:
 ## Facts the scene itself makes true, plus whatever the flight we just came back
 ## from did. The cantina owner reads these (WorldState), so her talk matches the town.
 func _world_from_scene() -> void:
-	WorldState.set_flag("gate_checkpoint_up", not town.markers_with_role("trooper_post").is_empty())
+	WorldState.set_flag("gate_checkpoint_up", not town.markers_with_role("trooper_post").is_empty() and Story.town_garrison())
 	WorldState.time_of_day = preset if preset != "" else WorldState.time_of_day
 	WorldState.on_flight_returned(_arrival)
 
@@ -491,6 +617,8 @@ func _build_ship() -> void:
 
 func _physics_process(dt: float) -> void:
 	WorldState.tick(dt)
+	if not _town_withdrawn and not Story.town_garrison():
+		_withdraw_town_remnant()
 
 
 # ---------------------------------------------------------------- desert
@@ -578,6 +706,7 @@ func _dress_desert() -> void:
 	_tint_sand(terrain.material, planet.get("type_cfg", {}).get("sand", {}))
 	if with_landforms:
 		landforms = DesertLandforms.new()
+		landforms.clear_circles = _landmark_clearings()
 		add_child(landforms)
 		landforms.build(terrain, _flat_mats(), desert_site().floor)
 		_tint_rock(landforms, planet.get("type_cfg", {}).get("rock", {}))
@@ -603,6 +732,17 @@ func _tint_rock(root: Node, rock: Dictionary) -> void:
 			done[mat] = true
 			for k in rock:
 				mat.set_shader_parameter(k, Color(str(rock[k])))
+
+
+## Issue #64: the world's landmarks that want open sand round them (the outposts).
+func _landmark_clearings() -> Array:
+	var cc := CoreContent.new()
+	cc.load_from()
+	var out: Array = []
+	for lm in cc.world_for_town(str(town.data.get("id", ""))).get("landmarks", []):
+		if lm.has("clear"):
+			out.append([Vector2(float(lm.at[0]), float(lm.at[2])), float(lm.clear)])
+	return out
 
 
 # ---------------------------------------------------------------- launch pads

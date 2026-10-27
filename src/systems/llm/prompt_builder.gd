@@ -131,6 +131,8 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 		for e in ev.slice(maxi(0, ev.size() - 4)):
 			recent.append(str(e.text))
 		L.append("RECENTLY: " + " ".join(recent))
+	if str(world.get("story", "")) != "":
+		L.append("WHAT YOU WANT FROM THE PLAYER NOW: " + str(world.story))   # issue #64
 	L.append("YOU FEEL: %s. YOUR TRUST IN THE PLAYER: %d/100 (%s). VISITS: %d." % [rel.mood, rel.trust, rel.tier(), rel.visits])
 	L.append("PLAYER'S CREDITS: %d. THEIR TAB: %d." % [int(world.get("credits", 0)), rel.tab])
 	var rumor_ids: Array = []

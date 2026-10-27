@@ -39,8 +39,8 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 181)   # locals: stall back panels; art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 4 ships + crates
-	assert_eq(t.markers().size(), 25)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar
+	assert_eq(t.boxes().size(), 181)   # locals: stall back panels; art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 3 ships + an empty pad (issue #58) + crates
+	assert_eq(t.markers().size(), 26)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89
 	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)
 
@@ -219,8 +219,9 @@ func test_cantina_stage_and_patrons() -> void:
 
 
 ## Art pass 2: a round pit with four bays. The player's ship is on the launch
-## pad and the spawn is beside it; the others are colour variants that never fly.
-func test_round_pit_with_four_ships() -> void:
+## pad and the spawn is beside it. Issue #58: two bays hold other flyable ships
+## (the round freighter among them) and the fourth is an empty pad.
+func test_round_pit_with_three_ships_and_an_empty_pad() -> void:
 	var t := _town()
 	var bowl := t.get_box("pit_bowl")
 	assert_eq(str(bowl.kind), "bowl")
@@ -229,12 +230,17 @@ func test_round_pit_with_four_ships() -> void:
 	for b in t.boxes():
 		if str(b.kind) == "ship":
 			ships.append(b)
-	assert_eq(ships.size(), 4, "four ships in the pit")
+	assert_eq(ships.size(), 3, "three ships in the pit")
 	var kinds := {}
 	for b in ships:
 		if b.has("ship"):
 			kinds[str(b.ship)] = true
-	assert_eq(kinds.keys().size(), 3, "three other flyable ships, all different (issue #43)")
+	assert_eq(kinds.keys().size(), 2, "two other flyable ships, all different (issue #43)")
+	assert_true(kinds.has("freighter"), "the round one stays")
+	var pad := t.get_box("spare_pad")
+	assert_eq(str(pad.get("kind", "")), "pad", "the fourth bay is an empty pad")
+	assert_false(pad.has("ship"), "nothing parked on it until you buy a ship")
+	ships.append(pad)
 	var own := t.get_box("ship")
 	var c := Vector3((float(own.min[0]) + float(own.max[0])) * 0.5, -6.0, (float(own.min[2]) + float(own.max[2])) * 0.5)
 	assert_lt(t.spawn_pos().distance_to(c), 10.0, "the player spawns by their own ship")

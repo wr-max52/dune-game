@@ -40,6 +40,7 @@ var phase_worst := {}
 
 func _initialize() -> void:
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64: the story unlocks the ships
 	GameFlow.reset()
 	GameFlow.change_scene = func(path: String) -> void: went.append(path)
 	_run()

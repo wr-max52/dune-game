@@ -35,6 +35,25 @@
         }
       }
     },
+    "remnant_marked": {
+      "height": 2.08, "bulk": 1.08,
+      "note": "Issue #64: the red Remnant officer Oda puts a price on (soldiers/bounty_target.json). The commander's kit in oxblood, every piece tinted red ('tint' multiplies the model's colours), so the target stands out at an outpost.",
+      "tint": "#ff5a48",
+      "armor": "#7a1c1c", "armor_light": "#a8302a", "under": "#2a1012", "trim": "#c9a058",
+      "cloth": "#b02a22", "visor": "#ffae4a", "boots": "#151414", "coat": "#8a1e1a", "gloves": "#151414",
+      "model": {
+        "scene": "res://assets/characters/kit/parts.glb",
+        "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
+        "parts": { "head": ["guard:oxblood"], "torso": ["guard:oxblood"], "legs": ["guard:oxblood"] },
+        "bones": {
+          "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
+          "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
+          "r_shoulder": "RightArm", "r_elbow": "RightForeArm", "r_wrist": "RightHand",
+          "l_hip": "LeftUpLeg", "l_knee": "LeftLeg", "l_ankle": "LeftFoot",
+          "r_hip": "RightUpLeg", "r_knee": "RightLeg", "r_ankle": "RightFoot"
+        }
+      }
+    },
     "smuggler": {
       "height": 1.8, "bulk": 1.0,
       "skin_wrap": "#1f7a78", "shirt": "#c9b896", "trousers": "#4a3c30", "coat": "#7a5636", "gloves": "#4a3020",

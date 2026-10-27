@@ -13,7 +13,9 @@ extends SceneTree
 ##   cells: [ { name, label, and one of:
 ##              ship_look: a look id in content/look/ships.json (built by ShipKit),
 ##              speeder:   a vehicle id in content/core/vehicles (built by SpeederNode),
-##              model:     a .glb path (loaded as-is) } ]
+##              model:     a .glb path (loaded as-is),
+##              item:      a look id in content/look/items.json (built by ItemKit),
+##              droid:     a droid kind (with "variant"), built by DroidKit as in game (issue #25) } ]
 ## A grey 1.8 m figure stands beside each vehicle on the sheet, for scale.
 
 const CELL := Vector2i(560, 400)
@@ -97,6 +99,13 @@ func _build(cell: Dictionary) -> Node3D:
 		v = s.visual
 		s.remove_child(v)
 		s.free()
+	elif cell.has("item"):
+		v = ItemKit.new().build(str(cell.item))
+	elif cell.has("droid"):
+		var dc := DroidRoster.config()
+		var kind := str(cell.droid)
+		v = DroidKit.build(kind, DroidRoster.variant_cfg(kind, str(cell.get("variant", ""))), LookMaterials.new(),
+			dc.get("kinds", {}).get(kind, {}).get("look", {}))
 	elif cell.has("model"):
 		var doc := GLTFDocument.new()
 		var state := GLTFState.new()

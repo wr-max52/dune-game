@@ -555,22 +555,22 @@
    "note": "Bay 2: the disc freighter (flyable, issue #43)."
   },
   {
-   "id": "ship_3",
+   "id": "spare_pad",
    "zone": "spaceport",
-   "kind": "ship",
+   "kind": "pad",
    "min": [
-    -18.2,
+    -20.0,
     -6,
-    -14.14
+    -17.0
    ],
    "max": [
-    -9.8,
-    -3.6,
-    -7.86
+    -8.0,
+    -5.97,
+    -5.0
    ],
-   "ship": "courier",
    "parked_yaw_deg": 90,
-   "note": "Bay 3: the twin-boom courier (flyable, issue #43)."
+   "note": "Bay 3: an empty landing pad (issue #58), a round plate inside the bay's painted ring. The ship you buy from T-89 is parked here; it stays empty until you do. No collision: you walk across it.",
+   "shape": "round"
   },
   {
    "id": "ship_4",
@@ -3426,6 +3426,31 @@
    "role": "ambient",
    "soldier": "local_resident",
    "patrol": "stroll_market_2"
+  },
+  {
+   "id": "t89",
+   "pos": [
+    2.0,
+    -6,
+    22.0
+   ],
+   "role": "interact",
+   "face": [
+    6,
+    -6,
+    13
+   ],
+   "note": "T-89, the ship salesman (issue #58): near the spawn, facing it, and further than a ship's board reach from every bay so E talks to him, not the ship."
+  },
+  {
+   "id": "remnant_respawn",
+   "pos": [
+    72,
+    0,
+    70.5
+   ],
+   "role": "waypoint",
+   "note": "Issue #64: behind the barracks hall, between it and the north wall. A Remnant trooper killed in town comes back here a minute later (while the garrison still holds the town) and walks back to its post."
   }
  ],
  "routes": [

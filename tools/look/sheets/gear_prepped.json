@@ -1,0 +1,11 @@
+{
+  "title": "Issue #25: gear and droids after prep (droids face -Z, rifle muzzle +Z)",
+  "out": "res://docs/lookdev/gear/03_prepped.png",
+  "views": ["front", "side", "front34", "top"],
+  "cells": [
+    { "name": "rifle", "model": "res://assets/gear/rifle.glb" },
+    { "name": "droid_floating", "model": "res://assets/gear/droid_floating.glb" },
+    { "name": "droid_cargo", "model": "res://assets/gear/droid_cargo.glb" },
+    { "name": "droid_assassin", "model": "res://assets/gear/droid_assassin.glb" }
+  ]
+}

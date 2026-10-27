@@ -34,6 +34,29 @@ Honest list of what is broken or faked. Updated every milestone.
 - **Planets are placed by hand** (`at`). Nothing stops two overlapping, and only
   planets that name each other through `near` are visible from each other.
 - **Reviewed in software rendering only** (`docs/planets/`).
+## After the gear models and ragdolls (2026-10-27, issue #25)
+
+**What is real and proven by tests (`test_ragdoll`):** a body dropped on a floor
+lands lying down, falls away from the shot, keeps every bone its length, sleeps,
+and stands back up exactly as it was.
+
+**Not done, honestly:**
+- **The jetpack is big and bright yellow** (the owner's pick of two tries). It sits
+  0.44 m deep on the back.
+- **The pistol's grips and muzzle were placed by eye**, like the rifle's.
+- **The energy sword was not replaced** (see DECISIONS). It is the code-built one.
+- **The ragdoll has no self-collision.** An arm can pass through the torso.
+  Particles collide with the world only (layer 1). The hips, knees, elbows and neck
+  have limits, but the spine can still twist further than a real back.
+- **The player in first person** sees the fall from eye height while the screen
+  fades; the camera does not follow the body.
+- **Droid deaths are unchanged:** a destroyed droid still snaps flat (`_lay_down`).
+- **Floating droid legs:** the chosen model has four little legs and hovers 1.7 m
+  up, as before.
+- **The assassin droid's pistol follows the hand, not the aim.** It points forward
+  in idle and walk but swings up while running. Bolts leave its muzzle wherever the
+  clip has it. Its fist, where the baked-in gun was cut away, is a little ragged.
+- **The rifle's grips and muzzle were placed by eye** from the side view.
 
 ## After the sound library and music (2026-10-27, issue #16)
 

@@ -119,6 +119,8 @@ func material_for(town, b: Dictionary) -> Material:
 				return mats.plaster(0.0, 2.0, LookMaterials.REMNANT_OXBLOOD)
 		"ship":
 			return mats.hull(-6.0, 4.0)
+		"pad":
+			return mats.flat(Color("#4a4642"), 0.85)    # issue #58: the empty pad's plate
 		"bowl":
 			return mats.plaster(-6.0, -1.0, LookMaterials.CLOTH_SAFFRON)
 		"spiral", "lookout":
@@ -284,17 +286,21 @@ func _dress_spaceport(town) -> void:
 		if str(b.get("zone", "")) != "spaceport":
 			continue
 		var k := str(b.kind)
-		if k == "ship" or k == "ramp" or k == "cover":
+		if k == "ship" or k == "pad" or k == "ramp" or k == "cover":
 			keep_out.append(Rect2(float(b.min[0]) - 1.2, float(b.min[2]) - 1.2, float(b.max[0]) - float(b.min[0]) + 2.4, float(b.max[2]) - float(b.min[2]) + 2.4))
 	var spawn: Vector3 = town.spawn_pos()
 	keep_out.append(Rect2(spawn.x - 2.0, spawn.z - 15.0, 4.0, 17.0))   # the walk from the spawn to the ramp
+	for m in town.markers_with_role("interact"):                        # issue #58: T-89's spot
+		var mp: Vector3 = town.marker_pos(str(m.id))
+		keep_out.append(Rect2(mp.x - 1.5, mp.z - 1.5, 3.0, 3.0))
 	# Bays: a painted ring under each ship, light posts round it, a fuel pod by the wall.
+	# Issue #58: the empty pad (kind "pad") gets the same ring, on top of its plate.
 	var paint := mats.flat(Color("#d9a441"), 0.8)
 	for b in town.boxes():
-		if str(b.kind) != "ship":
+		if str(b.kind) != "ship" and str(b.kind) != "pad":
 			continue
 		var bc := (_v3(b.min) + _v3(b.max)) * 0.5
-		var fy := float(b.min[1]) + 0.01
+		var fy := float(b.max[1] if str(b.kind) == "pad" else b.min[1]) + 0.01
 		kit.put(LookMeshKit.ring_segment(6.0, 6.35, fy, fy + 0.02, 0.0, TAU, 48), paint, Transform3D(Basis.IDENTITY, Vector3(bc.x, 0, bc.z)))
 		kit.solid = true
 		for k in 4:
@@ -571,8 +577,19 @@ func _park_ships(town) -> void:
 			_park(ship_kit, look, "Parked_" + str(b.id), float(b.get("parked_yaw_deg", 0.0)), b, str(b.ship))
 
 
+## Issue #58: park a ship bought from T-89 on a pad box (or any box). Returns the
+## model, or null when the ship has no look.
+func park_ship(ship_id: String, box: Dictionary) -> Node3D:
+	var content = preload("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var look_id := str(content.ships.get(ship_id, {}).get("look", ""))
+	if look_id == "" or box.is_empty():
+		return null
+	return _park(ShipKit.new(), look_id, "Parked_" + str(box.id), float(box.get("parked_yaw_deg", 0.0)), box, ship_id)
+
+
 ## Belly on the box base, centred on its footprint; the greybox stand-in hidden.
-func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> void:
+func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> Node3D:
 	var ship := ship_kit.build(look_id)
 	ship.name = node_name
 	ship.set_meta("ship_id", ship_id)
@@ -585,10 +602,11 @@ func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float
 	ship.position.y += float(box.min[1]) - a.position.y
 	ship.position.x += c.x - a.get_center().x
 	ship.position.z += c.z - a.get_center().z
-	var mi := _box_mesh(str(box.id))
+	var mi := _box_mesh(str(box.id)) if str(box.get("kind", "")) == "ship" else null
 	if mi != null:
-		mi.visible = false
+		mi.visible = false     # a pad's plate stays under the ship
 	parked_ships.append(ship)
+	return ship
 
 
 ## World-space bounds of every mesh under `root`.

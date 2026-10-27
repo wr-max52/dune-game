@@ -1,0 +1,346 @@
+{
+  "id": "droids",
+  "note": "IP-neutral (issue #51). Companion droids: three kinds, each with look variants. Not LLM characters; they only beep. The player runs up to max_owned at once. They show in the inventory as droids; what a cargo droid carries does not show, and the Remnant never searches it. Prices: the merchant sells at price and buys back at resale. Looks: each kind's 'look' names its Hyper3D model (issue #25, content/look/gear_models.json), tinted by the variant's body colour ('tint' 0..1), with glowing 'eyes' and a 'muzzle' in model space (metres, facing -Z, standing on y = 0). No model = the droid_kit.gd primitives. Following (issue #25 follow-up): a droid stays put until the player is 'leash' metres away, then walks to its slot and stops within 'settle'.",
+  "max_owned": 3,
+  "fix_seconds": 10.0,
+  "fix_reach": 2.6,
+  "kinds": {
+    "floating": {
+      "label": "Floating droid",
+      "price": 50,
+      "resale": 40,
+      "sound": "droid_beep",
+      "hover": 1.7,
+      "follow": {
+        "side": 1.1,
+        "back": 1.4,
+        "speed": 7.0,
+        "leash": 4.0,
+        "settle": 0.35
+      },
+      "variants": {
+        "range": {
+          "body": "#3a3c40",
+          "trim": "#b08e50",
+          "eye": "#4ad0ff"
+        },
+        "rust": {
+          "body": "#6b3f28",
+          "trim": "#c9a26a",
+          "eye": "#ffd24a"
+        },
+        "white": {
+          "body": "#d8d6cf",
+          "trim": "#5a6470",
+          "eye": "#4aff9a"
+        },
+        "remnant": {
+          "body": "#1d1e22",
+          "trim": "#5a5a60",
+          "eye": "#ff3030"
+        }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_floating.glb",
+        "tint": 0.85,
+        "eyes": [
+          [
+            0.0,
+            0.36,
+            -0.24
+          ]
+        ],
+        "eye_radius": 0.045
+      }
+    },
+    "cargo": {
+      "label": "Cargo droid",
+      "price": 50,
+      "resale": 40,
+      "sound": "cargo_beep",
+      "carries": true,
+      "follow": {
+        "side": -1.2,
+        "back": 1.8,
+        "speed": 6.5,
+        "leash": 5.0,
+        "settle": 0.35
+      },
+      "variants": {
+        "tan": {
+          "body": "#b89a68",
+          "trim": "#4a3a2c",
+          "eye": "#ffb84a"
+        },
+        "olive": {
+          "body": "#5f6644",
+          "trim": "#2c2e26",
+          "eye": "#9aff4a"
+        },
+        "blue": {
+          "body": "#3d5a7a",
+          "trim": "#c8c8c0",
+          "eye": "#4ad0ff"
+        }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_cargo.glb",
+        "tint": 0.9,
+        "eyes": [
+          [
+            -0.085,
+            0.7,
+            -0.15
+          ],
+          [
+            0.085,
+            0.7,
+            -0.15
+          ]
+        ],
+        "eye_radius": 0.03
+      }
+    },
+    "assassin": {
+      "label": "Assassin droid",
+      "price": 100,
+      "resale": 90,
+      "sound": "assassin_beep",
+      "height": 2.3,
+      "follow": {
+        "side": 0.0,
+        "back": 2.6,
+        "speed": 7.5,
+        "leash": 6.0,
+        "settle": 0.35
+      },
+      "gun": {
+        "range": 34.0,
+        "interval": 0.9,
+        "damage": 22.0,
+        "bolt_speed": 46.0,
+        "spread_deg": 0.4,
+        "color": "#ff5a3a"
+      },
+      "variants": {
+        "bone": {
+          "body": "#cfc6b0",
+          "trim": "#5a524a",
+          "eye": "#ffd24a"
+        },
+        "gunmetal": {
+          "body": "#4a4e56",
+          "trim": "#2a2c30",
+          "eye": "#4ad0ff"
+        },
+        "copper": {
+          "body": "#9a5a34",
+          "trim": "#3a2a20",
+          "eye": "#4aff9a"
+        },
+        "remnant": {
+          "body": "#141416",
+          "trim": "#2e2e32",
+          "eye": "#ff2020"
+        }
+      },
+      "look": {
+        "model": "res://assets/gear/droid_assassin.glb",
+        "tint": 0.85,
+        "eyes": [
+          [
+            -0.15,
+            2.09,
+            -0.17
+          ]
+        ],
+        "eye_radius": 0.03,
+        "anims": {
+          "idle": "HumanOffensiveIdle",
+          "walk": "HumanWalking",
+          "run": "HumanRunning",
+          "die": "HumanStandingDeathBackward01",
+          "calm": "HumanHappyIdle"
+        },
+        "walk_speed": 1.6,
+        "run_speed": 5.0,
+        "run_from": 3.5,
+        "eye_bone": "Head",
+        "root_bone": "Hips",
+        "carry": {
+          "scene": "res://assets/gear/pistol.glb",
+          "bone": "RightHand",
+          "pos": [
+            0.5,
+            1.08,
+            -0.19
+          ],
+          "rot_deg": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1.25,
+          "muzzle": [
+            0.0,
+            0.058,
+            0.165
+          ],
+          "bone_local": {
+            "pos": [
+              0.081,
+              0.096,
+              -0.057
+            ],
+            "rot_deg": [
+              -26.0,
+              103.7,
+              -168.0
+            ],
+            "scale": 1.03
+          }
+        }
+      }
+    }
+  },
+  "player_variants": {
+    "floating": [
+      "rust",
+      "white"
+    ],
+    "cargo": [
+      "tan",
+      "olive",
+      "blue"
+    ],
+    "assassin": [
+      "bone",
+      "gunmetal",
+      "copper"
+    ]
+  },
+  "vendor": {
+    "id": "droid_merchant",
+    "label": "Droid Merchant",
+    "marker": "vendor_4",
+    "offset": [
+      0,
+      0,
+      0
+    ],
+    "reach": 3.5,
+    "stock": [
+      "floating",
+      "cargo",
+      "assassin"
+    ]
+  },
+  "taming": {
+    "streak": 5,
+    "note": "Block or deflect this many of the range remote's bolts in a row (a bolt that hits you resets the count) and it follows you home. Oda drops the hint as a rumor (rumors/port_town.json, r_remote_tame)."
+  },
+  "wrecks": {
+    "check_seconds": 300.0,
+    "chance": 0.4,
+    "max_out": 3,
+    "min_radius": 160.0,
+    "max_radius": 520.0,
+    "min_separation": 180.0,
+    "reach": 3.0,
+    "note": "Broken droids stranded in the desert. Every check_seconds of play, with this chance, one more turns up (one of each kind at most, never near another). Fixing one takes fix_seconds; it resets and follows you. Radii are metres from the town's centre."
+  },
+  "remnant": {
+    "faction": "imperial_remnant",
+    "patrol": [
+      [
+        88,
+        0,
+        2
+      ],
+      [
+        31,
+        0,
+        2
+      ],
+      [
+        31,
+        0,
+        29
+      ],
+      [
+        -29,
+        0,
+        29
+      ],
+      [
+        -29,
+        0,
+        2
+      ],
+      [
+        31,
+        0,
+        2
+      ]
+    ],
+    "walk_speed": 2.2,
+    "sight": 22.0,
+    "kill_standing": -6,
+    "units": [
+      {
+        "kind": "assassin",
+        "variant": "remnant",
+        "hp": 60,
+        "start": 0
+      },
+      {
+        "kind": "floating",
+        "variant": "remnant",
+        "hp": 30,
+        "start": 3,
+        "gun": {
+          "range": 18.0,
+          "interval": 1.6,
+          "damage": 6.0,
+          "bolt_speed": 18.0,
+          "spread_deg": 3.0,
+          "color": "#ff3030"
+        }
+      }
+    ],
+    "outpost_unit": {
+   "kind": "assassin",
+   "variant": "remnant",
+   "hp": 60
+  },
+  "note": "Issue #64: outpost_unit is the assassin droid each desert outpost keeps (walking the outpost's 'patrol' points). The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
+  },
+  "labels": {
+    "trade": "[E] Trade droids with the %s",
+    "menu_trade": "%s  -  you have %d cr, %d of %d droids",
+    "buy": "Buy a %s  (%d cr)",
+    "sell": "Sell your %s  (%d cr)",
+    "bought": "Bought a %s for %d cr. It beeps and falls in behind you.",
+    "sold": "Sold your %s for %d cr.",
+    "full": "You already run %d droids. Sell one first.",
+    "cant_afford": "A %s costs %d cr. You have %d.",
+    "fix": "[E] Fix the broken %s (%d s)",
+    "fixing": "Fixing the %s...  %d%%  (stay close)",
+    "fix_cancelled": "You walked away. The %s is still broken.",
+    "fixed": "The %s reboots, resets, and follows you.",
+    "make_room": "You already run %d droids. Sell one to make room?",
+    "hold": "[E] Open the cargo droid's hold",
+    "menu_hold": "Cargo droid hold  -  the gate never looks in here",
+    "stash": "Stash %s  x%d",
+    "unload": "Unload everything (%s)",
+    "stashed": "Stashed %s in the cargo droid.",
+    "unloaded": "Took %d items out of the cargo droid.",
+    "unloaded_on_sale": "Unloaded %d items from it first.",
+    "empty_hold": "Nothing to stash, and the hold is empty.",
+    "tamed": "The sparring drone stops shooting, chirps, and follows you.",
+    "tame_declined": "The drone loses interest and goes back to shooting at people.",
+    "event_bought": "Someone bought a %s at the market.",
+    "event_found": "Someone dragged a broken %s back to life out in the desert.",
+    "event_remnant_droid": "Someone scrapped one of the Remnant's patrol droids."
+  }
+}
