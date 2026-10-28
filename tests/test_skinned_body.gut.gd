@@ -22,7 +22,7 @@ func test_player_wears_the_rigged_model() -> void:
 
 func test_primitives_are_hidden_but_joints_stay() -> void:
 	for m in PlayerAvatar._meshes_under(avatar.body):
-		if not avatar.skin.model.is_ancestor_of(m):
+		if not avatar.skin.model.is_ancestor_of(m) and not FpvArms.owns(m):   # first person arms hide by node
 			assert_false((m as GeometryInstance3D).visible, "primitive hidden: " + str(m.get_path()))
 	assert_true(avatar.body.has_meta("holster_grip"), "holster grip still there for the draw")
 
