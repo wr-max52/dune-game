@@ -32,7 +32,7 @@ var profile: Dictionary = {}
 var soldier_id := ""
 var post_id := ""              ## the marker this NPC was placed at
 var display_name := ""         ## issue #15: "Corporal Varo Kesh" (assign_name); "" until named
-var nameplate_range := 0.0     ## metres: the name floats over them when the target is this close
+var nameplate_range := 0.0     ## metres from the profile's naming block; unused since issue #65 (no floating names)
 var command := { "go_to": Vector3.INF, "face": Vector3.INF, "sprint": false, "crouch": false }
 
 var perception: Perception
@@ -48,6 +48,10 @@ var sees_vehicles := false
 var dead := false
 var faction := ""              ## from the profile; bolts from the same faction do no harm
 var last_hit_by: Node          ## who shot us last (null = unknown)
+var damage_usec := -1000000000         ## Time.get_ticks_usec() of the last accepted hit (hit markers read it)
+## Issue #65: set by brief() from the brain: true while this NPC is fighting. With
+## "has taken damage" it decides whether the health bar shows.
+var hostile := false
 
 ## M15: the rifle. A brain sets aim_point and calls fire_at(); the body owns the
 ## weapon state (ammo, rate, reload) and spawns real bolts.
@@ -100,7 +104,9 @@ var _last_damage := 0.0
 var ragdoll: Ragdoll
 var dropped_weapon: RigidBody3D
 var _label: Label3D
-var _nameplate: Label3D
+var _bar_bg: MeshInstance3D     ## issue #65: the enemy health bar (dark back, red fill)
+var _bar_fill: MeshInstance3D
+var _bar_fill_frac := 1.0
 var _shape: CollisionShape3D
 
 
@@ -164,7 +170,7 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_speech = Label3D.new()
 	_speech.name = "Speech"
 	_speech.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_speech.position.y = 2.35       # above the nameplate (2.05)
+	_speech.position.y = 2.35       # above the health bar (2.05)
 	_speech.pixel_size = 0.005
 	_speech.font_size = 40
 	_speech.outline_size = 10
@@ -172,15 +178,7 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	_speech.visible = false
 	add_child(_speech)
 	_build_sounds()
-	_nameplate = Label3D.new()
-	_nameplate.name = "Nameplate"
-	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_nameplate.position.y = 2.05
-	_nameplate.pixel_size = 0.0028
-	_nameplate.outline_size = 8
-	_nameplate.modulate = Color(0.96, 0.92, 0.84)
-	_nameplate.visible = false
-	add_child(_nameplate)
+	_build_health_bar()
 
 
 static func sound_cfg() -> Dictionary:
@@ -279,14 +277,14 @@ func assign_name(key: String) -> String:
 	var naming: Dictionary = profile.get("naming", {})
 	display_name = NameHooks.person(naming, key)
 	nameplate_range = float(naming.get("nameplate_range", 0.0))
-	if _nameplate != null:
-		_nameplate.text = display_name
 	return display_name
 
 
-## True when the floating name is up: named, alive, and the target within range.
+## Issue #65: names no longer float over heads (enemies show a health bar). The
+## name is still data (debug line F4, dialogue, briefings). Always false; kept so
+## callers and the names trace keep one place to ask.
 func nameplate_shown() -> bool:
-	return _nameplate != null and _nameplate.visible
+	return false
 
 
 func _ready() -> void:
@@ -389,6 +387,7 @@ func brief(b: GuardBrain, at: Vector3, vel: Vector3) -> void:
 	b.pos = global_position
 	b.facing = rotation.y
 	b.hp_frac = float(health.hp) / maxf(1.0, float(max_health))
+	hostile = b.state == GuardBrain.State.COMBAT
 	b.arrived = arrived()
 	b.visible = perception.visible
 	b.target_pos = at
@@ -468,7 +467,7 @@ func _physics_process(delta: float) -> void:
 	_animate_lod(delta, move)
 	_tick_steps()
 	_debug_line()
-	_update_nameplate()
+	_update_health_bar()
 
 
 func _walk(dt: float) -> Vector3:
@@ -620,6 +619,7 @@ func apply_damage(amount: float) -> void:
 	if dead:
 		return
 	hits_taken += 1
+	damage_usec = Time.get_ticks_usec()
 	_last_damage = amount
 	_flinch = 1.0
 	hurt.emit(amount)
@@ -668,7 +668,7 @@ func _fall(dt: float) -> void:
 		if moving and look_body.has_meta("skin"):
 			(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
 		_debug_line()
-		_update_nameplate()
+		_update_health_bar()
 		return
 	_fall_t = minf(1.0, _fall_t + dt * 2.5)
 	var look := get_node_or_null("Look") as Node3D
@@ -677,7 +677,7 @@ func _fall(dt: float) -> void:
 		look.rotation.x = -PI * 0.5 * k
 		look.position.y = (0.9 if kit == null else 0.0) * (1.0 - k) + 0.25 * k
 	_debug_line()
-	_update_nameplate()
+	_update_health_bar()
 
 
 # ------------------------------------------------------------------ look
@@ -760,13 +760,70 @@ func _aim_pitch() -> float:
 		return -0.25
 	var to := aim_point - eye_position()
 	return atan2(to.y, Vector2(to.x, to.z).length())
-func _update_nameplate() -> void:
-	if _nameplate == null:
+## Issue #65: a billboarded bar over enemies. Enemy = fighting right now (hostile,
+## from the brain) or hurt (it only loses hp to the player; same-faction fire is
+## ignored). Calm and unhurt townsfolk and guards show nothing. Hidden when dead
+## or farther than HEALTH_BAR_RANGE.
+const HEALTH_BAR_RANGE := 40.0
+const BAR_W := 0.7
+const BAR_H := 0.07
+
+func _build_health_bar() -> void:
+	_bar_bg = _bar_quad(Color(0.05, 0.04, 0.04), 0)
+	_bar_fill = _bar_quad(Color(0.9, 0.18, 0.1), 1)
+	_bar_bg.name = "HealthBarBack"
+	_bar_fill.name = "HealthBarFill"
+	for q in [_bar_bg, _bar_fill]:
+		q.position.y = 2.05
+		q.visible = false
+		add_child(q)
+
+
+## Unshaded billboard quad. Drawn through walls off (depth tested), fill on top of back.
+func _bar_quad(col: Color, priority: int) -> MeshInstance3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_color = col
+	m.render_priority = priority
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var q := QuadMesh.new()
+	q.size = Vector2(BAR_W, BAR_H)
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+func health_bar_fill() -> float:
+	return clampf(float(health.hp) / maxf(1.0, float(health.max_hp)), 0.0, 1.0)
+
+
+func health_bar_shown() -> bool:
+	return _bar_bg != null and _bar_bg.visible
+
+
+func _update_health_bar() -> void:
+	if _bar_bg == null:
 		return
-	var show := display_name != "" and not dead and not show_debug and target != null \
-		and nameplate_range > 0.0 and is_instance_valid(target) \
-		and global_position.distance_to(target.global_position) <= nameplate_range
-	_nameplate.visible = show
+	var hurt: bool = health.hp < health.max_hp
+	var near: bool = target != null and is_instance_valid(target) \
+		and global_position.distance_to(target.global_position) <= HEALTH_BAR_RANGE
+	var show: bool = not dead and (hostile or hurt) and near
+	_bar_bg.visible = show
+	_bar_fill.visible = show
+	if not show:
+		return
+	var f := health_bar_fill()
+	if is_equal_approx(f, _bar_fill_frac):
+		return
+	_bar_fill_frac = f
+	# Shrink the fill toward the left edge: size follows hp, centre shifts to keep
+	# the left edge fixed. Billboarding works in view space, so the offset rotates with it.
+	var fm := _bar_fill.mesh as QuadMesh
+	fm.size = Vector2(maxf(0.0001, BAR_W * f), BAR_H * 0.7)
+	fm.center_offset = Vector3(-BAR_W * (1.0 - f) * 0.5, 0.0, 0.002)
 
 
 func debug_text() -> String:
