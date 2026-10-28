@@ -7,9 +7,11 @@
     "planet": "planet"
   },
   "terrain": {
+    "sphere_radius": 5000.0,
+    "note": "Issue #77: the home planet is a whole ball of sphere_radius metres (src/systems/planets/planet_sphere.gd): sand all the way round, walkable everywhere, up turns with the ground. The flat keys below are what the square desert used and are kept only for worlds without a sphere.",
     "extent": 6000.0,
     "skirt_height": 4.0,
-    "planet_radius": 60000.0,
+    "planet_radius": 5000.0,
     "curve_from": 6000.0
   },
   "landmarks": [

@@ -53,6 +53,11 @@ var _was_on_floor := true
 
 var controller := CharacterController.new()
 var use_external_command := false
+## Issue #77: on the home planet "up" turns with the ground. `tilt` takes world up
+## to this body's up (identity on the town's plateau and on flat worlds). The pure
+## controller keeps working in that tilted frame; this node turns its velocity
+## into the world and back, and stands the capsule (and the avatar) along it.
+var tilt := Basis.IDENTITY
 
 ## M13: the attached jetpack (src/systems/player/jetpack.gd), or null. Gear
 ## (GearController) sets it; this node only feeds it jump-held + grounded and
@@ -128,9 +133,15 @@ func _physics_process(delta: float) -> void:
 	# only decides velocity and pose. Previously the node overwrote global_position
 	# with the controller's own integration every frame, which threw away whatever
 	# move_and_slide() resolved, so walls and floors never actually stopped anything.
+	# Last frame's velocity was made in last frame's tilt: read it there, so it turns
+	# with the ground (walking round the ball keeps it level, not climbing off it).
+	var made_in := tilt
+	_update_tilt()
+	var to_local := tilt.inverse()
 	var grounded := is_on_floor()
 	controller.body_pos = global_position
 	controller.on_ground = grounded
+	controller.velocity = made_in.inverse() * velocity
 	if grounded and controller.velocity.y < 0.0:
 		controller.velocity.y = 0.0
 	_step_jetpack(delta, grounded)
@@ -138,12 +149,17 @@ func _physics_process(delta: float) -> void:
 	# clamp, so landing is decided by collision instead of a hardcoded y = 0.
 	controller.step(delta, yaw, -INF)
 
-	velocity = controller.velocity
+	velocity = tilt * controller.velocity
+	if tilt != Basis.IDENTITY and controller.on_ground and controller.velocity.y < 0.01:
+		# The turn leaves a rounding sliver along up (1e-7), and move_and_slide()
+		# never snaps to the floor while moving "up": strip it and lean a hair down,
+		# as a flat world's exact zero does.
+		velocity -= tilt.y * (velocity.dot(tilt.y) + 0.001)
 	move_and_slide()
 
 	# Feed the resolved result back so the next step starts from reality.
 	controller.body_pos = global_position
-	controller.velocity = velocity
+	controller.velocity = to_local * velocity
 	controller.on_ground = is_on_floor()
 	if controller.on_ground and controller.pose == CharacterController.Pose.JUMP:
 		controller.pose = CharacterController.Pose.CROUCH if controller.crouching() else CharacterController.Pose.STAND
@@ -151,9 +167,30 @@ func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 	if on_floor and not _was_on_floor:
 		landed.emit()
-	elif not on_floor and _was_on_floor and velocity.y > 0.5:
+	elif not on_floor and _was_on_floor and controller.velocity.y > 0.5:
 		jumped.emit()
 	_was_on_floor = on_floor
+
+
+## Read "up" from the planet (if any) and stand the capsule along it.
+func _update_tilt() -> void:
+	var t := Basis.IDENTITY
+	if PlanetSphere.current != null:
+		t = PlanetSphere.current.tilt_at(global_position)
+	if t == Basis.IDENTITY and tilt == Basis.IDENTITY:
+		return                   # flat here: nothing to turn (the body's yaw spins the capsule otherwise)
+	tilt = t
+	up_direction = t.y
+	var col := _capsule()
+	if col != null:
+		_place_capsule(col, (col.shape as CapsuleShape3D).height)
+
+
+## The capsule's local transform: standing along `tilt`, its foot at the origin.
+func _place_capsule(col: CollisionShape3D, h: float) -> void:
+	var local := global_basis.orthonormalized().inverse() * tilt if is_inside_tree() else tilt
+	col.basis = local
+	col.position = local * Vector3(0.0, h * 0.5, 0.0)
 
 
 ## True while the player is mid slide (camera, animation and audio read this).
@@ -191,7 +228,7 @@ func _set_crouch_shape(on: bool) -> void:
 	var cap := (col.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
 	cap.height = maxf(h, capsule_radius * 2.0)
 	col.shape = cap
-	col.position.y = cap.height * 0.5
+	_place_capsule(col, cap.height)
 
 
 ## Room to stand up here: a full-height capsule would not hit anything.
@@ -203,7 +240,7 @@ func can_stand() -> bool:
 	cap.height = capsule_height
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = cap
-	q.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, capsule_height * 0.5 + 0.06, 0))
+	q.transform = Transform3D(tilt, global_position + tilt * Vector3(0, capsule_height * 0.5 + 0.06, 0))
 	q.exclude = [get_rid()]
 	q.collide_with_areas = false
 	return get_world_3d().direct_space_state.intersect_shape(q, 1).is_empty()

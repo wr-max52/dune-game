@@ -338,6 +338,11 @@ func _spawn_player() -> void:
 		_rig._camera.far = view_far()
 	if terrain != null:
 		terrain.follow(_player)
+		if terrain is PlanetTerrain:
+			# The mid ring follows whichever camera is drawing (on foot, a ship, a speeder).
+			(terrain as PlanetTerrain).follow_camera(func():
+				var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+				return cam.global_position if cam != null else _player.global_position)
 	if not lookdev_mode and DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -673,6 +678,8 @@ func _physics_process(dt: float) -> void:
 
 ## The far plane: out to the horizon landforms when the desert is on.
 func view_far() -> float:
+	if terrain is PlanetTerrain:
+		return 4.0 * (terrain as PlanetTerrain).sphere.radius   # the whole ball, from orbit too
 	return 12000.0 if terrain != null or platform != null else 4000.0
 
 
@@ -728,12 +735,25 @@ func desert_site() -> Dictionary:
 
 func _build_desert() -> void:
 	var site := desert_site()
-	terrain = DesertTerrain.new()
-	terrain.resolution = terrain_resolution
+	# Issue #77: a world with a sphere_radius is a whole ball (the home planet);
+	# the rest are still a square of desert.
+	var r := float(world.get("terrain", {}).get("sphere_radius", 0.0))
+	if r > 0.0:
+		var pt := PlanetTerrain.new()
+		pt.set_radius(r)
+		terrain = pt
+	else:
+		terrain = DesertTerrain.new()
+		terrain.resolution = terrain_resolution
+		terrain.collider_size = 512.0
 	terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
-	terrain.collider_size = 512.0
 	add_child(terrain)
 	terrain.build(use_look)          # greybox: collider only
+	if terrain is PlanetTerrain:
+		PlanetSphere.current = (terrain as PlanetTerrain).sphere
+		tree_exiting.connect(func():
+			if PlanetSphere.current == (terrain as PlanetTerrain).sphere:
+				PlanetSphere.current = null)
 
 
 ## Look only: the aprons outside the walls are hidden (still solid) so the terrain's
@@ -757,6 +777,9 @@ func _dress_desert() -> void:
 		landforms.clear_circles = _landmark_clearings()
 		add_child(landforms)
 		landforms.build(terrain, _flat_mats(), desert_site().floor)
+		if terrain is PlanetTerrain:
+			for m in landforms.rock_materials():
+				look.track_material(m)       # the sun, for the dusk side (issue #77)
 		_tint_rock(landforms, planet.get("type_cfg", {}).get("rock", {}))
 
 
@@ -868,9 +891,22 @@ func show_shot(id: String) -> bool:
 	if s.has("height_above_ground") and terrain != null:
 		pos.y = terrain.height_at(pos.x, pos.z) + float(s["height_above_ground"])
 	var target := Vector3(s["target"][0], s["target"][1], s["target"][2])
+	var up := Vector3.UP
+	# Issue #77: "map" = [x, z, metres up, target x, z, metres up] on the ball.
+	if s.has("map") and terrain is PlanetTerrain:
+		var sp: PlanetSphere = (terrain as PlanetTerrain).sphere
+		var m: Array = s["map"]
+		var g := sp.surface_at(float(m[0]), float(m[1]))
+		up = sp.up_at(g)
+		pos = g + up * float(m[2])
+		var gt := sp.surface_at(float(m[3]), float(m[4]))
+		target = gt + sp.up_at(gt) * float(m[5])
 	camera.fov = float(s.get("fov", 65.0))
 	camera.global_position = pos
-	camera.look_at(target, Vector3.UP)
+	camera.look_at(target, up)
+	if terrain is PlanetTerrain:
+		terrain.snap_to(pos)         # the fine sand under this shot
+		(terrain as PlanetTerrain).follow_camera(func(): return camera.global_position)
 	return true
 
 

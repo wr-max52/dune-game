@@ -55,8 +55,9 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		var base := _cyl(r * 0.8, r, h, 40)
 		base.rings = 14
 		var mesh := LookMeshKit.rock(base, noise, 0.18, 28.0 / h, float(m[0]) * 0.01, 0.35)
-		var gy := terrain.height_at(m[0], m[1])
-		var mi := _add(mesh, mats.rock(gy, 0.11), Vector3(m[0], gy + h * 0.42, m[1]), Vector3(0, rng.randf_range(0, 360), 0))
+		var g := _ground(terrain, m[0], m[1])
+		var gy := _ground_h(terrain, g, m[0], m[1])
+		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.42, Vector3(0, rng.randf_range(0, 360), 0))
 		if solid:
 			_solid(mi)
 
@@ -69,15 +70,16 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		noise.frequency = 1.4 / r
 		var base := _cyl(r * 0.55, r, h, 16)
 		base.rings = 10
-		var gy := terrain.height_at(hd[0], hd[1])
+		var g := _ground(terrain, hd[0], hd[1])
+		var gy := _ground_h(terrain, g, hd[0], hd[1])
 		var mat := mats.rock(gy, 0.35)
-		var col := _add(LookMeshKit.rock(base, noise, 0.28, 3.0, float(hd[0]), 0.4), mat, Vector3(hd[0], gy + h * 0.45, hd[1]))
+		var col := _add(LookMeshKit.rock(base, noise, 0.28, 3.0, float(hd[0]), 0.4), mat, g, h * 0.45)
 		var cap := SphereMesh.new()
 		cap.radius = r * 0.9
 		cap.height = r * 0.8
 		cap.radial_segments = 12
 		cap.rings = 6
-		_add(LookMeshKit.rock(cap, noise, 0.3, 0.0, float(hd[1])), mat, Vector3(hd[0], gy + h * 0.95, hd[1]),
+		_add(LookMeshKit.rock(cap, noise, 0.3, 0.0, float(hd[1])), mat, g, h * 0.95,
 			Vector3(0, 0, rng.randf_range(-12, 12)))
 		if solid:
 			_solid(col)
@@ -106,7 +108,8 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		basis = basis * Basis(Vector3.RIGHT, rng.randf_range(-0.4, 0.4))
 		if _hits(clear, x, z, s * 2.0) or _in_circles(x, z, s * 2.0):
 			continue
-		xforms.append(Transform3D(basis, Vector3(x, terrain.height_at(x, z) - s * 0.25, z)))
+		var g := _ground(terrain, x, z)
+		xforms.append(Transform3D(g.basis * basis, g.origin + g.basis.y * (-s * 0.25)))
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = LookMeshKit.rock(boulder_src, noise, 0.4, 0.0, 3.0)
@@ -121,6 +124,32 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	mmi.multimesh = mm
 	mmi.material_override = mats.rock(0.0, 1.2)
 	add_child(mmi)
+	if terrain is PlanetTerrain:
+		_on_ball((terrain as PlanetTerrain).sphere)
+
+
+## The rock shader's ground height on the ball is metres above the bare ball.
+static func _ground_h(terrain: DesertTerrain, g: Transform3D, x: float, z: float) -> float:
+	if terrain is PlanetTerrain:
+		return (terrain as PlanetTerrain).sphere.altitude(g.origin)
+	return terrain.height_at(x, z)
+
+
+## Every rock material here: strata and dusk follow the ball (issue #77).
+func rock_materials() -> Array:
+	var out: Array = []
+	for n in find_children("*", "GeometryInstance3D", true, false):
+		var m = (n as GeometryInstance3D).material_override
+		if m is ShaderMaterial and not out.has(m):
+			out.append(m)
+	return out
+
+
+func _on_ball(sp: PlanetSphere) -> void:
+	for m in rock_materials():
+		m.set_shader_parameter("planet_center", sp.center)
+		m.set_shader_parameter("planet_radius", sp.radius)
+		m.set_shader_parameter("dusk_strength", 0.35)
 
 
 static func _hits(r: Rect2, x: float, z: float, radius: float) -> bool:
@@ -144,12 +173,23 @@ func _cyl(top: float, bottom: float, h: float, seg: int) -> CylinderMesh:
 	return c
 
 
-func _add(mesh: Mesh, mat: Material, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+## Where a landform at map (x, z) stands: the ground there, y along its up. On the
+## home planet's ball (issue #77) that leans with the ground; on a flat desert it is
+## just the height at x, z.
+static func _ground(terrain: DesertTerrain, x: float, z: float) -> Transform3D:
+	if terrain is PlanetTerrain:
+		var sp: PlanetSphere = (terrain as PlanetTerrain).sphere
+		var at := sp.surface_at(x, z)
+		return Transform3D(PlanetSphere.tilt_to(sp.up_at(at)), at)
+	return Transform3D(Basis.IDENTITY, Vector3(x, terrain.height_at(x, z), z))
+
+
+## `up` metres above the ground frame g, turned by rot_deg within it.
+func _add(mesh: Mesh, mat: Material, g: Transform3D, up: float, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
-	mi.position = pos
-	mi.rotation_degrees = rot_deg
+	mi.transform = Transform3D(g.basis * Basis.from_euler(rot_deg * PI / 180.0), g.origin + g.basis.y * up)
 	add_child(mi)
 	return mi
 

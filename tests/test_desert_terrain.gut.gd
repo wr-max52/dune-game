@@ -35,7 +35,7 @@ func test_site_comes_from_town_data() -> void:
 	assert_eq(floor_rect.end, Vector2(160, 75), "aprons included (desert side)")
 	assert_eq(_site.walls, Rect2(-100, -75, 200, 150), "walled area = town bounds")
 	assert_eq(_site.sunken.size(), 1, "one sunken floor: the pit")
-	assert_eq(_site.sunken[0].rect, Rect2(-18, -22, 36, 44))
+	assert_eq(_site.sunken[0].rect, Rect2(-28, -28, 56, 56), "the round pit's square floor")
 
 
 func test_sand_meets_the_aprons_and_the_gate_at_floor_level() -> void:
@@ -157,7 +157,7 @@ func test_town_demo_builds_the_desert() -> void:
 	assert_not_null(d.terrain, "desert on by default")
 	assert_not_null(d.terrain.collider_body, "greybox gets the collider")
 	assert_eq(d.terrain.get_node_or_null("Mesh"), null, "but no mesh (nothing draws in CI)")
-	assert_eq(d.view_far(), 12000.0)
+	assert_eq(d.view_far(), 20000.0, "the home planet: the whole ball")
 	var off = TownDemo.new()
 	off.use_look = false
 	off.lookdev_mode = true
@@ -172,7 +172,11 @@ func test_look_hides_the_aprons_and_raises_landforms() -> void:
 	d.lookdev_mode = true
 	d.terrain_resolution = 120          # fast; the layout is what is under test
 	add_child_autofree(d)
-	assert_not_null(d.terrain.get_node_or_null("Mesh"), "look: the sand mesh")
+	# Issue #77: the home planet is a ball; its sand is three layers, the nearest first.
+	assert_true(d.terrain is PlanetTerrain, "the port's world is a sphere")
+	assert_not_null(d.terrain.get_node_or_null("Near"), "look: the sand under the player")
+	assert_not_null(d.terrain.get_node_or_null("Mid"), "look: the sand round the camera")
+	assert_eq(d.terrain.get_node("Far").get_child_count(), 6 * d.terrain.far_chunks * d.terrain.far_chunks, "the whole ball")
 	for id in ["desert_apron", "backgap_apron"]:
 		var body: Node = d.get_node("Town/" + id)
 		assert_false((body.get_node("Mesh") as MeshInstance3D).visible, "%s hidden: the sand shows" % id)
