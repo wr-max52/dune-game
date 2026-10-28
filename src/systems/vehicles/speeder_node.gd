@@ -95,8 +95,11 @@ func can_mount() -> bool:
 	var p := player()
 	if not rideable or riding or p == null or p.locked or p.piloting or not model.alive():
 		return false
-	var d := Vector2(p.global_position.x - model.position.x, p.global_position.z - model.position.z).length()
-	return d <= float(cfg.get("board_reach", 3.2)) and absf(p.global_position.y - (model.position.y - 1.0)) < 2.5
+	# Along the ground and along up (issue #77: up leans on the ball).
+	var u := model.up()
+	var rel: Vector3 = p.global_position - (model.position - u)
+	var along := rel.dot(u)
+	return (rel - u * along).length() <= float(cfg.get("board_reach", 3.2)) and absf(along) < 2.5
 
 
 func mount() -> bool:
@@ -232,7 +235,7 @@ func _ride(dt: float) -> void:
 	if demo._rig != null:
 		demo._rig.set_override(chase.update(dt, model.transform().translated_local(Vector3(0, 0.6, 0))), 75.0)
 	if demo.detail != null:
-		demo.detail.update_for(model.position.y)
+		demo.detail.update_for(model.ground.altitude(model.position) if model.ground != null else model.position.y)
 	_update_hud()
 
 
@@ -292,13 +295,13 @@ func _sync() -> void:
 func _exit_spot() -> Vector3:
 	var b := model.transform().basis
 	var g := model.ground
+	var u := model.up()
 	for off in [-b.x * 2.6, b.x * 2.6, b.z * 4.0]:
-		var q: Vector3 = model.position + Vector3(off.x, 0.0, off.z)
-		var gy := g.ground_at(q.x, q.z, model.position.y) if g != null else 0.0
-		var at := Vector3(q.x, gy + 0.05, q.z)
-		if g == null or g.hit(at + Vector3(0, 1.0, 0), 0.6) == "":
+		var q: Vector3 = model.position + off
+		var at: Vector3 = g.surface_below(q) + u * 0.05 if g != null else Vector3(q.x, 0.05, q.z)
+		if g == null or g.hit(at + u, 0.6) == "":
 			return at
-	return model.position + Vector3(0, 0.5, 0)
+	return model.position + u * 0.5
 
 
 func _player_collision(on: bool) -> void:

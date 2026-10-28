@@ -5,6 +5,8 @@ extends GutTest
 
 const TownDemo := preload("res://scenes/town_demo.gd")
 const Body := preload("res://src/systems/player/character_body.gd")
+const TownLayout := preload("res://src/systems/world/town_layout.gd")
+const CoreScript := preload("res://src/systems/dataload/core_content.gd")
 
 var _site: Dictionary
 
@@ -147,3 +149,125 @@ func test_a_body_stands_on_the_far_dunes() -> void:
 		await wait_physics_frames(1)
 	assert_gt(body.global_position.distance_to(start), 3.0, "it walked")
 	assert_almost_eq(t.sphere.height_above_ground(body.global_position), 0.0, 0.25, "still on the sand")
+
+
+# ---------------------------------------------------------------- flying on the ball
+
+func _flight() -> AtmoFlight:
+	var cc = CoreScript.new()
+	cc.load_from()
+	var sp := _sphere()
+	PlanetSphere.current = sp
+	var town := TownLayout.new()
+	town.load_town("port_town")
+	var g := WorldGround.new()
+	g.setup(cc.get_world("port_desert"), town, cc, func(x: float, z: float) -> float: return sp.height_at(x, z))
+	g.add_landforms(DesertLandforms.load_data(), _site.floor)
+	var a := AtmoFlight.new()
+	a.setup(cc.get_ship("interceptor"), g)
+	return a
+
+
+func test_the_ship_ground_is_the_ball() -> void:
+	var a := _flight()
+	assert_eq(a.ground.sphere(), PlanetSphere.current, "the home planet's world finds its ball")
+	assert_eq(a.ground.columns.filter(func(c): return c.has("up")).size(), a.ground.columns.size(),
+		"every mesa and hoodoo stands along the ball's up")
+	var outpost: Array = a.ground.boxes.filter(func(b): return str(b.id).begins_with("outpost/"))
+	assert_gt(outpost.size(), 0)
+	var xf := WorldGround.box_xf(outpost[0])
+	assert_gt(rad_to_deg(xf.basis.y.angle_to(Vector3.UP)), 30.0, "the outpost 3 km out leans with the ground")
+
+
+func test_park_lift_fly_and_land_round_the_curve() -> void:
+	var a := _flight()
+	var sp := PlanetSphere.current
+	var at := sp.surface_at(2000, 1200)
+	a.park(at, 0.4)
+	assert_almost_eq(a.agl(), 0.0, 0.05, "parked on the sand 2.3 km round")
+	assert_almost_eq(a.transform().basis.y.angle_to(sp.up_at(at)), 0.0, 0.01, "standing along the ground's up")
+	a.takeoff()
+	for i in 600:
+		a.step(1.0 / 60.0)
+	assert_eq(a.state, AtmoFlight.State.FLYING)
+	assert_almost_eq(a.agl(), a.p("liftoff_height", 18.0), 1.0, "lifted straight up along up, to its hover height")
+	# Hover at zero throttle: it stays at its height above the ground round the curve.
+	var alt := a.altitude()
+	for i in 120:
+		a.set_command(0, 0, 0, 0, false)
+		a.step(1.0 / 60.0)
+	assert_almost_eq(a.altitude(), alt, 0.5, "hovering holds its height")
+	assert_true(a.can_land())
+	a.land()
+	for i in 900:
+		a.step(1.0 / 60.0)
+		if a.state == AtmoFlight.State.PARKED:
+			break
+	assert_eq(a.state, AtmoFlight.State.PARKED, "landed out there")
+	assert_almost_eq(a.agl(), 0.0, 0.05, "on the sand, not in it")
+
+
+func test_flying_round_the_planet_never_leaves_it() -> void:
+	var a := _flight()
+	var sp := PlanetSphere.current
+	var start := sp.surface_at(0, 1500)
+	var up := sp.up_at(start)
+	a.place_flying(start + up * 300.0, Vector3(1, 0, 0) - up * up.x, 120.0, 0.6)
+	var low := INF
+	var high := -INF
+	for i in 60 * 40:
+		# Keep the nose level with the ground below as the ball turns under it.
+		var u := a.up()
+		var f: Vector3 = a.flight.forward()
+		var pitch := clampf(-f.dot(u) * 4.0, -1.0, 1.0)
+		a.set_command(pitch, 0, 0, 0.6, false)
+		a.step(1.0 / 60.0)
+		if a.state != AtmoFlight.State.FLYING:
+			break
+		low = minf(low, a.altitude())
+		high = maxf(high, a.altitude())
+	assert_eq(a.state, AtmoFlight.State.FLYING, "still flying after 40 s")
+	assert_gt(sp.world_to_map(a.position()).length(), 3000.0, "a good way round")
+	assert_gt(low, 100.0, "never hit the ground")
+	assert_lt(high, 900.0, "nor flew off into space: level flight follows the curve")
+
+
+func test_crashing_into_a_leaning_mesa() -> void:
+	var a := _flight()
+	var mesa: Dictionary = a.ground.columns.filter(func(c): return str(c.id) == "mesa_1500_1700")[0]
+	var up: Vector3 = mesa.up
+	var mid: Vector3 = (mesa.center as Vector3) + up * float(mesa.h) * 0.5
+	var side := up.cross(Vector3.RIGHT).normalized()
+	a.place_flying(mid + side * (float(mesa.radius) + 80.0), -side, 120.0, 1.0)
+	var ev := []
+	for i in 120:
+		a.set_command(0, 0, 0, 1.0, false)
+		ev.append_array(a.step(1.0 / 60.0))
+		if a.state == AtmoFlight.State.CRASHED:
+			break
+	assert_eq(a.state, AtmoFlight.State.CRASHED, "flew into its side")
+	assert_eq(a.last_hit, "mesa_1500_1700")
+
+
+func test_a_speeder_drives_straight_round_the_curve() -> void:
+	var a := _flight()
+	var sp := PlanetSphere.current
+	var m := HoverModel.new(HoverModel.load_config(), a.ground)
+	var at := sp.surface_at(1200, 2600)
+	m.place(at, 1.0)
+	assert_almost_eq(m.height_over_ground(), 0.0, 0.01, "riding at hover height, 2.9 km round")
+	var start_dir := m.forward()
+	var lows := 0
+	for i in 60 * 30:
+		m.set_command(1.0, 0.0, false)
+		m.step(1.0 / 60.0)
+		if m.height_over_ground() < -0.3:
+			lows += 1
+	var gone := sp.world_to_map(m.position).distance_to(Vector2(1200, 2600))
+	assert_gt(gone, 800.0, "drove most of a kilometre in 30 s")
+	assert_eq(lows, 0, "never sank into the sand")
+	assert_almost_eq(m.forward().dot(sp.up_at(m.position)), 0.0, 0.001, "nose stays along the ground")
+	# Straight round a ball is a great circle: the heading turned with the ground
+	# and nowhere else (the plane of travel holds).
+	var plane := (at - sp.center).cross(start_dir).normalized()
+	assert_almost_eq((m.position - sp.center).normalized().dot(plane), 0.0, 0.02, "drove straight, no drift")

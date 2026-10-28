@@ -144,14 +144,16 @@ func snap_to(pos: Vector3) -> void:
 	if collider_shape == null:
 		return
 	var c := snapped_center(pos)
-	_jobs.erase("near")
+	if _jobs.has("near"):
+		_stale.append(_jobs.near)          # overtaken by this rebuild: reaped once done
+		_jobs.erase("near")
 	_apply("near", _compute("near", Vector2(c.x, c.z)))
 	_pending = false
 	snaps += 1
 
 
 func is_rebuilding() -> bool:
-	return _jobs.has("near")
+	return _jobs.has("near") and _jobs.near.stage == "rows"
 
 
 func prefetch(pos: Vector3) -> void:
@@ -190,16 +192,34 @@ func _physics_process(_dt: float) -> void:
 			_start("mid", Vector2(snappedf(me.x, mid_step), snappedf(me.y, mid_step)))
 
 
+## The collider (near) is built on the main thread, `rows_per_frame` rows each
+## physics frame, and swapped in whole on the frame its last row is done: the
+## same frame on every run, so traces and tests are repeatable (a swap on
+## whichever frame a worker thread happened to finish made them flaky). About
+## 1.5 ms a frame; a whole rebuild takes ~2 s, 15 m of a sprint, inside the 80 m
+## the old one still covers. Vehicles and ships ride the sphere's own heights, not
+## this collider. The meshes (look only) are built on one worker thread: GDScript
+## workers only slow each other down, but one runs beside the main thread for free.
+@export var rows_per_frame := 2
+
+
 func _start(layer: String, center: Vector2) -> void:
 	if not threaded:
 		_apply(layer, _compute(layer, center))
 		if layer == "near":
 			recenters += 1
 		return
-	var job := { "center": center, "result": null }
-	job.task = WorkerThreadPool.add_task(func(): job.result = _compute(layer, center), false, "terrain " + layer)
+	var near := layer == "near"
+	var cells := near_cells if near else mid_cells
+	var step := near_step if near else mid_step
+	var job := { "center": center, "cells": cells, "step": step, "row": 0,
+		"heights": PackedFloat32Array(), "verts": PackedVector3Array(), "stage": "rows", "task": -1 }
+	if not near:
+		# Visual only: the whole patch and its mesh on the worker.
+		job.stage = "mesh"
+		job.task = WorkerThreadPool.add_task(func(): job.result = _compute(layer, center), false, "terrain " + layer)
 	if _jobs.has(layer):
-		_stale.append(_jobs[layer].task)   # superseded: reaped once done, result dropped
+		_stale.append(_jobs[layer])        # superseded: reaped once done, result dropped
 	_jobs[layer] = job
 
 
@@ -207,27 +227,47 @@ var _stale: Array = []
 
 
 func _finish_jobs() -> void:
-	for t in _stale.duplicate():
-		if WorkerThreadPool.is_task_completed(t):
-			WorkerThreadPool.wait_for_task_completion(t)
-			_stale.erase(t)
+	for job in _stale.duplicate():
+		if int(job.task) < 0 or WorkerThreadPool.is_task_completed(job.task):
+			if int(job.task) >= 0:
+				WorkerThreadPool.wait_for_task_completion(job.task)
+			_stale.erase(job)
 	for layer in _jobs.keys():
 		var job: Dictionary = _jobs[layer]
-		if not WorkerThreadPool.is_task_completed(job.task):
-			continue
-		WorkerThreadPool.wait_for_task_completion(job.task)
-		_jobs.erase(layer)
 		var ts := Time.get_ticks_usec()
-		_apply(layer, job.result)
-		var ms := (Time.get_ticks_usec() - ts) / 1000.0
-		worst_swap_ms = maxf(worst_swap_ms, ms)
-		worst_step_ms = maxf(worst_step_ms, ms)
-		if layer == "near":
-			recenters += 1
+		if job.stage == "rows":
+			var n := int(job.cells) + 1
+			var j1 := mini(int(job.row) + rows_per_frame, n)
+			var part := sphere.patch_rows(job.center.x, job.center.y, job.cells, job.step,
+				_collider_grow(), job.row, j1)
+			var hh: PackedFloat32Array = job.heights     # packed arrays copy on write:
+			hh.append_array(part.heights)                # append, then store back
+			job.heights = hh
+			var vv: PackedVector3Array = job.verts
+			vv.append_array(part.verts)
+			job.verts = vv
+			job.row = j1
+			if j1 >= n:
+				var p := { "xform": sphere.patch_frame(job.center.x, job.center.y), "heights": job.heights,
+					"verts": job.verts, "center": job.center, "cells": job.cells, "step": job.step }
+				_apply_collider(p)
+				recenters += 1
+				worst_swap_ms = maxf(worst_swap_ms, (Time.get_ticks_usec() - ts) / 1000.0)
+				if _with_mesh:
+					job.stage = "mesh"
+					job.result = p
+					job.task = WorkerThreadPool.add_task(func(): p.arrays = _grid_arrays(p.verts, n), false, "terrain mesh")
+				else:
+					_jobs.erase(layer)
+			worst_step_ms = maxf(worst_step_ms, (Time.get_ticks_usec() - ts) / 1000.0)
+		elif WorkerThreadPool.is_task_completed(job.task):
+			WorkerThreadPool.wait_for_task_completion(job.task)
+			_jobs.erase(layer)
+			_apply_mesh(layer, job.result)
 
 
-## Heights (and, with the look on, the mesh arrays) for a layer centred at map c.
-## Runs on a worker thread: touches nothing but the sphere (read-only).
+## Heights (and, with the look on, the mesh arrays) for a layer centred at map c,
+## all at once (the synchronous path: tests, snap_to, the first build).
 func _compute(layer: String, c: Vector2) -> Dictionary:
 	var near := layer == "near"
 	var cells := near_cells if near else mid_cells
@@ -243,8 +283,14 @@ func _compute(layer: String, c: Vector2) -> Dictionary:
 
 
 func _apply(layer: String, p: Dictionary) -> void:
-	var xf: Transform3D = p.xform
 	if layer == "near":
+		_apply_collider(p)
+	_apply_mesh(layer, p)
+
+
+func _apply_collider(p: Dictionary) -> void:
+	var xf: Transform3D = p.xform
+	if true:
 		var step: float = p.step
 		var data: PackedFloat32Array = p.heights
 		var scaled := PackedFloat32Array()
@@ -260,9 +306,14 @@ func _apply(layer: String, p: Dictionary) -> void:
 		collider_center = Vector3(p.center.x, 0.0, p.center.y)
 		_near_map = p.center
 		_pending = false
+
+
+func _apply_mesh(layer: String, p: Dictionary) -> void:
+	var xf: Transform3D = p.xform
+	if layer == "near":
 		if near_mesh != null:
-			_set_mesh(near_mesh, p.arrays, xf, p.cells * step)
-			_set_hole(mid_mesh, xf, p.cells * step * 0.5)
+			_set_mesh(near_mesh, p.arrays, xf, int(p.cells) * float(p.step))
+			_set_hole(mid_mesh, xf, int(p.cells) * float(p.step) * 0.5)
 	elif mid_mesh != null:
 		_mid_map = p.center
 		_set_mesh(mid_mesh, p.arrays, xf, int(p.cells) * float(p.step))

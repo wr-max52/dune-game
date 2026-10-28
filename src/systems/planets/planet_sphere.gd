@@ -238,20 +238,26 @@ static func _rect_dist(r: Rect2, p: Vector2) -> float:
 ## ((cells+1)^2, row-major, z rows), verts: PackedVector3Array (frame-local) }.
 ## Heights are what a HeightMapShape3D needs; verts are the same points for a
 ## mesh. Thread-safe (reads only).
-func patch(cx: float, cz: float, cells: int, step: float, grow: float = 2.0, rows: Vector2i = Vector2i(-1, -1)) -> Dictionary:
+func patch(cx: float, cz: float, cells: int, step: float, grow: float = 2.0) -> Dictionary:
+	var p := patch_rows(cx, cz, cells, step, grow, 0, cells + 1)
+	p.xform = patch_frame(cx, cz)
+	return p
+
+
+## Rows j0..j1-1 of patch(): { heights, verts } for just those rows, so a caller
+## can build a patch a few rows at a time.
+func patch_rows(cx: float, cz: float, cells: int, step: float, grow: float, j0: int, j1: int) -> Dictionary:
 	var xf := patch_frame(cx, cz)
 	var n := cells + 1
 	var half := cells * step * 0.5
 	var heights := PackedFloat32Array()
-	heights.resize(n * n)
+	heights.resize((j1 - j0) * n)
 	var verts := PackedVector3Array()
-	verts.resize(n * n)
+	verts.resize((j1 - j0) * n)
 	var bx := xf.basis.x
 	var by := xf.basis.y
 	var bz := xf.basis.z
 	var o := xf.origin
-	var j0 := 0 if rows.x < 0 else rows.x
-	var j1 := n if rows.y < 0 else rows.y
 	for j in range(j0, j1):
 		var v := -half + j * step
 		for i in n:
@@ -265,9 +271,9 @@ func patch(cx: float, cz: float, cells: int, step: float, grow: float = 2.0, row
 				var r := radius + elevation((q + by * h).normalized(), grow)
 				var qb := q.dot(by)
 				h = -qb + sqrt(maxf(qb * qb - q.length_squared() + r * r, 0.0))
-			heights[j * n + i] = h
-			verts[j * n + i] = Vector3(u, h, v)
-	return { "xform": xf, "heights": heights, "verts": verts }
+			heights[(j - j0) * n + i] = h
+			verts[(j - j0) * n + i] = Vector3(u, h, v)
+	return { "heights": heights, "verts": verts }
 
 
 ## The frame of the plane tangent to the ball at map (cx, cz): origin on the bare

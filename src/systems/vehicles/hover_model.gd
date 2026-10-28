@@ -16,11 +16,22 @@ extends RefCounted
 ## apply_damage(), which the node's hull passes on from bolts.
 ##
 ## Numbers: content/core/vehicles/speeder.json.
+##
+## Issue #77: on the home planet's ball "up" turns with the ground. The heading is
+## a direction slid along the ground as it drives (so straight stays straight round
+## the curve), and heights are measured along up (`_level`: the distance from the
+## planet's centre). On a flat world both are exactly the old yaw and y.
 
 var cfg: Dictionary = {}
 var ground: WorldGround
 var position := Vector3.ZERO
-var yaw := 0.0                       ## radians about +Y; 0 faces -Z
+var yaw: float:                      ## radians about the ground's up; 0 faces -Z (on the plateau)
+	get:
+		var l := _tilt().inverse() * _fwd
+		return atan2(-l.x, -l.z)
+	set(v):
+		_fwd = _tilt() * Vector3(-sin(v), 0.0, -cos(v))
+var _fwd := Vector3.FORWARD          ## heading, along the ground
 var speed := 0.0                     ## along the nose, m/s (negative = reversing)
 var vy := 0.0                        ## vertical speed, m/s
 var airborne := false
@@ -59,22 +70,43 @@ func p(key: String, fallback: float) -> float:
 # ---- queries ------------------------------------------------------------------------
 
 func forward() -> Vector3:
-	return Vector3(-sin(yaw), 0.0, -cos(yaw))
+	return _fwd
+
+
+func up() -> Vector3:
+	return ground.up_at(position) if ground != null else Vector3.UP
+
+
+func _tilt() -> Basis:
+	return PlanetSphere.tilt_to(up())
 
 
 func transform() -> Transform3D:
-	return Transform3D(Basis(Vector3.UP, yaw), position)
+	return Transform3D(Basis.looking_at(_fwd, up()), position)
 
 
+## How high a point is, measured along up: y on a flat world, the distance from
+## the centre on the ball.
+func _level(at: Vector3) -> float:
+	var sp: PlanetSphere = ground.sphere() if ground != null else null
+	return (at - sp.center).length() if sp != null else at.y
+
+
+## Move by `d` metres along up.
+func _lift(d: float) -> void:
+	position += up() * d
+
+
+## The ground's level under the speeder (see _level).
 func ground_height() -> float:
 	if ground == null:
 		return 0.0
-	return ground.ground_at(position.x, position.z, position.y)
+	return _level(position) - ground.height_above(position)
 
 
 ## Clearance between the hover line and the ground below (0 when riding).
 func height_over_ground() -> float:
-	return position.y - p("hover_height", 1.05) - ground_height()
+	return _level(position) - p("hover_height", 1.05) - ground_height()
 
 
 func alive() -> bool:
@@ -90,7 +122,7 @@ func place(at: Vector3, yaw_rad: float) -> void:
 	speed = 0.0
 	vy = 0.0
 	airborne = false
-	position.y = ground_height() + p("hover_height", 1.05)
+	_lift(ground_height() + p("hover_height", 1.05) - _level(position))
 	_last_ride = NAN
 	_ground_rate = 0.0
 
@@ -149,7 +181,7 @@ func _drive(dt: float) -> void:
 	var turn := deg_to_rad(lerpf(p("turn_rate_deg", 110.0), p("turn_rate_fast_deg", 62.0), k))
 	if airborne:
 		turn *= p("air_turn_scale", 0.35)
-	yaw -= float(_cmd.steer) * turn * dt
+	_fwd = _fwd.rotated(up(), -float(_cmd.steer) * turn * dt)
 
 
 func _move(dt: float) -> void:
@@ -160,8 +192,12 @@ func _move(dt: float) -> void:
 			events.append({ "type": "bump", "what": hit_id, "speed": speed })
 			speed = -speed * p("bump_bounce", 0.25)        # bounced off: no damage
 			return
-	position.x = to.x
-	position.z = to.z
+	var lv := _level(position)
+	position = to
+	_lift(lv - _level(position))       # along the ground: the hover settles the height
+	# Slide the heading along with it, so it stays flat to the ground here.
+	var u := up()
+	_fwd = (_fwd - u * _fwd.dot(u)).normalized()
 
 
 func _hover(dt: float) -> void:
@@ -170,16 +206,16 @@ func _hover(dt: float) -> void:
 	_last_ride = ride
 	if airborne:
 		vy -= p("gravity", 9.0) * dt
-		position.y += vy * dt
+		_lift(vy * dt)
 		air_time += dt
-		top_height = maxf(top_height, position.y - ride)
-		if position.y <= ride:
+		top_height = maxf(top_height, _level(position) - ride)
+		if _level(position) <= ride:
 			events.append({ "type": "landed", "fall_speed": -vy, "air_time": air_time, "top": top_height })
-			position.y = ride
+			_lift(ride - _level(position))
 			vy = 0.0
 			airborne = false
 		return
-	var before := position.y
+	var before := _level(position)
 	if before - ride > p("launch_gap", 0.45):
 		# The ground fell away faster than we can follow: off the edge, carrying
 		# the climb the ground was giving it (up a ramp, that is the jump).
@@ -189,10 +225,11 @@ func _hover(dt: float) -> void:
 		top_height = before - ride
 		events.append({ "type": "launch", "vy": vy, "speed": speed })
 		vy -= p("gravity", 9.0) * dt
-		position.y += vy * dt
+		_lift(vy * dt)
 		return
 	_ground_rate = rate
-	position.y = lerpf(before, ride, clampf(dt * p("follow_rate", 14.0), 0.0, 1.0))
-	if ride > position.y:
-		position.y = maxf(position.y, ride - 0.25)   # never sink into a rise
-	vy = (position.y - before) / maxf(dt, 0.0001)
+	var y := lerpf(before, ride, clampf(dt * p("follow_rate", 14.0), 0.0, 1.0))
+	if ride > y:
+		y = maxf(y, ride - 0.25)   # never sink into a rise
+	_lift(y - before)
+	vy = (y - before) / maxf(dt, 0.0001)
