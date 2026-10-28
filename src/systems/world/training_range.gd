@@ -101,7 +101,10 @@ func _physics_process(dt: float) -> void:
 			Sound.play("droid_beep", remote.global_position)
 	if bool(r.get("only_when_blade_out", true)):
 		active = active and blade_out.is_valid() and bool(blade_out.call())
-	(remote.get_node("Eye") as MeshInstance3D).material_override.emission_energy_multiplier = 4.0 if active else 0.6
+	for e in DroidKit.eyes(remote):
+		var em := (e as MeshInstance3D).material_override as StandardMaterial3D
+		if em != null:
+			em.emission_energy_multiplier = 4.0 if active else 0.6
 	if not active:
 		_remote_cd = maxf(_remote_cd, 1.0)
 		return
@@ -151,6 +154,16 @@ func _on_remote_bolt_gone(b: Node) -> void:
 
 
 ## The remote leaves the range (it follows its new owner now). Returns where it was.
+## Issue #80: where the remote is and which way it faces, for the companion that
+## takes its place exactly there.
+func release_remote_transform() -> Transform3D:
+	if remote == null:
+		return Transform3D(Basis.IDENTITY, Vector3.INF)
+	var xf := remote.global_transform
+	release_remote()
+	return xf
+
+
 func release_remote() -> Vector3:
 	if remote == null:
 		return Vector3.INF
@@ -171,34 +184,17 @@ func _build_remote() -> Node3D:
 	hull.range_node = self
 	var col := CollisionShape3D.new()
 	var sh := SphereShape3D.new()
-	sh.radius = 0.28
+	sh.radius = float(DroidRoster.kind_cfg("floating").get("hit_radius", 0.55))
 	col.shape = sh
 	hull.add_child(col)
 	root.add_child(hull)
-	var m := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 0.25
-	s.height = 0.5
-	m.mesh = s
-	m.material_override = _mats.flat(Color("#3a3c40"), 0.45, 0.7)
-	root.add_child(m)
-	var band := MeshInstance3D.new()
-	var tor := TorusMesh.new()
-	tor.inner_radius = 0.24
-	tor.outer_radius = 0.3
-	band.mesh = tor
-	band.material_override = _mats.flat(Color("#b08e50"), 0.4, 0.8)
-	root.add_child(band)
-	var eye := MeshInstance3D.new()
-	eye.name = "Eye"
-	var es := SphereMesh.new()
-	es.radius = 0.07
-	es.height = 0.14
-	eye.mesh = es
-	var em := _mats.glow(Color("#4ad0ff"))
-	eye.material_override = em
-	eye.position = Vector3(0, 0, -0.22)
-	root.add_child(eye)
+	# Issue #80: the same floating droid you can own (model, colours, eyes), so taming
+	# it changes nothing on screen. Its body faces -Z, like the companion's.
+	var look := DroidKit.build("floating", DroidRoster.variant_cfg("floating", "range"), _mats,
+		DroidRoster.kind_cfg("floating").get("look", {}))
+	look.name = "Look"
+	root.add_child(look)
+	DroidKit.set_awake(look, true)
 	return root
 
 

@@ -54,7 +54,8 @@
     "battle": { "stream": "res://assets/audio/music/battle.mp3", "start": 30.0 },
     "space":  { "stream": "res://assets/audio/music/space.mp3", "start": 0.0 },
     "fade": 4.0,
-    "battle_fade_in": 1.5,
+    "battle_fade_in": 0.05,
+    "battle_cut": 0.25,
     "battle_hold": 15.0
   }
 }
