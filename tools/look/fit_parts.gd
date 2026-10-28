@@ -15,7 +15,11 @@ extends SceneTree
 ##              scale: a correction on top, chosen by eye,
 ##            box: { min, max } to fit into instead of the reference part's bounds,
 ##            trim_top: share of the piece's height cut off the top first,
-##            yaw: degrees to turn the piece about the vertical axis first } }
+##            yaw: degrees to turn the piece about the vertical axis first,
+##            straighten: share of the height that is hips; the legs below are
+##              stood up straight (a piece generated mid-stride),
+##            align_top: share of the height whose middle is matched to the
+##              reference's (a waistband onto the hips) instead of the bounds' } }
 ##   dress: { outfit name: { source: raw .glb of a whole dressed character, decimate,
 ##            uniform, axis, scale, own_weights: true keeps a rigged source's own
 ##            weights (bones matched by name) instead of the copied ones, recolor: { swaps: { "#from": "#to" }, tol, min_l } bakes
@@ -124,6 +128,10 @@ func _fit(target: MeshInstance3D, ref_mesh: Mesh, pc: Dictionary) -> void:
 		arr = _trim_top(arr, float(pc.trim_top))
 	var k := _place(arr, to, pc)
 	var ref_arr := ref_mesh.surface_get_arrays(0)
+	if float(pc.get("align_top", 0.0)) > 0.0:
+		_align_top(arr, ref_arr[Mesh.ARRAY_VERTEX], float(pc.align_top))
+	if float(pc.get("straighten", 0.0)) > 0.0:
+		_straighten(arr, float(pc.straighten), ref_arr[Mesh.ARRAY_VERTEX])
 	var per := (ref_arr[Mesh.ARRAY_BONES] as PackedInt32Array).size() / (ref_arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
 	_skin_from(arr, ref_arr, per)
 	target.mesh = _mesh(arr, src[1], per)
@@ -149,6 +157,93 @@ static func _turn(arr: Array, yaw: float) -> void:
 			tg[i + 1] = d.y
 			tg[i + 2] = d.z
 		arr[Mesh.ARRAY_TANGENT] = tg
+
+
+## Stands a legs piece made mid-stride up straight on the reference's legs: below
+## the crotch (the top `share` of the height is the hips), each leg (split left and
+## right of the middle) is slid front to back, height band by height band, so its
+## middle sits where the reference's leg is at that height. The slide eases in over
+## the first third below the crotch, so the hips keep their shape.
+static func _straighten(arr: Array, share: float, ref: PackedVector3Array) -> void:
+	const BAND := 0.03
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var lo := INF
+	var hi := -INF
+	var mid := 0.0
+	for p in v:
+		lo = minf(lo, p.y)
+		hi = maxf(hi, p.y)
+		mid += p.x
+	mid /= v.size()
+	var crotch := hi - (hi - lo) * share
+	var ease := (crotch - lo) / 3.0
+	var ref_mid := 0.0
+	for p in ref:
+		ref_mid += p.x
+	ref_mid /= ref.size()
+	for side in [-1.0, 1.0]:
+		var want := _band_z(ref, ref_mid, side, lo, BAND)
+		var have := _band_z(v, mid, side, lo, BAND)
+		var most := 0.0
+		for i in v.size():
+			if v[i].y >= crotch or signf(v[i].x - mid) != side:
+				continue
+			var k := int(floor((v[i].y - lo) / BAND))
+			if not want.has(k):
+				continue
+			var shift: float = (want[k] - have[k]) * clampf((crotch - v[i].y) / ease, 0.0, 1.0)
+			v[i].z += shift
+			most = maxf(most, absf(shift))
+		print("fit: straightened the %s leg, up to %.3f m" % ["right" if side < 0.0 else "left", most])
+	arr[Mesh.ARRAY_VERTEX] = v
+
+
+## band -> middle z of one leg's points (x on `side` of `mid`) in bands of `band` up from `lo`.
+static func _band_z(v: PackedVector3Array, mid: float, side: float, lo: float, band: float) -> Dictionary:
+	var sums := {}
+	for p in v:
+		if signf(p.x - mid) == side:
+			var k := int(floor((p.y - lo) / band))
+			var e: Array = sums.get(k, [INF, -INF])
+			sums[k] = [minf(e[0], p.z), maxf(e[1], p.z)]
+	var out := {}
+	for k in sums:
+		out[k] = (sums[k][0] + sums[k][1]) * 0.5
+	return out
+
+
+## Slides the piece across the ground so the middle of its top `share` (a waistband)
+## sits on the middle of the reference's: the bounding box is thrown off by whatever
+## sticks out lower down (boot toes), which left a legs piece behind the hips.
+static func _align_top(arr: Array, ref: PackedVector3Array, share: float) -> void:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var shift := _top_middle(ref, share) - _top_middle(v, share)
+	shift.y = 0.0
+	for i in v.size():
+		v[i] += shift
+	arr[Mesh.ARRAY_VERTEX] = v
+	print("fit: aligned by the top, moved %s" % shift)
+
+
+## The middle (bounds centre) of the points in the top `share` of the height.
+static func _top_middle(v: PackedVector3Array, share: float) -> Vector3:
+	var hi := -INF
+	var lo := INF
+	for p in v:
+		hi = maxf(hi, p.y)
+		lo = minf(lo, p.y)
+	var cut := hi - (hi - lo) * share
+	var box := AABB()
+	var first := true
+	for p in v:
+		if p.y < cut:
+			continue
+		if first:
+			box = AABB(p, Vector3.ZERO)
+			first = false
+		else:
+			box = box.expand(p)
+	return box.get_center()
 
 
 ## The arrays without the triangles that reach into the top `share` of the height

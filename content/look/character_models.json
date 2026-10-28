@@ -336,7 +336,9 @@
           "uniform": true,
           "axis": "y",
           "trim_top": 0.035,
-          "yaw": -30
+          "yaw": -36,
+          "align_top": 0.12,
+          "straighten": 0.18
         }
       }
     },

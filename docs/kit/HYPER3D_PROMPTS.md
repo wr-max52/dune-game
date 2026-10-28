@@ -129,7 +129,9 @@ the legs slot, so they go under anyone's torso. The prompt:
 Two earlier tries are not used: "lower body only" came back on a bare mannequin
 torso with arms (2cdc52de-0f37-43a1-aa91-849c8fe00d52), and a looser retry had
 holsters and baggy legs (7f432ad5-37de-4558-b932-ee42f0fb676e). The picked one
-stands turned about 30 degrees, so the fit turns it back (`yaw`) and trims the
-strip of bare skin above its waistband (`trim_top`).
+stands mid-stride and turned about 36 degrees, so the fit turns it to face forward
+(`yaw`), lines its waistband up with the hips (`align_top`), stands each leg up
+straight on the base body's legs (`straighten`) and trims the strip of bare skin
+above its waistband (`trim_top`).
 
 Raw review sheet: `docs/kit/79_raw.png` (`tools/look/sheets/19_issue79_raw.json`).
