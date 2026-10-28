@@ -271,3 +271,23 @@ func test_a_speeder_drives_straight_round_the_curve() -> void:
 	# and nowhere else (the plane of travel holds).
 	var plane := (at - sp.center).cross(start_dir).normalized()
 	assert_almost_eq((m.position - sp.center).normalized().dot(plane), 0.0, 0.02, "drove straight, no drift")
+
+
+func test_the_town_always_has_ground_wherever_the_player_is() -> void:
+	var t := _terrain()
+	add_child_autofree(t)
+	t.build(false)
+	PlanetSphere.current = t.sphere
+	var walker := Node3D.new()
+	add_child_autofree(walker)
+	t.follow(walker)
+	walker.global_position = t.sphere.surface_at(1500, 0)
+	t.snap_to(walker.global_position)          # the player far away in the desert
+	var body := Body.new()
+	body.use_external_command = true
+	body.position = Vector3(-161, 1.0, -60)    # someone at the speeder post
+	add_child_autofree(body)
+	for i in 60:
+		await wait_physics_frames(1)
+	assert_true(body.is_on_floor(), "standing on the town's own collider")
+	assert_almost_eq(body.global_position.y, t.height_at(-161, -60), 0.1, "on the sand there, not below it")

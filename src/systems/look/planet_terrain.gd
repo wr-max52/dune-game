@@ -27,6 +27,14 @@ extends DesertTerrain
 @export var far_chunks := 4             ## per cube face side
 @export var far_cells := 48             ## per chunk side
 @export var hole_sink := 6.0            ## metres an outer layer drops under an inner one
+## The town's own collider: a fixed square round the port, built once, so people,
+## droids and dropped things anywhere in and around town always have ground under
+## them (the near collider only follows the player). Coarser, and a hair lower, so
+## wherever the near one is, its exact heights are the ones you stand on.
+@export var town_cells := 256
+@export var town_step := 2.0
+const TOWN_SINK := 0.05
+var town_body: StaticBody3D
 var threaded := true
 
 var sphere: PlanetSphere
@@ -115,6 +123,7 @@ func build(with_mesh: bool = true) -> void:
 	collider_shape.scale = Vector3(near_step, near_step, near_step)
 	collider_body.add_child(collider_shape)
 	add_child(collider_body)
+	_build_town_collider()
 	if with_mesh:
 		near_mesh = _layer_mesh("Near")
 		mid_mesh = _layer_mesh("Mid")
@@ -125,6 +134,25 @@ func build(with_mesh: bool = true) -> void:
 	_apply("near", _compute("near", Vector2(collider_center.x, collider_center.z)))
 	if with_mesh:
 		_apply("mid", _compute("mid", Vector2.ZERO))
+
+
+func _build_town_collider() -> void:
+	var p := sphere.patch(0.0, 0.0, town_cells, town_step, sink_grow + town_step + 1.0)
+	var data: PackedFloat32Array = p.heights
+	for i in data.size():
+		data[i] = (data[i] - TOWN_SINK) / town_step
+	var shape := HeightMapShape3D.new()
+	shape.map_width = town_cells + 1
+	shape.map_depth = town_cells + 1
+	shape.map_data = data
+	town_body = StaticBody3D.new()
+	town_body.name = "TownCollider"
+	var cs := CollisionShape3D.new()
+	cs.shape = shape
+	cs.scale = Vector3(town_step, town_step, town_step)
+	town_body.add_child(cs)
+	town_body.transform = p.xform
+	add_child(town_body)
 
 
 func _layer_mesh(n: String) -> MeshInstance3D:

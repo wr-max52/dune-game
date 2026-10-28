@@ -24,6 +24,7 @@ var _measure := false
 
 func _initialize() -> void:
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64 locks ships behind the story; this trace flies
 	GameFlow.reset()
 	GameFlow.dogfight_override = false        # this trace is about travel, not the fight
 	GameFlow.change_scene = func(path: String) -> void: went.append(path)
