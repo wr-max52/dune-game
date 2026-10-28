@@ -85,7 +85,9 @@
     "axis": "y",
     "size": 0.6,
     "origin": "back",
-    "max_texture": 1024
+    "max_texture": 1024,
+    "desaturate": 1.0,
+    "darken": 0.45
   },
   "pistol": {
     "source": "res://assets/gear/source/pistol_b.glb",
