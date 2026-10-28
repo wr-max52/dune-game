@@ -5,6 +5,13 @@
     "scale": 1.0,
     "retint": false,
     "tint": { "glow": "#ff7a3a" },
+    "dark": { "body_mul": 0.28, "accent_mul": 0.8, "glow": 0.6 },
+    "ads": { "sight": [0.0, 0.111, -0.105], "relief": 0.26, "mag": 1.25, "blend_s": 0.15 },
+    "sights": {
+      "note": "Iron sights in model space: front post on the sight line, rear blade pair either side of it.",
+      "front": { "pos": [0.0, 0.103, 0.125], "size": [0.0035, 0.016, 0.005] },
+      "rear": { "pos": [0.0, 0.1075, -0.105], "size": [0.004, 0.015, 0.006], "gap": 0.007 }
+    },
     "grips": { "r": [0.0, -0.05, -0.075], "l": [0.007, -0.072, -0.046] },
     "muzzle": [0.0, 0.058, 0.165],
     "aim": { "pos": [-0.08, 0.103, 0.475], "rot": [0, 0, 0] },
@@ -24,6 +31,13 @@
     "scale": 1.0,
     "retint": false,
     "tint": { "glow": "#ff5a2a" },
+    "dark": { "body_mul": 0.28, "accent_mul": 0.8, "glow": 0.6 },
+    "ads": { "sight": [0.0, 0.243, -0.1], "relief": 0.11, "mag": 2.5, "blend_s": 0.15 },
+    "scope": {
+      "note": "Procedural scope in model space: axis along +Z at pos, rear end (eyepiece) is the ads sight. rail sits on the model's own optic hump.",
+      "pos": [0.0, 0.243, 0.02], "length": 0.24, "radius": 0.024, "ocular": 0.029, "objective": 0.034,
+      "rings": [-0.065, 0.075], "reticle": "#ff2a1a"
+    },
     "grips": { "r": [0.0, -0.08, -0.11], "l": [0.0, -0.03, 0.2] },
     "muzzle": [0.0, 0.11, 0.48],
     "aim": { "pos": [-0.1, -0.02, 0.4], "rot": [0, 0, 0] },
