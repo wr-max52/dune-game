@@ -76,7 +76,8 @@ func test_oda_wears_her_model_and_it_follows_the_wipe() -> void:
 	if not oda.body.has_meta("skin"):
 		return
 	var skin: SkinnedBody = oda.body.get_meta("skin")
-	assert_string_contains(skin.model.scene_file_path, "oda", "Oda's model")
+	assert_string_contains(skin.model.scene_file_path, "kit/parts", "Oda wears the kit pieces (issue #79)")
+	assert_not_null(skin.model.find_child("cantina_owner_torso", true, false), "her own upper body")
 	var elbow: int = skin.bone_of.r_elbow
 	oda._process(0.0)
 	var before := skin.skeleton.get_bone_pose_rotation(elbow)

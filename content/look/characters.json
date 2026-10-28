@@ -70,7 +70,9 @@
       "towel": "#c9b896", "prosthetic": "#6b6660", "prosthetic_glow": "#7fd0c8", "lens": "#e0a050", "mask": "#3c3a36",
       "boots": "#2a2220", "gloves": "#2a2220", "under": "#3a302a",
       "model": {
-        "scene": "res://assets/characters/oda/oda.glb",
+        "scene": "res://assets/characters/kit/parts.glb",
+        "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
+        "parts": { "head": ["cantina_owner"], "torso": ["cantina_owner"], "legs": ["cantina_owner"] },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
           "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",

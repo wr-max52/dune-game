@@ -731,9 +731,9 @@ func _build_characters() -> void:
 	var lineup := Node3D.new()
 	lineup.name = "Lineup"
 	add_child(lineup)
-	var order := ["remnant_trooper", "remnant_commander", "duelist", "smuggler", "local"]
+	var order := ["remnant_trooper", "remnant_commander", "player_smuggler", "cantina_owner", "duelist", "smuggler", "local"]
 	for i in order.size():
-		_place(chars.build(order[i]), Vector3(26.0, FLOOR_Y, -103.8 + i * 1.9), -90.0, lineup)
+		_place(chars.build(order[i]), Vector3(26.0, FLOOR_Y, -104.3 + i * 1.45), -90.0, lineup)
 
 	# Hero shot: the player (smuggler) faces down a duelist standing in the breach.
 	var story := Node3D.new()

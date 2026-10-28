@@ -1,0 +1,26 @@
+{
+  "title": "Issue #79: the Hyper3D sources used (rigged, before fitting), next to the base body",
+  "out": "res://docs/kit/79_raw.png",
+  "cells": [
+    {
+      "label": "base body",
+      "model": "res://assets/characters/kit/source/base_body_rigged.glb"
+    },
+    {
+      "label": "player",
+      "model": "res://assets/characters/kit/source/player_full.glb"
+    },
+    {
+      "label": "guard",
+      "model": "res://assets/characters/kit/source/guard_full.glb"
+    },
+    {
+      "label": "cantina owner",
+      "model": "res://assets/characters/kit/source/cantina_owner_full.glb"
+    },
+    {
+      "label": "cantina owner legs",
+      "model": "res://assets/characters/kit/source/cantina_owner_legs.glb"
+    }
+  ]
+}

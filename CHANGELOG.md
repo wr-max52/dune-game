@@ -2,6 +2,23 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## New character art: player, guards, cantina owner (2026-10-27, issue #79)
+
+- **Three new outfits from the concept art**, made the way the locals are: one
+  model each, cut into head, upper body and lower body at the same seams, so any
+  piece goes with any other. Faces are fully covered and sizes are unchanged.
+- **Player:** dark leather jacket, cream undershirt, khaki cargo trousers, masked
+  face with glowing cyan goggles and a hat with a cyan band.
+- **Guards:** slim gunmetal armour with red shoulders and chest, a red eye slit and
+  a ragged red half-cape. Troopers wear it grey, commanders in oxblood.
+- **Cantina owner:** pilot helmet, breathing mask and yellow visor, a yellow
+  hooded tunic over a leather jacket, tight leather trousers and boots. She now
+  wears kit pieces too.
+- **Colours:** player rust, sand, olive, dusk; guard gunmetal, oxblood, desert,
+  navy, black; owner teal, madder, slate, sand. All show up in the character
+  builder (F11 > Character).
+- Review sheets in `docs/kit/`; prompts and picks in `docs/kit/HYPER3D_PROMPTS.md`.
+
 ## Shooter feel (2026-10-27, issue #65)
 
 - **Aim down the sights.** Right-click in first person brings the gun's own
