@@ -91,8 +91,10 @@ vec3 ripples(vec2 q, vec2 wd, float fade_near, float fade_mid) {
 	float p1 = dot(q, wd) * k1 + warp * 3.0;
 	float p2 = dot(q, wd2) * k2 + warp * 6.0 + n2 * 4.0;
 	float p3 = dot(q, wd) * k3 + warp;
-	// Patches where the ripples die out (sheltered sand).
-	float patchy = smoothstep(0.25, 0.6, n1 * 0.7 + n2 * 0.3);
+	// Ripple fields come in patches (about half the sand), with smooth sand
+	// between: a slow noise decides where, so whole stretches are bare.
+	float field = texture(noise_tex, q * 0.011 + vec2(0.57, 0.11)).r;
+	float patchy = smoothstep(0.48, 0.6, field * 0.75 + n1 * 0.25);
 	float e = 0.15;
 	float h1 = ripple_h(p1);
 	float h2 = ripple_h(p2);
@@ -134,7 +136,7 @@ void fragment() {
 	float fade_near = 1.0 - smoothstep(6.0, 40.0, dist);
 	float fade_mid = 1.0 - smoothstep(20.0, 160.0, dist);
 	// Flat ground ripples more than steep dune faces (sand slides there).
-	float flat_k = smoothstep(0.35, 0.05, slope);
+	float flat_k = smoothstep(0.18, 0.03, slope);   // only the flatter sand ripples
 	vec3 g3 = vec3(0.0);
 	float rh = 0.0;
 	float dr = 0.0;
@@ -167,7 +169,8 @@ void fragment() {
 	alb *= 0.94 + 0.12 * n_fine;
 	// Blowing sand: brighter wisps over the surface, out to ~250 m, stronger on
 	// open flats than in the lee of steep faces.
-	float dk = dr * wind_strength * (1.0 - smoothstep(60.0, 250.0, dist)) * (0.4 + 0.6 * flat_k);
+	float drift_flat = smoothstep(0.35, 0.05, slope);
+	float dk = dr * wind_strength * (1.0 - smoothstep(60.0, 250.0, dist)) * (0.4 + 0.6 * drift_flat);
 	alb = mix(alb, drift_color.rgb, dk * 0.35);
 	ALBEDO = alb;
 	// A little sheen at grazing angles (fine sand is not chalk).
