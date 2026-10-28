@@ -17,6 +17,11 @@ extends RefCounted
 ##
 ## Numbers: content/core/vehicles/speeder.json.
 ##
+## Issue #95: the Grav Lifter (a "hover" block in the config, from the mechanic's
+## upgrades). lift() hops it off the ground, and once it stops rising it hangs,
+## gravity off and sinking slowly, for float_s seconds. Then it falls as usual,
+## and the lifter needs recharge_s before it works again.
+##
 ## Issue #77: on the home planet's ball "up" turns with the ground. The heading is
 ## a direction slid along the ground as it drives (so straight stays straight round
 ## the curve), and heights are measured along up (`_level`: the distance from the
@@ -41,7 +46,10 @@ var max_hp := 0
 var events: Array = []               ## this step's: { type, ... }
 var air_time := 0.0                  ## of the current (or last) jump
 var top_height := 0.0                ## highest clearance over the ground on the last jump
+var float_left := 0.0                ## issue #95: seconds of hang the Grav Lifter has left this lift
+var lift_cooldown := 0.0             ## issue #95: until the Grav Lifter can fire again
 
+var _pending: Array = []             ## events from between steps (lift), for the next step()
 var _cmd := { "throttle": 0.0, "steer": 0.0, "boost": false }
 var _last_ride := NAN                ## the ride height last step (NAN: none yet)
 var _ground_rate := 0.0              ## how fast the ground under it was rising, m/s
@@ -113,6 +121,24 @@ func alive() -> bool:
 	return hp > 0
 
 
+## Boost is lit this step (the throttle open, the key held, boost left).
+func boosting() -> bool:
+	return bool(_cmd.boost) and float(_cmd.throttle) > 0.1 and boost_left > 0.0
+
+
+## Issue #95: a Grav Lifter is fitted.
+func has_lifter() -> bool:
+	return cfg.get("hover") is Dictionary
+
+
+func lifter() -> Dictionary:
+	return cfg.get("hover", {}) if has_lifter() else {}
+
+
+func lift_ready() -> bool:
+	return has_lifter() and lift_cooldown <= 0.0 and hp > 0
+
+
 # ---- control --------------------------------------------------------------------------
 
 ## Put it down at `at` (on the ground there), facing `yaw_rad`.
@@ -132,6 +158,23 @@ func set_command(throttle: float, steer: float, boost: bool = false) -> void:
 	_cmd = { "throttle": clampf(throttle, -1.0, 1.0), "steer": clampf(steer, -1.0, 1.0), "boost": boost }
 
 
+## Issue #95: fire the Grav Lifter. On the ground it hops; in the air it starts
+## the hang at once. False if there is no lifter or it is recharging.
+func lift() -> bool:
+	if not lift_ready():
+		return false
+	var h := lifter()
+	if not airborne:
+		airborne = true
+		vy = float(h.get("hop_vy", 6.5))
+		air_time = 0.0
+		top_height = 0.0
+	float_left = float(h.get("float_s", 1.2))
+	lift_cooldown = float(h.get("recharge_s", 4.0))
+	_pending.append({ "type": "lift", "vy": vy })     # reported by the next step()
+	return true
+
+
 ## Gunfire. Returns true if this shot destroyed it.
 func apply_damage(amount: float) -> bool:
 	if hp <= 0:
@@ -148,9 +191,11 @@ func apply_damage(amount: float) -> bool:
 
 ## Advance one step. Returns this step's events.
 func step(dt: float) -> Array:
-	events = []
+	events = _pending
+	_pending = []
 	if hp <= 0:
 		return events
+	lift_cooldown = maxf(0.0, lift_cooldown - dt)
 	_drive(dt)
 	_move(dt)
 	_hover(dt)
@@ -205,7 +250,12 @@ func _hover(dt: float) -> void:
 	var rate := 0.0 if is_nan(_last_ride) else (ride - _last_ride) / maxf(dt, 0.0001)
 	_last_ride = ride
 	if airborne:
-		vy -= p("gravity", 9.0) * dt
+		if float_left > 0.0 and vy <= 0.0:
+			# The Grav Lifter's hang: gravity off, a slow sink.
+			float_left = maxf(0.0, float_left - dt)
+			vy = -float(lifter().get("float_sink", 0.4))
+		else:
+			vy -= p("gravity", 9.0) * dt
 		_lift(vy * dt)
 		air_time += dt
 		top_height = maxf(top_height, _level(position) - ride)
@@ -214,6 +264,7 @@ func _hover(dt: float) -> void:
 			_lift(ride - _level(position))
 			vy = 0.0
 			airborne = false
+			float_left = 0.0
 		return
 	var before := _level(position)
 	if before - ride > p("launch_gap", 0.45):

@@ -33,6 +33,7 @@ static var droids := DroidRoster.new()     ## issue #51: the player's companion 
 static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
 static var ships_destroyed: Array = []     ## issue #64: town boxes whose parked ship was shot to pieces (never back)
+static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 
 static var _rumors: Array = []
@@ -61,6 +62,7 @@ static func reset() -> void:
 	story = {}
 	bounty = {}
 	ships_destroyed = []
+	speeder_fits = []
 
 
 # ------------------------------------------------------------------ writes
@@ -566,6 +568,7 @@ static func to_save() -> Dictionary:
 		"story": story.duplicate(),
 		"bounty": bounty.duplicate(),
 		"ships_destroyed": ships_destroyed.duplicate(),
+		"speeder_fits": speeder_fits.duplicate(true),
 	}
 
 
@@ -594,6 +597,7 @@ static func from_save(d: Dictionary) -> void:
 		smuggle = {}           # issue #64: a save from before the story; its old drop goes with it
 	bounty = d.get("bounty", {}).duplicate()
 	ships_destroyed = d.get("ships_destroyed", []).duplicate()
+	speeder_fits = d.get("speeder_fits", []).duplicate(true)
 
 
 static func _read_json(path: String) -> Variant:

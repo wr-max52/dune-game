@@ -1,0 +1,16 @@
+{
+  "id": "mechanic_yard",
+  "kind": "post",
+  "label": "the mechanic's yard",
+  "note": "Issue #95: Dorrin Vask's speeder yard, out in the desert about a 30 second drive from the back gate. Set in the world as a landmark (content/core/worlds/port_desert.json), so speeders collide with it and the player walks on it; src/systems/world/mechanic_yard.gd dresses it ('visual': false). Local frame: +x faces the town. 'points': where Dorrin stands at his bench, where you stand to talk, and the bay (the lift) where a speeder has to be parked for him to work on it.",
+  "buildings": [
+    { "id": "garage", "shape": "box", "size": [12, 5, 9], "position": [-9, 0, 0], "visual": false },
+    { "id": "bench", "shape": "box", "size": [1.2, 1.0, 3.0], "position": [-1.5, 0, 7], "visual": false },
+    { "id": "scrap_heap", "shape": "box", "size": [5, 2.2, 5], "position": [-6, 0, -12], "visual": false }
+  ],
+  "points": {
+    "mechanic": [-0.6, 0, 7],
+    "customer": [1.2, 0, 7],
+    "bay": [6, 0, 0]
+  }
+}

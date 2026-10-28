@@ -81,6 +81,7 @@ var retro_hud: RetroHud               ## issue #52: banner, footer and the F1 in
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
+var mechanic: MechanicYard            ## issue #95: Dorrin's speeder yard out in the desert
 var gate_speeders: Array = []         ## issue #82: the Remnant's Sand-boxers parked outside the front gate
 var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
 var world: Dictionary = {}            ## its world (terrain, atmosphere, detail): authored or generated
@@ -180,6 +181,8 @@ func _ready() -> void:
 			_build_droids()
 		if with_salesman and gear != null:
 			_build_salesman()
+		if speeder_post != null and gear != null:
+			_build_mechanic()
 		_build_detail()
 		_name_places()          # after the bar: a loaded save keeps the names it had
 		dev_settings = DevSettingsPanel.new()
@@ -589,6 +592,14 @@ func _build_droids() -> void:
 	add_child(droids)
 
 
+## Issue #95: Dorrin's speeder yard, out in the desert. After the speeders (he
+## works on the ones SpeederPost parks) and the gear (its HUD and E are shared).
+func _build_mechanic() -> void:
+	mechanic = MechanicYard.new()
+	mechanic.setup(self, pilot.ground, gear)
+	add_child(mechanic)
+
+
 ## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
 ## the bar (the save says which ship is on the spare pad).
 func _build_salesman() -> void:
@@ -604,7 +615,7 @@ func _build_detail() -> void:
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
 	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk,
-		speeder_post.skrugs if speeder_post != null else null])
+		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null])
 	if decor != null:
 		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
 	if landforms != null:

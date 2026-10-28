@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Speeder upgrades at the mechanic's yard (2026-10-28, issue #95)
+
+- **Dorrin Vask's yard** is out in the desert, about a 30 second drive from the
+  back gate: a garage, a workbench, a scrap heap and a lift. Park your speeder
+  on the lift and press E beside Dorrin.
+- **Paint:** steel, tide blue, crimson, or the Remnant's black and red.
+- **Looks:** turbo boosters on the back that flare when you boost, and a
+  convertible soft-top that is up when parked and folds back when you ride.
+- **Performance, two tiers each:** engine (top speed), thrusters (acceleration)
+  and cannons (laser damage). Tier 2 needs tier 1.
+- **Grav Lifter** (900 cr, the most expensive part): press Space while riding
+  to hop off the ground, then hang in the air for about a second; drive off a
+  hill and you float. It recharges in 4 seconds. With it fitted, Space lifts and
+  the left mouse button fires.
+- **Sell for scrap:** Dorrin pays 35 cr plus a quarter of what you spent on
+  its parts.
+- Each speeder keeps its own paint and parts, saved with the world.
+
 ## Character animations (2026-10-28, issue #87)
 
 - **Walking has some swagger.** The hips roll and shift over the planted foot,

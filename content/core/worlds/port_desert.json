@@ -60,6 +60,14 @@
       "at": [720, 0, 110],
       "yaw_deg": 170,
       "clear": 45
+    },
+    {
+      "id": "mechanic_yard",
+      "kind": "location",
+      "location": "mechanic_yard",
+      "at": [-900, 0, -620],
+      "yaw_deg": 325,
+      "clear": 40
     }
   ],
   "atmosphere": {
