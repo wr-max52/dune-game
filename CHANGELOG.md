@@ -14,7 +14,7 @@ Plain English, newest on top. One entry per milestone.
 - **Cantina owner:** pilot helmet, breathing mask and yellow visor, a yellow
   hooded tunic over a leather jacket, tight leather trousers and boots. She now
   wears kit pieces too.
-- **Colours:** player rust, sand, olive, dusk; guard gunmetal, oxblood, desert,
+- **Colours:** player rust (red cargo pants, rust hat band), sand, olive, dusk; guard gunmetal, oxblood, desert,
   navy, black; owner teal, madder, slate, sand. All show up in the character
   builder (F11 > Character).
 - Review sheets in `docs/kit/`; prompts and picks in `docs/kit/HYPER3D_PROMPTS.md`.
