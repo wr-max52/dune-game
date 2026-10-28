@@ -58,6 +58,7 @@ var _ammo: Label
 var _stam: ProgressBar
 var _name: Label
 var _name_left := 0.0
+var feedback: HitFeedback           ## hit markers + thud (issue #65)
 
 
 func setup(p: CharacterBody3D, a: PlayerAvatar, rig: Node3D, bolts_into: Node3D) -> void:
@@ -362,6 +363,8 @@ func intercept(b: Node) -> String:
 			else:
 				back = (aim_point() - b.global_position).normalized()
 			b.reflect(back, player)
+			if b.reflected == 1:    # a bolt you sent back that lands counts as your hit
+				b.on_hit.connect(func(t): hit_something.emit(t, b.damage))
 			deflections += 1
 			WorldState.on_deflection()
 			_play("blade_deflect")
@@ -432,6 +435,10 @@ func _build_hud() -> void:
 	_cross.set_anchors_preset(Control.PRESET_CENTER)
 	_cross.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hud.add_child(_cross)
+	feedback = HitFeedback.new()
+	add_child(feedback)
+	feedback.setup(_hud)
+	hit_something.connect(feedback.on_hit)
 	for r in [Rect2(-12, -1, 7, 2), Rect2(5, -1, 7, 2), Rect2(-1, -12, 2, 7), Rect2(-1, 5, 2, 7), Rect2(-1, -1, 2, 2)]:
 		var c := ColorRect.new()
 		c.position = r.position

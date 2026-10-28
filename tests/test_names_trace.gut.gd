@@ -27,9 +27,10 @@ func test_every_guard_is_named_on_spawn() -> void:
 	_true("DEBUG_LINE_NAMED", "F4 shows who they are")
 
 
-func test_the_name_floats_over_them_up_close() -> void:
-	_true("NAMEPLATE_UP_CLOSE")
+func test_no_name_floats_over_them_issue_65() -> void:
+	assert_eq(t.get("NAMEPLATE_UP_CLOSE"), "false", "enemies show a health bar, not a name")
 	assert_eq(t.get("NAMEPLATE_FAR_AWAY"), "false")
+	assert_eq(t.get("HEALTH_BAR_CALM"), "false", "a calm, unhurt guard shows no bar")
 
 
 func test_the_town_and_planet_are_named() -> void:
