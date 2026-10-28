@@ -39,7 +39,6 @@ var reached_space := false
 var last_hit := ""
 var crash_point := Vector3.ZERO
 
-var _liftoff_target := 0.0
 var _command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.0, "boost": false }
 
 
@@ -79,25 +78,33 @@ func speed() -> float:
 	return flight.speed
 
 
-## The highest ground under the ship's footprint (centre and four points around
-## it), so a ship set down on a slope rests on it instead of sinking in.
-func ground_below() -> float:
-	if ground == null:
-		return 0.0
-	var pos: Vector3 = flight.position
-	var below := pos.y - clearance
-	var g := ground.ground_at(pos.x, pos.z, below)
-	var b: Basis = flight.basis
-	var fx := Vector3(b.x.x, 0.0, b.x.z).normalized() * body_radius
-	var fz := Vector3(b.z.x, 0.0, b.z.z).normalized() * body_radius
-	for off in [fx, -fx, fz, -fz]:
-		g = maxf(g, ground.ground_at(pos.x + off.x, pos.z + off.z, below))
-	return g
+## "Up" where the ship is: straight up on a flat world and over the town, away
+## from the planet's centre out over the home planet's ball (issue #77).
+func up() -> Vector3:
+	return ground.up_at(flight.position) if ground != null else Vector3.UP
 
 
-## Height of the belly above whatever is under the ship.
+## Height of the belly above whatever is under the ship, along up: the highest
+## ground under its footprint (centre and four points around it), so a ship set
+## down on a slope rests on it instead of sinking in.
 func agl() -> float:
-	return flight.position.y - clearance - ground_below()
+	if ground == null:
+		return flight.position.y - clearance
+	var u := up()
+	var belly: Vector3 = flight.position - u * clearance
+	var h := ground.height_above(belly)
+	var b: Basis = flight.basis
+	var fx := (b.x - u * b.x.dot(u)).normalized() * body_radius
+	var fz := (b.z - u * b.z.dot(u)).normalized() * body_radius
+	for off in [fx, -fx, fz, -fz]:
+		h = minf(h, ground.height_above(belly + off))
+	return h
+
+
+## World y of the ground under the ship (flat-world readers; on the ball this is
+## the point straight down along up).
+func ground_below() -> float:
+	return (flight.position - up() * (clearance + agl())).y
 
 
 ## Altitude above the planet's curved sea level (what "space" is measured against).
@@ -123,6 +130,12 @@ func can_land() -> bool:
 	return ground == null or ground.landable(at.x, at.z)
 
 
+## A basis facing `yaw` radians about this planet's up at `at`.
+func _upright(at: Vector3, yaw: float) -> Basis:
+	var u: Vector3 = ground.up_at(at) if ground != null else Vector3.UP
+	return PlanetSphere.tilt_to(u) * Basis(Vector3.UP, yaw)
+
+
 func state_label() -> String:
 	return State.keys()[state]
 
@@ -131,10 +144,11 @@ func state_label() -> String:
 
 ## Put the ship down at `at` (its belly on the ground there), facing `yaw` radians.
 func park(at: Vector3, yaw: float) -> void:
-	flight.basis = Basis(Vector3.UP, yaw)
-	flight.position = Vector3(at.x, at.y + 0.5 + clearance, at.z)
-	var g := ground_below() if ground != null else at.y
-	flight.position = Vector3(at.x, g + clearance, at.z)
+	flight.basis = _upright(at, yaw)
+	var u := up() if ground != null else Vector3.UP
+	flight.position = at + u * (0.5 + clearance)
+	if ground != null:
+		flight.position -= up() * agl()
 	flight.speed = 0.0
 	flight.throttle = 0.0
 	_command.throttle = 0.0
@@ -144,7 +158,7 @@ func park(at: Vector3, yaw: float) -> void:
 ## Place the ship in the air, flying (a re-entry arrival or a test).
 func place_flying(at: Vector3, facing: Vector3, speed_now: float, throttle: float) -> void:
 	flight.position = at
-	flight.face(facing)
+	flight.face(facing, up())
 	flight.speed = speed_now
 	flight.throttle = throttle
 	_command.throttle = throttle
@@ -159,7 +173,6 @@ func set_command(pitch: float, yaw: float, roll: float, throttle: float, boost: 
 func takeoff() -> bool:
 	if state != State.PARKED:
 		return false
-	_liftoff_target = ground_below() + clearance + p("liftoff_height", 18.0)
 	state = State.LIFTOFF
 	events.append({ "type": "liftoff" })
 	return true
@@ -189,11 +202,11 @@ func step(dt: float) -> Array:
 
 
 func _step_liftoff(dt: float) -> void:
-	var pos: Vector3 = flight.position
-	var left := _liftoff_target - pos.y
+	var left := p("liftoff_height", 18.0) - agl()
 	var rise := minf(left, maxf(1.5, minf(p("liftoff_speed", 7.0), left * 1.5)) * dt)
-	flight.position = pos + Vector3(0, rise, 0)
-	flight.basis = _level(flight.basis, dt * 3.0)
+	var u := up()
+	flight.position += u * rise
+	flight.basis = _level(flight.basis, dt * 3.0, u)
 	if left <= 0.05:
 		state = State.FLYING
 		flight.speed = 0.0
@@ -203,7 +216,7 @@ func _step_liftoff(dt: float) -> void:
 
 
 func _step_flying(dt: float) -> void:
-	var climb: float = flight.forward().y
+	var climb: float = flight.forward().dot(up())
 	flight.speed_scale = air_scale() * (1.0 - p("climb_drag", 0.3) * maxf(0.0, climb))
 	flight.accel_scale = air_scale()
 	flight.set_command_dict(_command)
@@ -215,15 +228,17 @@ func _step_flying(dt: float) -> void:
 
 func _step_landing(dt: float) -> void:
 	flight.speed = move_toward(flight.speed, 0.0, p("land_brake", 45.0) * dt)
-	flight.basis = _level(flight.basis, dt * 2.0)
+	var u := up()
+	flight.basis = _level(flight.basis, dt * 2.0, u)
 	var before: Vector3 = flight.position
 	var fwd: Vector3 = flight.forward()
-	var h: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized() * float(flight.speed) * dt
+	var h: Vector3 = (fwd - u * fwd.dot(u)).normalized() * float(flight.speed) * dt
 	var a := agl()
 	var down := p("land_descent", 12.0) if a > 8.0 else p("land_slow", 4.0)
-	flight.position = before + h - Vector3(0, minf(down * dt, maxf(a, 0.0)), 0)
+	var drop := minf(down * dt, maxf(a, 0.0))
+	flight.position = before + h - u * drop
 	if ground.hit(flight.position, body_radius) != "":
-		flight.position = Vector3(before.x, flight.position.y, before.z)
+		flight.position = before - u * drop    # sliding into something: only go down
 		flight.speed = 0.0
 	if agl() <= 0.02:
 		_touch_down()
@@ -243,13 +258,14 @@ func _collide(before: Vector3, dt: float) -> void:
 		flight.speed = 0.0
 		events.append({ "type": "bump", "what": hit_id })
 		return
-	var g := ground.ground_at(pos.x, pos.z, before.y - clearance)
-	if pos.y - clearance <= g:
-		var vertical: float = maxf(0.0, (before.y - pos.y) / maxf(dt, 0.0001))
+	var u := up()
+	var h := ground.height_above(pos - u * clearance)
+	if h <= 0.0:
+		var vertical: float = maxf(0.0, (before - pos).dot(u) / maxf(dt, 0.0001))
 		if flight.speed > p("crash_speed", 32.0) and vertical > 4.0:
-			_crash(Vector3(pos.x, g, pos.z), "ground")
+			_crash(pos - u * (clearance + h), "ground")
 			return
-		flight.position = Vector3(pos.x, g + clearance, pos.z)
+		flight.position = pos - u * h
 		if flight.speed <= p("touchdown_speed", 9.0):
 			_touch_down()
 		else:
@@ -258,9 +274,8 @@ func _collide(before: Vector3, dt: float) -> void:
 
 
 func _touch_down() -> void:
-	var pos: Vector3 = flight.position
-	flight.position = Vector3(pos.x, ground_below() + clearance, pos.z)
-	flight.basis = _level(flight.basis, 1.0)
+	flight.position -= up() * agl()
+	flight.basis = _level(flight.basis, 1.0, up())
 	flight.speed = 0.0
 	flight.throttle = 0.0
 	_command.throttle = 0.0
@@ -281,13 +296,14 @@ func _check_space() -> void:
 		events.append({ "type": "reached_space", "altitude": altitude() })
 
 
-## Ease a basis toward wings-level, keeping its heading.
-static func _level(b: Basis, w: float) -> Basis:
+## Ease a basis toward wings-level (against `up`), keeping its heading.
+static func _level(b: Basis, w: float, up: Vector3 = Vector3.UP) -> Basis:
 	var fwd := -b.z
-	var flat := Vector3(fwd.x, 0.0, fwd.z)
+	var flat := fwd - up * fwd.dot(up)
 	if flat.length_squared() < 0.0001:
-		flat = Vector3(b.y.x, 0.0, b.y.z) if Vector2(b.y.x, b.y.z).length() > 0.01 else Vector3.FORWARD
-	var want := Basis.looking_at(flat.normalized(), Vector3.UP)
+		var by := b.y - up * b.y.dot(up)
+		flat = by if by.length() > 0.01 else (Vector3.FORWARD - up * up.z).normalized()
+	var want := Basis.looking_at(flat.normalized(), up)
 	var q := b.get_rotation_quaternion().slerp(want.get_rotation_quaternion(), clampf(w, 0.0, 1.0))
 	return Basis(q).orthonormalized()
 

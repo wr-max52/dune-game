@@ -34,7 +34,8 @@ func _ready() -> void:
 ## so the skirt carries on the same sand and its seam does not show from high up.
 func build_visuals(mats: LookMaterials = null, sand: Material = null) -> void:
 	_mats = mats if mats != null else LookMaterials.new()
-	_build_skirt(sand)
+	if terrain.sphere == null:
+		_build_skirt(sand)       # a ball (issue #77) has sand all the way round already
 	_build_landmark_visuals()
 
 
@@ -57,7 +58,8 @@ func _build_landmark_colliders() -> void:
 		var mx: Vector3 = b.max
 		shape.size = mx - mn
 		cs.shape = shape
-		cs.position = (mn + mx) * 0.5
+		# Issue #77: on the ball a box stands in its own (leaning) frame.
+		cs.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY, (mn + mx) * 0.5)
 		root.add_child(cs)
 
 
@@ -124,5 +126,5 @@ func _build_landmark_visuals() -> void:
 		mi.mesh = bm
 		mi.material_override = _mats.plaster(mn.y, mn.y + (mx.y - mn.y) * 0.75,
 			Color(str(op.get("trim", "#6b1e1e"))), Color(str(op.get("color", "#b9a48a"))))
-		mi.position = (mn + mx) * 0.5 - Vector3(0, 1.0, 0)
+		mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY, (mn + mx) * 0.5 - Vector3(0, 1.0, 0))
 		root.add_child(mi)

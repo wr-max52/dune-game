@@ -20,8 +20,12 @@ const FLOOR_KINDS := ["floor"]
 const SKIP_KINDS := ["ship", "bowl"]
 
 var terrain: WorldTerrain
-var boxes: Array = []        ## { id, kind, min: Vector3, max: Vector3, ramp_axis, ramp_sign }
-var columns: Array = []      ## { id, center: Vector3 (base), radius, top }  (mesas, spires)
+var boxes: Array = []        ## { id, kind, min: Vector3, max: Vector3, ramp_axis, ramp_sign, xf? }
+var columns: Array = []      ## { id, center: Vector3 (base), radius, top, up?, h? }  (mesas, spires)
+## Issue #77: on the home planet's ball, a box away from the town may lean with the
+## ground: "xf" (Transform3D) is its own frame and min/max are in it. A column may
+## too: "up" is its axis and "h" its height above its base. Town boxes and every
+## box on a flat world have neither and are plain world-space boxes.
 var world: Dictionary = {}
 
 
@@ -42,14 +46,71 @@ func setup(world_cfg: Dictionary, town = null, content = null,
 		_add_landmark(lm, content)
 
 
-func add_box(id: String, kind: String, mn: Vector3, mx: Vector3, rise: String = "", visual: bool = true) -> void:
+func add_box(id: String, kind: String, mn: Vector3, mx: Vector3, rise: String = "", visual: bool = true,
+		xf = null) -> void:
 	if SKIP_KINDS.has(kind):
 		return
-	boxes.append({ "id": id, "kind": kind, "min": mn, "max": mx, "rise": rise, "visual": visual })
+	var b := { "id": id, "kind": kind, "min": mn, "max": mx, "rise": rise, "visual": visual }
+	if xf is Transform3D and xf != Transform3D.IDENTITY:
+		b.xf = xf
+	boxes.append(b)
+
+
+## The planet's ball, or null on a flat world.
+func sphere() -> PlanetSphere:
+	return terrain.sphere if terrain != null else null
+
+
+## "Up" at p: the ground's on the home planet's ball, straight up elsewhere.
+func up_at(p: Vector3) -> Vector3:
+	var sp := sphere()
+	return sp.up_at(p) if sp != null else Vector3.UP
+
+
+## A box's own frame (identity for a plain world-space box).
+static func box_xf(b: Dictionary) -> Transform3D:
+	return b.get("xf", Transform3D.IDENTITY)
+
+
+## How high p is over the highest surface beneath it (along up_at(p)): the sand,
+## a roof, a mesa's top. Surfaces up to 0.5 m above p count (a step up), as in
+## ground_at. Negative when p is under the ground.
+func height_above(p: Vector3) -> float:
+	var sp := sphere()
+	if sp == null:
+		return p.y - ground_at(p.x, p.z, p.y)
+	var h := sp.height_above_ground(p)
+	for b in boxes:
+		var lp: Vector3 = box_xf(b).affine_inverse() * p
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		if lp.x < mn.x or lp.x > mx.x or lp.z < mn.z or lp.z > mx.z:
+			continue
+		var top := box_top(b, lp.x, lp.z)
+		if top <= lp.y + 0.5:
+			h = minf(h, lp.y - top)
+	for c in columns:
+		var up: Vector3 = c.get("up", Vector3.UP)
+		var rel: Vector3 = p - (c.center as Vector3)
+		var along := rel.dot(up)
+		if (rel - up * along).length() > float(c.radius):
+			continue
+		var top: float = c.get("h", float(c.top) - (c.center as Vector3).y)
+		if top <= along + 0.5:
+			h = minf(h, along - top)
+	return h
+
+
+## The ground point under p along up_at(p).
+func surface_below(p: Vector3) -> Vector3:
+	return p - up_at(p) * height_above(p)
 
 
 func _add_landmark(lm: Dictionary, content) -> void:
 	var at := _v3(lm.get("at", [0, 0, 0]))
+	if sphere() != null:
+		_add_landmark_on_ball(lm, content, at)
+		return
 	var base := terrain.height_at(at.x, at.z)
 	match str(lm.get("kind", "")):
 		"mesa", "spire":
@@ -74,6 +135,43 @@ func _add_landmark(lm: Dictionary, content) -> void:
 					str(b.get("rise", "")), bool(b.get("visual", true)))
 
 
+## Issue #77: a landmark at map (at.x, at.z) on the ball, standing along the ground's
+## up there: buildings become boxes in its own frame (no footprint growth from the
+## yaw), mesas and spires columns along its up.
+func _add_landmark_on_ball(lm: Dictionary, content, at: Vector3) -> void:
+	var sp := sphere()
+	var base := sp.surface_at(at.x, at.z)
+	var up := sp.up_at(base)
+	var yaw := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
+	match str(lm.get("kind", "")):
+		"mesa", "spire":
+			var h := float(lm.get("height", 100.0))
+			columns.append({ "id": str(lm.get("id", "")), "kind": str(lm.kind), "center": base,
+				"radius": float(lm.get("radius", 100.0)), "up": up, "h": h, "top": base.y + h })
+		"location":
+			var loc: Dictionary = content.get_location(str(lm.get("location", ""))) if content != null else {}
+			var xf := Transform3D(PlanetSphere.tilt_to(up) * Basis(Vector3.UP, yaw), base)
+			for b in loc.get("buildings", []):
+				var s := _v3(b.get("size", [4, 4, 4]))
+				var c := _v3(b.get("position", [0, 0, 0]))
+				# "rise" is in the world frame on a flat world; here the box's own frame
+				# carries the yaw, so turn it back into the landmark's frame.
+				add_box(str(lm.get("id", "")) + "/" + str(b.get("id", "")), "solid",
+					Vector3(c.x - s.x * 0.5, 0.0, c.z - s.z * 0.5), Vector3(c.x + s.x * 0.5, s.y, c.z + s.z * 0.5),
+					_rise_local(str(b.get("rise", "")), yaw), bool(b.get("visual", true)), xf)
+
+
+## A world-frame ramp side ("+x", "-z", ...) as seen from a frame turned by yaw.
+static func _rise_local(rise: String, yaw: float) -> String:
+	if rise == "":
+		return ""
+	var dir := { "+x": Vector3.RIGHT, "-x": Vector3.LEFT, "+z": Vector3.BACK, "-z": Vector3.FORWARD }[rise] as Vector3
+	var l := Basis(Vector3.UP, yaw).inverse() * dir
+	if absf(l.x) >= absf(l.z):
+		return "+x" if l.x > 0.0 else "-x"
+	return "+z" if l.z > 0.0 else "-z"
+
+
 ## The desert's mesas and hoodoos (content/look/desert_landforms.json, the data
 ## DesertLandforms builds them from), as columns a ship can hit or land on top of.
 ## Same skip rule as DesertLandforms: nothing within keep_out (grown by the data's
@@ -82,6 +180,9 @@ func _add_landmark(lm: Dictionary, content) -> void:
 ##   hoodoo -- column 0.55r..r, h tall, centred 0.45h up, capped by a 0.9r stone
 func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 	var clear := keep_out.grow(float(data.get("keep_out_margin", 25.0)))
+	if sphere() != null:
+		_add_landforms_on_ball(data, clear)
+		return
 	for m in data.get("mesas", []):
 		if not clear.grow(float(m[2])).has_point(Vector2(m[0], m[1])):
 			var gy := terrain.height_at(m[0], m[1])
@@ -94,6 +195,24 @@ func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 			columns.append({ "id": "hoodoo_%d_%d" % [int(hd[0]), int(hd[1])], "kind": "hoodoo",
 				"center": Vector3(hd[0], gy, hd[1]), "radius": float(hd[2]) * 0.9,
 				"top": gy + float(hd[3]) * 0.95 + float(hd[2]) * 0.4 })
+
+
+## Issue #77: the same columns, standing along the ball's up at their map spot
+## (where DesertLandforms puts them).
+func _add_landforms_on_ball(data: Dictionary, clear: Rect2) -> void:
+	var sp := sphere()
+	for m in data.get("mesas", []):
+		if not clear.grow(float(m[2])).has_point(Vector2(m[0], m[1])):
+			var base := sp.surface_at(m[0], m[1])
+			var h := float(m[3]) * 0.92
+			columns.append({ "id": "mesa_%d_%d" % [int(m[0]), int(m[1])], "kind": "mesa", "center": base,
+				"radius": float(m[2]) * 0.9, "up": sp.up_at(base), "h": h, "top": base.y + h })
+	for hd in data.get("hoodoos", []):
+		if not clear.grow(float(hd[2])).has_point(Vector2(hd[0], hd[1])):
+			var base := sp.surface_at(hd[0], hd[1])
+			var h := float(hd[3]) * 0.95 + float(hd[2]) * 0.4
+			columns.append({ "id": "hoodoo_%d_%d" % [int(hd[0]), int(hd[1])], "kind": "hoodoo", "center": base,
+				"radius": float(hd[2]) * 0.9, "up": sp.up_at(base), "h": h, "top": base.y + h })
 
 
 ## Somewhere a ship may set down: inside the desert (beyond it there is sand to
@@ -145,6 +264,8 @@ func ground_at(x: float, z: float, below: float = INF) -> float:
 	var g := terrain.height_at(x, z) if terrain != null else 0.0
 	var limit := below + 0.5
 	for b in boxes:
+		if b.has("xf"):
+			continue            # leans with the ball: height_above() asks it
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
 		if x < mn.x or x > mx.x or z < mn.z or z > mx.z:
@@ -153,6 +274,8 @@ func ground_at(x: float, z: float, below: float = INF) -> float:
 		if top <= limit and top > g:
 			g = top
 	for c in columns:
+		if c.has("up"):
+			continue
 		var cc: Vector3 = c.center
 		if Vector2(x - cc.x, z - cc.z).length() <= float(c.radius):
 			var top: float = c.top
@@ -170,13 +293,23 @@ func hit(p: Vector3, r: float) -> String:
 			continue
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
-		if p.y - r * 0.5 >= mx.y:
+		var lp: Vector3 = box_xf(b).affine_inverse() * p if b.has("xf") else p
+		if lp.y - r * 0.5 >= mx.y:
 			continue            # above it: that is landing, not hitting
-		var q := Vector3(clampf(p.x, mn.x, mx.x), clampf(p.y, mn.y, mx.y), clampf(p.z, mn.z, mx.z))
-		if q.distance_squared_to(p) <= r * r:
+		var q := Vector3(clampf(lp.x, mn.x, mx.x), clampf(lp.y, mn.y, mx.y), clampf(lp.z, mn.z, mx.z))
+		if q.distance_squared_to(lp) <= r * r:
 			return str(b.id)
 	for c in columns:
 		var cc: Vector3 = c.center
+		if c.has("up"):
+			var up: Vector3 = c.up
+			var rel := p - cc
+			var along := rel.dot(up)
+			if along - r * 0.5 >= float(c.h) or along + r < 0.0:
+				continue
+			if (rel - up * along).length() <= float(c.radius) + r:
+				return str(c.id)
+			continue
 		if p.y - r * 0.5 >= float(c.top) or p.y + r < cc.y:
 			continue
 		if Vector2(p.x - cc.x, p.z - cc.z).length() <= float(c.radius) + r:

@@ -17,6 +17,9 @@ var extent := 6000.0             ## half-size of the desert; the planet beyond
 var skirt_height := 0.0          ## the level the planet starts from at the edge
 var planet_radius := 120000.0
 var curve_from := 6000.0
+## Issue #77: the home planet is a real ball. When set, it answers everything:
+## heights on the vertical line, altitude along the radius, and no edge.
+var sphere: PlanetSphere = null
 
 
 func _init(terrain_cfg: Dictionary = {}, height_source: Callable = Callable(), desert_extent: float = -1.0) -> void:
@@ -26,16 +29,23 @@ func _init(terrain_cfg: Dictionary = {}, height_source: Callable = Callable(), d
 	skirt_height = float(terrain_cfg.get("skirt_height", skirt_height))
 	planet_radius = float(terrain_cfg.get("planet_radius", planet_radius))
 	curve_from = float(terrain_cfg.get("curve_from", extent))
+	if terrain_cfg.has("sphere_radius") and PlanetSphere.current != null:
+		sphere = PlanetSphere.current
+		extent = PI * sphere.radius
 
 
 ## True inside the desert's square (where the sand mesh and collider exist).
 func in_desert(x: float, z: float) -> bool:
+	if sphere != null:
+		return true
 	return absf(x) <= extent and absf(z) <= extent
 
 
 ## How far the curved surface has fallen below flat at horizontal distance d from
 ## the port.
 func drop(d: float) -> float:
+	if sphere != null:
+		return 0.0              # the ball's heights already curve
 	if d <= curve_from:
 		return 0.0
 	var k := d - curve_from
@@ -44,6 +54,8 @@ func drop(d: float) -> float:
 
 ## The ground's height at (x, z), in world metres.
 func height_at(x: float, z: float) -> float:
+	if sphere != null:
+		return float(source.call(x, z)) if source.is_valid() else sphere.height_at(x, z)
 	return local_height(x, z) - drop(Vector2(x, z).length())
 
 
@@ -57,4 +69,6 @@ func local_height(x: float, z: float) -> float:
 ## A world position's altitude above the curved sea level (what "space at 8 km"
 ## measures). Near the port this is just y.
 func altitude(p: Vector3) -> float:
+	if sphere != null:
+		return sphere.altitude(p)
 	return p.y + drop(Vector2(p.x, p.z).length())

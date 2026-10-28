@@ -393,7 +393,8 @@ func exit_ship() -> bool:
 	var rig = demo._rig
 	if rig != null:
 		rig.clear_override()
-		rig.rig.yaw = atmo.flight.basis.get_euler().y
+		# The ship's heading, read in the ground's own frame (issue #77: on the ball).
+		rig.rig.yaw = (PlanetSphere.tilt_to(atmo.up()).inverse() * atmo.flight.basis).get_euler().y
 		rig.set_first_person(_rig_was_fp)
 		var cam: Camera3D = rig.camera()
 		cam.near = _cam_near
@@ -1010,14 +1011,14 @@ func _wreck_berth(i: int, boom: bool) -> void:
 func _exit_spot() -> Vector3:
 	var b: Basis = atmo.flight.basis
 	var s := atmo.position()
+	var u := atmo.up()
 	var side := 5.5
 	for off in [-b.x * side, b.x * side, b.z * (side + 3.0), -b.z * (side + 3.0)]:
-		var q: Vector3 = s + Vector3(off.x, 0.0, off.z)
-		var g := ground.ground_at(q.x, q.z, s.y)
-		var at := Vector3(q.x, g + 0.05, q.z)
-		if ground.hit(at + Vector3(0, 1.0, 0), 0.6) == "":
+		var flat: Vector3 = off - u * off.dot(u)
+		var at := ground.surface_below(s + flat) + u * 0.05
+		if ground.hit(at + u, 0.6) == "":
 			return at
-	return Vector3(s.x, ground.ground_at(s.x, s.z, s.y + 5.0) + 0.05, s.z)
+	return ground.surface_below(s + u * 5.0) + u * 0.05
 
 
 func _set_player_collision(on: bool) -> void:

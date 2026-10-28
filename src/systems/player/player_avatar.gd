@@ -359,6 +359,10 @@ static func _meshes_under(n: Node) -> Array:
 ## upper (BodyAnimator.UPPER_*), dt is seconds.
 func animate(dt: float, inp: Dictionary) -> void:
 	var vel: Vector3 = inp.get("velocity", Vector3.ZERO)
+	# Issue #77: on the home planet, read the velocity in the ground's own frame.
+	var tilt = get_parent().get("tilt") if get_parent() != null else null
+	if tilt is Basis and tilt != Basis.IDENTITY:
+		vel = tilt.inverse() * vel
 	var flat := Vector3(vel.x, 0, vel.z)
 	var speed := flat.length()
 	var cam_yaw: float = inp.get("cam_yaw", 0.0)
@@ -373,7 +377,11 @@ func animate(dt: float, inp: Dictionary) -> void:
 		want = atan2(flat.x, flat.z)
 	facing_yaw = _approach_angle(facing_yaw, want, (turn_rate * 2.0 if first_person else turn_rate) * dt)
 	var parent_yaw := (get_parent() as Node3D).global_rotation.y if get_parent() is Node3D else 0.0
-	rotation.y = facing_yaw - parent_yaw
+	# Issue #77: stand along the ground's up on the home planet (the body's tilt).
+	if tilt is Basis and tilt != Basis.IDENTITY:
+		basis = (get_parent() as Node3D).global_basis.orthonormalized().inverse() * tilt * Basis(Vector3.UP, facing_yaw)
+	else:
+		rotation.y = facing_yaw - parent_yaw
 
 	var local := Basis(Vector3.UP, facing_yaw).inverse() * flat
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)

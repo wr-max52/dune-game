@@ -136,9 +136,16 @@ func _process(delta: float) -> void:
 	rig.fpv_offset.y = move_toward(rig.fpv_offset.y, eye_to, delta * (6.0 if sliding else 4.0))
 	rig.tpv_height = move_toward(rig.tpv_height, (1.25 if crouched else 1.8), delta * 4.0)
 	_slide_roll = lerpf(_slide_roll, deg_to_rad(3.5) if sliding else 0.0, 1.0 - exp(-10.0 * delta))
-	var xf: Transform3D = rig.camera_transform(_player.global_position)
+	var p: Vector3 = _player.global_position
+	var xf: Transform3D = rig.camera_transform(p)
+	# Issue #77: on the home planet the view stands on the ground's up, not world up.
+	var tilt: Basis = _player.get("tilt") if _player.get("tilt") is Basis else Basis.IDENTITY
+	var pivot: Vector3 = rig.tpv_pivot(p)
+	if tilt != Basis.IDENTITY:
+		xf = Transform3D(tilt, p) * Transform3D(Basis.IDENTITY, -p) * xf
+		pivot = p + tilt * (pivot - p)
 	if not rig.is_first_person() and collide:
-		xf.origin = _resolve_collision(rig.tpv_pivot(_player.global_position), xf.origin)
+		xf.origin = _resolve_collision(pivot, xf.origin)
 	if _glide_left > 0.0:
 		_glide_left = maxf(0.0, _glide_left - delta)
 		var f := 1.0 - _glide_left / glide_time

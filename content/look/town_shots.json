@@ -1,5 +1,5 @@
 {
-  "note": "Fixed review cameras for the port town. pos/target in metres, town coordinates (floor y = 0). height_above_ground (optional) puts the camera that high over the desert terrain at pos x, z.",
+  "note": "Fixed review cameras for the port town. pos/target in metres, town coordinates (floor y = 0). height_above_ground (optional) puts the camera that high over the desert terrain at pos x, z. map (optional, issue #77: the home planet is a ball) = [x, z, metres up, target x, z, metres up] in map coordinates, standing along the ground's up.",
   "shots": {
     "gate_approach":      { "pos": [130.0, 1.7, 0.0], "target": [0.0, 3.0, 0.0], "fov": 62.0 },
     "plaza":              { "pos": [30.0, 8.0, 30.0], "target": [0.0, -3.0, 0.0], "fov": 65.0 },
@@ -24,6 +24,9 @@
     "homes_market_side":  { "pos": [26.0, 2.0, -33.0], "target": [-10.0, 2.5, -56.0], "fov": 66.0 },
     "homes_tower_side":   { "pos": [26.0, 2.0, 33.0], "target": [-20.0, 9.0, 56.0], "fov": 70.0 },
     "barracks_front":     { "pos": [46.0, 2.0, 6.0], "target": [72.0, 6.0, 50.0], "fov": 68.0 },
-    "town_oblique":       { "pos": [150.0, 95.0, -150.0], "target": [0.0, 0.0, 0.0], "fov": 50.0 }
+    "town_oblique":       { "pos": [150.0, 95.0, -150.0], "target": [0.0, 0.0, 0.0], "fov": 50.0 },
+    "dunes_far":          { "pos": [0.0, 0.0, 0.0], "target": [0.0, 0.0, 0.0], "map": [1800.0, -900.0, 1.7, 2200.0, -1100.0, 3.0], "fov": 66.0 },
+    "planet_high":        { "pos": [0.0, 1500.0, 2500.0], "target": [0.0, -400.0, -2500.0], "fov": 60.0 },
+    "planet_orbit":       { "pos": [6000.0, 7000.0, 13000.0], "target": [0.0, -5000.0, 0.0], "fov": 50.0 }
   }
 }

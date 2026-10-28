@@ -105,7 +105,7 @@ func test_buildings_bump_slow_ships_and_crash_fast_ones() -> void:
 func test_land_only_when_low_and_settles_on_what_is_below() -> void:
 	a.place_flying(Vector3(40, 400, 0), Vector3.FORWARD, 0.0, 0.0)
 	assert_false(a.land(), "too high to land")
-	var roof := ground.boxes.filter(func(b): return b.id == "watchtower")[0]
+	var roof: Dictionary = ground.boxes.filter(func(b): return b.id == "watchtower")[0]
 	var c: Vector3 = ((roof.min as Vector3) + (roof.max as Vector3)) * 0.5
 	a.place_flying(Vector3(c.x, (roof.max as Vector3).y + 40.0, c.z), Vector3.FORWARD, 0.0, 0.0)
 	assert_true(a.land())
