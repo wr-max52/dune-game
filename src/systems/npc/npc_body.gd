@@ -81,6 +81,10 @@ var kit: CharacterKit
 var look_body: Node3D
 var joints: Dictionary = {}
 var anim = BodyAnimatorT.new()
+## Issue #87: the rifle rests low across the body until there is something to aim
+## at, comes up before the first shot and goes back down a moment after.
+var carry := WeaponCarry.new()
+var _rifle_aim_xf := Transform3D()     ## the rifle where CharacterKit's "rifle" pose shoulders it
 
 ## Numbers the traces and tests read.
 var walked_m := 0.0
@@ -147,6 +151,8 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 		look_body.name = "Look"
 		add_child(look_body)
 		joints = look_body.get_meta("joints")
+		if look_body.has_meta("weapon"):
+			_rifle_aim_xf = (look_body.get_meta("weapon") as Node3D).transform
 	else:
 		var mesh := CapsuleMesh.new()
 		mesh.radius = 0.35
@@ -415,7 +421,8 @@ func carry_out(b: GuardBrain, dt: float) -> void:
 	else:
 		clear_face()
 	aim_point = b.aim
-	if b.fire and b.aim != Vector3.INF:
+	# Issue #87: the rifle has to come up before a bolt leaves it.
+	if b.fire and b.aim != Vector3.INF and carry.on_target():
 		if fire_at(b.aim, dt):
 			b.on_shot()
 	else:
@@ -456,11 +463,13 @@ func _physics_process(delta: float) -> void:
 		_speech_left -= delta
 		if _speech_left <= 0.0:
 			_speech.visible = false
+	carry.step(delta, aim_point != Vector3.INF)
 	var move := _walk(delta)
 	_turn(delta, move)
 	var dir := NpcLocomotion.world_to_command(move, -rotation.y)
 	set_command(dir, bool(command.sprint), bool(command.crouch), false)
 	super._physics_process(delta)
+	_stand_on_ground()
 	if _last_pos != Vector3.INF:
 		walked_m += NpcLocomotion._flat(global_position - _last_pos).length()
 	_last_pos = global_position
@@ -502,6 +511,16 @@ func _repath(goal: Vector3) -> void:
 	if not last_path_ok:
 		path_failures += 1      # walk as close as the mesh allows, but say so
 	locomotion.set_path(p)
+
+
+## Issue #77: on the home planet's ball the body turns only by its facing (yaw),
+## so stand the look along the ground's up (the body's tilt) or, far round the
+## curve, it walks along lying down.
+func _stand_on_ground() -> void:
+	if look_body == null or not is_instance_valid(look_body):
+		return
+	var yaw := Basis(Vector3.UP, rotation.y)
+	look_body.basis = Basis.IDENTITY if tilt == Basis.IDENTITY else yaw.inverse() * tilt * yaw
 
 
 func _turn(dt: float, move: Vector3) -> void:
@@ -713,25 +732,29 @@ func _animate(dt: float, move: Vector3) -> void:
 	_flinch = maxf(0.0, _flinch - dt * 4.0)
 	if kit == null or look_body == null:
 		return
-	var flat := Vector3(velocity.x, 0, velocity.z)
+	var v := tilt.inverse() * velocity      # in the ground's frame (issue #77)
+	var flat := Vector3(v.x, 0, v.z)
 	var speed := flat.length()
 	var local := Basis(Vector3.UP, rotation.y).inverse() * flat
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)
 	var out: Dictionary = anim.step(dt, {
-		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": velocity.y,
+		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": v.y,
 		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": BodyAnimatorT.UPPER_RIFLE,
-		"aim_pitch": _aim_pitch(),
+		"aim_pitch": _aim_pitch(), "ready": carry.eased(),
 	})
 	for jn in out.joints:
 		if joints.has(jn):
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]
 	(joints.pelvis as Node3D).position.y = out.pelvis_y
+	(joints.pelvis as Node3D).position.x = out.pelvis_x
 	if _flinch > 0.0:
 		(joints.chest as Node3D).rotation_degrees.x -= 14.0 * _flinch
-	# Hands back on the rifle (CharacterKit put it in the chest at the "rifle" pose).
+	# Hands back on the rifle: shouldered at CharacterKit's "rifle" pose when aiming,
+	# slung low across the body at rest (issue #87).
 	if look_body.has_meta("weapon"):
 		var w: Node3D = look_body.get_meta("weapon")
 		var grips: Dictionary = w.get_meta("grips", {})
+		w.transform = WeaponCarry.blend(WeaponCarry.rest_xf("rifle", grips.get("r", Vector3.ZERO)), _rifle_aim_xf, carry.eased())
 		if grips.has("r"):
 			kit.reach(look_body, "r", w.transform * (grips.r as Vector3), Vector3(-0.5, -0.7, -0.5))
 		if grips.has("l"):

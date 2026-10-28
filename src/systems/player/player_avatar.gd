@@ -42,6 +42,11 @@ var facing_yaw := 0.0              ## world yaw the body faces
 var turn_rate := 10.0              ## rad/s
 var last_frame: Dictionary = {}
 var _recoil := 0.0                 ## 1 right after a shot, decays to 0
+## Issue #87: in third person a gun rests low (rifle across the body, pistol by the
+## thigh) and comes up while the trigger or aim is held, then for a moment after.
+## weapons sets aim_wanted; first person always holds the gun up.
+var carry := WeaponCarry.new(1.0)
+var aim_wanted := false
 var _flash_left := 0.0
 
 ## Aim down sights (first person): the weapon blends to a pose solved from the
@@ -368,10 +373,13 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var cam_yaw: float = inp.get("cam_yaw", 0.0)
 	var upper: String = inp.get("upper", BodyAnimator.UPPER_FREE)
 	var armed := upper != BodyAnimator.UPPER_FREE
+	var gun := upper == BodyAnimator.UPPER_AIM or upper == BodyAnimator.UPPER_RIFLE
+	carry.step(dt, first_person or aim_wanted or not gun)
 
-	# Facing: toward the aim when armed or in first person, else toward travel.
+	# Facing: toward the aim when a weapon is up or in first person, else toward
+	# travel (a gun at rest walks where you go, issue #87).
 	var want := facing_yaw
-	if armed or first_person:
+	if (armed and (not gun or carry.ready > 0.3)) or first_person:
 		want = cam_yaw
 	elif speed > 0.4:
 		want = atan2(flat.x, flat.z)
@@ -394,12 +402,14 @@ func animate(dt: float, inp: Dictionary) -> void:
 		"vy": vel.y, "crouch": inp.get("crouch", false), "sprint": inp.get("sprint", false),
 		"slide": inp.get("slide", false),
 		"upper": upper, "aim_pitch": pitch * (1.6 if first_person else 1.0), "twist": twist,
+		"ready": 1.0 if first_person else carry.eased(),
 	})
 	last_frame = out
 	for jn in out.joints:
 		if joints.has(jn):
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]
 	(joints.pelvis as Node3D).position.y = out.pelvis_y
+	(joints.pelvis as Node3D).position.x = out.pelvis_x
 	var rc: Dictionary = look.get("recoil", {})
 	_recoil = maxf(0.0, _recoil - dt / float(rc.get("recover_s", 0.12)))
 	if _flash_left > 0.0:
@@ -436,8 +446,12 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	if current == "" or not weapons.has(current):
 		return
 	var w: Node3D = weapons[current]
+	var grips: Dictionary = w.get_meta("grips", {})
 	var ready := _ready_xf(current, pitch)
 	var holster := _holster_xf(current)
+	var up := 1.0 if first_person or current == "energy_blade" else carry.eased()
+	if up < 1.0:
+		ready = WeaponCarry.blend(WeaponCarry.rest_xf(carry_kind(current), grips.get("r", Vector3.ZERO)), ready, up)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
 	if _recoil > 0.0 and current != "energy_blade":
 		var rc: Dictionary = look.get("recoil", {})
@@ -456,7 +470,6 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		var to_chest := (joints.chest as Node3D).global_transform.affine_inverse() * aimed
 		ready = ready.interpolate_with(to_chest, ads_blend * ads_blend * (3.0 - 2.0 * ads_blend))
 	w.transform = holster.interpolate_with(ready, f)
-	var grips: Dictionary = w.get_meta("grips", {})
 	if upper == BodyAnimator.UPPER_FREE:
 		return
 	# The right hand always rides the grip; the left joins once the weapon is up.
@@ -466,6 +479,9 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	if grips.has("r"):
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), POLE_R)
 	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
+	# A pistol at rest hangs from the right hand alone; the left arm swings free.
+	if carry_kind(current) == "pistol" and up < 0.5:
+		one_hand = true
 	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
 
@@ -482,6 +498,16 @@ func _fpv_grips(upper: String, dt: float) -> void:
 		left = false
 	_fpv.ease_grip("r", 1.0 if armed else relaxed, dt)
 	_fpv.ease_grip("l", 1.0 if left else relaxed, dt)
+
+
+## True once the gun is up far enough to shoot (weapons holds the trigger until then).
+func gun_up() -> bool:
+	return first_person or current == "energy_blade" or carry.on_target()
+
+
+## "pistol" or "rifle": how the weapon rests (hand_weapons.json "carry", else by name).
+func carry_kind(id: String) -> String:
+	return str((look.get(id, {}) as Dictionary).get("carry", "pistol" if id.contains("pistol") else "rifle"))
 
 
 func _ready_xf(id: String, _pitch: float) -> Transform3D:

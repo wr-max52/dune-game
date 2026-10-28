@@ -151,23 +151,29 @@ static func neighbours(id: String, cc = null) -> Array:
 			continue
 		var o: Dictionary = all[other]
 		if str(o.get("near", "")) == id and o.has("at"):
-			out.append(_neighbour(o, GameFlow.vec(o.at)))
+			out.append(_neighbour(o, GameFlow.vec(o.at), cc))
 	if str(mine.get("near", "")) != "" and all.has(str(mine.near)):
 		var home: Dictionary = all[str(mine.near)]
 		var at := GameFlow.vec(mine.get("at", [0, 0, -20000]))
 		var back := GameFlow.vec(mine.get("home_at", [-at.x * 1.6, at.y * 0.3, -at.z * 1.6]))
-		out.append(_neighbour(home, back))
+		out.append(_neighbour(home, back, cc))
 	return out
 
 
-static func _neighbour(o: Dictionary, at: Vector3) -> Dictionary:
+static func _neighbour(o: Dictionary, at: Vector3, cc) -> Dictionary:
 	var t: Dictionary = types().get("types", {}).get(str(o.get("type", "sand")), {})
 	var body: Dictionary = t.get("body", {})
+	# Issue #77: a planet that is a real ball (its world's terrain.sphere_radius)
+	# looks its true size from a neighbour's sky.
+	var ball := 0.0
+	if o.has("world") and cc != null:
+		ball = float(cc.get_world(str(o.world)).get("terrain", {}).get("sphere_radius", 0.0))
 	return {
 		"id": str(o.get("id", "")),
 		"type": str(o.get("type", "sand")),
 		"at": at,
-		"radius": float(o.get("body_radius", body.get("radius", 1000.0))),
+		"ball": ball > 0.0,
+		"radius": ball if ball > 0.0 else float(o.get("body_radius", body.get("radius", 1000.0))),
 		"color": Color(str(body.get("color", "#a08060"))),
 		"dark": Color(str(body.get("dark", "#504030"))),
 	}

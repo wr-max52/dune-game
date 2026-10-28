@@ -101,6 +101,7 @@ var _respawned := 0
 func _ready() -> void:
 	# Issue #45: the planet decides the town, the world, the ground and the look.
 	planet = GameFlow.planet()
+	PlanetSphere.current = null       # issue #77: only a ball planet sets it again (_build_desert)
 	if planet.is_empty():
 		push_error("TownDemo: no planet " + GameFlow.current_planet_id())
 		return
@@ -924,7 +925,18 @@ func show_shot(id: String) -> bool:
 	if terrain is PlanetTerrain:
 		terrain.snap_to(pos)         # the fine sand under this shot
 		(terrain as PlanetTerrain).follow_camera(func(): return camera.global_position)
+		# The sky a ship would see at this height (fog clears, stars come out).
+		if look != null:
+			if _shot_sky == null:
+				_shot_sky = AltitudeSky.new()
+				_shot_sky.setup(look, world.get("atmosphere", {}))
+				add_child(_shot_sky)
+			_shot_sky._applied = -1.0
+			_shot_sky.update_for((terrain as PlanetTerrain).sphere.altitude(pos), pos)
 	return true
+
+
+var _shot_sky: AltitudeSky
 
 
 func _unhandled_input(event: InputEvent) -> void:

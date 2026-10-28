@@ -65,7 +65,12 @@ func update_for(altitude: float, viewer: Vector3) -> void:
 	m.set_shader_parameter("sky_energy", lerpf(float(k.get("energy", 1.0)), float(space.get("sky_energy", 0.35)), level))
 	m.set_shader_parameter("planet_visibility", lerpf(float(k.get("planet_visibility", 0.75)), float(space.get("planet_visibility", 1.0)), level))
 	if env.env != null and not fog.is_empty():
-		env.env.fog_density = float(fog.get("density", 0.00016)) * lerpf(1.0, float(space.get("fog_density_scale", 0.15)), level)
+		# Issue #77: from above the home planet's ball you look across the whole
+		# planet (10-20 km of air): clear nearly all of it so the ball reads.
+		var thin := float(space.get("fog_density_scale", 0.15))
+		if PlanetSphere.current != null:
+			thin = minf(thin, float(space.get("ball_fog_density_scale", 0.01)))
+		env.env.fog_density = float(fog.get("density", 0.00016)) * lerpf(1.0, thin, level)
 		env.env.fog_sky_affect = float(fog.get("sky_affect", 0.3)) * (1.0 - level)
 	var vol: Dictionary = pr.get("volumetric", {})
 	if env.env != null and not vol.is_empty():
@@ -100,7 +105,9 @@ func _build_stars() -> void:
 	rng.seed = 91
 	var dist := float(st.get("distance", 60000.0))
 	for i in n:
-		var v := Vector3(rng.randf_range(-1, 1), rng.randf_range(0.02, 1), rng.randf_range(-1, 1)).normalized()
+		# On the ball "up" turns with you: stars all round (the planet hides its share).
+		var low := -1.0 if PlanetSphere.current != null else 0.02
+		var v := Vector3(rng.randf_range(-1, 1), rng.randf_range(low, 1), rng.randf_range(-1, 1)).normalized()
 		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * rng.randf_range(0.3, 1.0)), v * dist))
 	_stars = MultiMeshInstance3D.new()
 	_stars.name = "Stars"
