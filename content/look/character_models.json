@@ -298,7 +298,8 @@
                 0.18
               ],
               "above": -0.3,
-              "push": 0.03
+              "push": 0.03,
+              "drop_back": true
             }
           ],
           "skip": [

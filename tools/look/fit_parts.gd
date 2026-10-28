@@ -271,7 +271,9 @@ static func _recolored(mat: Material, rc: Dictionary) -> Material:
 ## [low, high]) and whose saturation and value reach mv.min_sv, with its centre above
 ## mv.above (so the boots, further down, stay), goes from mv.from to
 ## mv.to (a tunic hem that hangs past the waist stays with the tunic), pushed out along
-## its normals by mv.push (so a separately made legs piece stays under it).
+## its normals by mv.push (so a separately made legs piece stays under it). With
+## mv.drop_back, the matching triangles behind the body (z < 0) are dropped instead,
+## so a tunic hem hangs only in front, like an apron.
 static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array, mv: Dictionary) -> void:
 	var from := -1
 	var to := -1
@@ -293,6 +295,7 @@ static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array
 	var hi := float(mv.hue[1]) / 360.0
 	var sv: Array = mv.get("min_sv", [0.4, 0.3])
 	var above := float(mv.get("above", -INF))
+	var drop_back := bool(mv.get("drop_back", false))
 	var kept := PackedInt32Array()
 	var moved := 0
 	var t_from: PackedInt32Array = tris[from]
@@ -301,6 +304,8 @@ static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array
 		var px := img.get_pixel(clampi(int(fposmod(c.x, 1.0) * w), 0, w - 1), clampi(int(fposmod(c.y, 1.0) * h), 0, h - 1))
 		var cy := (vv[t_from[t]].y + vv[t_from[t + 1]].y + vv[t_from[t + 2]].y) / 3.0
 		if cy >= above and px.h >= lo and px.h <= hi and px.s >= float(sv[0]) and px.v >= float(sv[1]):
+			if drop_back and (vv[t_from[t]].z + vv[t_from[t + 1]].z + vv[t_from[t + 2]].z) / 3.0 < 0.0:
+				continue
 			tris[to].append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
 			moved += 1
 		else:

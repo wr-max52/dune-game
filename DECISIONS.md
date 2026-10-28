@@ -18,7 +18,8 @@ Every significant technical choice, the alternative, and why. Newest on top.
 - **The cantina owner's legs are a separate piece.** Her tunic came back
   mid-thigh with no body under it, so a cut at the belt left a hole. The hem goes
   to her upper body by colour (`move`, pushed out a little so the legs stay under
-  it), and her legs are a prompt-only generation (skin-tight leather trousers,
+  it); its back half is dropped (`drop_back`), since it did not render well behind
+  her, so it hangs in front like a tattered apron. Her legs are a prompt-only generation (skin-tight leather trousers,
   boots) fitted into the legs slot. Alternative: fill the gap with the base body's
   hips in her trouser colour. Rejected: it read as a flat patch.
 - **Accents get their own tolerance.** A colour variant's swap can carry its own

@@ -114,8 +114,9 @@ gunmetal grey (`recolor` in the kit's `dress.guard`).
 **Cantina owner's legs are their own piece.** Her tunic came back mid-thigh (the
 references won over the prompt) and there is no body under it, so cutting at the
 belt left a hole. The tunic hem goes to her upper body (`move` in `dress`, by
-colour), and her legs are a separate prompt-only generation fitted into the legs
-slot, so they go under anyone's torso. The prompt:
+colour), front half only: the back of the hem is dropped (`drop_back`), so it hangs
+like a tattered apron. Her legs are a separate prompt-only generation fitted into
+the legs slot, so they go under anyone's torso. The prompt:
 
 > A single pair of skin-tight dark brown leather riding trousers with pale grey-tan
 > lace-up combat boots, displayed empty and standing on their own, a plain fitted
