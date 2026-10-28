@@ -182,6 +182,67 @@ func test_no_money_no_speeder() -> void:
 	t.bar.end_talk()
 
 
+# ---- issue #82: the Atlantium Sand-boxer and its paint jobs ---------------------------------
+
+func test_every_paint_job_is_a_model() -> void:
+	var look: Dictionary = cfg.look
+	assert_eq(str(cfg.label), "Atlantium Sand-boxer")
+	for id in ["steel", "remnant", "tide", "crimson"]:
+		assert_true(look.paints.has(id), id)
+		assert_true(ResourceLoader.exists(str(look.paints[id])), "the %s model is prepped" % id)
+	for id in look.sold_paints:
+		assert_true(look.paints.has(id), "Skrugs sells a paint that exists: " + str(id))
+
+
+func test_skrugs_sells_each_one_in_a_new_paint() -> void:
+	var t = _town()
+	var post: SpeederPost = t.speeder_post
+	WorldState.credits = 1000
+	for i in 3:
+		post.buy()
+	var paints := post.speeders.map(func(s): return s.paint)
+	assert_eq(paints, cfg.look.sold_paints, "steel, then green and blue, then crimson and white")
+	assert_eq(post.display.paint, str(cfg.look.display_paint))
+	assert_not_null(post.speeders[1].visual.get_node_or_null("Model"), "the Sand-boxer, not the stand-in")
+
+
+func test_the_remnant_parks_a_black_and_red_one_outside_the_front_gate() -> void:
+	var t = _town()
+	assert_eq(t.gate_speeders.size(), 1)
+	var s: SpeederNode = t.gate_speeders[0]
+	assert_eq(s.paint, "remnant")
+	assert_false(s.rideable, "the Remnant's, not the player's")
+	var gate: Vector3 = t.town.marker_pos("gate")
+	assert_gt(s.model.position.x, gate.x + 2.0, "outside the wall")
+	assert_gt(absf(s.model.position.z), 7.0, "off the gate lane")
+	assert_lt(s.model.position.distance_to(gate), 16.0, "right by the gate")
+
+
+func test_its_hitbox_is_the_shape_of_the_sand_boxer() -> void:
+	var t = _town()
+	var s: SpeederNode = t.gate_speeders[0]
+	var shape: Shape3D = (s.hull.get_node("Shape") as CollisionShape3D).shape
+	assert_true(shape is ConvexPolygonShape3D, "the model's own shape, not a box")
+	var box := AABB(shape.points[0], Vector3.ZERO)
+	for p in shape.points:
+		box = box.expand(p)
+	assert_almost_eq(box.size.x, 2.7, 0.25, "as wide as the model")
+	assert_lt(box.position.z, -2.7, "reaches the blaster tips")
+	await wait_physics_frames(2)
+	var space: PhysicsDirectSpaceState3D = s.get_world_3d().direct_space_state
+	var at: Vector3 = s.model.position
+	var fwd: Vector3 = s.model.forward()
+	var right: Vector3 = fwd.cross(Vector3.UP)
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + right * 8.0, at - right * 8.0))
+	assert_eq(hit.get("collider"), s.hull, "a bolt across the middle hits the hull")
+	var cabin := at + Vector3(0, 0.9, 0)      # the cabin: above the old 1 m box, inside the model
+	hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(cabin + right * 8.0, cabin - right * 8.0))
+	assert_eq(hit.get("collider"), s.hull, "a bolt through the cabin hits")
+	var over := at + Vector3(0, 1.6, 0)       # just over the roof
+	hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(over + right * 8.0, over - right * 8.0))
+	assert_ne(hit.get("collider"), s.hull, "a bolt over the roof misses")
+
+
 func test_ride_it_and_get_off() -> void:
 	var t = _town()
 	var post: SpeederPost = t.speeder_post

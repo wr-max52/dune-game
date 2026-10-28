@@ -35,6 +35,50 @@
     "length": 4.6,
     "max_span": 3.0
   },
+  "sandboxer": {
+    "source": "res://assets/vehicles/source/sandboxer2.glb",
+    "yaw_deg": 180,
+    "length": 5.0,
+    "max_span": 2.7,
+    "out": "res://assets/vehicles/sandboxer.glb",
+    "paint": {
+      "body": "#a4a6aa"
+    }
+  },
+  "sandboxer_remnant": {
+    "source": "res://assets/vehicles/source/sandboxer2.glb",
+    "yaw_deg": 180,
+    "length": 5.0,
+    "max_span": 2.7,
+    "out": "res://assets/vehicles/sandboxer_remnant.glb",
+    "paint": {
+      "body": "#2b2b30",
+      "trim": "#a01e1e",
+      "glow": "#ff4030"
+    }
+  },
+  "sandboxer_tide": {
+    "source": "res://assets/vehicles/source/sandboxer2.glb",
+    "yaw_deg": 180,
+    "length": 5.0,
+    "max_span": 2.7,
+    "out": "res://assets/vehicles/sandboxer_tide.glb",
+    "paint": {
+      "body": "#3f8a52",
+      "trim": "#3a78d8"
+    }
+  },
+  "sandboxer_crimson": {
+    "source": "res://assets/vehicles/source/sandboxer2.glb",
+    "yaw_deg": 180,
+    "length": 5.0,
+    "max_span": 2.7,
+    "out": "res://assets/vehicles/sandboxer_crimson.glb",
+    "paint": {
+      "body": "#8c1428",
+      "trim": "#ece7dc"
+    }
+  },
   "options": {
     "note": "Runner-up generations, kept for later (more ships to buy, or swaps). All in assets/vehicles/source/, nose toward +Z. Not loaded by the game.",
     "interceptor_text.glb": "text-only interceptor, white and teal, detailed jet (8042... ref copy is interceptor_ref.glb)",
@@ -44,7 +88,8 @@
     "courier.glb": "yellow and blue cartoon racer with wing pods",
     "speeder_text.glb": "teal and sand hover car (has wheels; would need trimming)",
     "speeder_ref.glb": "reference-led copy of the primitive speeder",
-    "speeder_text2.glb": "text-only hover sled, second try (2130a072); not reviewed"
+    "speeder_text2.glb": "text-only hover sled, second try (2130a072); not reviewed",
+    "sandboxer.glb": "first Sand-boxer try (issue #82): glass plasma core shows more, but the engine deck sits off centre; no front guns"
   },
   "generations": {
     "interceptor": "b173bc6a-9d84-4c6b-8007-5c06d23a24a2 (agentic, refs: stand-in crops)",
@@ -52,7 +97,8 @@
     "courier": "4fa39cfb-2d25-4586-aac6-12fd0f584059",
     "gunship": "b82e5ccf-faa8-4714-bb76-1564ffd446f3",
     "speeder": "895b349d-a78a-4094-bccc-f7acfb611e8c (agentic, refs: stand-in crops)",
-    "runner_ups": "8042aad5 (interceptor_ref), afd8adcf (interceptor_text), 9f5deb82 (interceptor_text2), b3bf40dd (freighter), ce66b6d3 (courier), 79440b71 (speeder_ref), 3ecc12e5 (speeder_text), 2130a072 (speeder_text2)",
-    "not_downloaded": "agentic clean-style rebuilds of the chosen layouts, still building when this was committed; fetch from Hyper3D Mine if wanted: fb9ecabb (freighter), e9a97efd (courier), 07fcc97c (gunship)"
+    "runner_ups": "8042aad5 (interceptor_ref), afd8adcf (interceptor_text), 9f5deb82 (interceptor_text2), b3bf40dd (freighter), ce66b6d3 (courier), 79440b71 (speeder_ref), 3ecc12e5 (speeder_text), 2130a072 (speeder_text2), 12657846 (sandboxer.glb: first Sand-boxer, engine deck off centre)",
+    "not_downloaded": "agentic clean-style rebuilds of the chosen layouts, still building when this was committed; fetch from Hyper3D Mine if wanted: fb9ecabb (freighter), e9a97efd (courier), 07fcc97c (gunship)",
+    "sandboxer": "c6c78950-0769-413d-9a6e-d22b3fbd29d3 (Gen-2.5 Medium, delit, 30k; refs: front and rear-quarter crops of the issue #82 concept sheet; prompt asks for a centred core and front blasters). Issue #82: the Atlantium Sand-boxer; the four sandboxer* entries are paint jobs on this one model. The blasters are SpeederNode's (laser.muzzle), not the model's"
   }
 }

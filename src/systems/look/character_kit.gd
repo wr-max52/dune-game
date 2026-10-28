@@ -16,6 +16,8 @@ extends RefCounted
 
 const PALETTES_PATH := "res://content/look/characters.json"
 const BLADE_PATH := "res://content/core/weapons/energy_blade.json"
+const HAND_WEAPONS_PATH := "res://content/look/hand_weapons.json"   ## issue #82: the guards' rifle model
+const GunSights := preload("res://src/systems/look/gun_sights.gd")
 const ENERGY := preload("res://src/systems/look/shaders/energy.gdshader")
 const GEAR := preload("res://src/systems/look/shaders/gear.gdshader")
 const REF_HEIGHT := 1.8
@@ -496,14 +498,36 @@ func _dress_trooper(body: Node3D, p: Dictionary, commander: bool) -> void:
 		_rifle(body, p)
 
 
-## Remnant line rifle: long, slab-sided, a side-mounted power cell. Grips for IK.
+## Remnant line rifle. Issue #82: the rendered rifle the player carries
+## (content/look/hand_weapons.json "rifle_blaster", darkened and scoped the same
+## way), slid so its grips sit where the old one's did and the poses still fit.
+## Without the model it is the old slab-sided box rifle. Grips for IK.
 func _rifle(body: Node3D, p: Dictionary) -> void:
-	var metal := _m(Color("#2a2a2a"), "metal", 0.35)
-	var furn := _m(_c(p, "armor_light", "#4a4a4a"), "metal", 0.5)
-	var cell := _m(_c(p, "cloth", "#6b1e1e"), "metal", 0.3)
 	var r := Node3D.new()
 	r.name = "Rifle"
 	_j(body, "chest").add_child(r)
+	body.set_meta("weapon", r)
+	var grips := { "r": Vector3(0, -0.06, 0.0), "l": Vector3(0, -0.04, 0.26) }
+	r.set_meta("grips", grips)
+	var spec: Dictionary = _read_json(HAND_WEAPONS_PATH).get("rifle_blaster", {})
+	var path := str(spec.get("model", ""))
+	if path != "" and ResourceLoader.exists(path) and load(path) is PackedScene:
+		var model: Node3D = (load(path) as PackedScene).instantiate()
+		var k := float(spec.get("scale", 1.0))
+		var g: Dictionary = spec.get("grips", {})
+		var gr := Vector3(float(g.r[0]), float(g.r[1]), float(g.r[2])) * k if g.has("r") else Vector3.ZERO
+		var gl := Vector3(float(g.l[0]), float(g.l[1]), float(g.l[2])) * k if g.has("l") else gr + Vector3(0, 0, 0.3)
+		model.scale = Vector3.ONE * k
+		model.position = grips.r - gr
+		if spec.get("dark") is Dictionary:
+			PlayerAvatar._darken(model, spec.dark)
+		GunSights.add_to(model, spec)
+		r.add_child(model)
+		r.set_meta("grips", { "r": grips.r, "l": model.position + gl })
+		return
+	var metal := _m(Color("#2a2a2a"), "metal", 0.35)
+	var furn := _m(_c(p, "armor_light", "#4a4a4a"), "metal", 0.5)
+	var cell := _m(_c(p, "cloth", "#6b1e1e"), "metal", 0.3)
 	_mi(r, _box(Vector3(0.05, 0.1, 0.52)), metal, Vector3(0, 0.05, 0.12))
 	_mi(r, _cyl(0.016, 0.016, 0.4, 8), metal, Vector3(0, 0.07, 0.56), Vector3(90, 0, 0))
 	_mi(r, _cyl(0.03, 0.03, 0.16, 8), furn, Vector3(0, 0.07, 0.44), Vector3(90, 0, 0))
@@ -512,8 +536,6 @@ func _rifle(body: Node3D, p: Dictionary) -> void:
 	_mi(r, _box(Vector3(0.03, 0.05, 0.17)), metal, Vector3(0, 0.125, 0.1))
 	_mi(r, _box(Vector3(0.07, 0.06, 0.12)), cell, Vector3(0.05, 0.03, 0.18))
 	_mi(r, _box(Vector3(0.035, 0.06, 0.05)), metal, Vector3(0, -0.02, 0.3))
-	r.set_meta("grips", { "r": Vector3(0, -0.06, 0.0), "l": Vector3(0, -0.04, 0.26) })
-	body.set_meta("weapon", r)
 
 
 # ------------------------------------------------------------------ smuggler

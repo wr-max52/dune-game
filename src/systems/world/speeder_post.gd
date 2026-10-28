@@ -32,6 +32,7 @@ var yaw := 0.0
 var points: Dictionary = {}           ## local name -> Vector3 (see the location file)
 var sales := 0                        ## speeders sold this session (tests, traces)
 var _offered: Dictionary = {}         ## the item on the card right now
+var _paint_scenes: Dictionary = {}    ## issue #82: path -> the paint's model, loaded in the background
 
 
 func setup(town_demo, world_ground: WorldGround) -> void:
@@ -57,11 +58,34 @@ func _ready() -> void:
 		_dress(loc)
 	_build_skrugs()
 	display = SpeederNode.new()
-	display.setup(demo, ground, {}, false)
+	display.setup(demo, ground, {}, false, str(HoverModel.load_config("speeder").get("look", {}).get("display_paint", "")))
 	add_child(display)
 	display.place(world_point("display"), yaw + PI * 0.5)
 	for i in WorldState.count("speeders_owned"):
 		_park(i)
+	# Issue #82: each speeder sold is a new paint job, an 8 MB model; load them
+	# now, off the main thread, so buying one does not hitch. Held here so they
+	# stay cached.
+	var look: Dictionary = HoverModel.load_config("speeder").get("look", {})
+	for id in look.get("sold_paints", []):
+		var path := str(look.get("paints", {}).get(id, ""))
+		if path != "" and ResourceLoader.exists(path) and ResourceLoader.load_threaded_request(path) == OK:
+			_paint_scenes[path] = null
+
+
+func _process(_dt: float) -> void:
+	var waiting := false
+	for path in _paint_scenes:
+		if _paint_scenes[path] != null:
+			continue
+		var st := ResourceLoader.load_threaded_get_status(path)
+		if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			waiting = true
+		elif st == ResourceLoader.THREAD_LOAD_LOADED:
+			_paint_scenes[path] = ResourceLoader.load_threaded_get(path)
+		else:
+			_paint_scenes[path] = false
+	set_process(waiting)
 
 
 ## A point from the location file, in the world.
@@ -132,7 +156,8 @@ func buy() -> bool:
 ## Speeder number `i` parked behind the house (side by side when there are several).
 func _park(i: int) -> SpeederNode:
 	var s := SpeederNode.new()
-	s.setup(demo, ground)
+	var paints: Array = HoverModel.load_config("speeder").get("look", {}).get("sold_paints", [""])
+	s.setup(demo, ground, {}, true, str(paints[i % paints.size()]))   # issue #82: each one a different paint job
 	demo.add_child(s)
 	var side := Vector3(0, 0, (i % 4) * 4.5).rotated(Vector3.UP, yaw)
 	s.place(world_point("spawn") + side, yaw + PI * 0.5)   # nose to the open desert, away from the house

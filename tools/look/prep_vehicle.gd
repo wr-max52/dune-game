@@ -9,7 +9,8 @@ extends SceneTree
 ## Reads content/look/vehicle_models.json:
 ##   { id: { source, out, yaw_deg (turns the raw model so its nose faces -Z),
 ##           length (metres, nose to tail), max_span (metres; shrinks it further if
-##           wider), max_height } }
+##           wider), max_height, paint ({ body, trim, glow, glow_energy }: a
+##           paint job on the albedo and a lit core; see _paint) } }
 ## Hyper3D models come out about 2 units long, facing any way; the numbers here are
 ## the only fix-up, so a re-generation is one source path and one yaw.
 
@@ -53,6 +54,8 @@ func _prep(id: String, c: Dictionary) -> void:
 	box = _aabb(root)
 	turn.position = -box.get_center()
 	box = _aabb(root)
+	if c.has("paint"):
+		_paint(root, c.paint)
 	_own(root, root)
 	var out_doc := GLTFDocument.new()
 	var out_state := GLTFState.new()
@@ -69,6 +72,51 @@ func _prep(id: String, c: Dictionary) -> void:
 	print("prep_vehicle: %s  %.2f x %.2f x %.2f m (span x height x length), %d triangles -> %s" % [
 		id, box.size.x, box.size.y, box.size.z, tris, out])
 	root.free()
+
+
+## Issue #82: one Hyper3D model, several paint jobs. The albedo's light panels
+## take `body`, its mid greys (pads, frame, trim) take `trim`, near-black (glass,
+## underside) stays as it is. The blue plasma core is lit by an emission map made
+## from its own pixels, recoloured to `glow` when there is one.
+static func _paint(root: Node, paint: Dictionary) -> void:
+	var body := Color(str(paint.get("body", "#0000")))      # alpha 0 = leave it
+	var trim := Color(str(paint.get("trim", "#0000")))
+	var glow := Color(str(paint.get("glow", "#0000")))
+	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+		for s in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
+			if mat == null or mat.albedo_texture == null:
+				continue
+			var img := mat.albedo_texture.get_image()
+			if img.is_compressed():
+				img.decompress()
+			img.convert(Image.FORMAT_RGBA8)
+			var em := Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGB8)
+			for y in img.get_height():
+				for x in img.get_width():
+					var c := img.get_pixel(x, y)
+					if c.s > 0.35 and c.v > 0.3 and c.h > 0.5 and c.h < 0.72:
+						var g := Color.from_hsv(glow.h, glow.s, c.v) if glow.a > 0.0 else c
+						img.set_pixel(x, y, g)
+						em.set_pixel(x, y, g)
+						continue
+					var l := c.get_luminance()
+					var out := c
+					var wb := smoothstep(0.32, 0.5, l) if body.a > 0.0 else 0.0
+					var wt := smoothstep(0.08, 0.2, l) * (1.0 - wb) if trim.a > 0.0 else 0.0
+					if wb > 0.0:
+						out = out.lerp(body * clampf(l / 0.8, 0.6, 1.15), wb)
+					if wt > 0.0:
+						out = out.lerp(trim * clampf(l / 0.28, 0.45, 1.3), wt)
+					out.a = c.a
+					img.set_pixel(x, y, out)
+			mat = mat.duplicate() as BaseMaterial3D
+			mat.albedo_texture = ImageTexture.create_from_image(img)
+			mat.emission_enabled = true
+			mat.emission = Color.WHITE
+			mat.emission_texture = ImageTexture.create_from_image(em)
+			mat.emission_energy_multiplier = float(paint.get("glow_energy", 3.0))
+			mi.mesh.surface_set_material(s, mat)
 
 
 static func _own(n: Node, owner: Node) -> void:

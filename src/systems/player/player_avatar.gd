@@ -208,8 +208,9 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 
 
 ## Dark variant of a gun that keeps its own textures: neutral texels go dark, the
-## saturated glow panels stay (weapon_dark.gdshader).
-func _darken(n: Node3D, d: Dictionary) -> void:
+## saturated glow panels stay (weapon_dark.gdshader). Static: the guards' rifles
+## use it too (CharacterKit._rifle).
+static func _darken(n: Node3D, d: Dictionary) -> void:
 	for mi in _meshes_under(n):
 		if mi.mesh == null or mi.mesh.get_surface_count() == 0:
 			continue

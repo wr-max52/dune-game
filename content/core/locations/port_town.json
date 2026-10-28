@@ -3158,6 +3158,18 @@
    "role": "waypoint"
   },
   {
+   "id": "remnant_speeder",
+   "pos": [
+    106,
+    0,
+    11
+   ],
+   "role": "vehicle",
+   "yaw_deg": -90,
+   "paint": "remnant",
+   "note": "Issue #82: the Remnant's black and red Sand-boxer, parked outside the front gate off the gate lane, nose to the desert. Not rideable; gone with the town garrison."
+  },
+  {
    "id": "desert_exit",
    "pos": [
     106,

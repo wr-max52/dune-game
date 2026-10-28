@@ -1,7 +1,7 @@
 {
   "id": "speeder",
-  "label": "Hartwell MK-84 Curlew",
-  "note": "Issue #42: the one speeder Skrugs sells. Read by src/systems/vehicles/hover_model.gd (how it moves) and speeder_node.gd (how it looks, its hull and guns). It rides `hover_height` above whatever is under it (sand, floors, ramp tops) and turns ballistic when the ground drops away faster than it can follow (`launch_gap` in one frame): off the end of a ramp or over a dune crest. There is no jump button; low gravity makes it a light, floaty sled. No fall or crash damage: only gunfire hurts it. Issue #43: look.scene is the Hyper3D speeder (assets/vehicles/speeder.glb); the primitive sled is the fallback. label is its make and model from the name generator.",
+  "label": "Atlantium Sand-boxer",
+  "note": "Issue #42: the one speeder Skrugs sells. Read by src/systems/vehicles/hover_model.gd (how it moves) and speeder_node.gd (how it looks, its hull and guns). It rides `hover_height` above whatever is under it (sand, floors, ramp tops) and turns ballistic when the ground drops away faster than it can follow (`launch_gap` in one frame): off the end of a ramp or over a dune crest. There is no jump button; low gravity makes it a light, floaty sled. No fall or crash damage: only gunfire hurts it. Issue #43: look.scene is the Hyper3D speeder (assets/vehicles/speeder.glb); the primitive sled is the fallback. label is its make and model from the name generator. Issue #82: the Atlantium Sand-boxer replaces the Curlew (assets/vehicles/sandboxer*.glb, one Hyper3D model in four paint jobs from content/look/vehicle_models.json). look.paints names them; SpeederNode takes one by name (empty = look.scene). Skrugs's speeders go round `sold_paints`; the Remnant's black and red one is parked outside the front gate (the 'remnant_speeder' marker in port_town.json).",
   "hover_height": 1.05,
   "follow_rate": 14.0,
   "launch_gap": 0.45,
@@ -22,13 +22,25 @@
   "health": 120,
   "board_reach": 3.2,
   "look": {
-    "length": 4.6,
+    "length": 5.0,
     "hull": "#c9a46a",
     "trim": "#8e3a26",
     "metal": "#4a4c52",
     "seat": "#3a2a20",
     "glow": "#7fe0d0",
-    "scene": "res://assets/vehicles/speeder.glb"
+    "scene": "res://assets/vehicles/sandboxer.glb",
+    "paints": {
+      "steel": "res://assets/vehicles/sandboxer.glb",
+      "remnant": "res://assets/vehicles/sandboxer_remnant.glb",
+      "tide": "res://assets/vehicles/sandboxer_tide.glb",
+      "crimson": "res://assets/vehicles/sandboxer_crimson.glb"
+    },
+    "display_paint": "crimson",
+    "sold_paints": [
+      "steel",
+      "tide",
+      "crimson"
+    ]
   },
   "laser": {
     "damage": 18,
@@ -37,6 +49,7 @@
     "reload": 1.6,
     "bolt_speed": 90,
     "range": 140,
-    "color": "#7fe0d0"
+    "color": "#7fe0d0",
+    "muzzle": [0.78, -0.05, -2.85]
   }
 }

@@ -27,6 +27,7 @@ var demo                              ## town_demo.gd (player, rig, terrain)
 var model: HoverModel
 var cfg: Dictionary = {}
 var rideable := true
+var paint := ""                       ## issue #82: a look.paints name ("" = look.scene)
 var riding := false
 var hull: StaticBody3D
 var visual: Node3D
@@ -42,13 +43,15 @@ var _prompt: Label
 var _fan: Node3D
 var _glow_mat: StandardMaterial3D
 var _t := 0.0
+static var _hulls: Dictionary = {}   ## issue #82: model -> its hull shape (see _model_hull)
 var _engine: AudioStreamPlayer3D   ## issue #16: the speeder's drone while you ride
 
 
-func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bool = true) -> void:
+func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bool = true, paint_job: String = "") -> void:
 	demo = town_demo
 	cfg = config if not config.is_empty() else HoverModel.load_config("speeder")
 	rideable = can_ride
+	paint = paint_job
 	model = HoverModel.new(cfg, ground)
 	name = "Speeder" if can_ride else "DisplaySpeeder"
 
@@ -243,8 +246,9 @@ func _fire(dt: float, trigger: bool) -> void:
 		# Issue #64: the barrels sit either side of the nose, so two parallel bolts
 		# straddled anyone straight ahead. Both converge on what the nose points at.
 		var aim := _aim_point(b)
-		for side in [-0.55, 0.55]:
-			var origin := model.position + b * Vector3(side, 0.25, -2.4)
+		var m := _muzzle()
+		for side in [-1.0, 1.0]:
+			var origin := model.position + b * Vector3(side * m.x, m.y, m.z)
 			gun._make_bolt(aim - origin, origin, float(gun.weapon.config.get("damage", 18.0)),
 				float(gun.weapon.config.get("bolt_speed", 90.0)))
 			gun.shots_fired += 1
@@ -255,7 +259,7 @@ func _fire(dt: float, trigger: bool) -> void:
 ## Where the lasers meet: the first thing straight ahead of the nose (not the
 ## speeder or its rider), else a point at the guns' convergence range.
 func _aim_point(b: Basis) -> Vector3:
-	var from := model.position + b * Vector3(0, 0.25, -2.4)
+	var from := model.position + b * Vector3(0, _muzzle().y, _muzzle().z)
 	var far := from + model.forward() * float(gun.weapon.config.get("range", 140.0))
 	if is_inside_tree():
 		var q := PhysicsRayQueryParameters3D.create(from, far)
@@ -368,7 +372,8 @@ func _build_visual() -> void:
 	visual = Node3D.new()
 	visual.name = "Look"
 	add_child(visual)
-	if _build_model(str(look.get("scene", "")), float(look.get("base_y", -0.65))):
+	var scene := str(look.get("paints", {}).get(paint, look.get("scene", "")))
+	if _build_model(scene, float(look.get("base_y", -0.65))):
 		return
 	# The tub: a low wedge-ended body, the rider sits in it.
 	_part(_box(Vector3(1.5, 0.5, 3.0)), hullm, Vector3(0, -0.15, 0.1))
@@ -423,7 +428,27 @@ func _build_model(path: String, base_y: float) -> bool:
 	m.position = Vector3(-box.get_center().x, base_y - box.position.y, -box.get_center().z)
 	for side in [-1.0, 1.0]:
 		_part(_box(Vector3(0.24, 0.04, box.size.z * 0.75)), _glow_mat, Vector3(side * box.size.x * 0.32, base_y - 0.02, 0))
+	_build_blasters()
 	return true
+
+
+## Issue #82: the twin blasters under the nose, where the bolts come from
+## (laser.muzzle). Bolted on here so every paint job has them.
+func _build_blasters() -> void:
+	var mats: LookMaterials = demo._flat_mats() if demo != null and demo.has_method("_flat_mats") else LookMaterials.new()
+	var gunmetal := mats.flat(Color(str(cfg.get("look", {}).get("metal", "#4a4c52"))), 0.4, 0.6)
+	var m := _muzzle()
+	for side in [-1.0, 1.0]:
+		var at := Vector3(side * m.x, m.y, m.z)
+		_part(_box(Vector3(0.24, 0.2, 0.7)), gunmetal, at + Vector3(0, 0, 1.0)).name = "BlasterHousing"
+		_part(_cyl(0.07, 0.07, 1.0), gunmetal, at + Vector3(0, 0, 0.5), Vector3(90, 0, 0)).name = "Blaster"
+		_part(_cyl(0.09, 0.09, 0.06), _glow_mat, at + Vector3(0, 0, 0.03), Vector3(90, 0, 0))
+
+
+## Where each laser's bolt starts (the right barrel's tip; the left is mirrored).
+func _muzzle() -> Vector3:
+	var v: Array = cfg.get("laser", {}).get("muzzle", [0.55, 0.25, -2.4])
+	return Vector3(float(v[0]), float(v[1]), float(v[2]))
 
 
 static func _local_xf(n: Node3D, top: Node3D) -> Transform3D:
@@ -466,12 +491,45 @@ func _build_hull() -> void:
 	hull = StaticBody3D.new()
 	hull.name = "Hull"
 	var cs := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(3.0, 1.0, 4.6)
-	cs.shape = shape
-	cs.position = Vector3(0, -0.2, 0)
+	cs.name = "Shape"
+	cs.shape = _model_hull()
+	if cs.shape == null:
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(3.0, 1.0, 4.6)
+		cs.shape = shape
+		cs.position = Vector3(0, -0.2, 0)
 	hull.add_child(cs)
 	add_child(hull)
+
+
+## Issue #82: the hull is the model's own shape (its convex hull, blasters and
+## all), not a box: bolts that miss the body miss the speeder. One shape per
+## model, shared by every speeder that uses it. Null with no model.
+func _model_hull() -> ConvexPolygonShape3D:
+	var m := visual.get_node_or_null("Model") as Node3D if visual != null else null
+	if m == null:
+		return null
+	var key := str(m.scene_file_path) + str(m.position)
+	if _hulls.has(key):
+		return _hulls[key]
+	var pts := PackedVector3Array()
+	for mi: MeshInstance3D in visual.find_children("*", "MeshInstance3D", true, false):
+		if mi.material_override == _glow_mat:
+			continue                       # the hover glow is light, not metal
+		var xf := _local_xf(mi, visual)
+		for sf in mi.mesh.get_surface_count():
+			var verts: PackedVector3Array = mi.mesh.surface_get_arrays(sf)[Mesh.ARRAY_VERTEX]
+			var step := maxi(1, verts.size() / 4000)
+			for i in range(0, verts.size(), step):
+				pts.append(xf * verts[i])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = pts
+	var cloud := ArrayMesh.new()
+	cloud.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
+	var shape := cloud.create_convex_shape(true, false)     # just the hull's corners
+	_hulls[key] = shape
+	return shape
 
 
 func _build_hud() -> void:
