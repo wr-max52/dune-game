@@ -158,7 +158,9 @@ func set_hp(frac: float, hurt: bool) -> void:
 	hp = clampf(frac, 0.0, 1.0)
 	if hurt:
 		hp_visible_left = 4.0
-	hp_bar.visible = hp < 0.999 or hp_visible_left > 0.0
+	# Issue #80: the 80s HUD's footer is the health bar; this red one only stands in
+	# when that HUD is off (the CI greybox), never both in the same spot.
+	hp_bar.visible = RetroSkin.current == null and (hp < 0.999 or hp_visible_left > 0.0)
 	hp_bar.queue_redraw()
 
 

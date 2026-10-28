@@ -11,6 +11,8 @@
       "resale": 40,
       "sound": "droid_beep",
       "hover": 1.7,
+      "hit_radius": 0.55,
+      "chirp_s": [2.0, 5.0],
       "follow": {
         "side": 1.1,
         "back": 1.4,
@@ -226,6 +228,8 @@
     "id": "droid_merchant",
     "label": "Droid Merchant",
     "marker": "vendor_4",
+  "spawn_behind": 2.6,
+  "walk_round": 3.4,
     "offset": [
       0,
       0,
