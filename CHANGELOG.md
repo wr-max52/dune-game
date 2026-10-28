@@ -19,6 +19,8 @@ Plain English, newest on top. One entry per milestone.
   over the roof, instead of a flat 1 m box.
 - Buying one no longer loads a model on the spot: the paints load in the
   background when the stall is built.
+- **Guards carry the rendered rifle**, the same dark, scoped Hyper3D rifle the
+  player uses, instead of the boxy one.
 - Review sheet: `docs/lookdev/vehicles/03_sandboxer.png`. Paint jobs are
   `paint` in `content/look/vehicle_models.json` (prepped by
   `tools/look/prep_vehicle.gd`).

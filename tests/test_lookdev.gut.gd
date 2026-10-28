@@ -70,6 +70,10 @@ func test_ik_puts_both_hands_on_the_rifle() -> void:
 	var grips: Dictionary = rifle.get_meta("grips")
 	assert_lt(_hand_error(kit, trooper, "r", kit._rel(trooper, rifle) * (grips["r"] as Vector3)), 0.02, "right hand on the grip")
 	assert_lt(_hand_error(kit, trooper, "l", kit._rel(trooper, rifle) * (grips["l"] as Vector3)), 0.02, "left hand on the foregrip")
+	# Issue #82: the rendered rifle the player carries, not the box one.
+	var model: Node3D = rifle.get_child(0)
+	assert_eq(model.scene_file_path, "res://assets/gear/rifle.glb")
+	assert_gt(model.find_children("*", "MeshInstance3D", true, false).size(), 0)
 	trooper.free()
 
 
