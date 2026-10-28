@@ -23,8 +23,9 @@
     }
   },
   "dust": {
-    "note": "Issue #93: blowing sand round the camera (src/systems/look/dust_wind.gd). streaks: thin fast lines along the wind; puffs: slow soft clouds. box = half-width of the emitting box (m), height = its height above the ground, width/length = the quad (m), speed in m/s, alpha = opacity. The sand shader's wind_strength makes the matching sheets on the ground.",
-    "streaks": { "amount": 600, "lifetime": 1.6, "box": 45.0, "height": 2.5, "width": 0.05, "length": 1.6, "speed_min": 9.0, "speed_max": 15.0, "spread": 6.0, "alpha": 0.35, "color": "#e8cfa4" },
+    "note": "Issue #93: blowing sand round the camera (src/systems/look/dust_wind.gd). streaks: grains flying along the wind (each two or three small dots along its path); puffs: slow soft clouds. box = half-width of the emitting box (m), height = its height above the ground, width/length = the quad (m), speed in m/s, alpha = opacity. gust_rate: how often the wind gusts (noise frequency per second); lull: how much dust is left between gusts (0..1). The sand shader's wind_strength makes the matching sheets on the ground.",
+    "streaks": { "amount": 700, "lifetime": 1.6, "box": 45.0, "height": 2.5, "width": 0.12, "length": 1.0, "speed_min": 9.0, "speed_max": 15.0, "spread": 6.0, "alpha": 0.7, "color": "#e8cfa4" },
+    "gust_rate": 0.12, "lull": 0.12,
     "puffs": { "amount": 60, "lifetime": 5.0, "box": 70.0, "height": 6.0, "width": 9.0, "length": 6.0, "speed_min": 2.0, "speed_max": 4.5, "spread": 25.0, "alpha": 0.06, "color": "#d9b98c" }
   }
 }
