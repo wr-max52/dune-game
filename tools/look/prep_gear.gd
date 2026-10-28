@@ -14,6 +14,7 @@ extends SceneTree
 ##           origin    "center" (the middle of the bounds), "ground" (bottom centre) or
 ##                     "back" (centred, its +Z face at 0: a pack worn on the back),
 ##           desaturate 0..1: wash the colour texture toward grey (for tinting),
+##           darken    multiplies the colour texture after that (a grey and black jetpack),
 ##           max_texture  pixels: textures larger than this are halved until they fit,
 ##           cut       { bones: [...], bone_prefix, boxes: [[x0, y0, z0, x1, y1, z1], ...],
 ##                     keep_near: [x, y, z, r] }: drop the triangles mostly skinned
@@ -72,7 +73,7 @@ func _prep(id: String, c: Dictionary) -> void:
 	box = _aabb(root)
 	if c.has("cut"):
 		_cut(root, c.cut)
-	_textures(root, int(c.get("max_texture", 1024)), float(c.get("desaturate", 0.0)))
+	_textures(root, int(c.get("max_texture", 1024)), float(c.get("desaturate", 0.0)), float(c.get("darken", 1.0)))
 	_own(root, root)
 	var out_doc := GLTFDocument.new()
 	var out_state := GLTFState.new()
@@ -148,7 +149,7 @@ func _cut(root: Node3D, cut: Dictionary) -> void:
 
 
 ## Shrink every texture to max_px and wash the colour ones toward grey.
-func _textures(root: Node, max_px: int, desat: float) -> void:
+func _textures(root: Node, max_px: int, desat: float, darken: float = 1.0) -> void:
 	var done := {}
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		for s in mi.mesh.get_surface_count():
@@ -172,19 +173,19 @@ func _textures(root: Node, max_px: int, desat: float) -> void:
 					img.decompress()
 				while img.get_width() > max_px or img.get_height() > max_px:
 					img.resize(img.get_width() / 2, img.get_height() / 2, Image.INTERPOLATE_LANCZOS)
-				if slot == BaseMaterial3D.TEXTURE_ALBEDO and desat > 0.0:
-					_desaturate(img, desat)
+				if slot == BaseMaterial3D.TEXTURE_ALBEDO and (desat > 0.0 or darken != 1.0):
+					_desaturate(img, desat, darken)
 				var nt := ImageTexture.create_from_image(img)
 				done[key] = nt
 				m.set_texture(slot, nt)
 
 
-static func _desaturate(img: Image, k: float) -> void:
+static func _desaturate(img: Image, k: float, darken: float = 1.0) -> void:
 	for y in img.get_height():
 		for x in img.get_width():
 			var col := img.get_pixel(x, y)
 			var l := col.get_luminance()
-			img.set_pixel(x, y, Color(lerpf(col.r, l, k), lerpf(col.g, l, k), lerpf(col.b, l, k), col.a))
+			img.set_pixel(x, y, Color(lerpf(col.r, l, k) * darken, lerpf(col.g, l, k) * darken, lerpf(col.b, l, k) * darken, col.a))
 
 
 static func _own(n: Node, owner: Node) -> void:
