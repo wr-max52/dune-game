@@ -86,6 +86,7 @@ func _ready() -> void:
 	# Start the pure controller where the node actually is (it used to start at the
 	# origin and teleport the player there on frame 1).
 	controller.body_pos = global_position
+	controller.can_slide = can_slide
 
 
 func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
@@ -118,9 +119,10 @@ func _physics_process(delta: float) -> void:
 	# M15: crouching shrinks the capsule, so cover really covers you (and the
 	# guards, who use this same body). You stay down while there is no room to
 	# stand (under a low overhang), whatever the key says.
-	if not bool(controller.command.crouch) and crouched_shape and not can_stand():
-		controller.command.crouch = true
-	_set_crouch_shape(bool(controller.command.crouch))
+	# A slide keeps the short capsule too, and ends standing even with crouch held.
+	if not controller.crouching() and crouched_shape and not can_stand():
+		controller.force_crouch()
+	_set_crouch_shape(controller.crouching())
 
 	# Physics is the authority on position and ground contact. The pure controller
 	# only decides velocity and pose. Previously the node overwrote global_position
@@ -144,7 +146,7 @@ func _physics_process(delta: float) -> void:
 	controller.velocity = velocity
 	controller.on_ground = is_on_floor()
 	if controller.on_ground and controller.pose == CharacterController.Pose.JUMP:
-		controller.pose = CharacterController.Pose.CROUCH if controller.command.crouch else CharacterController.Pose.STAND
+		controller.pose = CharacterController.Pose.CROUCH if controller.crouching() else CharacterController.Pose.STAND
 	pose_changed.emit(controller.pose)
 	var on_floor := is_on_floor()
 	if on_floor and not _was_on_floor:
@@ -153,6 +155,17 @@ func _physics_process(delta: float) -> void:
 		jumped.emit()
 	_was_on_floor = on_floor
 
+
+## True while the player is mid slide (camera, animation and audio read this).
+var sliding: bool:
+	get: return controller.is_sliding()
+var slide_progress: float:
+	get: return controller.slide_progress()
+## Turn the sprint slide on (the player does; guards share this body and never do).
+@export var can_slide := false:
+	set(v):
+		can_slide = v
+		controller.can_slide = v
 
 ## True while the capsule is the short crouched one.
 var crouched_shape := false

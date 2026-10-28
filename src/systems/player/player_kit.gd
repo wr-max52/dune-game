@@ -31,6 +31,7 @@ static func attach(p: CharacterBody3D, rig: Node3D, bolts_into: Node3D, mats: Lo
 	k.rig_node = rig
 	k.avatar = PlayerAvatar.new(mats)
 	p.add_child(k.avatar)
+	p.set("can_slide", true)  # only the player slides; guards share the body but never do
 	k.weapons = PlayerWeapons.new()
 	k.add_child(k.weapons)
 	k.weapons.setup(p, k.avatar, rig, bolts_into)
@@ -100,13 +101,17 @@ func _physics_process(dt: float) -> void:
 	avatar.animate(dt, {
 		"velocity": player.velocity,
 		"grounded": player.is_on_floor(),
-		"crouch": bool(ctl.command.crouch),
+		"crouch": ctl.crouching(),
+		"slide": ctl.is_sliding(),
+		"slide_t": ctl.slide_progress(),
 		"sprint": bool(ctl.command.sprint),
 		"cam_yaw": rig.yaw if rig != null else player.rotation.y,
 		"aim_pitch": rig.pitch if rig != null else 0.0,
 		"upper": weapons.upper_mode(),
 	})
-	var moving := player.is_on_floor() and Vector2(player.velocity.x, player.velocity.z).length() > 0.6
+	if ctl.slide_sound_hint:
+		Sound.play("slide_scuff")
+	var moving: bool = player.is_on_floor() and not ctl.is_sliding() and Vector2(player.velocity.x, player.velocity.z).length() > 0.6
 	if _steps != null:
 		if moving and not _steps.playing:
 			_steps.play()

@@ -330,6 +330,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var out := anim.step(dt, {
 		"speed": speed, "move_local": move_local, "grounded": inp.get("grounded", true),
 		"vy": vel.y, "crouch": inp.get("crouch", false), "sprint": inp.get("sprint", false),
+		"slide": inp.get("slide", false),
 		"upper": upper, "aim_pitch": pitch * (1.6 if first_person else 1.0), "twist": twist,
 	})
 	last_frame = out

@@ -38,6 +38,7 @@ var _override_xf := Transform3D()
 var _override_fov := -1.0
 var _override_blend := 0.0
 var _last_xf := Transform3D()
+var _slide_roll := 0.0                ## current camera roll from a slide (rad)
 
 
 func _ready() -> void:
@@ -127,9 +128,14 @@ func _process(delta: float) -> void:
 	# M15: the eye drops with a crouch (the capsule shrinks too), so you cannot
 	# peek over cover your body is hiding behind.
 	var crouched: bool = _player.get("crouched_shape") == true
+	# Slide: lower still, eased in and out by progress, plus a small roll (issue #65).
+	var sliding: bool = _player.get("sliding") == true
 	var eye_to := 1.0 if crouched else 1.6
-	rig.fpv_offset.y = move_toward(rig.fpv_offset.y, eye_to, delta * 4.0)
+	if sliding:
+		eye_to = 0.85
+	rig.fpv_offset.y = move_toward(rig.fpv_offset.y, eye_to, delta * (6.0 if sliding else 4.0))
 	rig.tpv_height = move_toward(rig.tpv_height, (1.25 if crouched else 1.8), delta * 4.0)
+	_slide_roll = lerpf(_slide_roll, deg_to_rad(3.5) if sliding else 0.0, 1.0 - exp(-10.0 * delta))
 	var xf: Transform3D = rig.camera_transform(_player.global_position)
 	if not rig.is_first_person() and collide:
 		xf.origin = _resolve_collision(rig.tpv_pivot(_player.global_position), xf.origin)
@@ -146,6 +152,8 @@ func _process(delta: float) -> void:
 	if _override_blend > 0.0:
 		var b := _override_blend * _override_blend * (3.0 - 2.0 * _override_blend)
 		xf = xf.interpolate_with(_override_xf, b)
+	if absf(_slide_roll) > 0.0005:
+		xf.basis = xf.basis * Basis(Vector3(0, 0, 1), _slide_roll)
 	_camera.global_transform = xf
 	_zoom = lerpf(_zoom, _zoom_target, 1.0 - exp(-12.0 * delta))
 	var fov := base_fov * _zoom
