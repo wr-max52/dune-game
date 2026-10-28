@@ -66,6 +66,7 @@ var gear: GearController              ## M13
 var pilot: ShipPilot                  ## M14
 var characters: Dictionary = {}       ## marker id -> built character
 var terrain: DesertTerrain            ## null when with_desert is off
+var dust: DustWind                    ## issue #93: blowing sand round the camera (look only)
 var landforms: DesertLandforms
 var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
@@ -620,6 +621,8 @@ func _build_detail() -> void:
 		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
 	if landforms != null:
 		detail.add_group("props", [landforms.get_node_or_null("Boulders")])
+	if dust != null:
+		detail.add_group("weather", [dust])
 	add_child(detail)
 
 
@@ -790,6 +793,12 @@ func _dress_desert() -> void:
 		if mi != null:
 			mi.visible = false
 	_tint_sand(terrain.material, planet.get("type_cfg", {}).get("sand", {}))
+	# Issue #93: wind you can see over the sand (not on a snow world).
+	if str(planet.get("type", "sand")) != "snow":
+		dust = DustWind.new()
+		add_child(dust)
+		var wd = terrain.material.get_shader_parameter("wind_dir")
+		dust.set_wind(wd if wd is Vector2 else Vector2(0.8, 0.6))   # unset: the shader's default
 	if with_landforms:
 		landforms = DesertLandforms.new()
 		landforms.clear_circles = _landmark_clearings()

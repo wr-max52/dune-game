@@ -27,6 +27,25 @@ var columns: Array = []      ## { id, center: Vector3 (base), radius, top, up?, 
 ## too: "up" is its axis and "h" its height above its base. Town boxes and every
 ## box on a flat world have neither and are plain world-space boxes.
 var world: Dictionary = {}
+## Issue #93: the desert's boulders ({ center, up, radius, height }, from
+## DesertLandforms). Each is a smooth hump of ground (wider than the rock: sand
+## banks against it), so a speeder rides up a low one and launches off it; one
+## taller than RAMP_MAX is also a wall a speeder or ship hits.
+var boulders: Array = []
+const RAMP_MAX := 3.0
+const RAMP_SPREAD := 1.6
+
+
+func add_boulders(list: Array) -> void:
+	boulders.append_array(list)
+
+
+## A boulder's hump: its height above its centre at `off` metres from its axis.
+static func boulder_top(b: Dictionary, off: float) -> float:
+	var r := float(b.radius) * RAMP_SPREAD
+	if off >= r:
+		return -INF
+	return float(b.height) * (0.5 + 0.5 * cos(PI * off / r))
 
 
 ## Build from a world entry (content/core/worlds/*.json), the town it holds and
@@ -98,6 +117,15 @@ func height_above(p: Vector3) -> float:
 		var top: float = c.get("h", float(c.top) - (c.center as Vector3).y)
 		if top <= along + 0.5:
 			h = minf(h, along - top)
+	for bd in boulders:
+		var bu: Vector3 = bd.up
+		var rel: Vector3 = p - (bd.center as Vector3)
+		if rel.length_squared() > pow(float(bd.radius) * RAMP_SPREAD + float(bd.height) + 50.0, 2.0):
+			continue
+		var along := rel.dot(bu)
+		var bt := boulder_top(bd, (rel - bu * along).length())
+		if bt > -INF and bt <= along + 0.5:
+			h = minf(h, along - bt)
 	return h
 
 
@@ -273,6 +301,14 @@ func ground_at(x: float, z: float, below: float = INF) -> float:
 		var top := box_top(b, x, z)
 		if top <= limit and top > g:
 			g = top
+	for bd in boulders:
+		var bc: Vector3 = bd.center
+		if (bd.up as Vector3) != Vector3.UP or absf(x - bc.x) > float(bd.radius) * RAMP_SPREAD \
+				or absf(z - bc.z) > float(bd.radius) * RAMP_SPREAD:
+			continue
+		var bt := bc.y + boulder_top(bd, Vector2(x - bc.x, z - bc.z).length())
+		if bt <= limit and bt > g:
+			g = bt
 	for c in columns:
 		if c.has("up"):
 			continue
@@ -299,6 +335,16 @@ func hit(p: Vector3, r: float) -> String:
 		var q := Vector3(clampf(lp.x, mn.x, mx.x), clampf(lp.y, mn.y, mx.y), clampf(lp.z, mn.z, mx.z))
 		if q.distance_squared_to(lp) <= r * r:
 			return str(b.id)
+	for bd in boulders:
+		if float(bd.height) <= RAMP_MAX:
+			continue                # low: a ramp, ridden over, not hit
+		var bu: Vector3 = bd.up
+		var rel: Vector3 = p - (bd.center as Vector3)
+		var along := rel.dot(bu)
+		if along - r * 0.5 >= float(bd.height) * 0.85 or along + r < 0.0:
+			continue
+		if (rel - bu * along).length() <= float(bd.radius) * 0.8 + r:
+			return "boulder"
 	for c in columns:
 		var cc: Vector3 = c.center
 		if c.has("up"):

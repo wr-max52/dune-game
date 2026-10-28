@@ -81,7 +81,7 @@
     "hysteresis": 40.0,
     "tiers": [
       { "above": 60.0, "off": ["sdfgi", "ssil"], "hide": [] },
-      { "above": 500.0, "off": ["ssao", "volumetric"], "hide": ["people"] },
+      { "above": 500.0, "off": ["ssao", "volumetric"], "hide": ["people", "weather"] },
       { "above": 1500.0, "off": ["shadows"], "hide": ["props"] }
     ]
   },

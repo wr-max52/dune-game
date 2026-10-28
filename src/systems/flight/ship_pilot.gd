@@ -116,6 +116,7 @@ func _ready() -> void:
 		# The mesas and hoodoos on screen are solid to the ship too.
 		if demo.landforms != null:
 			ground.add_landforms(demo.landforms.data, demo.desert_site().floor)
+			ground.add_boulders(demo.landforms.boulders)      # issue #93: solid rocks, speeder ramps
 		scenery = WorldScenery.new()
 		scenery.setup(ground)
 		demo.add_child(scenery)
