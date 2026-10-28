@@ -8,6 +8,8 @@ extends RefCounted
 ## (written by the settings panel). `masked()` is the only form ever displayed.
 
 const DEFAULTS := "res://content/core/llm/defaults.json"
+## The shared build (export feature "share") ships this instead: cloud only, Anthropic.
+const SHARE_DEFAULTS := "res://content/core/llm/defaults_share.json"
 const USER_PATH := "user://llm_config.json"
 const KEYS_PATH := "user://llm/keys.cfg"
 
@@ -16,8 +18,12 @@ var user_path := USER_PATH
 var keys_path := KEYS_PATH
 
 
-func load_all(defaults_path: String = DEFAULTS) -> LLMConfig:
-	data = _read(defaults_path)
+static func default_path() -> String:
+	return SHARE_DEFAULTS if OS.has_feature("share") and FileAccess.file_exists(SHARE_DEFAULTS) else DEFAULTS
+
+
+func load_all(defaults_path: String = "") -> LLMConfig:
+	data = _read(defaults_path if defaults_path != "" else default_path())
 	var user := _read(user_path)
 	data = merge(data, user)
 	return self
@@ -89,8 +95,8 @@ static func masked(key: String) -> String:
 
 
 ## Save only what differs from the defaults, so shipped changes still flow in.
-func save_user(defaults_path: String = DEFAULTS) -> bool:
-	var base := _read(defaults_path)
+func save_user(defaults_path: String = "") -> bool:
+	var base := _read(defaults_path if defaults_path != "" else default_path())
 	var diff := _diff(base, data)
 	var f := FileAccess.open(user_path, FileAccess.WRITE)
 	if f == null:
