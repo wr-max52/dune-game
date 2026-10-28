@@ -21,7 +21,9 @@ var _kill := false
 
 func _ready() -> void:
 	name = "HitMarker"
-	set_anchors_preset(Control.PRESET_CENTER)
+	# Anchors AND offsets: set_anchors_preset() alone, once in the tree, keeps the old
+	# position, which left the marker in the top-left corner.
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 

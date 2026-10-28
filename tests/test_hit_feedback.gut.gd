@@ -82,6 +82,14 @@ func test_marker_is_its_own_child_of_the_hud_not_the_crosshair() -> void:
 	assert_eq(fb.marker.get_parent(), hud)
 
 
+## Play test: it sat in the top-left corner (anchors centred, offsets not).
+func test_marker_sits_on_the_screen_centre() -> void:
+	await wait_process_frames(2)
+	var centre: Vector2 = fb.marker.get_viewport_rect().size * 0.5
+	assert_almost_eq(fb.marker.global_position.x, centre.x, 0.5)
+	assert_almost_eq(fb.marker.global_position.y, centre.y, 0.5)
+
+
 # ---- what counts as damage --------------------------------------------------------
 
 func test_a_wall_is_not_a_hit() -> void:
