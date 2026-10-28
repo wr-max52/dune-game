@@ -2,6 +2,26 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #65, shooter feel (2026-10-27)
+
+**Proven by tests:** sight on the screen centre within 1 mm at any pitch, rifle
+zoom twice the pistol's, transparent scope glass, the slide's start and exit
+rules (and that guards never slide), hit and kill markers, the thud rate limit,
+health bars (hidden calm, filled after damage, gone on death), the new arms.
+
+**Not done, honestly:**
+- **Bounty targets lost their floating name** (it showed from 30 m). Nothing
+  marks them now.
+- **The sword view shows only a sliver of glove** at the bottom edge.
+- **Unarmed, the arms hang out of view** unless you look down.
+- **The pistol stays one-handed while aimed in.**
+- **The rifle scope sits on the model's own optic hump** (one mesh, so the hump
+  stays).
+- **Not felt by hand yet:** the slide, the camera tilt and the thud were checked
+  headless and in still renders only.
+- **The m11 body trace hangs on this Mac** (also on a clean main), so
+  `test_m11_body_weapons` was not rerun against these changes.
+
 ## After P1, the planet generator (2026-10-27)
 
 **What is real and proven by tests:**

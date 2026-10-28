@@ -20,6 +20,7 @@ const Weapon := preload("res://src/systems/combat/weapon.gd")
 const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
 const WeaponHolder := preload("res://src/systems/combat/weapon_holder.gd")
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
+const Ads := preload("res://src/systems/look/ads.gd")
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const LOOK_PATH := "res://content/look/hand_weapons.json"
 
@@ -58,6 +59,7 @@ var _ammo: Label
 var _stam: ProgressBar
 var _name: Label
 var _name_left := 0.0
+var feedback: HitFeedback           ## hit markers + thud (issue #65)
 
 
 func setup(p: CharacterBody3D, a: PlayerAvatar, rig: Node3D, bolts_into: Node3D) -> void:
@@ -173,7 +175,10 @@ func _physics_process(dt: float) -> void:
 			_shoot(id)
 	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_on
 	if rig_node != null:
-		rig_node.set_zoom(0.72 if aiming else 1.0)
+		# Each gun has its own magnification (issue #65): fov = base / mag.
+		rig_node.set_zoom(Ads.zoom(look, cur) if aiming else 1.0)
+		avatar.ads_camera = rig_node.camera()
+	avatar.ads_on = aiming
 
 	# Sword.
 	var sdt := dt * (0.08 if _hitstop > 0.0 else 1.0)
@@ -362,6 +367,8 @@ func intercept(b: Node) -> String:
 			else:
 				back = (aim_point() - b.global_position).normalized()
 			b.reflect(back, player)
+			if b.reflected == 1:    # a bolt you sent back that lands counts as your hit
+				b.on_hit.connect(func(t): hit_something.emit(t, b.damage))
 			deflections += 1
 			WorldState.on_deflection()
 			_play("blade_deflect")
@@ -423,6 +430,12 @@ func _play(key: String) -> void:
 		p.play()
 
 
+## The crosshair shows with a gun ready, unless a cinematic owns the camera or the
+## sights are up in first person (then the sight is the crosshair).
+static func crosshair_shown(has_gun: bool, ready: bool, overridden: bool, first_person: bool, ads_blend: float) -> bool:
+	return has_gun and ready and not overridden and not (first_person and ads_blend >= 0.95)
+
+
 func _build_hud() -> void:
 	_hud = CanvasLayer.new()
 	_hud.name = "WeaponHUD"
@@ -432,6 +445,10 @@ func _build_hud() -> void:
 	_cross.set_anchors_preset(Control.PRESET_CENTER)
 	_cross.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hud.add_child(_cross)
+	feedback = HitFeedback.new()
+	add_child(feedback)
+	feedback.setup(_hud)
+	hit_something.connect(feedback.on_hit)
 	for r in [Rect2(-12, -1, 7, 2), Rect2(5, -1, 7, 2), Rect2(-1, -12, 2, 7), Rect2(-1, 5, 2, 7), Rect2(-1, -1, 2, 2)]:
 		var c := ColorRect.new()
 		c.position = r.position
@@ -481,7 +498,8 @@ func _update_hud(dt: float) -> void:
 	if _hud == null:
 		return
 	var cur := holder.current
-	_cross.visible = guns.has(cur) and holder.is_ready() and (rig_node == null or not rig_node.is_overridden())
+	_cross.visible = crosshair_shown(guns.has(cur), holder.is_ready(), rig_node != null and rig_node.is_overridden(),
+		avatar.first_person, avatar.ads_blend)
 	if guns.has(cur):
 		var g: Weapon = guns[cur]
 		_ammo.text = "RELOADING" if g.is_reloading() else "%d / %d" % [g.ammo, int(g.config.get("mag", 0))]

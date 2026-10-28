@@ -84,7 +84,7 @@ func _run() -> void:
 	out("JETPACK_MODEL", NameHooks.equipment(jet, "jetpack"))
 	out("CANTINA_OWNER_RESERVED", WorldState.names.by_key.get("npc:cantina_owner", ""))
 
-	# The name floats over a guard when you walk up to them, not from across town.
+	# Issue #65: names no longer float over heads; a calm guard shows no bar either.
 	var guard = demo.npcs[0]
 	var p = demo._player
 	_place(p, guard.global_position + Vector3(3, 0, 0))
@@ -93,6 +93,7 @@ func _run() -> void:
 	_place(p, guard.global_position + Vector3(40, 0, 0))
 	await frames(4)
 	out("NAMEPLATE_FAR_AWAY", guard.nameplate_shown())
+	out("HEALTH_BAR_CALM", guard.health_bar_shown())
 	out("DEBUG_LINE_NAMED", guard.debug_text().begins_with(guard.display_name))
 
 	# The cantina owner is briefed with the place and the people.

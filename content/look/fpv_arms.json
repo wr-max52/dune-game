@@ -1,0 +1,26 @@
+{
+  "note": "First person arms (issue #65 D). Black sleeves and gloves for every outfit for now. Metres. The hand hangs along -Y from the wrist joint, palm toward the body's centre, thumb up (+Z), as the IK leaves it. Curl angles are degrees at grip 0 (open) and 1 (closed).",
+  "sleeve": "#171717",
+  "cuff": "#0f0f0f",
+  "glove": "#0d0d0d",
+  "seg": 12,
+  "forearm": {
+    "length": 0.27,
+    "rings": [[0.03, 0.043], [-0.05, 0.044], [-0.14, 0.036], [-0.235, 0.029]],
+    "cuff_len": 0.04,
+    "cuff_r": 0.0335
+  },
+  "hand": {
+    "palm": [0.032, 0.098, 0.086],
+    "offset": 0.022,
+    "finger_len": [0.043, 0.036],
+    "finger_r": 0.0092,
+    "finger_z": [0.032, 0.011, -0.011, -0.030],
+    "finger_scale": [0.92, 1.0, 0.98, 0.84],
+    "thumb_len": [0.038, 0.032],
+    "relaxed": 0.3,
+    "curl1": [8, 80],
+    "curl2": [14, 96],
+    "thumb_curl": [12, 40]
+  }
+}
