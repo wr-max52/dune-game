@@ -23,6 +23,24 @@ Plain English, newest on top. One entry per milestone.
 - **The port's Remnant outposts** no longer appear on other planets.
 - Ilka Vell, the station's old hand-written owner, is gone; the station has its
   own Oda now.
+## Bug fixes: droids, sounds, one settings panel, one health bar (2026-10-27, issue #80)
+
+- **Droids bought from the merchant** now come out from behind the stall and
+  walk round it to you, instead of appearing at your feet.
+- **The practice droid in the pit** is built from the same model as the
+  floating droid you can take on, so taking it is seamless: it keeps its look,
+  height and facing instead of being swapped for another one.
+- **Floating droids fall when they die**, dropping to the ground and tipping
+  over, instead of appearing on the floor.
+- **Floating droids' hitboxes are bigger** (0.55 m, from droids.json) and bob
+  with the droid.
+- **The alarm** is quieter and a saw-wave "beep beep beep, pause".
+- **Music** cuts into and out of battle music straight away (0.25 s).
+- **Droids chirp more often** (floating droids every 2 to 5 s).
+- **The AI settings are a tab ("LLM") in the F11 settings panel**; F10 opens
+  that tab. The cursor now shows on every settings tab.
+- **One health bar**: the red bar that sat over the HUD's own is gone (it only
+  shows in the greybox, where there is no HUD).
 
 ## Atlantium Sand-boxer speeders (2026-10-27, issue #82)
 

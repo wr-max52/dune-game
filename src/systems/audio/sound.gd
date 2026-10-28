@@ -179,6 +179,12 @@ func _switch(to: String) -> void:
 	var path := ""
 	var start := 0.0
 	var fade_in := _fade()
+	var fade_out := _fade()
+	# Issue #80: into and out of a fight the music cuts over at once (a slow
+	# cross-fade lagged behind the gunfire); ambient tracks still blend.
+	if to == "battle" or mode == "battle":
+		fade_in = float(m.get("battle_cut", 0.25))
+		fade_out = float(m.get("battle_cut", 0.25))
 	match to:
 		"ambient":
 			var list: Array = m.get("ambient", [])
@@ -192,7 +198,7 @@ func _switch(to: String) -> void:
 			path = str(c.get("stream", ""))
 			start = float(c.get("start", 0.0))
 			if to == "battle":
-				fade_in = float(m.get("battle_fade_in", 1.5))
+				fade_in = float(m.get("battle_fade_in", 0.05))
 	mode = to
 	var stream := _load(path)
 	if stream == null:
@@ -211,7 +217,7 @@ func _switch(to: String) -> void:
 	_tw = create_tween().set_parallel(true)
 	_tw.tween_property(_deck, "volume_db", float(m.get("volume_db", -12.0)), fade_in)
 	if old.playing:
-		_tw.tween_property(old, "volume_db", SILENT_DB, _fade())
+		_tw.tween_property(old, "volume_db", SILENT_DB, fade_out)
 		_tw.chain().tween_callback(old.stop)
 
 

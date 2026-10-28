@@ -16,6 +16,8 @@ var _key: LineEdit
 var _key_now: Label
 var _result: Label
 var _test_id := -1
+var _content: VBoxContainer
+var host                          ## issue #80: the F11 panel this lives in (its "LLM" tab), or null
 const MODES := ["auto", "local", "ollama", "cloud"]
 
 
@@ -38,6 +40,7 @@ func _ready() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	_panel.add_child(v)
+	_content = v
 	var title := Label.new()
 	title.text = "Cantina Owner brain"
 	title.add_theme_font_size_override("font_size", 18)
@@ -69,7 +72,7 @@ func _ready() -> void:
 	v.add_child(_key_now)
 	var h := HBoxContainer.new()
 	v.add_child(h)
-	for b in [["Test", _test], ["Save", _save], ["Close", func(): visible = false]]:
+	for b in [["Test", _test], ["Save", _save], ["Close", _close]]:
 		var btn := Button.new()
 		btn.text = b[0]
 		btn.pressed.connect(b[1])
@@ -92,9 +95,32 @@ func _row(label: String, c: Control) -> HBoxContainer:
 
 
 func toggle() -> void:
+	if host != null:
+		host.open_tab("LLM")             # issue #80: one settings panel (F10 is a shortcut)
+		_load()
+		return
 	visible = not visible
 	if visible:
 		_load()
+
+
+## Issue #80: move this panel's controls into `parent` (the F11 panel's LLM tab).
+## From then on F10 opens that tab and Close closes the settings.
+func embed_into(parent: Control, settings_panel) -> void:
+	if _content == null:
+		return
+	_content.get_parent().remove_child(_content)
+	parent.add_child(_content)
+	host = settings_panel
+	visible = false
+	_load()
+
+
+func _close() -> void:
+	if host != null:
+		host.close()
+	else:
+		visible = false
 
 
 func _load() -> void:

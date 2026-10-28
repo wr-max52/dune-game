@@ -20,5 +20,5 @@
     "volume_db": -4.0, "shout_db": 0.0, "unit_size": 5.0, "max_distance": 45.0
   },
   "shout_keys": ["halt_hostile", "warn", "contact", "man_down", "hit", "reload", "alarm", "run_found"],
-  "alarm": { "stream": "res://assets/audio/npc/klaxon_loop.wav", "volume_db": -2.0, "unit_size": 40.0, "max_distance": 400.0, "seconds": 8.0 }
+  "alarm": { "stream": "res://assets/audio/npc/klaxon_loop.wav", "volume_db": -16.0, "unit_size": 18.0, "max_distance": 220.0, "seconds": 8.0, "note": "issue #80: was -2 dB, far too loud; now a saw-wave beep beep beep pause" }
 }
