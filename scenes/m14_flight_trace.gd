@@ -256,7 +256,8 @@ func _run() -> void:
 	out("CIRCUIT_MAX_DISTANCE", int(st.max_dist))
 	# Land in the open desert east of town.
 	var lz := Vector3(700, 0, 500)
-	var app := await fly_to(Vector3(lz.x, 120, lz.z), 0.35, 90.0,
+	# 120 m over the sand there (issue #77: on the ball the ground falls away from y = 0).
+	var app := await fly_to(Vector3(lz.x, pilot.ground.terrain.height_at(lz.x, lz.z) + 120.0, lz.z), 0.35, 90.0,
 		func(): return Vector2(pilot.atmo.position().x - lz.x, pilot.atmo.position().z - lz.z).length() < 60.0)
 	out("APPROACH_OK", app >= 0.0)
 	out("CAN_LAND", pilot.atmo.can_land())
@@ -306,11 +307,13 @@ func _run() -> void:
 	# ---------------------------------------------------------------- 4. crash
 	_phase = "crash"
 	var mesa: Dictionary = pilot.ground.columns.filter(func(m): return str(m.id) == "mesa_1500_1700")[0]
-	var mc: Vector3 = mesa.center
-	var low := mc.y + (float(mesa.top) - mc.y) * 0.4
-	await fly_to(Vector3(mc.x, low, mc.z - 900.0), 0.6, 120.0,
-		func(): return Vector2(pilot.atmo.position().x - mc.x, pilot.atmo.position().z - (mc.z - 900.0)).length() < 150.0)
-	var crash := await fly_to(Vector3(mc.x, low, mc.z), 1.0, 60.0, func(): return false)
+	# Issue #77: on the ball the mesa leans with the ground: aim along its own up.
+	var mup: Vector3 = mesa.get("up", Vector3.UP)
+	var mid: Vector3 = (mesa.center as Vector3) + mup * float(mesa.get("h", float(mesa.top) - (mesa.center as Vector3).y)) * 0.4
+	var side := (Vector3.FORWARD - mup * mup.dot(Vector3.FORWARD)).normalized()
+	var start := mid + side * 900.0
+	await fly_to(start, 0.6, 120.0, func(): return pilot.atmo.position().distance_to(start) < 150.0)
+	var crash := await fly_to(mid, 1.0, 60.0, func(): return false)
 	out("CRASHED", crash == -2.0)
 	out("CRASHED_INTO", pilot.atmo.last_hit if pilot.atmo.last_hit != "" else str(pilot.log_events.back().get("what", "")))
 	await frames(int(60 * (ShipPilot.CRASH_TOW_TIME + 0.5)))

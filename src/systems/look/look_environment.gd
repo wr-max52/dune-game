@@ -102,6 +102,16 @@ func _init() -> void:
 	add_child(sun)
 
 
+## Issue #77: on the home planet's ball, turn the sky's gradient and clouds to
+## the up of whoever is looking (the drawing camera), wherever on the ball they are.
+func _process(_dt: float) -> void:
+	if sky_mat == null or PlanetSphere.current == null or not is_inside_tree():
+		return
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		sky_mat.set_shader_parameter("sky_frame", PlanetSphere.current.tilt_at(cam.global_position))
+
+
 func track_material(m: ShaderMaterial) -> void:
 	_tracked.append(m)
 	m.set_shader_parameter("sun_dir", sun_dir)
@@ -225,7 +235,9 @@ func _apply_values(p: Dictionary) -> void:
 	env.fog_light_color = Color.html(fog["color"])
 	env.fog_sky_affect = float(fog["sky_affect"])
 	env.fog_height = float(fog.get("height", 0.0))
-	env.fog_height_density = float(fog.get("height_density", 0.0))
+	# Issue #77: height fog is measured on world y; on the home planet's ball the
+	# ground falls below it a few hundred metres out and the whole planet drowns.
+	env.fog_height_density = 0.0 if PlanetSphere.current != null else float(fog.get("height_density", 0.0))
 
 	env.volumetric_fog_enabled = bool(vol["enabled"])
 	env.volumetric_fog_density = float(vol["density"])

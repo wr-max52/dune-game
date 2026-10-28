@@ -14,7 +14,7 @@
     "cloud_cover": 0.0,
     "sky_energy": 0.35,
     "planet_visibility": 1.0,
-    "fog_density_scale": 0.15,
+    "fog_density_scale": 0.15, "ball_fog_density_scale": 0.01,
     "stars": {
       "count": 1200,
       "size": 40.0,

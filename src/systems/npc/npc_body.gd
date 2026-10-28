@@ -461,6 +461,7 @@ func _physics_process(delta: float) -> void:
 	var dir := NpcLocomotion.world_to_command(move, -rotation.y)
 	set_command(dir, bool(command.sprint), bool(command.crouch), false)
 	super._physics_process(delta)
+	_stand_on_ground()
 	if _last_pos != Vector3.INF:
 		walked_m += NpcLocomotion._flat(global_position - _last_pos).length()
 	_last_pos = global_position
@@ -502,6 +503,16 @@ func _repath(goal: Vector3) -> void:
 	if not last_path_ok:
 		path_failures += 1      # walk as close as the mesh allows, but say so
 	locomotion.set_path(p)
+
+
+## Issue #77: on the home planet's ball the body turns only by its facing (yaw),
+## so stand the look along the ground's up (the body's tilt) or, far round the
+## curve, it walks along lying down.
+func _stand_on_ground() -> void:
+	if look_body == null or not is_instance_valid(look_body):
+		return
+	var yaw := Basis(Vector3.UP, rotation.y)
+	look_body.basis = Basis.IDENTITY if tilt == Basis.IDENTITY else yaw.inverse() * tilt * yaw
 
 
 func _turn(dt: float, move: Vector3) -> void:
@@ -713,12 +724,13 @@ func _animate(dt: float, move: Vector3) -> void:
 	_flinch = maxf(0.0, _flinch - dt * 4.0)
 	if kit == null or look_body == null:
 		return
-	var flat := Vector3(velocity.x, 0, velocity.z)
+	var v := tilt.inverse() * velocity      # in the ground's frame (issue #77)
+	var flat := Vector3(v.x, 0, v.z)
 	var speed := flat.length()
 	var local := Basis(Vector3.UP, rotation.y).inverse() * flat
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)
 	var out: Dictionary = anim.step(dt, {
-		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": velocity.y,
+		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": v.y,
 		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": BodyAnimatorT.UPPER_RIFLE,
 		"aim_pitch": _aim_pitch(),
 	})
