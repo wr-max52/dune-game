@@ -7,8 +7,8 @@ extends RefCounted
 ##   town      -- the layout (TownGen at its town_size, or an authored location)
 ##   world     -- the world dict ShipPilot, the sky and the detail tiers read
 ##                (an authored world, or one made from the planet's type)
-##   type_cfg  -- content/core/planets/types.json for its type: ground (terrain or
-##                platform), sand and rock colours, the sea / lava / gas / rock under
+##   type_cfg  -- content/core/planets/types.json for its type: ground (terrain,
+##                platform or sphere), sand and rock colours, the sea / lava / gas / rock under
 ##                a platform, sky colours, atmosphere, how it looks from space
 ##   style     -- the town style (TownStyle spec: a preset or words)
 ##   sky       -- values laid over every time-of-day preset
@@ -80,6 +80,11 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 			opts["cantina_card"] = str(co.card)
 		if co.has("look"):
 			opts["cantina_look"] = str(co.look)
+		if not co.has("card"):
+			opts["cantina_planet"] = id          # issue #75: her own Oda (PlanetOwner)
+		if str(tcfg.get("landing_bay", "")) == "pit":
+			opts["bay"] = "pit"
+			opts["pit_clear"] = float(tcfg.get("dome", {}).get("spread", 1.0))
 		town = TownGen.generate(town_id, size, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), opts)
 	var world: Dictionary = {}
 	if cfg.has("world"):
@@ -112,7 +117,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 
 ## A world dict for a generated planet: the same shape as content/core/worlds.
 static func _world_for(id: String, town_id: String, tcfg: Dictionary) -> Dictionary:
-	var platform := str(tcfg.get("ground", "terrain")) == "platform"
+	var platform := str(tcfg.get("ground", "terrain")) in ["platform", "sphere"]
 	var surface: Dictionary = tcfg.get("surface", {})
 	return {
 		"id": id,

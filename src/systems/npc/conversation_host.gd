@@ -116,7 +116,14 @@ func _build_cantina_owner() -> void:
 		dressing.dress(town, demo.decor.mats if "decor" in demo and demo.decor != null else mats)
 		body.dressing = dressing
 	var card := str(om.get("card", ""))
-	var brain := NpcBrain.new() if card == "" else NpcBrain.new(null, "res://content/core/" + card)
+	var brain: NpcBrain
+	if card == "" and str(om.get("planet", "")) != "" and "planet" in demo:
+		# Issue #75: this planet's own Oda (a new card, a new brain, nothing shared).
+		brain = NpcBrain.new(null, PlanetOwner.card(demo.planet))
+	elif card == "":
+		brain = NpcBrain.new()
+	else:
+		brain = NpcBrain.new(null, "res://content/core/" + card)
 	var s := TalkSpot.new(brain, body, front)
 	s.radius = TALK_RADIUS
 	add_spot(s)

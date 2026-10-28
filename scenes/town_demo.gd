@@ -85,7 +85,7 @@ var gate_speeders: Array = []         ## issue #82: the Remnant's Sand-boxers pa
 var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
 var world: Dictionary = {}            ## its world (terrain, atmosphere, detail): authored or generated
 var style: TownStyle                  ## its town style (metallic, snowy, pastel, words...)
-var platform: PlatformWorld           ## the deck, glass, shield and what lies below (platform planets only)
+var platform: PlatformWorld           ## the deck, glass, shield and what lies below (platform planets; AsteroidWorld on an asteroid)
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
 @export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
 var droids: DroidController
@@ -121,8 +121,13 @@ func _ready() -> void:
 		_build_nav()
 	if with_desert and str(planet.get("ground", "terrain")) == "terrain":
 		_build_desert()
-	if str(planet.get("ground", "")) == "platform":
-		platform = PlatformWorld.new()
+	if str(planet.get("ground", "")) in ["platform", "sphere"]:
+		# Issue #75: an asteroid is a rock ball you stand on (a PlatformWorld that
+		# swaps the deck and the glass walls for the rock and a glass dome).
+		if str(planet.ground) == "sphere":
+			platform = AsteroidWorld.new()
+		else:
+			platform = PlatformWorld.new()
 		platform.setup(self, planet)
 		add_child(platform)
 	if use_look:
@@ -399,7 +404,8 @@ func _build_npcs() -> void:
 			continue
 		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
 		built_markers += 1
-	if with_outposts and pilot != null:
+	# The Remnant's outposts are the port's desert's (issue #75: not on other planets).
+	if with_outposts and pilot != null and str(planet.get("id", "")) == PlanetGen.home_id():
 		outposts = RemnantOutposts.new()
 		outposts.setup(self, pilot.ground)
 		add_child(outposts)

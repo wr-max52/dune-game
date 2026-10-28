@@ -2,6 +2,28 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Planet generation cleanup: the asteroid, and what every planet has (2026-10-27, issue #75)
+
+- **The asteroid is a whole rock ball**, 900 m across, grey like the moon, with
+  big and small craters, rough ground and blocky boulders. The station sits on
+  top of it, under a **glass dome** with a shielded door over the gate, and the
+  port's own **round landing pit** is outside the gate. You can walk out onto the
+  rock and keep going until it is too steep; slide off the side and you wake by
+  the bay.
+- **Z lands you in the bay.** Flying near your bay on any planet (home too),
+  press Z and the ship flies itself over the pad and sets down on it. Z again
+  takes control back.
+- **Every generated planet now has:**
+  - its merchants' stalls in front of the cantina;
+  - at least three locals walking the street, who fight back like every local;
+  - a stage in the cantina;
+  - its own Oda: a new iteration with a generated last name, the planet's name in
+    her prompt, and her own brain, memory and save entry;
+  - smuggling runs and contracts on Remnant officers, always on her board.
+- **The port's Remnant outposts** no longer appear on other planets.
+- Ilka Vell, the station's old hand-written owner, is gone; the station has its
+  own Oda now.
+
 ## Atlantium Sand-boxer speeders (2026-10-27, issue #82)
 
 - **A new speeder, the Atlantium Sand-boxer**, replaces the Curlew: a wide,

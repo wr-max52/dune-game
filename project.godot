@@ -46,6 +46,10 @@ crouch_act={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":67)]
 }
+bay_land={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":90)]
+}
 interact={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":69)]

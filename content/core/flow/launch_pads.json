@@ -33,6 +33,8 @@
     "seated": "[Space]  Take off      [LMB]  Guns      [E]  Get out",
     "airborne": "[R / F]  Throttle    [W / S]  Pitch    [A / D]  Turn    [Q / E]  Roll    [Shift]  Ability    [LMB]  Guns",
     "can_land": "[C]  Land",
+    "bay_land": "[Z]  Land in the bay",
+    "bay_landing": "Bringing her down in the bay...",
     "landing": "Landing...",
     "landed": "Landed.  [E]  Get out    [Space]  Take off",
     "crashed": "Crashed. Your ship is being towed back to the pad.",
@@ -52,5 +54,7 @@
     "orbit_broke_off": "You broke off the fight.",
     "orbit_failed": "Fighter lost. Your ship is being towed back to the pad."
   },
-  "reentry_delay": 25.0
+  "reentry_delay": 25.0,
+  "bay_land_radius": 4000.0,
+  "bay_land_note": "Issue #75: flying within bay_land_radius metres (across the ground) of your ship's bay, below space, Z flies her in and lands her on her own pad (ShipPilot.bay_land), on any planet."
 }
