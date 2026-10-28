@@ -81,6 +81,7 @@ var retro_hud: RetroHud               ## issue #52: banner, footer and the F1 in
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
+var gate_speeders: Array = []         ## issue #82: the Remnant's Sand-boxers parked outside the front gate
 var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
 var world: Dictionary = {}            ## its world (terrain, atmosphere, detail): authored or generated
 var style: TownStyle                  ## its town style (metallic, snowy, pastel, words...)
@@ -168,6 +169,7 @@ func _ready() -> void:
 			_build_npcs()
 		if with_speeders and pilot != null and has_feature("speeders"):
 			_build_speeder_post()
+			_park_gate_speeders()
 		if use_look and with_droids and gear != null:
 			_build_droids()
 		if with_salesman and gear != null:
@@ -550,6 +552,21 @@ func _build_speeder_post() -> void:
 	add_child(speeder_post)
 	if bar != null:
 		speeder_post.attach_host(bar)
+
+
+## Issue #82: the Remnant's black and red Sand-boxers (the town's "vehicle"
+## markers), parked outside the front gate while the garrison holds it. Not
+## rideable: they are the Remnant's.
+func _park_gate_speeders() -> void:
+	if not Story.town_garrison():
+		return
+	for m in town.markers_with_role("vehicle"):
+		var s := SpeederNode.new()
+		s.setup(self, pilot.ground, {}, false, str(m.get("paint", "")))
+		add_child(s)
+		s.name = str(m.id).to_pascal_case()
+		s.place(town.marker_pos(str(m.id)), deg_to_rad(float(m.get("yaw_deg", 0.0))))
+		gate_speeders.append(s)
 
 
 ## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)

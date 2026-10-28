@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Atlantium Sand-boxer speeders (2026-10-27, issue #82)
+
+- **A new speeder, the Atlantium Sand-boxer**, replaces the Curlew: a wide,
+  flat, wedge-shaped hover car (DeLorean meets Cybertruck) with hover pads in
+  the wheel wells, a plasma-core engine deck with twin exhausts, and twin
+  blasters under the headlights, where the lasers now fire from. Same handling
+  and specs; it is 5 m long and 2.7 m wide.
+- **Four paint jobs** on the one Hyper3D model: bare steel, green and blue,
+  crimson and white, and the Remnant's black and red (with a red core).
+  Skrugs's display model is crimson; each speeder you buy comes in the next
+  colour (steel, green and blue, crimson).
+- **The Remnant park a black and red one outside the front gate**, off the gate
+  lane, while they hold the town. It is theirs: you cannot ride it.
+- **Its hitbox is its shape**: bolts hit the body (cabin included) and miss
+  over the roof, instead of a flat 1 m box.
+- Buying one no longer loads a model on the spot: the paints load in the
+  background when the stall is built.
+- Review sheet: `docs/lookdev/vehicles/03_sandboxer.png`. Paint jobs are
+  `paint` in `content/look/vehicle_models.json` (prepped by
+  `tools/look/prep_vehicle.gd`).
+
 ## New character art: player, guards, cantina owner (2026-10-27, issue #79)
 
 - **Three new outfits from the concept art**, made the way the locals are: one

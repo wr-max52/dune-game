@@ -1,0 +1,36 @@
+{
+  "title": "Issue #82: the Atlantium Sand-boxer as the game builds it (SpeederNode): one Hyper3D model in four paint jobs, twin blasters under the nose",
+  "out": "res://docs/lookdev/vehicles/03_sandboxer.png",
+  "views": [
+    "front34",
+    "side",
+    "rear34",
+    "top"
+  ],
+  "cells": [
+    {
+      "name": "sandboxer",
+      "label": "Atlantium Sand-boxer (steel)",
+      "speeder": "speeder",
+      "paint": "steel"
+    },
+    {
+      "name": "sandboxer_remnant",
+      "label": "Sand-boxer, Remnant black and red",
+      "speeder": "speeder",
+      "paint": "remnant"
+    },
+    {
+      "name": "sandboxer_tide",
+      "label": "Sand-boxer, green and blue",
+      "speeder": "speeder",
+      "paint": "tide"
+    },
+    {
+      "name": "sandboxer_crimson",
+      "label": "Sand-boxer, crimson and white",
+      "speeder": "speeder",
+      "paint": "crimson"
+    }
+  ]
+}
