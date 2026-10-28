@@ -27,11 +27,16 @@ uniform vec4 planet_color_b : source_color = vec4(0.55, 0.47, 0.45, 1.0);
 uniform vec3 ring_normal = vec3(0.25, 0.95, 0.2);
 uniform vec4 ring_color : source_color = vec4(0.9, 0.82, 0.72, 1.0);
 uniform float planet_visibility = 0.75;  // 0 = lost in daylight, 1 = vivid
+// Issue #77: on the home planet's ball "up" turns with the ground. sky_frame takes
+// the viewer's own frame (y = their up) to the world; the gradient, the horizon
+// glow and the clouds are laid out in it. The sun and the ringed planet stay where
+// they are in the world.
+uniform mat3 sky_frame = mat3(1.0);
 
 float hash(float n) { return fract(sin(n) * 43758.5453); }
 
 vec3 base_sky(vec3 d) {
-	float h = d.y;
+	float h = dot(d, sky_frame[1]);
 	vec3 col;
 	if (h >= 0.0) {
 		col = mix(horizon_color.rgb, zenith_color.rgb, pow(clamp(h, 0.0, 1.0), horizon_falloff));
@@ -111,13 +116,14 @@ void sky() {
 	}
 
 	// --- Thin high cloud streaks ---
-	if (d.y > 0.0) {
-		vec2 uv = d.xz / (d.y + 0.12);
+	vec3 dl = transpose(sky_frame) * d;
+	if (dl.y > 0.0) {
+		vec2 uv = dl.xz / (dl.y + 0.12);
 		float n1 = texture(cloud_noise, uv * vec2(0.05, 0.16) + vec2(0.13, 0.4)).r;
 		float n2 = texture(cloud_noise, uv * vec2(0.17, 0.5) + vec2(0.7, 0.2)).r;
 		float n = n1 * 0.7 + n2 * 0.3;
 		float cov = smoothstep(1.0 - cloud_cover, 1.0 - cloud_cover + 0.35, n);
-		cov *= smoothstep(0.0, 0.12, d.y) * (1.0 - smoothstep(0.55, 0.95, d.y));
+		cov *= smoothstep(0.0, 0.12, dl.y) * (1.0 - smoothstep(0.55, 0.95, dl.y));
 		float sd = max(dot(d, s), 0.0);
 		vec3 cc = mix(cloud_shadow.rgb, cloud_color.rgb, 0.45 + 0.55 * n2);
 		cc += sun_glow_color.rgb * pow(sd, 8.0) * 1.2;

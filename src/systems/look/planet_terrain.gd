@@ -172,10 +172,22 @@ func snap_to(pos: Vector3) -> void:
 	if collider_shape == null:
 		return
 	var c := snapped_center(pos)
+	var m := Vector2(c.x, c.z)
 	if _jobs.has("near"):
 		_stale.append(_jobs.near)          # overtaken by this rebuild: reaped once done
 		_jobs.erase("near")
-	_apply("near", _compute("near", Vector2(c.x, c.z)))
+	if not threaded:
+		_apply("near", _compute("near", m))
+	else:
+		# A teleport (a respawn, a tow home): ground at once, but coarse (4x the
+		# cells' size, a sixteenth of the work), then the fine one row by row as usual.
+		var coarse := near_cells / 4
+		var p := sphere.patch(m.x, m.y, coarse, near_step * 4.0, _collider_grow() + near_step * 3.0)
+		p.center = m
+		p.cells = coarse
+		p.step = near_step * 4.0
+		_apply_collider(p)
+		_start("near", m)
 	_pending = false
 	snaps += 1
 
@@ -330,6 +342,7 @@ func _apply_collider(p: Dictionary) -> void:
 		shape.map_depth = int(p.cells) + 1
 		shape.map_data = scaled
 		collider_shape.shape = shape
+		collider_shape.scale = Vector3(step, step, step)
 		collider_body.global_transform = xf
 		collider_center = Vector3(p.center.x, 0.0, p.center.y)
 		_near_map = p.center

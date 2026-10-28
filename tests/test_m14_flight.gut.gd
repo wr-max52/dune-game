@@ -24,7 +24,7 @@ func test_trace_exists() -> void:
 func test_the_world_is_there() -> void:
 	_true("DESERT_BUILT")
 	_true("GROUND_IS_THE_DESERT", "the ship lands on the same sand the player walks on")
-	assert_eq(int(t.get("DESERT_EXTENT", 0)), 6000)
+	assert_eq(int(t.get("DESERT_EXTENT", 0)), int(PI * 5000.0), "issue #77: the whole ball, half way round")
 	assert_gt(int(t.get("LANDMARKS", 0)), 10, "the desert's mesas and hoodoos")
 	assert_eq(int(t.get("OUTPOST_BUILDINGS", 0)), 3)
 	assert_eq(int(t.get("OUTPOST_IN_SKY_SCENE", 0)), 3)

@@ -20,6 +20,7 @@ var traveling := ""                  ## the planet a fade is taking us to ("" = 
 var change := true                   ## false: decide but do not change scene (tests)
 var _layer: CanvasLayer
 var _labels: Dictionary = {}         ## id -> Label
+var _sand_bodies: Array = []         ## sand ShaderMaterials of ball neighbours (the sun is tracked)
 
 
 func setup(ship_pilot, neighbours: Array, with_looks: bool) -> void:
@@ -37,6 +38,10 @@ func _ready() -> void:
 	for b in bodies:
 		if b.node != null:
 			add_child(b.node)
+	var look = pilot.demo.get("look") if pilot != null and pilot.get("demo") != null else null
+	if look != null:
+		for m in _sand_bodies:
+			look.track_material(m)     # the sun, so the ball's night side is dusk
 	_layer = CanvasLayer.new()
 	_layer.layer = 4
 	add_child(_layer)
@@ -136,6 +141,17 @@ func _body(n: Dictionary) -> Node3D:
 	m.rim = 0.6
 	m.rim_tint = 0.4
 	mi.material_override = m
+	if bool(n.get("ball", false)) and str(n.type) == "sand":
+		# Issue #77: the home planet seen from space is the same sand you walk on:
+		# its dunes' colours and the dusk side of one real sun.
+		var sand := ShaderMaterial.new()
+		sand.shader = DesertTerrain.SAND_SHADER
+		sand.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(256, 3, 0.01))
+		sand.set_shader_parameter("planet_center", n.at)
+		sand.set_shader_parameter("planet_radius", r)
+		sand.set_shader_parameter("glitter", 0.0)
+		mi.material_override = sand
+		_sand_bodies.append(sand)
 	mi.position = n.at
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.extra_cull_margin = r
