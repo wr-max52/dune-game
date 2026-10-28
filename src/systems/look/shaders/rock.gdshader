@@ -42,8 +42,22 @@ void fragment() {
 	alb = mix(rock_dark.rgb, alb, smoothstep(ground_y - 2.0, ground_y + 25.0, wh));
 	alb = mix(alb, dust.rgb, smoothstep(0.55, 0.85, dot(wnorm, up)) * 0.75);
 
+	// Issue #93, a light touch: a fine pitted grain in the normal and darker
+	// crevices (where the coarse noise dips), so close up it reads as stone, not
+	// clay. Sampled on two planes by the face's direction (no stretch on walls).
+	float side = abs(dot(wnorm, up));
+	vec2 gp = side > 0.6 ? wpos.xz : vec2(dot(wpos, cross(up, wnorm)), wh);
+	float g1 = texture(noise_tex, gp * 0.9).r;
+	float g2 = texture(noise_tex, gp * 0.9 + vec2(0.013, 0.0)).r;
+	float g3 = texture(noise_tex, gp * 0.9 + vec2(0.0, 0.013)).r;
+	vec3 grain = vec3(g2 - g1, 0.0, g3 - g1) * 6.0;
+	float crev = smoothstep(0.42, 0.25, texture(noise_tex, gp * 0.18).r);
+	alb *= 1.0 - crev * 0.28;
+	// Sand settles on ledges that face up.
+	alb = mix(alb, dust.rgb, smoothstep(0.75, 0.95, dot(wnorm, up)) * 0.25);
+
 	// Grooves along the strata tilt the normal up and down a little.
-	vec3 nw = normalize(wnorm + up * cos(band_ph * 5.3) * 0.12);
+	vec3 nw = normalize(wnorm + up * cos(band_ph * 5.3) * 0.12 + grain * 0.25);
 	NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
 	ALBEDO = alb;
 	ROUGHNESS = 0.88;

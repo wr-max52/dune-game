@@ -5,8 +5,10 @@ extends Node3D
 ## the beauty corner's `_build_landforms` (the beauty corner is the art reference
 ## and is not edited, so this is a copy driven by content/look/desert_landforms.json).
 ##
-## Mesas and hoodoos are solid (the player can walk up to them); boulders are one
-## MultiMesh with no collision, as in the beauty corner.
+## Mesas and hoodoos are solid (the player can walk up to them). Boulders are one
+## MultiMesh to draw, and (issue #93) each also has its own convex collider, so you
+## can stand on them; `boulders` lists them for WorldGround, where the low ones are
+## ramps for a speeder and the tall ones stop it.
 
 const DATA_PATH := "res://content/look/desert_landforms.json"
 
@@ -14,6 +16,8 @@ var data: Dictionary = {}
 var solid_count := 0          ## bodies added (read by tests)
 var boulder_count := 0
 var boulder_spots := PackedVector3Array()   ## where they went (the renderer may not say)
+## { center: Vector3 (on the ground), up, radius, height } for WorldGround.add_boulders.
+var boulders: Array = []
 
 
 static func load_data(path: String = DATA_PATH) -> Dictionary:
@@ -113,6 +117,8 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = LookMeshKit.rock(boulder_src, noise, 0.4, 0.0, 3.0)
+	if solid:
+		_solid_boulders(mm.mesh, xforms)
 	mm.instance_count = xforms.size()
 	for i in xforms.size():
 		mm.set_instance_transform(i, xforms[i])
@@ -192,6 +198,44 @@ func _add(mesh: Mesh, mat: Material, g: Transform3D, up: float, rot_deg: Vector3
 	mi.transform = Transform3D(g.basis * Basis.from_euler(rot_deg * PI / 180.0), g.origin + g.basis.y * up)
 	add_child(mi)
 	return mi
+
+
+## One static body per boulder: a convex hull of the very rock mesh drawn there (its
+## points put through that boulder's transform), so what you stand on is what you see.
+func _solid_boulders(mesh: Mesh, xforms: Array[Transform3D]) -> void:
+	var pts := PackedVector3Array()
+	var seen := {}
+	for v in (mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+		var key := v.snapped(Vector3.ONE * 0.01)
+		if not seen.has(key):
+			seen[key] = true
+			pts.append(v)
+	var root := StaticBody3D.new()
+	root.name = "BoulderColliders"
+	add_child(root)
+	for xf in xforms:
+		var hull := PackedVector3Array()
+		hull.resize(pts.size())
+		var top := 0.0
+		var rad := 0.0
+		for i in pts.size():
+			var w: Vector3 = xf.basis * pts[i]
+			hull[i] = w
+			top = maxf(top, w.dot(xf.basis.y.normalized()))
+			rad = maxf(rad, (w - xf.basis.y.normalized() * w.dot(xf.basis.y.normalized())).length())
+		var shape := ConvexPolygonShape3D.new()
+		shape.points = hull
+		var cs := CollisionShape3D.new()
+		cs.shape = shape
+		cs.position = xf.origin
+		root.add_child(cs)
+		# Up: the ground's (the transform also leans and turns the rock a little).
+		var up := Vector3.UP
+		if PlanetSphere.current != null:
+			up = PlanetSphere.current.up_at(xf.origin)
+		# Measured from the rock's origin, a little under the sand; the ground under
+		# it counts wherever it is higher.
+		boulders.append({ "center": xf.origin, "up": up, "radius": rad * 0.85, "height": top })
 
 
 func _solid(mi: MeshInstance3D) -> void:

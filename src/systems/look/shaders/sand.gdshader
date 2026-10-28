@@ -2,10 +2,19 @@ shader_type spatial;
 // Sand: two scales of wind ripples in the normal, warm (not grey) shadow sides,
 // slope tint and a soft glitter close to the camera. Journey is the reference.
 //
-// Issue #77: on a ball (planet_radius > 0) every pattern is laid out in map
-// coordinates (distance and direction along the ground from the port) and the
-// ripples tilt with the ground. A layer of sand sinks out of the way wherever the
-// finer layer inside it covers (hole_*: that layer's square, per instance).
+// Issue #77: on a ball (planet_radius > 0) the broad colour is laid out in map
+// coordinates (distance and direction along the ground from the port); the fine
+// patterns (ripples, blowing sand, glitter) are triplanar on the world position,
+// the three planes picked by the ground's up, so they keep their size all round
+// the ball (map coordinates stretch sideways far from the port). On a flat world
+// only the top-down plane is used. A layer of sand sinks out of the way wherever
+// the finer layer inside it covers (hole_*: that layer's square, per instance).
+//
+// Ripples (issue #93), the usual cheap tricks rather than any sand simulation:
+// two scales (~0.9 m and ~0.25 m) plus a faint 4 m swell, a lopsided profile (long
+// windward slope, short steep lee), lines bent and broken by noise, faded on steep
+// faces and toward the distance, darker troughs and lighter crests. Blowing sand:
+// thin wisps scrolling downwind over the surface (wind_strength, 0 = still air).
 
 uniform vec4 sand_light : source_color = vec4(0.91, 0.77, 0.56, 1.0);
 uniform vec4 sand_mid : source_color = vec4(0.79, 0.58, 0.35, 1.0);
@@ -13,8 +22,10 @@ uniform vec4 sand_shadow : source_color = vec4(0.48, 0.35, 0.29, 1.0);
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 uniform vec2 wind_dir = vec2(0.8, 0.6);
 uniform vec3 sun_dir = vec3(0.0, 0.15, -1.0);
-uniform float ripple_strength = 0.16;
-uniform float glitter = 1.0;
+uniform float ripple_strength = 0.22;
+uniform float glitter = 0.25;              // was 1.0: from a distance it read as sparks
+uniform float wind_strength = 1.0;         // blowing sand sheets; 0 = still air
+uniform vec4 drift_color : source_color = vec4(0.97, 0.86, 0.68, 1.0);
 uniform vec3 planet_center = vec3(0.0);
 uniform float planet_radius = 0.0;          // 0 = flat ground
 uniform float hole_sink = 6.0;
@@ -43,18 +54,6 @@ vec2 to_map(vec3 w) {
 	return d.xz / hl * atan(hl, d.y) * planet_radius;
 }
 
-// The rotation taking (0, 1, 0) to `up`, applied to v.
-vec3 tilt(vec3 v, vec3 up) {
-	vec3 axis = cross(vec3(0.0, 1.0, 0.0), up);
-	float s = length(axis);
-	if (s < 1e-6) {
-		return v;
-	}
-	axis /= s;
-	float c = up.y;
-	return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
-}
-
 void vertex() {
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
@@ -72,6 +71,50 @@ void vertex() {
 	mpos = to_map(wpos);
 }
 
+// One ripple field in a plane, at 2D point q (metres): its height (0..1, for
+// shading) and its slope (d height / d q, for the normal).
+float ripple_h(float ph) {
+	// Lopsided: rises over 80% of a wavelength, falls over the last 20%.
+	float t = fract(ph / 6.28318);
+	return smoothstep(0.0, 0.8, t) * (1.0 - smoothstep(0.8, 1.0, t));
+}
+
+vec3 ripples(vec2 q, vec2 wd, float fade_near, float fade_mid) {
+	// Noise bends the crest lines (and breaks them where it changes fast).
+	float n1 = texture(noise_tex, q * 0.019).r;
+	float n2 = texture(noise_tex, q * 0.083 + vec2(0.31, 0.77)).r;
+	float warp = n1 * 9.0 + n2 * 2.2;
+	vec2 wd2 = normalize(vec2(wd.x + 0.3, wd.y - 0.25));
+	float k1 = 7.0;     // ~0.9 m
+	float k2 = 25.0;    // ~0.25 m
+	float k3 = 1.55;    // ~4 m swell
+	float p1 = dot(q, wd) * k1 + warp * 3.0;
+	float p2 = dot(q, wd2) * k2 + warp * 6.0 + n2 * 4.0;
+	float p3 = dot(q, wd) * k3 + warp;
+	// Patches where the ripples die out (sheltered sand).
+	float patchy = smoothstep(0.25, 0.6, n1 * 0.7 + n2 * 0.3);
+	float e = 0.15;
+	float h1 = ripple_h(p1);
+	float h2 = ripple_h(p2);
+	float d1 = (ripple_h(p1 + e) - h1) / e * k1;
+	float d2 = (ripple_h(p2 + e) - h2) / e * k2;
+	float d3 = cos(p3) * k3;
+	float a1 = 0.012 * fade_mid * patchy;
+	float a2 = 0.006 * fade_near * patchy;
+	float a3 = 0.018 * fade_mid;
+	vec2 grad = wd * d1 * a1 + wd2 * d2 * a2 + wd * d3 * a3;
+	float h = (h1 - 0.5) * fade_mid * patchy + (h2 - 0.5) * 0.3 * fade_near * patchy;
+	return vec3(grad, h);
+}
+
+// Thin wisps of sand blowing downwind (0..1).
+float drift(vec2 q, vec2 wd, float t) {
+	vec2 along = wd * t;
+	float a = texture(noise_tex, q * 0.012 - along * 0.010).r;
+	float b = texture(noise_tex, vec2(dot(q, wd) * 0.05, dot(q, vec2(-wd.y, wd.x)) * 0.35) - vec2(t * 0.55, 0.0)).r;
+	return smoothstep(0.55, 0.8, a) * smoothstep(0.45, 0.85, b);
+}
+
 void fragment() {
 	float dist = length(wpos - CAMERA_POSITION_WORLD);
 	float n_big = texture(noise_tex, mpos * 0.0021).r;
@@ -83,36 +126,61 @@ void fragment() {
 	float slope = 1.0 - clamp(dot(wnorm, up), 0.0, 1.0);
 	alb = mix(alb, sand_shadow.rgb, smoothstep(0.15, 0.55, slope) * 0.45);
 
-	// Ripples run across the wind. Warping the phase keeps them from looking ruled.
+	// Triplanar weights from the ground's up (not the dune's own slope, so a dune
+	// face does not swap planes); sharp, so blends are short.
+	vec3 aw = pow(abs(up), vec3(8.0));
+	aw /= (aw.x + aw.y + aw.z);
 	vec2 wd = normalize(wind_dir);
-	vec2 wd2 = normalize(vec2(wd.x + 0.35, wd.y - 0.2));
-	float warp = n_mid * 7.0 + n_big * 18.0;
-	float ph1 = dot(mpos, wd) * 1.6 + warp;
-	float ph2 = dot(mpos, wd2) * 7.5 + warp * 2.0 + n_fine * 3.0;
-	float fade1 = 1.0 - smoothstep(25.0, 140.0, dist);
-	float fade2 = 1.0 - smoothstep(8.0, 45.0, dist);
+	float fade_near = 1.0 - smoothstep(6.0, 40.0, dist);
+	float fade_mid = 1.0 - smoothstep(20.0, 160.0, dist);
 	// Flat ground ripples more than steep dune faces (sand slides there).
 	float flat_k = smoothstep(0.35, 0.05, slope);
-	// sin + a harmonic gives a skewed, asymmetric ripple profile.
-	vec2 grad = wd * (cos(ph1) + 0.45 * cos(2.0 * ph1 + 0.6)) * fade1 * ripple_strength
-		+ wd2 * (cos(ph2) + 0.4 * cos(2.0 * ph2)) * fade2 * ripple_strength * 0.6;
-	grad *= flat_k;
-	vec3 nw = normalize(wnorm - tilt(vec3(grad.x, 0.0, grad.y), up));
+	vec3 g3 = vec3(0.0);
+	float rh = 0.0;
+	float dr = 0.0;
+	float t = TIME * wind_strength;
+	if (aw.y > 0.01) {
+		vec3 r = ripples(wpos.xz, wd, fade_near, fade_mid);
+		g3 += vec3(r.x, 0.0, r.y) * aw.y;
+		rh += r.z * aw.y;
+		dr += drift(wpos.xz, wd, t) * aw.y;
+	}
+	if (aw.x > 0.01) {
+		vec3 r = ripples(wpos.zy, wd, fade_near, fade_mid);
+		g3 += vec3(0.0, r.y, r.x) * aw.x;
+		rh += r.z * aw.x;
+		dr += drift(wpos.zy, wd, t) * aw.x;
+	}
+	if (aw.z > 0.01) {
+		vec3 r = ripples(wpos.xy, wd, fade_near, fade_mid);
+		g3 += vec3(r.x, r.y, 0.0) * aw.z;
+		rh += r.z * aw.z;
+		dr += drift(wpos.xy, wd, t) * aw.z;
+	}
+	g3 *= flat_k * ripple_strength / 0.16;
+	g3 -= up * dot(g3, up);                     // along the ground only
+	vec3 nw = normalize(wnorm - g3);
 	NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
 
-	alb *= 1.0 - 0.035 * sin(ph1) * fade1 * flat_k;
+	// Troughs hold darker, coarser grains; crests catch the light.
+	alb *= 1.0 + rh * 0.07 * flat_k;
 	alb *= 0.94 + 0.12 * n_fine;
+	// Blowing sand: brighter wisps over the surface, out to ~250 m, stronger on
+	// open flats than in the lee of steep faces.
+	float dk = dr * wind_strength * (1.0 - smoothstep(60.0, 250.0, dist)) * (0.4 + 0.6 * flat_k);
+	alb = mix(alb, drift_color.rgb, dk * 0.35);
 	ALBEDO = alb;
-	ROUGHNESS = 0.93;
-	SPECULAR = 0.3;
+	// A little sheen at grazing angles (fine sand is not chalk).
+	ROUGHNESS = 0.88;
+	SPECULAR = 0.35;
 
 	// Glitter: a few cells per metre catch the sun, only near the camera.
-	vec2 cell = floor(mpos * 14.0);
+	vec2 cell = floor((aw.y >= max(aw.x, aw.z) ? wpos.xz : (aw.x >= aw.z ? wpos.zy : wpos.xy)) * 14.0);
 	float hsh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
 	vec3 v = normalize(CAMERA_POSITION_WORLD - wpos);
 	float flick = fract(hsh * 37.0 + dot(v, vec3(3.1, 1.7, 2.3)) * 3.0);
 	float sunlit = clamp(dot(nw, normalize(sun_dir)) * 3.0, 0.0, 1.0);
-	EMISSION = vec3(1.0, 0.88, 0.7) * step(0.997, flick) * fade2 * sunlit * glitter * 2.0;
+	EMISSION = vec3(1.0, 0.88, 0.7) * step(0.9985, flick) * fade_near * sunlit * glitter * 2.0;
 	float sun_up = dot(up, normalize(sun_dir));
 	if (planet_radius > 0.0) {
 		EMISSION += alb * dusk_color.rgb * dusk_strength * smoothstep(0.25, -0.35, sun_up);
