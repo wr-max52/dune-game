@@ -81,6 +81,8 @@ var _cam_far := 4000.0
 var _rig_was_fp := false
 var _boost := false
 var _foot_prompt: Label          ## "[E] Board" while standing at the ship
+var jolt := BoardJolt.new(1.6, 1.4)   ## issue #87: the ship settles and lifts on its gear as you board
+var _jolt_xf := Transform3D.IDENTITY
 var hull: ShipHull               ## the ship's own collision: solid parked and flying (bolts hit it)
 var defense                      ## issue #55: ShipDefense, the flown ship's shield and hull
 var guns                         ## issue #55: ShipLoadout, its guns in the air
@@ -369,6 +371,8 @@ func board() -> bool:
 		cam.far = 160000.0
 	chase._primed = false
 	hud.visible = true
+	if atmo.state == AtmoFlight.State.PARKED:
+		jolt.start()
 	boarded.emit()
 	return true
 
@@ -657,6 +661,7 @@ func _seated(dt: float) -> void:
 			float(_external.get("roll", 0.0)), _throttle, _boost)
 	if st == AtmoFlight.State.LIFTOFF or st == AtmoFlight.State.FLYING or st == AtmoFlight.State.LANDING:
 		flight_time += dt
+	_jolt_xf = jolt.step(dt)
 	if fight != null:
 		_fight_step(dt)
 	elif bay_landing:
@@ -853,7 +858,7 @@ func _tow_home() -> void:
 
 func _sync_visual() -> void:
 	if visual != null and is_instance_valid(visual):
-		visual.global_transform = atmo.transform()
+		visual.global_transform = atmo.transform() * _jolt_xf
 
 
 func _update_hud() -> void:

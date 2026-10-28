@@ -43,6 +43,9 @@ var _prompt: Label
 var _fan: Node3D
 var _glow_mat: StandardMaterial3D
 var _t := 0.0
+var jolt := BoardJolt.new()      ## issue #87: sink, lift and shudder as you climb on
+var _lean := Vector2.ZERO        ## smoothed (pitch, roll) for the eye
+var _jolt_xf := Transform3D.IDENTITY
 static var _hulls: Dictionary = {}   ## issue #82: model -> its hull shape (see _model_hull)
 var _engine: AudioStreamPlayer3D   ## issue #16: the speeder's drone while you ride
 
@@ -120,6 +123,7 @@ func mount() -> bool:
 	_external = {}
 	if _hud != null:
 		_hud.visible = true
+	jolt.start()
 	mounted.emit()
 	return true
 
@@ -194,6 +198,7 @@ func _physics_process(dt: float) -> void:
 			_engine.stop()
 		return
 	_t += dt
+	_jolt_xf = jolt.step(dt)
 	if riding:
 		_ride(dt)
 	elif rideable:
@@ -281,9 +286,9 @@ func _sync() -> void:
 	if visual != null:
 		# Lean into turns and pitch with the climb, for the eye only.
 		var lean := clampf(model.speed / 40.0, -1.0, 1.0) * (_axis("move_left", "move_right") if riding and _external.is_empty() else float(_external.get("steer", 0.0)))
-		visual.rotation.z = lerpf(visual.rotation.z, -lean * 0.25, 0.15)
-		visual.rotation.x = lerpf(visual.rotation.x, clampf(model.vy / 30.0, -0.35, 0.35), 0.2)
-		visual.position.y = 0.04 * sin(_t * 3.0)
+		_lean.y = lerpf(_lean.y, -lean * 0.25, 0.15)
+		_lean.x = lerpf(_lean.x, clampf(model.vy / 30.0, -0.35, 0.35), 0.2)
+		visual.transform = Transform3D(Basis.from_euler(Vector3(_lean.x, 0.0, _lean.y)), Vector3(0, 0.04 * sin(_t * 3.0), 0)) * _jolt_xf
 	if _fan != null:
 		_fan.rotation.z += 0.3 + absf(model.speed) * 0.02
 	if _glow_mat != null:
