@@ -1,6 +1,6 @@
 {
   "id": "types",
-  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava, gas or the asteroid's own rock), and falling off the deck kills you (you wake by the bay). sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
+  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava or gas), and falling off the deck kills you (you wake by the bay); 'sphere' (issue #75, the asteroid) = the planet is one cratered rock ball of surface.radius, the town and its landing bay sit on top of it, the town under a glass dome ('dome': its half-axes are the walls' times spread, its height that times height, a door with an energy shield over the gate), and you walk anywhere on the rock that is not too steep to stand on (src/systems/planets/asteroid_world.gd). landing_bay 'pit': the port's round landing pit outside the gate instead of bays inside the walls. sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
   "home": "port_desert",
   "detail": {
     "hysteresis": 40.0,
@@ -91,16 +91,21 @@
     "asteroid": {
       "town_naming": "town_station",
       "label": "asteroid station",
-      "ground": "platform",
+      "ground": "sphere",
+      "landing_bay": "pit",
       "default_style": "metallic",
-      "surface": { "kind": "rock", "depth": 40.0, "radius": 260.0, "color": "#38383c", "deep": "#1c1c20", "debris": 40 },
+      "surface": { "kind": "rock", "radius": 900.0, "color": "#7a7a7e", "deep": "#3a3a3e", "rim": "#9c9ca0",
+                   "craters": [ { "cell": 150.0, "density": 0.55, "radius": [18.0, 46.0], "depth": 0.24, "seed": 11 },
+                                { "cell": 36.0, "density": 0.5, "radius": [4.0, 10.0], "depth": 0.22, "seed": 23 } ],
+                   "bumps": 1.4, "cell_m": 5.0, "cap": 0.72, "blend": 45.0, "boulders": 700, "debris": 40 },
+      "dome": { "spread": 1.45, "height": 0.8, "door_height": 6.5, "door_half": 6.0 },
       "sky": { "sun": { "color": "#f4f4f6", "elevation_deg": 42.0, "energy": 2.6 }, "ambient": { "energy": 0.85 },
                "sky": { "zenith": "#26282c", "horizon": "#6a6d72", "ground": "#3a3c40", "sun_glow": "#d8d8d8", "cloud_cover": 0.0, "planet_visibility": 1.0, "energy": 0.8 },
                "fog": { "color": "#5a5d62", "density": 0.00004, "sky_affect": 0.1 }, "volumetric": { "enabled": false } },
       "atmosphere": { "upper_start": 0.0, "cloud_deck": 200.0, "sky_black_at": 900.0, "space_altitude": 700.0 },
-      "body": { "radius": 600.0, "color": "#6a6a6e", "dark": "#2e2e32" },
+      "body": { "radius": 900.0, "color": "#7a7a7e", "dark": "#2e2e32" },
       "arrival": { "altitude": 520.0, "distance": 900.0 },
-      "fall_text": "You drifted off the edge of the station."
+      "fall_text": "You slid off the side of the asteroid and drifted away."
     }
   }
 }

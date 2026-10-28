@@ -1,7 +1,8 @@
 extends GutTest
 ## Issue #45: the planet generator, pure. Every town size from 1 to 100 passes the
 ## town validator; sizes scale the way the issue says (50 = the port, 100 = 5x,
-## 1 = a cantina, a guard at its door and a merchant out back); every planet type
+## 1 = a cantina with a stage, a guard at its door, a merchant in front and locals
+## in the street); every planet type
 ## builds; the style kit reads presets and plain words; a new planet is a config
 ## file and nothing else.
 
@@ -49,12 +50,14 @@ func test_size_scales_like_the_issue_says() -> void:
 	assert_gt(_town(100).boxes().size(), _town(50).boxes().size() * 3)
 
 
-func test_size_1_is_a_cantina_a_guard_and_a_merchant_out_back() -> void:
+func test_size_1_is_a_cantina_a_guard_a_merchant_in_front_and_locals() -> void:
 	var t := _town(1)
 	var counts: Dictionary = t.data.counts
 	assert_eq(int(counts.guards), 1)
 	assert_eq(int(counts.merchants), 1)
 	assert_eq(int(counts.residents), 0)
+	assert_gte(int(counts.roamers), 3, "locals walking the street")
+	assert_gte(t.routes().size(), 3)
 	assert_eq(int(counts.bays), 1, "and a bay to land on")
 	assert_false(t.get_box("bar_counter").is_empty(), "a cantina")
 	assert_false(t.get_marker("cantina_owner").is_empty())
@@ -62,7 +65,8 @@ func test_size_1_is_a_cantina_a_guard_and_a_merchant_out_back() -> void:
 	assert_eq(guards.size(), 1)
 	assert_lt(_v(guards[0].pos).distance_to(t.marker_pos("cantina_door")), 5.0, "at the cantina door")
 	var vendor := t.get_marker("vendor_1")
-	assert_lt(float(vendor.pos[0]), float(t.get_box("cantina_wall_w").min[0]), "out back, behind the cantina")
+	assert_gt(float(vendor.pos[0]), float(t.get_box("cantina_wall_e_s").max[0]), "in front of the cantina")
+	assert_false(t.get_box("cantina_stage").is_empty(), "a stage")
 	assert_eq(t.boxes().filter(func(b): return str(b.get("look", "")).begins_with("hut")).size(), 0, "no houses")
 	assert_false(t.get_box("ship").is_empty())
 	assert_false(t.get_marker("player_spawn").is_empty())
@@ -76,6 +80,21 @@ func test_big_towns_have_everything() -> void:
 	assert_gt(t.boxes().filter(func(b): return str(b.get("look", "")) == "stall").size(), 8)
 	assert_gt(t.routes().size(), 3, "residents strolling")
 	assert_eq(t.data.garrison.klaxon_marker, "trooper_tower")
+	assert_false(t.get_box("cantina_stage").is_empty(), "a stage")
+	var door := float(t.get_box("cantina_wall_e_s").max[0])
+	for i in int(t.data.counts.merchants):
+		var v := t.get_marker("vendor_%d" % (i + 1))
+		assert_between(float(v.pos[0]), door, door + 40.0, "every merchant in front of the cantina")
+
+
+func test_a_pit_town() -> void:
+	var t := TownLayout.new()
+	t.load_from_dict(TownGen.generate("p", 1, 45, { "bay": "pit", "pit_clear": 1.45 }))
+	assert_eq(t.validate().size(), 0, str(t.validate().slice(0, 3)))
+	assert_false(t.get_box("pit_bowl").is_empty(), "the port's pit")
+	assert_gt(float(t.get_box("pit_bowl").min[0]), float(t.data.bounds.max[0]), "outside the walls")
+	assert_lt(float(t.get_marker("player_spawn").pos[1]), -5.0, "you start in the pit")
+	assert_false(t.get_box("ship").is_empty())
 
 
 func test_the_same_seed_is_the_same_town() -> void:
@@ -93,9 +112,9 @@ func test_every_planet_type_builds() -> void:
 		var t := TownLayout.new()
 		t.load_from_dict(p.town)
 		assert_eq(t.validate().size(), 0, type)
-		assert_true(p.ground in ["terrain", "platform"], type)
+		assert_true(p.ground in ["terrain", "platform", "sphere"], type)
 		assert_gt(float(p.world.atmosphere.space_altitude), 0.0, type)
-		if p.ground == "platform":
+		if p.ground != "terrain":
 			assert_true((types[type] as Dictionary).has("surface"), type)
 			assert_ne(str(types[type].fall_text), "", type + " says how you died")
 
@@ -114,10 +133,13 @@ func test_the_asteroid_station() -> void:
 	var p := PlanetGen.build("grit_station", cc)
 	assert_eq(p.type, "asteroid")
 	assert_eq(p.size, 1)
-	assert_eq(p.ground, "platform")
+	assert_eq(p.ground, "sphere", "a rock ball you stand on")
 	assert_eq(p.style, "metallic")
 	assert_eq(p.encounter, "", "quiet sky over the station")
-	assert_eq(p.town.markers.filter(func(m): return m.id == "cantina_owner")[0].card, "npcs/station_owner_card.json")
+	var om: Dictionary = p.town.markers.filter(func(m): return m.id == "cantina_owner")[0]
+	assert_false(om.has("card"), "her own generated Oda")
+	assert_eq(om.planet, "grit_station")
+	assert_false(p.town.boxes.filter(func(b): return b.id == "pit_bowl").is_empty(), "the port's pit, outside")
 	assert_eq(p.world.naming.town, "town_station", "a station's name, not a desert town's")
 	var n: Array = p.neighbours
 	assert_eq(n.size(), 1)
@@ -207,17 +229,35 @@ func test_game_flow_travel() -> void:
 	assert_eq(GameFlow.current_planet_id(), "port_desert")
 
 
-func test_the_station_owner_is_her_own_person() -> void:
-	var card: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/npcs/station_owner_card.json"))
+func test_every_planet_has_its_own_oda() -> void:
+	var p := PlanetGen.build("grit_station", cc)
+	var book := NameBook.new()
+	var card := PlanetOwner.card(p, book)
 	var oda: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/npcs/cantina_owner_card.json"))
-	assert_eq(card.keys().size(), oda.keys().size(), "every field Oda's card has")
-	assert_eq(card.id, "station_owner")
-	assert_ne(card.name, oda.name)
-	assert_true(str(card.people).contains("Oda"), "she knows her sister")
+	assert_eq(card.id, "cantina_owner_grit_station", "her own brain and save entry")
+	assert_ne(card.id, oda.id)
+	assert_true(str(card.name).begins_with("Oda "), "a new iteration of Oda")
+	assert_ne(card.name, oda.name, "with a generated last name")
+	assert_true(str(card.identity).contains(PlanetGen.display_name(p, book)), "the planet's name in her prompt")
+	assert_true((card.actions as Array).has("offer_job"), "she always has jobs")
+	assert_eq(card.drinks, oda.drinks, "Oda's own trade")
+	assert_eq(PlanetOwner.card(p, book).name, card.name, "the same name every time")
+	assert_true(book.is_taken(card.name), "and nothing else gets it")
+	for r in card.rules:
+		assert_false(str(r).contains("Skrugs"), "nobody from the port's stalls")
 	var looks: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://content/look/characters.json")).archetypes
 	assert_eq(looks.cantina_owner_station.base, "cantina_owner", "Oda's body, re-tinted")
-	assert_true(looks.cantina_owner_station.model.has("tint"))
-	assert_true(NameBook.new().is_taken(card.name), "her name is reserved")
+
+
+func test_jobs_are_always_offered_off_the_home_planet() -> void:
+	WorldState.reset()
+	var home_kinds := WorldState.open_jobs("stranger").map(func(j): return str(j.get("kind", "")))
+	assert_false(home_kinds.has("bounty"), "at the port the story opens contracts")
+	GameFlow.planet_id = "grit_station"
+	var kinds := WorldState.open_jobs("stranger").map(func(j): return str(j.get("kind", "")))
+	assert_true(kinds.has("smuggle"), "a smuggling run")
+	assert_true(kinds.has("bounty"), "and a contract")
+	WorldState.reset()
 
 
 static func _v(a) -> Vector3:

@@ -148,6 +148,8 @@ func _sync_loose_contraband() -> void:
 func sync_drop() -> void:
 	_sync_loose_contraband()
 	var want := WorldState.smuggle_drop()
+	if str(want.get("location", "")) not in ["", location_id]:
+		want = {}               # issue #75: taken on another planet; the drop is in its own town
 	var have := str(drop.pickup.get("id", "")) if drop != null and is_instance_valid(drop) else ""
 	if str(want.get("id", "")) == have:
 		return

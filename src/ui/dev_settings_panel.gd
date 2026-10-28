@@ -21,6 +21,7 @@ const SPEEDS := [0.25, 0.5, 1.0, 2.0, 4.0]
 
 var demo                              ## town_demo.gd
 var _panel: PanelContainer
+var tabs: TabContainer               ## issue #80: open_tab() picks one by title
 var _was_mouse := Input.MOUSE_MODE_VISIBLE
 var _refreshers: Array[Callable] = []  ## each puts the live value back into its control
 var _hour: HSlider
@@ -56,7 +57,7 @@ func _ready() -> void:
 	title.text = "Demo settings  (F11)"
 	title.add_theme_font_size_override("font_size", 18)
 	v.add_child(title)
-	var tabs := TabContainer.new()
+	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(tabs)
 	tabs.add_child(_world_tab())
@@ -67,6 +68,7 @@ func _ready() -> void:
 	tabs.add_child(_hud_tab())
 	tabs.add_child(_sound_tab())
 	tabs.add_child(_story_tab())
+	tabs.add_child(_llm_tab())
 	var h := HBoxContainer.new()
 	v.add_child(h)
 	for b in [["Save now", _save], ["Close", close]]:
@@ -88,6 +90,13 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
+## Issue #80: the cursor shows on every page while the settings are open, whatever
+## else (a click in the world, a tab's own controls) tried to capture it.
+func _process(_dt: float) -> void:
+	if visible and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
 func _physics_process(_dt: float) -> void:
 	var p = _player()
 	if p == null:
@@ -103,6 +112,14 @@ func toggle() -> void:
 		close()
 	else:
 		open()
+
+
+## Issue #80: open on a tab by its title ("LLM": F10 lands here).
+func open_tab(title: String) -> void:
+	open()
+	for i in tabs.get_tab_count():
+		if tabs.get_tab_title(i) == title:
+			tabs.current_tab = i
 
 
 func open() -> void:
@@ -495,13 +512,31 @@ func _save() -> void:
 		demo.bar._save_memory()
 
 
+# ------------------------------------------------------------------ LLM (issue #80)
+
+## The AI brain settings (they were a separate F10 panel): where the cantina
+## owner's brain runs, its URLs, models and key, Test and Save.
+func _llm_tab() -> Control:
+	var v := _tab("LLM")
+	var bar = demo.bar if demo != null and "bar" in demo else null
+	if bar != null and bar.settings != null:
+		_section(v, "AI CHARACTERS' BRAIN  (F10 opens this tab)")
+		bar.settings.embed_into(v, self)
+		_refreshers.append(func(): bar.settings._load())
+	else:
+		var l := Label.new()
+		l.text = "No AI characters in this scene."
+		v.add_child(l)
+	return v.get_parent()
+
+
 # ------------------------------------------------------------------ HUD (issue #52)
 
 const KEYS := [
 	["F1", "Info: planet, town, time, credits, standing"],
 	["F3", "AI debug overlay"],
 	["F4", "Guard debug (what each guard sees and hears)"],
-	["F10", "AI model settings (Shift+F10: next model)"],
+	["F10", "AI model settings: the LLM tab here (Shift+F10: next model)"],
 	["F11", "These settings"],
 	["E", "Interact: talk, board, ride, pick up"],
 	["L", "Cycle the lighting"],

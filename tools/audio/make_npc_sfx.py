@@ -8,7 +8,7 @@ line on screen says what was said.
 
   radio_calm_N.wav   level, mid pitch ("Papers.", "Move along.")
   radio_shout_N.wav  higher, louder, harder clipped ("Halt!", "Contact!")
-  klaxon_loop.wav    the town alarm, a two-tone wail that loops cleanly
+  klaxon_loop.wav    the town alarm: saw-wave beep beep beep, pause (issue #80)
 
 Run: python3 tools/audio/make_npc_sfx.py   (needs numpy and scipy)
 Writes 16-bit mono WAVs to assets/audio/npc/.
@@ -115,20 +115,22 @@ def chatter(dur, f0, shout=False):
 
 
 def klaxon():
-    # Two tones alternating twice a second, an exact number of cycles so it loops.
-    dur = 2.0
-    t = np.arange(int(SR * dur)) / SR
-    sw = (np.floor(t * 2) % 2)
-    f = np.where(sw > 0, 660.0, 520.0)
-    # Glide between the tones over 40 ms so it wails rather than clicks.
-    k = int(0.04 * SR)
-    f = np.convolve(f, np.ones(k) / k, mode="same")
-    phase = np.cumsum(f / SR)
-    x = np.sign(np.sin(2 * np.pi * phase)) * 0.6 + np.sin(2 * np.pi * phase * 2) * 0.3
-    x = bandpass(x, 300, 4000, 2)
-    x = np.tanh(x * 1.5)
-    n = 1024
-    x[-n:] = x[-n:] * np.linspace(1, 0, n) + x[:n] * np.linspace(0, 1, n)
+    # Issue #80: a saw-wave "beep beep beep ... pause", not a wail. Three short
+    # beeps and a rest, an exact cycle so it loops cleanly. Soft attack and release
+    # on each beep (no clicks) and a gentle low-pass so the saw is bright, not harsh.
+    beep, gap, rest, f0 = 0.15, 0.09, 0.62, 880.0
+    cycle = 3 * beep + 2 * gap + rest
+    t = np.arange(int(SR * cycle)) / SR
+    saw = 2.0 * ((t * f0) % 1.0) - 1.0
+    env = np.zeros_like(t)
+    edge = int(0.006 * SR)
+    for k in range(3):
+        a = int((k * (beep + gap)) * SR)
+        b = a + int(beep * SR)
+        env[a:b] = 1.0
+        env[a:a + edge] *= np.linspace(0, 1, edge)
+        env[b - edge:b] *= np.linspace(1, 0, edge)
+    x = bandpass(saw, 200, 3500, 2) * env
     return x
 
 

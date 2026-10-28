@@ -1,6 +1,6 @@
 {
   "id": "town_kit",
-  "note": "IP-neutral. How src/systems/planets/town_gen.gd lays out a town of any size from 1 to 100. Size 50 is the port's scale (about 200 x 150 m inside the walls); the area grows as (size / 50) ^ area_power, so size 100 is 5x the area and size 1 shrinks to the smallest compound that still holds a cantina, a landing bay and a stall. Counts (guards, residents, stalls, merchants, bays) are 'per' that area factor, with a minimum each. Building looks are the town kit's (src/systems/world/town_buildings.gd): footprint ranges in metres [min, max], heights [min, max], and a weight. Ship bays are sized to each ship's model, taken from port_town.json.",
+  "note": "IP-neutral. How src/systems/planets/town_gen.gd lays out a town of any size from 1 to 100. Size 50 is the port's scale (about 200 x 150 m inside the walls); the area grows as (size / 50) ^ area_power, so size 100 is 5x the area and size 1 shrinks to the smallest compound that still holds a cantina (with its stage), a landing bay, a merchant's stall in front of the cantina and a few locals walking the street. Counts (guards, residents, stalls, merchants, bays) are 'per' that area factor, with a minimum each. Building looks are the town kit's (src/systems/world/town_buildings.gd): footprint ranges in metres [min, max], heights [min, max], and a weight. Ship bays are sized to each ship's model, taken from port_town.json.",
   "area_at_50": 30000.0,
   "area_power": 2.3219,
   "aspect": 1.333,
@@ -11,13 +11,13 @@
   "lot": 11.0,
   "apron": 30.0,
   "square": 8.0,
-  "backyard": 10.0,
   "bay": 16.0,
   "cantina": {
     "full_from_size": 20,
     "small": { "length": 18.0, "width": 14.0, "height": 5.5 },
     "full": { "length": 32.0, "width": 28.0, "height": 9.0 },
     "door_half": 2.0,
+    "stage": { "small": 4.0, "full": 7.0, "height": 0.6, "at": 0.68, "note": "Issue #75: every cantina has a round stage (diameter in metres), at this fraction of its length from the back wall, against the side wall, off the door-to-bar path." },
     "patrons_from_size": 10
   },
   "barracks_from_size": 25,
@@ -27,7 +27,33 @@
     "residents": { "per": 5, "min": 0, "max": 30 },
     "stalls": { "per": 12, "min": 1, "max": 40 },
     "merchants": { "per": 4, "min": 1, "max": 14 },
-    "bays": { "per": 3, "min": 1, "max": 10 }
+    "bays": { "per": 3, "min": 1, "max": 10 },
+    "roamers": { "per": 2, "min": 3, "max": 10, "note": "Issue #75: locals walking the main street (and fighting, like every local), on top of the residents." }
+  },
+  "pit": {
+    "note": "Issue #75: the port's round landing pit (port_town.json, its spaceport), relative to its centre, for towns whose bay is outside the walls (opts.bay \"pit\"). The port's three other bays are empty pads here. ring: metres of paving round the 56 m square.",
+    "half": 28.0,
+    "ring": 6.0,
+    "spawn": [6, -6, 13],
+    "boxes": [
+      {"id": "pit_floor", "kind": "floor", "min": [-28.0, -6.5, -28.0], "max": [28.0, -6, 28.0]},
+      {"id": "pit_bowl", "kind": "bowl", "min": [-28.0, -6, -28.0], "max": [28.0, 0, 28.0], "hollow": true, "gaps": ["ramp_ne", "ramp_sw"]},
+      {"id": "pit_crates_1", "kind": "cover", "min": [11.85, -6, -20.25], "max": [13.35, -4.8, -18.15], "look": "crates"},
+      {"id": "pit_crates_2", "kind": "cover", "min": [3.7, -6, -6.6], "max": [5.3, -5.1, -4.4], "look": "crates"},
+      {"id": "pit_crates_3", "kind": "cover", "min": [-1.85, -6, 6.55], "max": [-0.15, -5.1, 7.85], "look": "crates"},
+      {"id": "pit_crates_4", "kind": "cover", "min": [0.35, -6, -14.45], "max": [2.65, -4.5, -12.55], "look": "crates"},
+      {"id": "pit_crates_5", "kind": "cover", "min": [-6.65, -6, 15.65], "max": [-4.75, -5.1, 17.15], "look": "crates"},
+      {"id": "pit_crates_6", "kind": "cover", "min": [-7.95, -6, -4.85], "max": [-6.05, -5.1, -3.55], "look": "crates"},
+      {"id": "pit_crates_7", "kind": "cover", "min": [4.35, -6, -23.5], "max": [5.85, -4.5, -22.3], "look": "crates"},
+      {"id": "pit_crates_8", "kind": "cover", "min": [-13.85, -6, -20.15], "max": [-12.35, -5.1, -18.85], "look": "crates"},
+      {"id": "pit_crates_9", "kind": "cover", "min": [-4.1, -6, -9.65], "max": [-1.7, -5.1, -7.95], "look": "crates"},
+      {"id": "ramp_ne", "kind": "ramp", "min": [10, -6, -3.5], "max": [28.0, 0, 3.5], "rise_toward": "+x"},
+      {"id": "ramp_sw", "kind": "ramp", "min": [-28.0, -6, -3.5], "max": [-10, 0, 3.5], "rise_toward": "-x"},
+      {"id": "ship", "kind": "ship", "min": [9.59, -6, 7.1], "max": [18.41, -3.64, 14.9]},
+      {"id": "bay_pad_2", "kind": "pad", "min": [-20.0, -6, 5.0], "max": [-8.0, -5.97, 17.0], "shape": "round"},
+      {"id": "bay_pad_3", "kind": "pad", "min": [-20.0, -6, -17.0], "max": [-8.0, -5.97, -5.0], "shape": "round"},
+      {"id": "bay_pad_4", "kind": "pad", "min": [8.0, -6, -17.0], "max": [20.0, -5.97, -5.0], "shape": "round"}
+    ]
   },
   "bay_ships": ["freighter", "courier", "gunship"],
   "ship_boxes": {

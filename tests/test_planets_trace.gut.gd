@@ -1,8 +1,10 @@
 extends GutTest
 ## Issue #45: the trip the issue asks for, from the headless trace
 ## (scenes/planets_trace.gd, real physics, the real town scene): port -> space ->
-## the asteroid station (a size-1 town on a platform, its own cantina owner) ->
-## out through the shield, over the edge, into the glass -> home.
+## the asteroid station (issue #75: a size-1 town under a glass dome on a cratered
+## rock ball, the port's landing pit outside, its own Oda) -> Z lands you in the
+## pit -> out through the dome's shield, across the rock, off the side, into the
+## glass -> home.
 
 const Reader := preload("res://tests/trace_reader.gd")
 var t: Dictionary
@@ -42,22 +44,31 @@ func test_a_size_1_asteroid_town() -> void:
 	assert_eq(t.get("STATION_TOWN"), "grit_station_town")
 	_true("STATION_TOWN_VALID")
 	assert_eq(int(t.get("STATION_TOWN_SIZE", 0)), 1)
-	assert_eq(t.get("STATION_GROUND"), "platform")
-	_true("STATION_PLATFORM")
+	assert_eq(t.get("STATION_GROUND"), "sphere")
+	_true("STATION_ROCK")
 	assert_eq(t.get("STATION_TERRAIN"), "false", "no dunes under a station")
 	assert_eq(t.get("STATION_STYLE"), "metallic")
 	_true("STATION_CANTINA")
 	assert_eq(int(t.get("STATION_GUARDS", 0)), 1, "a single Remnant guard")
 	_true("GUARD_AT_CANTINA_DOOR")
-	_true("MERCHANT_OUT_BACK")
+	_true("MERCHANT_IN_FRONT", "the merchant is in front of the cantina")
+	_true("STATION_STAGE", "the cantina has a stage")
+	assert_gte(int(t.get("STATION_ROAMERS", 0)), 3, "locals walking the street")
+	assert_gte(int(t.get("STATION_LOCALS", 0)), 4, "and the merchant")
+	_true("STATION_PIT_OUTSIDE", "the landing pit is outside the walls")
 	assert_eq(int(t.get("STATION_BUILDINGS", 9)), 0, "nothing else")
 	assert_ne(str(t.get("STATION_NAME", "")), "")
 	assert_eq(t.get("STATION_NAME"), t.get("STATION_NAME_IN_PORT_SKY"), "one name everywhere")
 	assert_ne(str(t.get("STATION_TOWN_NAME", "")), "")
 
 
-func test_its_own_cantina_owner() -> void:
-	assert_eq(t.get("STATION_OWNER_CARD"), "npcs/station_owner_card.json")
+func test_its_own_oda() -> void:
+	assert_eq(t.get("STATION_OWNER_CARD"), "", "no hand-written card")
+	assert_eq(t.get("STATION_OWNER_PLANET"), "grit_station")
+	assert_eq(t.get("STATION_OWNER_ID"), "cantina_owner_grit_station", "her own brain")
+	assert_true(str(t.get("STATION_OWNER_NAME", "")).begins_with("Oda "), "a new Oda")
+	assert_ne(t.get("STATION_OWNER_NAME"), "Oda Vell")
+	_true("STATION_OWNER_KNOWS_PLANET", "the planet's name is in her prompt")
 	assert_eq(t.get("STATION_OWNER_LOOK"), "cantina_owner_station", "a variation of Oda")
 
 
@@ -70,18 +81,20 @@ func test_you_arrive_flying_the_same_ship() -> void:
 	assert_eq(t.get("STATION_NEIGHBOURS"), "port_desert", "and home is in its sky")
 
 
-func test_land_on_the_bay_and_walk_the_deck() -> void:
-	_true("REACHED_BAY")
-	_true("LAND_ON_BAY")
+func test_z_lands_you_in_the_pit() -> void:
+	_true("NEAR_BAY")
+	_true("BAY_LAND", "Z near the bay")
 	assert_eq(t.get("LANDED_STATE"), "PARKED")
-	_true("LANDED_ON_DECK")
-	assert_lt(float(t.get("LANDED_FROM_BAY_M", 99)), 12.0, "on its bay")
+	_true("LANDED_IN_PIT")
+	assert_lt(float(t.get("LANDED_FROM_BAY_M", 99)), 1.0, "on its own pad")
 	_true("EXIT_AT_STATION")
-	_true("ON_DECK")
+	_true("IN_PIT")
 
 
-func test_the_shield_is_walkable_and_the_edge_kills() -> void:
-	_true("THROUGH_THE_SHIELD", "the gate is open")
+func test_the_shield_is_walkable_the_rock_too_and_the_side_kills() -> void:
+	_true("THROUGH_THE_SHIELD", "the dome's door is open")
+	_true("WALK_ON_ROCK", "the asteroid is ground")
+	assert_gt(float(t.get("ROCK_DROP_M", 0)), 5.0, "a ball: it falls away from the town")
 	_true("FELL_OFF")
 	assert_eq(int(t.get("FALLS", 0)), 1)
 	_true("WOKE_BY_BAY")
@@ -91,7 +104,7 @@ func test_the_shield_is_walkable_and_the_edge_kills() -> void:
 func test_the_glass_is_solid() -> void:
 	_true("GLASS_HOLDS", "to people")
 	_true("SHIP_HITS_GLASS", "and to ships")
-	assert_gt(int(t.get("GLASS_PANES", 0)), 4)
+	assert_gt(int(t.get("DOME_TRIS", 0)), 100, "a dome")
 
 
 func test_and_home_again() -> void:

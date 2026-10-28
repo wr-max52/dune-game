@@ -36,6 +36,7 @@ var companions: Dictionary = {}     ## uid -> DroidUnit (yours, following)
 var wreck_nodes: Dictionary = {}    ## uid -> DroidUnit (broken, in the desert)
 var remnant: Array = []             ## DroidUnit (the Remnant's patrol)
 var vendor_pos := Vector3.INF
+var vendor_face := Vector3.ZERO     ## issue #80: the way the droid merchant faces (the aisle); behind = the other way
 var focus: Dictionary = {}          ## what E would act on: { kind: "vendor"|"wreck"|"cargo", uid }
 var fixing: Dictionary = {}         ## { uid, left }
 var rng := RandomNumberGenerator.new()
@@ -68,6 +69,9 @@ func _ready() -> void:
 		if not demo.town.get_marker(str(v.get("marker", ""))).is_empty():
 			var off: Array = v.get("offset", [0, 0, 0])
 			vendor_pos = demo.town.marker_pos(str(v.marker)) + Vector3(float(off[0]), float(off[1]), float(off[2]))
+			var vm: Dictionary = demo.town.get_marker(str(v.marker))
+			if vm.has("face"):
+				vendor_face = Vector3(float(vm.face[0]) - vendor_pos.x, 0, float(vm.face[2]) - vendor_pos.z).normalized()
 	for w in roster().wrecks:
 		_build_wreck(w)
 	_build_remnant()
@@ -238,7 +242,19 @@ func buy(kind: String) -> String:
 	WorldState.credits -= int(r.cost)
 	WorldState.log_event(_l("event_bought") % DroidRoster.label(kind).to_lower())
 	var at := vendor_pos if vendor_pos != Vector3.INF else player.global_position
-	_spawn_companion(r.droid, at)
+	if vendor_pos != Vector3.INF and vendor_face != Vector3.ZERO:
+		# Issue #80: it comes out from the back of the stall and walks round to you.
+		var v: Dictionary = cfg.get("vendor", {})
+		var back := -vendor_face * float(v.get("spawn_behind", 2.6))
+		var side := vendor_face.cross(Vector3.UP).normalized() * float(v.get("walk_round", 3.4))
+		if side.dot(player.global_position - vendor_pos) < 0.0:
+			side = -side                       # round the side nearer the player
+		at = vendor_pos + back
+		var u := _spawn_companion(r.droid, at)
+		u.via = [at + side, vendor_pos + side + vendor_face * 2.0]
+		u.following = true
+	else:
+		_spawn_companion(r.droid, at)
 	_toast(_l("bought") % [DroidRoster.label(kind), int(r.cost)])
 	return "bought"
 
@@ -379,9 +395,15 @@ func _lay_down(u: DroidUnit) -> void:
 			u.shape.rotation.x = PI * 0.5
 			u.shape.position = Vector3(0, 0.15, 1.1)
 		"floating":
-			u.look.position.y = 0.25
-			u.shape.position.y = 0.25
-			model.rotation.z = 0.5
+			# Issue #80: it drops out of the air (it used to appear on the ground).
+			u.falling = true
+			var from := u.look.position.y
+			var t := sqrt(maxf(0.1, from - 0.25) * 2.0 / 9.8)
+			var tw := u.create_tween().set_parallel(true)
+			tw.tween_property(u.look, "position:y", 0.25, t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tw.tween_property(u.shape, "position:y", 0.25, t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tw.tween_property(model, "rotation:z", 0.5, t)
+			tw.chain().tween_callback(func(): Sound.play("droid_beep", u.global_position + Vector3(0, 0.3, 0)))
 		"cargo":
 			model.rotation.z = 0.35
 	if u.hum != null:
@@ -404,11 +426,15 @@ func _decline_remote() -> void:
 
 
 func _take_remote() -> void:
-	var at: Vector3 = demo.training_range.release_remote() if demo != null and demo.training_range != null else Vector3.INF
+	var xf: Transform3D = demo.training_range.release_remote_transform() if demo != null and demo.training_range != null else Transform3D(Basis.IDENTITY, Vector3.INF)
+	var at := xf.origin
 	var d := roster().add("floating", "range")
 	if d.is_empty():
 		return
-	var u := _spawn_companion(d, at if at != Vector3.INF else player.global_position)
+	# Issue #80: the same droid, where it was: no swap to another look, no jump.
+	var u := _spawn_companion(d, at if at != Vector3.INF else player.global_position, at.y if at != Vector3.INF else INF)
+	if at != Vector3.INF:
+		u.rotation.y = xf.basis.get_euler().y
 	_beep(u)
 	_toast(_l("tamed"))
 
@@ -425,14 +451,17 @@ func _sync_companions() -> void:
 			_free_companion(uid)
 
 
-func _spawn_companion(d: Dictionary, at: Vector3) -> DroidUnit:
+func _spawn_companion(d: Dictionary, at: Vector3, from_y := INF) -> DroidUnit:
 	var u := _make_unit(str(d.kind), str(d.variant))
 	u.uid = int(d.uid)
 	add_child(u)
 	u.global_position = Vector3(at.x, _ground_y(at), at.z)
 	if u.kind == "floating":
 		u.look_lift += u.quirk().z * 0.5 - 0.15      # issue #64: not all at one height
-		u.look.position.y = u.look_lift
+		# Issue #80: start at the height it was at (a tamed remote) and ease to its own.
+		u.lift_now = (from_y - u.global_position.y) if from_y != INF else u.look_lift
+		u.look.position.y = u.lift_now
+		u.shape.position.y = u.lift_now
 	DroidKit.set_awake(u.look, true)
 	companions[int(d.uid)] = u
 	return u
@@ -475,6 +504,12 @@ func _follow(dt: float) -> void:
 		var drift := Vector2(sin(_follow_t * 0.37 + me.x * TAU), cos(_follow_t * 0.29 + me.y * TAU)) * 0.45
 		var slot := player.global_position + right * (float(f.get("side", 1.0)) + fan + drift.x) \
 			- _heading * (float(f.get("back", 1.5)) + 1.1 * k + drift.y)
+		if not u.via.is_empty():
+			var wp: Vector3 = u.via[0]
+			if _flat_dist(u.global_position, wp) < 0.5:
+				u.via.pop_front()
+			else:
+				slot = wp                         # issue #80: round the stall first
 		var to := Vector3(slot.x - u.global_position.x, 0, slot.z - u.global_position.z)
 		var dist := to.length()
 		var leash := float(f.get("leash", 5.0)) + me.z * 2.0 + 0.8 * k
@@ -484,11 +519,11 @@ func _follow(dt: float) -> void:
 				u.following = true
 		else:
 			u.wait_left = 0.15 + me.x * 0.6        # a beat before it notices you left
-		if u.following and dist <= float(f.get("settle", 0.35)):
+		if u.following and dist <= float(f.get("settle", 0.35)) and u.via.is_empty():
 			u.following = false
 		var pos: Vector3 = u.global_position
 		var speed := 0.0
-		if dist > 40.0:
+		if dist > 40.0 and u.via.is_empty():
 			pos = slot
 		elif u.following:
 			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
@@ -832,7 +867,7 @@ func _make_unit(kind: String, variant: String) -> DroidUnit:
 	match kind:
 		"floating":
 			var s := SphereShape3D.new()
-			s.radius = 0.3
+			s.radius = float(kc.get("hit_radius", 0.55))        # issue #80: was 0.3, easy to miss
 			u.shape.shape = s
 			u.look_lift = float(kc.get("hover", 1.7))
 			u.shape.position = Vector3(0, u.look_lift, 0)
@@ -890,7 +925,8 @@ func _chirps(dt: float) -> void:
 			continue
 		u.chirp_cd -= dt
 		if u.chirp_cd <= 0.0:
-			u.chirp_cd = rng.randf_range(6.0, 14.0)
+			var ch: Array = DroidRoster.kind_cfg(u.kind).get("chirp_s", [2.5, 6.0])   # issue #80: more beeps
+			u.chirp_cd = rng.randf_range(float(ch[0]), float(ch[1]))
 			if u.global_position.distance_to(player.global_position) <= 25.0:
 				_beep(u)
 
@@ -938,6 +974,9 @@ class DroidUnit extends StaticBody3D:
 	var respawn_left := -1.0        ## seconds until a dead one comes back (< 0 = never)
 	var wait_left := 0.0            ## a beat before it starts after you (issue #64)
 	var size_scale := 1.0           ## its kind's "scale" (the cargo droid is bigger, issue #64)
+	var via: Array = []             ## issue #80: points to pass first (round the merchant's stall)
+	var lift_now := 0.0             ## issue #80: its hover height now, easing to look_lift
+	var falling := false            ## issue #80: dropping after it died (the bob stops)
 
 	## This droid's own small differences, 0..1 each, steady for its uid.
 	func quirk() -> Vector3:
@@ -970,7 +1009,11 @@ class DroidUnit extends StaticBody3D:
 		var model := look.get_node("Model") as Node3D
 		match kind:
 			"floating":
-				look.position.y = look_lift + sin(_t * 2.1) * 0.12
+				if falling or dead or broken:
+					return
+				lift_now = move_toward(lift_now, look_lift, dt * 0.8)
+				look.position.y = lift_now + sin(_t * 2.1) * 0.12
+				shape.position.y = look.position.y          # issue #80: the hit box bobs with it
 			"cargo":
 				model.rotation.z = sin(_t * 18.0) * 0.02 if moving else 0.0
 			"assassin":

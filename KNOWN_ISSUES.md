@@ -2,6 +2,31 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #75, planet generation cleanup (2026-10-27)
+
+**Checked, not run in CI for this PR:** every town size passes the validator with and
+without the pit; the station builds headless with and without looks (about 1 s
+for the rock and the dome); Z flies the ship in from its arrival point and parks
+it on its own pad; the player stands on the rock 150 m and 300 m out; the new Oda
+is generated with the planet's name in her prompt; the board offers a smuggling
+run and a contract on the station. The full suite was not run (as asked); the
+planets trace and tests were updated to the new station but not run.
+
+**Not done, honestly:**
+- **Gravity is the town's, straight down.** You can walk over the top of the
+  asteroid until it gets too steep (about 450 m out from the town), not all the
+  way round it. Walking round a ball needs gravity toward its centre for the
+  player, the locals and the ship, which is a bigger change.
+- **The rock was not looked at on a screen.** The headless runs cannot render, so
+  the crater sizes, the faceted look, the boulders and the dome's ribs are only
+  checked by numbers.
+- **Jobs off the home planet lead home.** The smuggling drop and the Remnant
+  outposts are still the port's, so the station's Oda sends you back there.
+- **The landing pit's other three bays are empty pads** (the port parks flyable
+  ships on two of them).
+- **Bigger asteroid towns are untested in play.** Sizes up to 100 pass the
+  validator with the pit, but only the size-1 station has been built.
+
 ## After issue #65, shooter feel (2026-10-27)
 
 **Proven by tests:** sight on the screen centre within 1 mm at any pitch, rifle

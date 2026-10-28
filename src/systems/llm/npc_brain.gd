@@ -59,8 +59,9 @@ var _rng := RandomNumberGenerator.new()
 var _summary_id := -1
 
 
-func _init(service: LLMService = null, card_path: String = CARD_PATH) -> void:
-	card = _read(card_path)
+## `card_src`: a card's path, or (issue #75: a planet's own Oda) the card itself.
+func _init(service: LLMService = null, card_src = CARD_PATH) -> void:
+	card = card_src if card_src is Dictionary else _read(str(card_src))
 	log_dir = LOG_ROOT + "/" + id()
 	builder = PromptBuilder.new(card, _read(BRIEF_PATH), _read(SCHEMA_PATH))
 	filter = OutputFilter.new(card)
