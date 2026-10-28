@@ -222,6 +222,8 @@ func _build_ramp_collider() -> void:
 		cs.shape = shape
 		body.add_child(cs)
 		add_child(body)
+		# Issue #77: on the ball the box is in its landmark's own frame.
+		body.global_transform = WorldGround.box_xf(b)
 		if demo.use_look:
 			var mi := MeshInstance3D.new()
 			mi.name = "Ramp"
@@ -240,6 +242,7 @@ func _build_ramp_collider() -> void:
 			sand.cull_mode = BaseMaterial3D.CULL_DISABLED
 			mi.material_override = sand
 			add_child(mi)
+			mi.global_transform = body.global_transform
 
 
 ## The house, the stall and the display pad, in the town's palette. Shapes from

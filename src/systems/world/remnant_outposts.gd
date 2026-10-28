@@ -53,9 +53,15 @@ func build() -> void:
 				continue
 			var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
 			var loc: Dictionary = cc.get_location(id)
+			var yaw := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
 			var o := { "id": id, "label": str(loc.get("label", id)), "cfg": loc,
-				"origin": Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z),
-				"yaw": deg_to_rad(float(lm.get("yaw_deg", 0.0))) }
+				"origin": Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z), "yaw": yaw }
+			# Issue #77: on the home planet's ball the outpost stands along the ground's
+			# up there, in the same frame WorldGround gives its buildings.
+			var sp := ground.sphere()
+			if sp != null:
+				o.origin = sp.surface_at(at.x, at.z)
+			o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
 			outposts.append(o)
 			_build_ground(o)
 			if demo.use_look:
@@ -75,7 +81,11 @@ func outpost(id: String) -> Dictionary:
 ## A point from an outpost's location file, in the world, on the sand.
 func world_point(o: Dictionary, local) -> Vector3:
 	var lp: Vector3 = local if local is Vector3 else WorldGround._v3(local)
-	var p: Vector3 = o.origin + lp.rotated(Vector3.UP, float(o.yaw))
+	var p: Vector3 = (o.xf as Transform3D) * Vector3(lp.x, 0.0, lp.z)
+	var sp := ground.sphere()
+	if sp != null:
+		var dir := (p - sp.center).normalized()
+		return sp.center + dir * (sp.radius + sp.elevation(dir))   # on the sand, along up
 	p.y = ground.terrain.height_at(p.x, p.z)
 	return p
 
@@ -257,11 +267,11 @@ func _park_ship(o: Dictionary) -> void:
 	ship.name = "Ship_" + str(o.id)
 	add_child(ship)
 	var at := point(o, "ship")
-	ship.global_position = at
-	ship.rotation.y = float(o.yaw) + PI * 0.5
+	# Measured upright at the origin, then stood on the sand in the outpost's frame.
 	var a := TownDecor.visual_aabb(ship)
-	ship.global_position += Vector3(at.x - a.get_center().x, at.y - a.position.y, at.z - a.get_center().z)
-	a = TownDecor.visual_aabb(ship)
+	var b: Basis = (o.xf as Transform3D).basis * Basis(Vector3.UP, PI * 0.5)
+	var lift := Vector3(-a.get_center().x, -a.position.y, -a.get_center().z)
+	ship.global_transform = Transform3D(b, at + b * lift)
 	var body := StaticBody3D.new()
 	body.name = "ShipCollider_" + str(o.id)
 	var cs := CollisionShape3D.new()
@@ -270,7 +280,7 @@ func _park_ship(o: Dictionary) -> void:
 	cs.shape = box
 	body.add_child(cs)
 	add_child(body)
-	body.global_position = a.get_center()
+	body.global_transform = Transform3D(b, at + b * (lift + a.get_center()))
 
 
 func _mesh(o: Dictionary, mesh: Mesh, mat: Material, local: Vector3) -> MeshInstance3D:
@@ -278,8 +288,7 @@ func _mesh(o: Dictionary, mesh: Mesh, mat: Material, local: Vector3) -> MeshInst
 	mi.mesh = mesh
 	mi.material_override = mat
 	add_child(mi)
-	mi.global_position = o.origin + local.rotated(Vector3.UP, float(o.yaw))
-	mi.rotation.y = float(o.yaw)
+	mi.global_transform = (o.xf as Transform3D) * Transform3D(Basis.IDENTITY, local)
 	return mi
 
 
