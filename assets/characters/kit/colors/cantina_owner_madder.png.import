@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d00a57nkp4lf7"
-path="res://.godot/imported/player_head_dusk.png-16ba9d1e231fb4d2a9d72fa2d0e0aeb2.ctex"
+uid="uid://cinetjddqy8nw"
+path="res://.godot/imported/cantina_owner_madder.png-037f02d7a81fa4bf59885b065fb9cb68.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/kit/colors/player_head_dusk.png"
-dest_files=["res://.godot/imported/player_head_dusk.png-16ba9d1e231fb4d2a9d72fa2d0e0aeb2.ctex"]
+source_file="res://assets/characters/kit/colors/cantina_owner_madder.png"
+dest_files=["res://.godot/imported/cantina_owner_madder.png-037f02d7a81fa4bf59885b065fb9cb68.ctex"]
 
 [params]
 

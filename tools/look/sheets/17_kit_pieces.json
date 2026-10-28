@@ -1,16 +1,104 @@
 {
- "title": "Kit pieces in colour: player and guard, head, upper and lower body",
+ "title": "Kit pieces: player, guard and cantina owner, assembled, apart and mixed",
  "out": "res://test_results/parts/17_kit_pieces.png",
  "cells": [
-  {"label": "Player, assembled", "model": "res://assets/characters/kit/parts.glb", "show": ["player_head", "player_torso", "player_legs"]},
-  {"label": "Guard, assembled", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_head", "guard_torso", "guard_legs"]},
-  {"label": "Player head", "model": "res://assets/characters/kit/parts.glb", "show": ["player_head"]},
-  {"label": "Player upper body", "model": "res://assets/characters/kit/parts.glb", "show": ["player_torso"]},
-  {"label": "Player lower body", "model": "res://assets/characters/kit/parts.glb", "show": ["player_legs"]},
-  {"label": "Guard head", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_head"]},
-  {"label": "Guard upper body", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_torso"]},
-  {"label": "Guard lower body", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_legs"]},
-  {"label": "Mix: guard helmet, player body", "model": "res://assets/characters/kit/parts.glb", "show": ["guard_head", "player_torso", "player_legs"]},
-  {"label": "Mix: player head and legs, guard armour", "model": "res://assets/characters/kit/parts.glb", "show": ["player_head", "guard_torso", "player_legs"]}
+  {
+   "label": "Player",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ]
+  },
+  {
+   "label": "Guard",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "guard_legs"
+   ]
+  },
+  {
+   "label": "Cantina owner",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_head",
+    "cantina_owner_torso",
+    "cantina_owner_legs"
+   ]
+  },
+  {
+   "label": "Player head",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head"
+   ]
+  },
+  {
+   "label": "Player upper body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_torso"
+   ]
+  },
+  {
+   "label": "Player lower body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_legs"
+   ]
+  },
+  {
+   "label": "Owner upper body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_torso"
+   ]
+  },
+  {
+   "label": "Owner lower body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_legs"
+   ]
+  },
+  {
+   "label": "Mix: player head, guard body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "guard_torso",
+    "guard_legs"
+   ]
+  },
+  {
+   "label": "Mix: guard helmet, owner body",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "cantina_owner_torso",
+    "cantina_owner_legs"
+   ]
+  },
+  {
+   "label": "Mix: owner head, player top, guard legs",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_head",
+    "player_torso",
+    "guard_legs"
+   ]
+  },
+  {
+   "label": "Mix: guard top, owner legs",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "guard_head",
+    "guard_torso",
+    "cantina_owner_legs"
+   ]
+  }
  ]
 }

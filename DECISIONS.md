@@ -2,6 +2,30 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — New player, guard and cantina owner art, built like the locals (issue #79)
+
+- **Costumes come from the concept sheets now.** Each is one Hyper3D generation
+  from its sheet's front and back views plus a prompt, rigged with the human
+  template and fitted onto the kit's base body, so all three are cut at the same
+  neck and waist seams and every head, upper body and lower body mixes. The prompts
+  ask for a collar ring and a thick belt at those seams and an A-pose with space
+  under the arms. Alternative: prompt only (#48). Rejected: the owner wanted the
+  concepts' looks, and the references were followed closely.
+- **The guard is the simple white run, baked grey.** A gunmetal re-run came back
+  too detailed for the game's look. The fit recolours the white armour to gunmetal
+  (`recolor` in `dress`), so the plain guard is grey and its colours start from
+  there.
+- **The cantina owner's legs are a separate piece.** Her tunic came back
+  mid-thigh with no body under it, so a cut at the belt left a hole. The hem goes
+  to her upper body by colour (`move`, pushed out a little so the legs stay under
+  it), and her legs are a prompt-only generation (skin-tight leather trousers,
+  boots) fitted into the legs slot. Alternative: fill the gap with the base body's
+  hips in her trouser colour. Rejected: it read as a flat patch.
+- **Accents get their own tolerance.** A colour variant's swap can carry its own
+  tolerance and brightness floor (`recolor_fitted.gd`): a saturated red spreads
+  further in chroma than a grey, and its dark folds sit under the floor that keeps
+  the black undersuit out of the grey swap.
+
 ## 2026-10-27 — P1, the planet generator (issue #45)
 
 - **A planet is data, and so is its town.** A config file becomes a town layout

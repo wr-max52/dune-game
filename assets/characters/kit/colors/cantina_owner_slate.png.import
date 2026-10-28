@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dh510ntmvlt7o"
-path="res://.godot/imported/player_head_rust.png-21c923667309a3830ea64e7432a19f11.ctex"
+uid="uid://b8e6wcvwoq0wx"
+path="res://.godot/imported/cantina_owner_slate.png-ee51a5615e3df929084493fca7eeb347.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/kit/colors/player_head_rust.png"
-dest_files=["res://.godot/imported/player_head_rust.png-21c923667309a3830ea64e7432a19f11.ctex"]
+source_file="res://assets/characters/kit/colors/cantina_owner_slate.png"
+dest_files=["res://.godot/imported/cantina_owner_slate.png-ee51a5615e3df929084493fca7eeb347.ctex"]
 
 [params]
 

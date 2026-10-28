@@ -13,9 +13,13 @@ extends SceneTree
 ##              on the box, standing on its floor); axis: "y" scales by height alone, so a
 ##              hat brim or a pauldron sticking out past the body is not squeezed in;
 ##              scale: a correction on top, chosen by eye,
-##            box: { min, max } to fit into instead of the reference part's bounds } }
+##            box: { min, max } to fit into instead of the reference part's bounds,
+##            trim_top: share of the piece's height cut off the top first,
+##            yaw: degrees to turn the piece about the vertical axis first } }
 ##   dress: { outfit name: { source: raw .glb of a whole dressed character, decimate,
-##            uniform, axis, scale, trim_top: { part: share of its height cut off the
+##            uniform, axis, scale, recolor: { swaps: { "#from": "#to" }, tol, min_l } bakes
+##            a new base colour into the outfit's texture, move: [{ from, to, hue, min_sv,
+##            above }] hands triangles of one colour to another piece, trim_top: { part: share of its height cut off the
 ##            top, e.g. stray scarf bits above the collar }, trim_below: { part: [y, radius] }
 ##            drops the part's triangles under y and within radius of the vertical axis
 ##            (hanging armour between the hands; the hands, further out, stay) }, skip: [parts left out, e.g. a head replaced by a
@@ -37,6 +41,7 @@ extends SceneTree
 const CFG_PATH := "res://content/look/character_models.json"
 const CELL := 0.03
 const Prep := preload("res://tools/look/prep_character.gd")
+const Recolor := preload("res://tools/look/recolor_fitted.gd")
 
 
 func _init() -> void:
@@ -112,12 +117,55 @@ func _fit(target: MeshInstance3D, ref_mesh: Mesh, pc: Dictionary) -> void:
 	if pc.has("box"):
 		var lo := Vector3(pc.box.min[0], pc.box.min[1], pc.box.min[2])
 		to = AABB(lo, Vector3(pc.box.max[0], pc.box.max[1], pc.box.max[2]) - lo)
+	if pc.has("yaw"):
+		_turn(arr, deg_to_rad(float(pc.yaw)))
+	if float(pc.get("trim_top", 0.0)) > 0.0:
+		arr = _trim_top(arr, float(pc.trim_top))
 	var k := _place(arr, to, pc)
 	var ref_arr := ref_mesh.surface_get_arrays(0)
 	var per := (ref_arr[Mesh.ARRAY_BONES] as PackedInt32Array).size() / (ref_arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
 	_skin_from(arr, ref_arr, per)
 	target.mesh = _mesh(arr, src[1], per)
 	print("fit: %s  %d triangles, scale %s" % [target.name, (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3, k])
+
+
+## Turns the arrays about the vertical axis (a piece the generator stood at an angle).
+static func _turn(arr: Array, yaw: float) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in v.size():
+		v[i] = b * v[i]
+	for i in n.size():
+		n[i] = b * n[i]
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = n
+	if arr[Mesh.ARRAY_TANGENT] != null:
+		var tg: PackedFloat32Array = arr[Mesh.ARRAY_TANGENT]
+		for i in range(0, tg.size(), 4):
+			var d := b * Vector3(tg[i], tg[i + 1], tg[i + 2])
+			tg[i] = d.x
+			tg[i + 1] = d.y
+			tg[i + 2] = d.z
+		arr[Mesh.ARRAY_TANGENT] = tg
+
+
+## The arrays without the triangles that reach into the top `share` of the height
+## (bare skin the generator left above a waistband).
+static func _trim_top(arr: Array, share: float) -> Array:
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var lo := INF
+	var hi := -INF
+	for p in v:
+		lo = minf(lo, p.y)
+		hi = maxf(hi, p.y)
+	var cut := hi - (hi - lo) * share
+	var kept := PackedInt32Array()
+	for t in range(0, idx.size(), 3):
+		if maxf(v[idx[t]].y, maxf(v[idx[t + 1]].y, v[idx[t + 2]].y)) <= cut:
+			kept.append_array([idx[t], idx[t + 1], idx[t + 2]])
+	return _subset(arr, kept)
 
 
 ## Fits a whole dressed character onto all the reference parts and cuts it where they
@@ -127,6 +175,8 @@ func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> v
 	var src := _source(pc, base_skel if pc.get("rigged", false) else null)
 	if src.is_empty():
 		return
+	if pc.has("recolor"):
+		src[1] = _recolored(src[1], pc.recolor)
 	var arr: Array = src[0]
 	var ref_arr: Array = []                ## all reference parts as one vertex list
 	var label := PackedInt32Array()        ## which part each reference vertex is in
@@ -168,6 +218,8 @@ func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> v
 		var b := lab[idx[t + 1]]
 		var c := lab[idx[t + 2]]
 		tris[b if b == c else a].append_array([idx[t], idx[t + 1], idx[t + 2]])
+	for mv: Dictionary in pc.get("move", []):
+		_move_by_colour(arr, src[1], tris, bases, mv)
 	var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 	for i in bases.size():
 		var ref: MeshInstance3D = bases[i]
@@ -198,6 +250,73 @@ func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> v
 		mi.skeleton = mi.get_path_to(ref.get_node(ref.skeleton))
 		mi.mesh = _mesh(_subset(arr, tris[i]), src[1], per)
 		print("fit: %s  %d triangles, scale %s" % [mi.name, tris[i].size() / 3, k])
+
+
+## A copy of the material with its albedo recoloured (recolor_fitted.gd's swap):
+## rc = { swaps: { "#from": "#to" }, tol, min_l }. Bakes a new base colour into the
+## outfit (the guard's white armour made gunmetal grey).
+static func _recolored(mat: Material, rc: Dictionary) -> Material:
+	var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+	var img := m.albedo_texture.get_image()
+	img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	for from in rc.swaps:
+		img = Recolor._recolor(img, Color(str(from)), Color(str(rc.swaps[from])), float(rc.get("tol", 0.35)), float(rc.get("min_l", 0.02)))
+	m.albedo_texture = ImageTexture.create_from_image(img)
+	return m
+
+
+## Moves triangles of one colour from one piece to another: the texture under each
+## triangle's centre is sampled, and a triangle whose hue is within mv.hue (degrees,
+## [low, high]) and whose saturation and value reach mv.min_sv, with its centre above
+## mv.above (so the boots, further down, stay), goes from mv.from to
+## mv.to (a tunic hem that hangs past the waist stays with the tunic), pushed out along
+## its normals by mv.push (so a separately made legs piece stays under it).
+static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array, mv: Dictionary) -> void:
+	var from := -1
+	var to := -1
+	for i in bases.size():
+		if String(bases[i].name) == str(mv.from):
+			from = i
+		if String(bases[i].name) == str(mv.to):
+			to = i
+	if from < 0 or to < 0 or not (mat is BaseMaterial3D) or (mat as BaseMaterial3D).albedo_texture == null:
+		push_error("fit: cannot move '%s' to '%s'" % [mv.from, mv.to])
+		return
+	var img := (mat as BaseMaterial3D).albedo_texture.get_image()
+	img.decompress()
+	var w := img.get_width()
+	var h := img.get_height()
+	var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
+	var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var lo := float(mv.hue[0]) / 360.0
+	var hi := float(mv.hue[1]) / 360.0
+	var sv: Array = mv.get("min_sv", [0.4, 0.3])
+	var above := float(mv.get("above", -INF))
+	var kept := PackedInt32Array()
+	var moved := 0
+	var t_from: PackedInt32Array = tris[from]
+	for t in range(0, t_from.size(), 3):
+		var c := (uv[t_from[t]] + uv[t_from[t + 1]] + uv[t_from[t + 2]]) / 3.0
+		var px := img.get_pixel(clampi(int(fposmod(c.x, 1.0) * w), 0, w - 1), clampi(int(fposmod(c.y, 1.0) * h), 0, h - 1))
+		var cy := (vv[t_from[t]].y + vv[t_from[t + 1]].y + vv[t_from[t + 2]].y) / 3.0
+		if cy >= above and px.h >= lo and px.h <= hi and px.s >= float(sv[0]) and px.v >= float(sv[1]):
+			tris[to].append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
+			moved += 1
+		else:
+			kept.append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
+	tris[from] = kept
+	var push := float(mv.get("push", 0.0))
+	if push != 0.0 and moved > 0:
+		var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+		var done := {}
+		var t_to: PackedInt32Array = tris[to]
+		for i in range(t_to.size() - moved * 3, t_to.size()):
+			if not done.has(t_to[i]):
+				done[t_to[i]] = true
+				vv[t_to[i]] += nn[t_to[i]] * push
+		arr[Mesh.ARRAY_VERTEX] = vv
+	print("fit: moved %d triangles %s -> %s" % [moved, mv.from, mv.to])
 
 
 ## The triangles that stay when those whose centre is under `y` and within `radius`

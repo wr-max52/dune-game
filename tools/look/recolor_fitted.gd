@@ -8,6 +8,9 @@ extends SceneTree
 ## Reads "part_colors" from content/look/character_models.json:
 ##   out:   res:// path with %s for the part and %s for the colour name
 ##   parts: { part: { mesh, tol: 0.35, min_l: 0.02, variants: { name: { "#from": "#to", ... } } } }
+##   (a swap's "#to" can be ["#to", tol, min_l] to set those for that swap alone: a
+##   saturated accent spreads further in chroma than a neutral base, and its dark
+##   folds sit under a min_l that keeps a black undersuit out of a grey swap)
 ## mesh names the mesh whose texture is recoloured (default: the part name). A kit
 ## outfit's pieces share one texture, so one entry ("player", mesh "player_torso")
 ## gives every piece of that outfit its variants.
@@ -54,7 +57,14 @@ func _init() -> void:
 			DirAccess.make_dir_recursive_absolute(out.get_base_dir())
 			var v := img
 			for from in p.variants[name]:
-				v = _recolor(v, Color(str(from)), Color(str(p.variants[name][from])), float(p.get("tol", 0.35)), float(p.get("min_l", 0.02)))
+				var to = p.variants[name][from]
+				var tol := float(p.get("tol", 0.35))
+				var min_l := float(p.get("min_l", 0.02))
+				if to is Array:
+					tol = float(to[1])
+					min_l = float(to[2]) if to.size() > 2 else min_l
+					to = to[0]
+				v = _recolor(v, Color(str(from)), Color(str(to)), tol, min_l)
 			v.save_png(out)
 			print("recolor: wrote ", out)
 	scene.free()
