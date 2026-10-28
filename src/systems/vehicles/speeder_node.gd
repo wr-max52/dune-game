@@ -9,6 +9,7 @@ extends Node3D
 ##   A / D         -- steer
 ##   Shift         -- boost
 ##   Space or LMB  -- both lasers at once   V -- chase / close camera
+##   Space         -- with a Grav Lifter fitted (issue #95): hop and hang; LMB fires
 ##
 ## `rideable = false` is the one on Skrugs's display pad: it just sits there.
 ## Bolts hit the hull (a StaticBody child; bolts call apply_damage on its parent):
@@ -45,6 +46,12 @@ var _glow_mat: StandardMaterial3D
 var _t := 0.0
 static var _hulls: Dictionary = {}   ## issue #82: model -> its hull shape (see _model_hull)
 var _engine: AudioStreamPlayer3D   ## issue #16: the speeder's drone while you ride
+## Issue #95: the mechanic's looks parts (cfg.parts) and how big the body is.
+var _size := Vector3(2.4, 1.2, 5.0)
+var _flames: Array = []              ## the turbo boosters' flames (scaled by boost)
+var _roof: Node3D                    ## the soft-top's hinge (folds back while you ride)
+var _roof_fold := 0.0                ## 0 = up, 1 = folded
+var _lift_glow := 0.0                ## the hover glow's flare while the Grav Lifter holds it up
 
 
 func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bool = true, paint_job: String = "") -> void:
@@ -58,6 +65,7 @@ func setup(town_demo, ground: WorldGround, config: Dictionary = {}, can_ride: bo
 
 func _ready() -> void:
 	_build_visual()
+	_build_parts()
 	_build_hull()
 	_engine = Sound.loop("speeder_engine", self)
 	if rideable:
@@ -215,11 +223,19 @@ func _ride(dt: float) -> void:
 		var throttle := _axis("move_back", "move_forward")
 		var steer := _axis("move_left", "move_right")
 		model.set_command(throttle, steer, _held("sprint_mod") or _held("flight_boost"))
-		fire = _held("jump") or _held("fire") or _held("flight_fire")
+		if model.has_lifter():
+			# Issue #95: Space is the Grav Lifter now; the mouse fires.
+			fire = _held("fire")
+			if _just("jump"):
+				model.lift()
+		else:
+			fire = _held("jump") or _held("fire") or _held("flight_fire")
 	else:
 		model.set_command(float(_external.get("throttle", 0.0)), float(_external.get("steer", 0.0)),
 			bool(_external.get("boost", false)))
 		fire = bool(_external.get("fire", false))
+		if bool(_external.get("lift", false)):
+			model.lift()
 	for e in model.step(dt):
 		log_events.append(e)
 	_fire(dt, fire)
@@ -286,8 +302,10 @@ func _sync() -> void:
 		visual.position.y = 0.04 * sin(_t * 3.0)
 	if _fan != null:
 		_fan.rotation.z += 0.3 + absf(model.speed) * 0.02
+	_lift_glow = move_toward(_lift_glow, 1.0 if model.float_left > 0.0 else 0.0, 0.08)
 	if _glow_mat != null:
-		_glow_mat.emission_energy_multiplier = 1.5 + absf(model.speed) / 10.0
+		_glow_mat.emission_energy_multiplier = 1.5 + absf(model.speed) / 10.0 + 6.0 * _lift_glow
+	_sync_parts()
 
 
 # ------------------------------------------------------------------ helpers
@@ -429,6 +447,7 @@ func _build_model(path: String, base_y: float) -> bool:
 		box = b if first else box.merge(b)
 		first = false
 	m.position = Vector3(-box.get_center().x, base_y - box.position.y, -box.get_center().z)
+	_size = box.size
 	for side in [-1.0, 1.0]:
 		_part(_box(Vector3(0.24, 0.04, box.size.z * 0.75)), _glow_mat, Vector3(side * box.size.x * 0.32, base_y - 0.02, 0))
 	_build_blasters()
@@ -461,6 +480,77 @@ static func _local_xf(n: Node3D, top: Node3D) -> Transform3D:
 		xf = (p as Node3D).transform * xf
 		p = p.get_parent()
 	return top.transform * xf
+
+
+# ------------------------------------------------------------------ parts (issue #95)
+
+func has_part(id: String) -> bool:
+	return (cfg.get("parts", []) as Array).has(id)
+
+
+## The mechanic's looks parts, on whatever body this is (sized from _size).
+func _build_parts() -> void:
+	var mats: LookMaterials = demo._flat_mats() if demo != null and demo.has_method("_flat_mats") else LookMaterials.new()
+	var metal := mats.flat(Color(str(cfg.get("look", {}).get("metal", "#4a4c52"))), 0.35, 0.7)
+	var hx := _size.x * 0.5
+	var back := _size.z * 0.5
+	var base_y := float(cfg.get("look", {}).get("base_y", -0.65))
+	if has_part("turbo_boosters"):
+		var flame_mat := StandardMaterial3D.new()
+		flame_mat.albedo_color = Color("#ffb060")
+		flame_mat.emission_enabled = true
+		flame_mat.emission = Color("#ff8a30")
+		flame_mat.emission_energy_multiplier = 4.0
+		flame_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		flame_mat.albedo_color.a = 0.85
+		for side in [-1.0, 1.0]:
+			var at := Vector3(side * (hx * 0.62), base_y + 0.55, back - 0.5)
+			_part(_cyl(0.2, 0.24, 1.3), metal, at, Vector3(90, 0, 0)).name = "Booster"
+			_part(_cyl(0.26, 0.26, 0.12), metal, at + Vector3(0, 0, 0.66), Vector3(90, 0, 0)).name = "BoosterRing"
+			_part(_cyl(0.15, 0.15, 0.04), _glow_mat, at + Vector3(0, 0, 0.7), Vector3(90, 0, 0))
+			var flame := _part(_cyl(0.16, 0.0, 1.0), flame_mat, at + Vector3(0, 0, 1.2), Vector3(-90, 0, 0))
+			flame.name = "BoosterFlame"
+			flame.visible = false
+			_flames.append(flame)
+	if has_part("soft_top"):
+		var cloth := mats.flat(Color(str(cfg.get("look", {}).get("roof", "#8a7456"))), 0.95)
+		_roof = Node3D.new()
+		_roof.name = "SoftTop"
+		_roof.position = Vector3(0, base_y + _size.y * 0.78, 0.9)   # the hinge, behind the seat
+		visual.add_child(_roof)
+		var w := minf(_size.x * 0.7, 1.6)
+		for k in [[0.0, 0.0], [-0.55, 0.0], [-1.1, 0.0]]:
+			var bar := MeshInstance3D.new()
+			bar.mesh = _box(Vector3(w, 0.05, 0.05))
+			bar.material_override = metal
+			bar.position = Vector3(0, 0.55, float(k[0]))
+			_roof.add_child(bar)
+		for side in [-1.0, 1.0]:
+			var post := MeshInstance3D.new()
+			post.mesh = _box(Vector3(0.05, 0.6, 0.05))
+			post.material_override = metal
+			post.position = Vector3(side * w * 0.5, 0.27, 0.0)
+			_roof.add_child(post)
+		var top := MeshInstance3D.new()
+		top.mesh = _box(Vector3(w + 0.06, 0.06, 1.25))
+		top.material_override = cloth
+		top.position = Vector3(0, 0.6, -0.58)
+		_roof.add_child(top)
+
+
+## Boost lights the flames; the roof folds back while someone rides.
+func _sync_parts() -> void:
+	var lit := model.boosting() and riding
+	for f in _flames:
+		(f as Node3D).visible = lit
+		if lit:
+			(f as Node3D).scale = Vector3(1, 0.8 + 0.4 * absf(sin(_t * 41.0)), 1)
+	if _roof != null:
+		_roof_fold = move_toward(_roof_fold, 1.0 if riding else 0.0, 0.03)
+		var e := _roof_fold * _roof_fold * (3.0 - 2.0 * _roof_fold)
+		_roof.rotation.x = deg_to_rad(-150.0 * e)
+		_roof.scale = Vector3(1, 1, lerpf(1.0, 0.35, e))
 
 
 func _part(mesh: Mesh, mat: Material, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
@@ -551,7 +641,8 @@ func _build_hud() -> void:
 	help.position = Vector2(-420, -100)
 	help.size = Vector2(840, 28)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.text = "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [Space / LMB] Lasers   [E] Get off"
+	help.text = "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [LMB] Lasers   [Space] Grav Lifter   [E] Get off" \
+		if model.has_lifter() else "[W/S] Throttle   [A/D] Steer   [Shift] Boost   [Space / LMB] Lasers   [E] Get off"
 	help.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	help.add_theme_constant_override("outline_size", 4)
 	_hud.add_child(help)
@@ -583,3 +674,5 @@ func _update_hud() -> void:
 		int(absf(model.speed)), int(absf(model.speed) * 3.6), model.hp, model.max_hp,
 		int(model.boost_left / maxf(model.p("boost_time", 3.5), 0.001) * 100.0),
 		"\nAIRBORNE" if model.airborne else ""]
+	if model.has_lifter():
+		_readout.text += "\nLIFTER %s" % ("READY [SPACE]" if model.lift_ready() else "%.1fs" % model.lift_cooldown)

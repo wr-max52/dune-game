@@ -155,21 +155,67 @@ func buy() -> bool:
 
 ## Speeder number `i` parked behind the house (side by side when there are several).
 func _park(i: int) -> SpeederNode:
-	var s := SpeederNode.new()
-	var paints: Array = HoverModel.load_config("speeder").get("look", {}).get("sold_paints", [""])
-	s.setup(demo, ground, {}, true, str(paints[i % paints.size()]))   # issue #82: each one a different paint job
-	demo.add_child(s)
+	var s := _spawn(i)
 	var side := Vector3(0, 0, (i % 4) * 4.5).rotated(Vector3.UP, yaw)
 	s.place(world_point("spawn") + side, yaw + PI * 0.5)   # nose to the open desert, away from the house
+	return s
+
+
+## Issue #95: speeder `i` with its fit (paint and parts) from WorldState.speeder_fits.
+## A speeder from before upgrades gets a fit here, its old paint job included.
+func fit_for(i: int) -> Dictionary:
+	var paints: Array = HoverModel.load_config("speeder").get("look", {}).get("sold_paints", [""])
+	while WorldState.speeder_fits.size() <= i:
+		var n := WorldState.speeder_fits.size()
+		WorldState.speeder_fits.append(SpeederUpgrades.new_fit(str(paints[n % paints.size()])))   # issue #82: each one a different paint job
+	return WorldState.speeder_fits[i]
+
+
+func _spawn(i: int) -> SpeederNode:
+	var s := SpeederNode.new()
+	var fit := fit_for(i)
+	s.setup(demo, ground, SpeederUpgrades.apply(HoverModel.load_config("speeder"), fit), true, str(fit.get("paint", "")))
+	s.set_meta("slot", i)
+	demo.add_child(s)
 	s.destroyed.connect(func(_at): _lost(s))
 	speeders.append(s)
 	return s
 
 
+## Issue #95: rebuild speeder `s` with its fit as it is now (after the mechanic
+## changed it), where it stands. Returns the new node.
+func refit(s: SpeederNode) -> SpeederNode:
+	var i := int(s.get_meta("slot", 0))
+	var at := s.model.position
+	var heading := s.model.yaw
+	speeders.erase(s)
+	s.queue_free()
+	var n := _spawn(i)
+	n.place(at, heading)
+	return n
+
+
+## Issue #95: speeder `s` is gone for good (sold for scrap): no burn-out in the log.
+func remove(s: SpeederNode) -> void:
+	_forget(s)
+	s.queue_free()
+
+
 func _lost(s: SpeederNode) -> void:
+	_forget(s)
+	WorldState.log_event("A speeder burned out in the sand.")
+
+
+func _forget(s: SpeederNode) -> void:
 	speeders.erase(s)
 	WorldState.counters["speeders_owned"] = maxi(0, WorldState.count("speeders_owned") - 1)
-	WorldState.log_event("A speeder burned out in the sand.")
+	# Its fit goes with it; the ones parked after it move up a slot.
+	var i := int(s.get_meta("slot", -1))
+	if i >= 0 and i < WorldState.speeder_fits.size():
+		WorldState.speeder_fits.remove_at(i)
+		for o in speeders:
+			if int(o.get_meta("slot", 0)) > i:
+				o.set_meta("slot", int(o.get_meta("slot", 0)) - 1)
 
 
 # ------------------------------------------------------------------ Skrugs

@@ -1,0 +1,56 @@
+{
+  "note": "Issue #95: what the mechanic in the desert sells for a speeder. Read by src/systems/vehicles/speeder_upgrades.gd (prices, rules, stats) and src/systems/world/mechanic_yard.gd (him, his words). A part has a slot; a speeder holds one part per slot, except 'paint', which can be bought again. 'requires' is the part before it in its line (tier 2 needs tier 1, and replaces it). 'mods' multiply the speeder's numbers in content/core/vehicles/speeder.json ('laser.damage' reaches into the laser). 'hover' turns on the Grav Lifter in hover_model.gd. Looks-only parts change nothing but the look. Scrap pays 'base' plus 'parts_back' of what was spent on parts.",
+  "mechanic": {
+    "name": "Dorrin Vask",
+    "location": "mechanic_yard",
+    "reach": 3.4,
+    "bay_radius": 16.0,
+    "lines": {
+      "hello": "Bring her round to the bay and I'll see what she needs.",
+      "no_speeder": "No speeder in my bay. Drive one over and park it by the lift.",
+      "bought": "Done. She'll feel it.",
+      "too_poor": "Come back when your credits can pay for it.",
+      "scrapped": "Pleasure doing business. She'll make good spares."
+    },
+    "labels": {
+      "talk": "[E] Talk to %s (speeder parts)",
+      "menu_title": "%s  -  you have %d cr",
+      "menu_paint": "Paint",
+      "menu_looks": "Looks",
+      "menu_performance": "Performance",
+      "menu_scrap": "Sell her for scrap  (+%d cr)",
+      "confirm_scrap": "Scrap your speeder for %d cr? This can't be undone.",
+      "yes_scrap": "Yes, scrap her",
+      "no_scrap": "No, keep her",
+      "back": "Back",
+      "buy": "%s  (%d cr)",
+      "owned": "%s  - fitted",
+      "locked": "%s  (%d cr)  - needs %s",
+      "event_bought": "Someone had a %s fitted at the mechanic's yard.",
+      "event_scrapped": "Someone sold a speeder for scrap at the mechanic's yard."
+    }
+  },
+  "scrap": { "base": 35, "parts_back": 0.25 },
+  "parts": [
+    { "id": "paint_steel", "slot": "paint", "group": "paint", "label": "Steel grey paint", "price": 40, "paint": "steel" },
+    { "id": "paint_tide", "slot": "paint", "group": "paint", "label": "Tide blue paint", "price": 40, "paint": "tide" },
+    { "id": "paint_crimson", "slot": "paint", "group": "paint", "label": "Crimson paint", "price": 40, "paint": "crimson" },
+    { "id": "paint_remnant", "slot": "paint", "group": "paint", "label": "Black and red paint (Remnant colours)", "price": 60, "paint": "remnant" },
+    { "id": "turbo_boosters", "slot": "boosters", "group": "looks", "label": "Turbo boosters", "price": 120 },
+    { "id": "soft_top", "slot": "roof", "group": "looks", "label": "Convertible soft-top", "price": 90 },
+    { "id": "engine_1", "slot": "engine", "group": "performance", "label": "Tuned engine (+12% top speed)", "price": 150,
+      "mods": { "max_speed": 1.12, "boost_speed": 1.1 } },
+    { "id": "engine_2", "slot": "engine", "group": "performance", "label": "Racing engine (+25% top speed)", "price": 320, "requires": "engine_1",
+      "mods": { "max_speed": 1.25, "boost_speed": 1.2 } },
+    { "id": "thrusters_1", "slot": "thrusters", "group": "performance", "label": "Thrusters (+30% acceleration)", "price": 120,
+      "mods": { "accel": 1.3 } },
+    { "id": "thrusters_2", "slot": "thrusters", "group": "performance", "label": "Twin thrusters (+60% acceleration)", "price": 260, "requires": "thrusters_1",
+      "mods": { "accel": 1.6, "brake": 1.2 } },
+    { "id": "cannons_1", "slot": "cannons", "group": "performance", "label": "Hot cannons (+30% damage)", "price": 140,
+      "mods": { "laser.damage": 1.3 } },
+    { "id": "cannons_2", "slot": "cannons", "group": "performance", "label": "Overcharged cannons (+70% damage)", "price": 300, "requires": "cannons_1",
+      "mods": { "laser.damage": 1.7 } },
+    { "id": "grav_lifter", "slot": "lifter", "group": "lifter", "label": "Grav Lifter (Space: hop, then hang in the air)", "price": 900,
+      "hover": { "hop_vy": 6.5, "float_s": 1.2, "float_sink": 0.4, "recharge_s": 4.0 } }
+  ]
+}
