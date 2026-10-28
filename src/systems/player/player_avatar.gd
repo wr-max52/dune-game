@@ -45,7 +45,8 @@ var skin: SkinnedBody              ## the rigged model over the joints (null = p
 
 var _arm_meshes: Array = []
 var _other_meshes: Array = []
-var _kit_arms: Array = []          ## kit forearms shown in first person over a skin
+var _kit_arms: Array = []          ## the kit's own forearms and hands (hidden in first person; see FpvArms)
+var _fpv: FpvArms                  ## the first person sleeves and gloves
 var _kit_chest: Array = []         ## the chest's own children, as the kit built it
 
 
@@ -255,21 +256,28 @@ func set_first_person(on: bool) -> void:
 		(m as GeometryInstance3D).cast_shadow = shadow_only if on else normal
 	for m in _arm_meshes:
 		(m as GeometryInstance3D).cast_shadow = normal
-	# The kit forearms stand in for the skin's in first person; they cast no shadow
-	# (the skin already does).
+	# FpvArms replace the kit's forearms and hands in the view. Over a skin the kit's
+	# stay hidden always; primitives keep them for the shadow and third person.
 	for m in _kit_arms:
-		(m as GeometryInstance3D).visible = on
-		(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var g := m as GeometryInstance3D
+		g.visible = skin == null
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if skin != null \
+				else (shadow_only if on else normal)
+	if _fpv != null:
+		_fpv.set_visible(on)
 
 
 func _collect_meshes() -> void:
 	_arm_meshes.clear()
 	_other_meshes.clear()
 	_kit_arms.clear()
+	if _fpv == null or not _fpv.fits(joints):
+		_fpv = FpvArms.attach(joints, kit)
 	var keep := {}
 	for jn in ["l_elbow", "r_elbow"]:
 		for m in _meshes_under(joints[jn]):
-			keep[m] = true
+			if not FpvArms.owns(m):
+				keep[m] = true
 	var weapon_meshes := {}
 	for w in weapons.values():
 		for m in _meshes_under(w):
@@ -284,8 +292,12 @@ func _collect_meshes() -> void:
 				_kit_arms.append(m)
 		return
 	for m in _meshes_under(body):
-		if keep.has(m):
+		if FpvArms.owns(m):
+			continue
+		if weapon_meshes.has(m):
 			_arm_meshes.append(m)
+		elif keep.has(m):
+			_kit_arms.append(m)
 		else:
 			_other_meshes.append(m)
 
@@ -347,6 +359,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 			if w != null and w.has_node("Muzzle/Flash"):
 				(w.get_node("Muzzle/Flash") as Node3D).visible = false
 	_place_weapon(upper, pitch)
+	_fpv_grips(upper, dt)
 	if skin != null:
 		skin.sync(body)
 
@@ -378,6 +391,20 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
 	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+
+
+## Fingers close on a grip: the right hand whenever a weapon is out, the left while it
+## rides a grip (same test as _place_weapon); otherwise they hang relaxed.
+func _fpv_grips(upper: String, dt: float) -> void:
+	if _fpv == null:
+		return
+	var relaxed := float(_fpv._hand().get("relaxed", 0.3))
+	var armed := upper != BodyAnimator.UPPER_FREE and current != "" and weapons.has(current)
+	var left: bool = armed and (weapons[current] as Node3D).get_meta("grips", {}).has("l") and drawn > 0.6
+	if left and first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
+		left = false
+	_fpv.ease_grip("r", 1.0 if armed else relaxed, dt)
+	_fpv.ease_grip("l", 1.0 if left else relaxed, dt)
 
 
 func _ready_xf(id: String, _pitch: float) -> Transform3D:
