@@ -89,6 +89,20 @@ func test_defaults_load_and_cloud_is_off_without_key() -> void:
 	assert_false(c.usable("cloud"), "cloud is off and has no key by default")
 
 
+func test_share_defaults_are_cloud_only_anthropic_and_keyless() -> void:
+	assert_eq(LLMConfig.default_path(), LLMConfig.DEFAULTS, "the editor and CI are not the shared build")
+	var c := LLMConfig.new()
+	c.user_path = "user://does_not_exist.json"
+	c.keys_path = "user://no_keys.cfg"
+	c.load_all(LLMConfig.SHARE_DEFAULTS)
+	assert_eq(c.chain(), ["cloud"])
+	assert_eq(str(c.profile("cloud").type), "anthropic")
+	assert_true(bool(c.profile("cloud").enabled))
+	assert_false(c.usable("cloud"), "no key until the player pastes one in F10")
+	assert_false(bool(c.data.debug.log_transcripts))
+	assert_false(FileAccess.get_file_as_string(LLMConfig.SHARE_DEFAULTS).contains("sk-"), "no key in res://")
+
+
 func test_keys_are_masked_and_stored_outside_res() -> void:
 	assert_eq(LLMConfig.masked("sk-abcdefghijkl1234"), "sk-...1234")
 	assert_eq(LLMConfig.masked(""), "(none)")
