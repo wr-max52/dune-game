@@ -1,6 +1,6 @@
 {
   "id": "grit_station",
-  "note": "Issue #45's test planet: an asteroid station a short hop from the port, with a size-1 town (a cantina, a guard at its door, a merchant out back) in metal. Everything else comes from the planet generator. See docs/planets/PLANETS.md.",
+  "note": "Issue #45's test planet: an asteroid station a short hop from the port, with a size-1 town (a cantina with a stage, a guard at its door, a merchant in front, locals in the street) in metal, under a glass dome on top of a cratered rock ball, and the port's landing pit outside the gate (issue #75). Its cantina owner is a new Oda, generated for this planet (no card: see src/systems/planets/planet_owner.gd). Everything else comes from the planet generator. See docs/planets/PLANETS.md.",
   "name": "",
   "type": "asteroid",
   "town_size": 1,
@@ -8,6 +8,6 @@
   "style": "metallic",
   "near": "port_desert",
   "at": [9000, 5200, -6500],
-  "cantina_owner": { "card": "npcs/station_owner_card.json", "look": "cantina_owner_station" },
+  "cantina_owner": { "look": "cantina_owner_station" },
   "encounter": ""
 }

@@ -2,10 +2,12 @@ extends SceneTree
 ## Issue #45 trace (headless, real physics, the real town scene): the test the
 ## issue asks for. Take off from the port, climb to space, fly to the asteroid
 ## station hanging in the port's sky, arrive in its sky still flying the same
-## ship, land on its bay, get out in its size-1 town (a cantina with its own
-## owner, a guard at the door, a merchant out back), walk through the open gate's
-## shield, fall off the edge and wake by the bay, find the glass solid, then fly
-## home again. Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
+## ship, press Z and be landed in its landing pit (issue #75: the port's pit, out
+## past the gate), get out in its size-1 town (a cantina with its own Oda and a
+## stage, a guard at the door, a merchant in front, locals in the street, all
+## under a glass dome on a cratered rock ball), walk out through the dome's
+## shield and across the rock, slide off the side and wake by the bay, find the
+## dome solid, then fly home again. Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
 ##
 ## Run: godot --headless --fixed-fps 60 --path . -s res://scenes/planets_trace.gd
 
@@ -145,7 +147,7 @@ func _run() -> void:
 	out("STATION_TOWN_VALID", t.validate().is_empty())
 	out("STATION_TOWN_SIZE", t.data.get("generated", {}).get("size", -1))
 	out("STATION_GROUND", demo.planet.get("ground", ""))
-	out("STATION_PLATFORM", demo.platform != null)
+	out("STATION_ROCK", demo.platform is AsteroidWorld)
 	out("STATION_TERRAIN", demo.terrain != null)
 	out("STATION_STYLE", demo.style.spec)
 	out("STATION_NAME", demo.planet_name)
@@ -156,48 +158,44 @@ func _run() -> void:
 	out("STATION_CANTINA", not t.get_box("bar_counter").is_empty())
 	var om: Dictionary = t.get_marker("cantina_owner")
 	out("STATION_OWNER_CARD", om.get("card", ""))
+	out("STATION_OWNER_PLANET", om.get("planet", ""))
 	out("STATION_OWNER_LOOK", om.get("look", ""))
+	var oda := PlanetOwner.card(demo.planet)
+	out("STATION_OWNER_ID", oda.id)
+	out("STATION_OWNER_NAME", oda.name)
+	out("STATION_OWNER_KNOWS_PLANET", str(oda.identity).contains(demo.planet_name))
+	out("STATION_STAGE", not t.get_box("cantina_stage").is_empty())
+	out("STATION_ROAMERS", t.markers().filter(func(m): return str(m.id).begins_with("roamer_")).size())
+	out("STATION_PIT_OUTSIDE", float(t.get_box("pit_bowl").min[0]) > float(t.data.bounds.max[0]))
 	var guard = demo.npcs[0] if not demo.npcs.is_empty() else null
 	out("GUARD_AT_CANTINA_DOOR", guard != null and guard.post_pos.distance_to(t.marker_pos("cantina_door")) < 5.0)
 	var merchant = demo.locals.filter(func(n): return str(n.profile.get("id", "")) == "local_merchant")
-	out("MERCHANT_OUT_BACK", not merchant.is_empty() and merchant[0].post_pos.x < float(t.get_box("cantina_wall_w").min[0]))
+	out("MERCHANT_IN_FRONT", not merchant.is_empty() and merchant[0].post_pos.x > float(t.get_box("cantina_wall_e_s").max[0]))
 	out("ARRIVED_PILOTING", pilot.piloting)
 	out("ARRIVED_STATE", pilot.atmo.state_label())
 	out("ARRIVED_ALTITUDE", int(pilot.atmo.altitude()))
 	out("ARRIVED_SHIP", pilot.ship_id)
 	out("STATION_NEIGHBOURS", ",".join(PackedStringArray(pilot.travel.bodies.map(func(b): return str(b.id)))))
 	out("STATION_SPACE_ALTITUDE", int(pilot.atmo.space_altitude))
-	# Down onto the bay.
+	# Z: she flies herself in and lands in the pit.
 	var h: Vector3 = pilot.home
-	var back := await fly_to(Vector3(h.x, 60, h.z), 0.3, 120.0,
-		func(): return Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 40.0)
-	# Settle over the bay: creep in slowly, stop, and again until right over it.
-	for attempt in 4:
-		await fly_to(Vector3(h.x, 50, h.z), 0.08, 30.0,
-			func(): return Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 4.0)
-		for i in 600:
-			pilot.set_external_command({ "throttle": 0.0 })
-			await physics_frame
-			if pilot.atmo.speed() < 0.5:
-				break
-		if Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 6.0:
-			break
-	out("REACHED_BAY", back >= 0.0)
-	out("LAND_ON_BAY", pilot.land())
-	for i in 60 * 30:
-		pilot.set_external_command({ "throttle": 0.0 })
+	out("NEAR_BAY", pilot.near_bay())
+	out("BAY_LAND", pilot.bay_land())
+	for i in 60 * 60:
 		await physics_frame
 		if pilot.atmo.state == AtmoFlight.State.PARKED:
 			break
 	out("LANDED_STATE", pilot.atmo.state_label())
-	out("LANDED_ON_DECK", absf(pilot.atmo.position().y - pilot.atmo.clearance) < 0.6)
+	out("LANDED_IN_PIT", absf(pilot.atmo.position().y - h.y) < 1.5)
 	out("LANDED_FROM_BAY_M", snappedf(Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length(), 0.1))
 	out("EXIT_AT_STATION", pilot.exit_ship())
 	await frames(20)
-	out("ON_DECK", player.is_on_floor() and absf(player.global_position.y) < 0.3)
-	# Out through the open gate: the shield is no wall.
-	var gate: Vector3 = t.marker_pos("gate")
-	place_player(gate + Vector3(-5, 0, 0))
+	out("IN_PIT", player.is_on_floor() and absf(player.global_position.y + 6.0) < 0.3)
+	# Out through the dome's door: the shield is no wall.
+	var rock: AsteroidWorld = demo.platform
+	var dome: Dictionary = rock.dome
+	var door := Vector3(float(dome.door_x), 0.0, float(dome.door_z))
+	place_player(door + Vector3(-5, 0, 0))
 	await frames(10)
 	demo._rig.rig.yaw = 0.0
 	for i in 240:
@@ -205,12 +203,19 @@ func _run() -> void:
 		await physics_frame
 	player.set_command(Vector2.ZERO, false, false, false)
 	await frames(10)
-	out("SHIELD_WALK_X", snappedf(player.global_position.x - gate.x, 0.1))
-	out("THROUGH_THE_SHIELD", player.global_position.x > gate.x + 3.0 and player.is_on_floor())
-	# Off the end of the apron: down, dead, back by the bay.
+	out("SHIELD_WALK_X", snappedf(player.global_position.x - door.x, 0.1))
+	out("THROUGH_THE_SHIELD", player.global_position.x > door.x + 3.0 and player.is_on_floor())
+	# The rock is ground: stand on it well away from the town.
+	var c: Vector3 = rock.center
+	var far := Vector3(c.x + 150.0, rock.height_at(c.x + 150.0, c.z - 60.0), c.z - 60.0)
+	place_player(far + Vector3(0, 1.0, 0))
+	await frames(60)
+	out("WALK_ON_ROCK", player.is_on_floor() and absf(player.global_position.y - rock.height_at(player.global_position.x, player.global_position.z)) < 0.6)
+	out("ROCK_DROP_M", snappedf(-far.y, 0.1))
+	# Off the side of the ball: down, dead, back by the bay.
 	var falls0: int = demo.platform.falls
-	var edge := float(demo.platform.deck.end.x)
-	place_player(Vector3(edge - 3.0, 0, 0))
+	var edge := c.x + rock.extent + 15.0
+	place_player(Vector3(edge, rock.height_at(edge - 20.0, c.z), c.z))
 	await frames(5)
 	var fell_y := 0.0
 	for i in 60 * 8:
@@ -225,18 +230,18 @@ func _run() -> void:
 	out("FALLS", demo.platform.falls - falls0)
 	out("WOKE_BY_BAY", player.global_position.distance_to(t.spawn_pos()) < 3.0 and player.is_on_floor())
 	out("FALL_LOGGED", WorldState.count("falls"))
-	# The glass is solid: a jetpack-high push at the wall stays inside.
-	var wall: Dictionary = t.get_box("wall_north")
-	var wz := float(wall.min[2])
-	place_player(Vector3(t.marker_pos("cantina_door").x + 4.0, 9.0, wz - 2.0))
+	# The dome is solid: a jetpack-high push at it from inside stays inside.
+	var dc: Vector3 = dome.c
+	var shell_z := dc.z + float(dome.b) * sqrt(1.0 - pow((9.0 - dc.y) / float(dome.h), 2.0))
+	place_player(Vector3(dc.x, 9.0, shell_z - 3.0))
 	for i in 90:
 		player.set_command(Vector2(0, 1), false, false, false)
 		player.velocity.y = maxf(player.velocity.y, 0.0)
 		await physics_frame
 	player.set_command(Vector2.ZERO, false, false, false)
-	out("GLASS_HOLDS", player.global_position.z < wz)
-	out("GLASS_PANES", demo.platform.glass_boxes.size())
-	out("SHIP_HITS_GLASS", pilot.ground.hit(Vector3(0, 15.0, float(wall.max[2])), 2.0).begins_with("glass_"))
+	out("GLASS_HOLDS", player.global_position.z < shell_z)
+	out("DOME_TRIS", rock.dome_tris)
+	out("SHIP_HITS_GLASS", pilot.ground.hit(Vector3(dc.x, 10.0, dc.z + float(dome.b) * 0.9), 2.0).begins_with("glass_"))
 
 	# ---------------------------------------------------------------- home again
 	went.clear()

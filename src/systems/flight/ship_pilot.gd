@@ -93,6 +93,8 @@ var fight_log: Array = []        ## { outcome, payout, at } per sortie, for trac
 var space_exit_margin := 250.0   ## metres below the edge that break off a running fight
 var travel: SpaceTravel          ## issue #45: the other planets in this sky, and flying to them
 var _engine: AudioStreamPlayer   ## issue #16: the engine drone while the ship flies
+var bay_landing := false          ## issue #75: Z near the bay: she is flying herself in
+var bay_landings := 0             ## times that brought her down (traces, tests)
 
 
 func setup(town_scene) -> void:
@@ -414,6 +416,57 @@ func land() -> bool:
 	return piloting and atmo.land()
 
 
+# ------------------------------------------------------------------ Z: land in the bay (issue #75)
+
+## Close enough to your bay (across the ground, below space) for Z to bring you in.
+func near_bay() -> bool:
+	if not piloting or fight != null or atmo.state != AtmoFlight.State.FLYING:
+		return false
+	var p := atmo.position()
+	return Vector2(p.x - home.x, p.z - home.z).length() <= GameFlow.setting("bay_land_radius", 4000.0) \
+		and atmo.altitude() < atmo.space_altitude
+
+
+## Z: fly her over the bay and set her down on her own pad, on any planet. False
+## when not near enough (or not flying).
+func bay_land() -> bool:
+	if bay_landing or not near_bay():
+		return false
+	bay_landing = true
+	_throttle = 0.0
+	hud.toast(GameFlow.label("bay_landing"), 3.0)
+	return true
+
+
+## One frame of the autopilot: across to a point high over the pad (higher than
+## anything in the town), turning to the pad's heading on the way in, then
+## straight down with the normal landing.
+func _bay_step(dt: float) -> void:
+	var f = atmo.flight
+	var pos: Vector3 = f.position
+	var flat := Vector2(home.x - pos.x, home.z - pos.z)
+	var d := flat.length()
+	var hold := home.y + atmo.clearance + 60.0
+	if d < 0.5:
+		f.position = Vector3(home.x, pos.y, home.z)
+		f.speed = 0.0
+		f.basis = Basis(Vector3.UP, home_yaw)
+		if pos.y > hold + 2.0:
+			f.position.y = move_toward(pos.y, hold, maxf(10.0, (pos.y - hold) * 0.9) * dt)
+			return
+		bay_landing = false
+		if atmo.land():
+			bay_landings += 1
+		return
+	var v := clampf(d * 0.7, 3.0, 90.0)
+	var step := flat.normalized() * minf(v * dt, d)
+	var ty := hold if d < 250.0 else maxf(pos.y, hold)
+	f.position = Vector3(pos.x + step.x, move_toward(pos.y, ty, maxf(8.0, absf(pos.y - ty) * 0.8) * dt), pos.z + step.y)
+	var yaw := atan2(-flat.x, -flat.y) if d > 30.0 else home_yaw
+	f.basis = f.basis.slerp(Basis(Vector3.UP, yaw), minf(1.0, dt * 2.0)).orthonormalized()
+	f.speed = v
+
+
 ## A bot's command for this frame and on: { pitch, yaw, roll, throttle, boost }.
 ## Pass {} to give control back to the keys.
 func set_external_command(c: Dictionary) -> void:
@@ -605,6 +658,8 @@ func _seated(dt: float) -> void:
 		flight_time += dt
 	if fight != null:
 		_fight_step(dt)
+	elif bay_landing:
+		_bay_step(dt)
 	else:
 		for e in atmo.step(dt):
 			_on_event(e)
@@ -636,7 +691,15 @@ func _read_keys(dt: float) -> void:
 			takeoff()
 		return
 	if st == AtmoFlight.State.FLYING and _just("crouch_act"):
+		bay_landing = false
 		land()
+	if st == AtmoFlight.State.FLYING and _just("bay_land"):
+		if bay_landing:
+			bay_landing = false          # Z again: take her back
+		else:
+			bay_land()
+	if bay_landing:
+		return
 	_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
 	var pitch := clampf(_axis("flight_pitch_down", "flight_pitch_up") + _stick.y, -1.0, 1.0)
 	var yaw := clampf(_axis("flight_yaw_left", "flight_yaw_right") + _stick.x, -1.0, 1.0)
@@ -808,6 +871,10 @@ func _update_hud() -> void:
 			tip = GameFlow.label("seated")
 		AtmoFlight.State.FLYING:
 			tip = GameFlow.label("can_land") if atmo.can_land() else ""
+			if bay_landing:
+				tip = GameFlow.label("bay_landing")
+			elif near_bay():
+				tip = (tip + "    " if tip != "" else "") + GameFlow.label("bay_land")
 		AtmoFlight.State.LANDING:
 			tip = GameFlow.label("landing")
 	hud.set_prompt(tip)

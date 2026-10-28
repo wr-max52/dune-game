@@ -7,13 +7,16 @@ extends RefCounted
 ##
 ## size 1..100. 50 is the port's scale; the area inside the walls grows as
 ## (size / 50) ^ area_power (5x at 100). Size 1 is the smallest compound that holds
-## what every town needs: a cantina with its owner, a Remnant guard at its door, a
-## merchant out back, and a landing bay. Every number is in
-## content/core/planets/town_kit.json.
+## what every town needs: a cantina with its owner and its stage, a Remnant guard
+## at its door, a merchant in front of it, locals walking the street, and a
+## landing bay. Every number is in content/core/planets/town_kit.json.
 ##
 ## Layout, west to east along the main street (gate in the east wall, like the
-## port): [back yard] [cantina] [square] [landing bays both sides of the street]
-## [market south / barracks north] ... [gate]. Everything else inside the walls is
+## port): [cantina] [square: the merchants' stalls both sides of the street]
+## [landing bays both sides of the street] [market south / barracks north] ...
+## [gate]. With opts.bay "pit" (issue #75: the asteroid) there are no bays inside
+## the walls: the port's round landing pit sits outside the gate, past the apron,
+## ringed in paving. Everything else inside the walls is
 ## a grid of lots, each holding one hut or tower, with lanes between them that the
 ## residents stroll round. Nothing overlaps by construction: every block is a
 ## rectangle, and a lot is only used if it keeps a lane clear of every block.
@@ -40,7 +43,11 @@ func _init(kit_data: Dictionary = {}) -> void:
 
 ## The town's layout. `opts`:
 ##   cantina_card / cantina_look  -- who runs its cantina (on the cantina_owner marker)
-##   vendor_marker_prefix         -- merchants' marker ids (default "vendor_")
+##   cantina_planet               -- issue #75: the planet whose own Oda runs it
+##                                   (a generated card: see PlanetOwner)
+##   bay                          -- "pit": the port's landing pit outside the gate
+##   pit_clear                    -- how far past the walls (x their half-width) the
+##                                   pit must start (the asteroid's dome)
 static func generate(town_id: String, size: int, seed: int = 1, opts: Dictionary = {}, kit_data: Dictionary = {}) -> Dictionary:
 	var g := TownGen.new(kit_data)
 	return g.build(town_id, size, seed, opts)
@@ -82,18 +89,26 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 	var cdim: Dictionary = ccfg.get("full" if full else "small", {})
 	var cl := float(cdim.get("length", 18.0))
 	var cw := float(cdim.get("width", 14.0))
-	var market := stalls >= 2                  # one stall goes out back instead
+	var roamers := count("roamers", size)
+	var pit := str(opts.get("bay", "")) == "pit"
+	# Issue #75: every merchant works a stall in the square in front of the cantina;
+	# the stalls nobody keeps fill the market (if there are two or more).
+	var front := maxi(1, merchants)
+	var rest := stalls - front
+	var market := rest >= 2
 	var barracks := size >= int(kit.get("barracks_from_size", 25)) and guards >= 3
 	var tower := size >= int(kit.get("tower_from_size", 35)) and guards >= 4
-	var cols := int(ceil(bays / 2.0))
-	var market_w := ceili(stalls / 2.0) * 8.0 if market else 0.0
+	var cols := 0 if pit else int(ceil(bays / 2.0))
+	var market_w := ceili(rest / 2.0) * 8.0 if market else 0.0
 	var district_need := maxf(market_w, 32.0 if barracks else 0.0) + 16.0      # + gate clearance
-	var backyard := 0.0 if market else float(kit.get("backyard", 10.0))
+	var square := maxf(float(kit.get("square", 8.0)), ceili(front / 2.0) * 8.0 + 4.0)
 	# Inside the walls: big enough for the area factor and for what must fit.
 	var area := float(kit.get("area_at_50", 30000.0)) * area_factor(size)
 	var aspect := float(kit.get("aspect", 1.333))
-	var w_need := margin + backyard + cl + float(kit.get("square", 8.0)) + cols * bay + district_need + margin
-	var d_need := maxf(cw + 2.0 * (lane + margin), 2.0 * (sh + 1.0 + bay) + 2.0 * margin)
+	var w_need := margin + cl + square + cols * bay + district_need + margin
+	var d_need := maxf(cw + 2.0 * (lane + margin), 2.0 * (sh + 6.0 + lane) + 2.0 * margin)
+	if cols > 0:
+		d_need = maxf(d_need, 2.0 * (sh + 1.0 + bay) + 2.0 * margin)
 	if market:
 		d_need = maxf(d_need, 2.0 * (sh + 21.0) + 2.0 * margin)
 	if barracks:
@@ -107,20 +122,22 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 
 	_ground(town_id, xi0 - wt, xi1 + wt, zi0 - wt, zi1 + wt, wt, wall)
 	var x := xi0 + margin
-	# The back yard: the merchant "out back" when there is no market.
-	if not market:
-		_backyard(x, backyard, cw)
-		x += backyard
 	var cantina := _cantina(x, cl, cw, float(cdim.get("height", 5.5)), float(ccfg.get("door_half", 2.0)), opts,
-		size >= int(ccfg.get("patrons_from_size", 10)))
-	x = cantina.end + float(kit.get("square", 8.0))
-	var sp := _spaceport(x, cols, bays, sh, bay)
+		size >= int(ccfg.get("patrons_from_size", 10)), full)
+	_front_stalls(cantina.end, square, front, sh)
+	x = cantina.end + square
+	if pit:
+		var spread := float(opts.get("pit_clear", 1.0))
+		var ring := float(kit.get("pit", {}).get("ring", 6.0))
+		var half := float(kit.get("pit", {}).get("half", 28.0))
+		var start := maxf(xi1 + wt + float(kit.get("apron", 30.0)), (xi0 + xi1) * 0.5 + (xi1 - xi0 + 2.0 * wt) * 0.5 * spread + 6.0)
+		_pit(ceilf(start + ring + half))     # whole metres: the zone check is exact
+	else:
+		_spaceport(x, cols, bays, sh, bay)
 	x += cols * bay
 	var district_x0 := x + lane
 	if market:
-		_market(district_x0, stalls, merchants, sh, opts)
-	else:
-		_stall_out_back(cantina, cw, opts)
+		_market(district_x0, rest, 0, sh, opts)
 	var tower_rect := Rect2()
 	if barracks:
 		_barracks(xi1 - 16.0 - 30.0, sh + lane)
@@ -128,6 +145,7 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 		tower_rect = _watchtower(xi1)
 	_street(cantina.end, xi1, sh)
 	_guards(guards, cantina, xi1, sh, district_x0, tower)
+	_roamers(roamers, float(cantina.end), xi1 - wt, sh)
 	_lots(xi0, xi1, zi0, zi1, sh, residents)
 	var zones := _zone_list(xi0, xi1, zi0, zi1, sh)
 	var klaxon := ""
@@ -151,7 +169,8 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 		"routes": _routes,
 		"garrison": { "alarm": alarms.get("garrison", {}), "klaxon_marker": klaxon },
 		"locals": { "alarm": alarms.get("locals", {}) },
-		"counts": { "guards": guards, "residents": residents, "stalls": stalls, "merchants": merchants, "bays": bays },
+		"counts": { "guards": guards, "residents": residents, "roamers": roamers, "stalls": stalls, "merchants": front,
+			"bays": 1 if pit else bays },
 	}
 
 
@@ -173,7 +192,7 @@ func _ground(_town_id: String, x0: float, x1: float, z0: float, z1: float, wt: f
 	_marker("desert_exit", [x1 + 6.0, 0, 0], "waypoint")
 
 
-func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictionary, patrons: bool) -> Dictionary:
+func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictionary, patrons: bool, full: bool = false) -> Dictionary:
 	var x1 := x0 + l
 	var z0 := -w * 0.5
 	var z1 := w * 0.5
@@ -193,7 +212,16 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 		owner["card"] = str(opts.cantina_card)
 	if opts.has("cantina_look"):
 		owner["look"] = str(opts.cantina_look)
+	if opts.has("cantina_planet"):
+		owner["planet"] = str(opts.cantina_planet)
 	_markers.append(owner)
+	# Issue #75: every cantina has a stage, off the path from the door to the bar.
+	var st: Dictionary = kit.get("cantina", {}).get("stage", {})
+	var sd := float(st.get("full" if full else "small", 4.0))
+	var sz1 := z1 - 0.6
+	var sx := x0 + l * float(st.get("at", 0.68))
+	_box("cantina_stage", "cantina", "cover", [snappedf(sx - sd * 0.5, 0.1), 0, snappedf(sz1 - sd, 0.1)],
+		[snappedf(sx + sd * 0.5, 0.1), float(st.get("height", 0.6)), snappedf(sz1, 0.1)], { "shape": "round", "look": "stage" })
 	_marker("bar_front", [cx0 + 3.5, 0, 0], "interact")
 	_marker("cantina_door", [x1 + 1.0, 0, 0], "waypoint")
 	if patrons:
@@ -207,20 +235,62 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 	return { "x0": x0, "end": x1, "z0": z0, "z1": z1 }
 
 
-func _backyard(x0: float, depth: float, cw: float) -> void:
-	_core.append(Rect2(x0, -cw * 0.5, depth, cw))
+## Issue #75: the merchants' stalls, in the square in front of the cantina, both
+## sides of the street (the port's stall: a counter facing the street, a back
+## panel, the merchant between them).
+func _front_stalls(x0: float, length: float, n: int, sh: float) -> void:
+	for i in n:
+		var north := i % 2 == 0
+		var sx := x0 + 2.0 + (i / 2) * 8.0
+		var sg := 1.0 if north else -1.0
+		var id := "stall_f%s%d" % ["n" if north else "s", i / 2 + 1]
+		var c0 := sg * (sh + 1.0)
+		var c1 := sg * (sh + 2.0)
+		var b0 := sg * (sh + 4.6)
+		var b1 := sg * (sh + 5.0)
+		_box(id, "square", "cover", [sx, 0, minf(c0, c1)], [sx + 4.0, 1.1, maxf(c0, c1)],
+			{ "look": "stall", "face": "-z" if north else "+z" })
+		_box(id + "_back", "square", "solid", [sx, 0, minf(b0, b1)], [sx + 4.0, 2.6, maxf(b0, b1)], { "look": "stall_back" })
+		_markers.append({ "id": "vendor_%d" % (i + 1), "pos": [sx + 2.0, 0, sg * (sh + 3.3)], "role": "ambient",
+			"soldier": "local_merchant", "face": [sx + 2.0, 0, 0] })
+	_core.append(Rect2(x0, -(sh + 5.5), length, 2.0 * (sh + 5.5)))
+	_zones.append({ "id": "square", "min": [x0, -(sh + 5.5)], "max": [x0 + length, sh + 5.5] })
 
 
-## Size-1 towns (and any town with only one stall): the merchant works a stall in
-## the yard behind the cantina, facing the back wall's lane.
-func _stall_out_back(cantina: Dictionary, cw: float, _opts: Dictionary) -> void:
-	var xb := float(cantina.x0) - float(kit.get("backyard", 10.0))
-	var z := -2.0
-	_box("stall_back_1_back", "backyard", "solid", [xb + 0.3, 0, z - 2.0], [xb + 0.7, 2.6, z + 2.0], { "look": "stall_back" })
-	_box("stall_back_1", "backyard", "cover", [xb + 3.3, 0, z - 2.0], [xb + 4.3, 1.1, z + 2.0], { "look": "stall", "face": "+x" })
-	_markers.append({ "id": "vendor_1", "pos": [xb + 2.0, 0, z], "role": "ambient", "soldier": "local_merchant",
-		"face": [xb + 8.0, 0, z] })
-	_zones.append({ "id": "backyard", "min": [xb, -cw * 0.5], "max": [float(cantina.x0), cw * 0.5] })
+## Issue #75: locals who walk the streets (and fight, like every local): loops up
+## and down the main street from the cantina door to the gate, each its own.
+func _roamers(n: int, x_door: float, x_gate: float, _sh: float) -> void:
+	for k in n:
+		var zr := 1.5 + float(k % 3) * 1.5
+		var inset := float(k % 2) * 6.0
+		var xa := x_door + 2.0 + inset
+		var xb := maxf(xa + 6.0, x_gate - 3.0 - inset)
+		var id := "roamer_%d" % (k + 1)
+		_routes.append({ "id": "roam_" + id, "points": [[xa, -zr], [xb, -zr], [xb, zr], [xa, zr], [xa, -zr]] })
+		_markers.append({ "id": id, "pos": [xa, 0, -zr], "role": "ambient", "soldier": "local_resident",
+			"patrol": "roam_" + id })
+
+
+## Issue #75: the port's round landing pit (content/core/planets/town_kit.json
+## "pit", copied from port_town.json), centred at (cx, 0), ringed in paving.
+func _pit(cx: float) -> void:
+	var pk: Dictionary = kit.get("pit", {})
+	var half := float(pk.get("half", 28.0))
+	var ring := float(pk.get("ring", 6.0))
+	var o := half + ring
+	for b in pk.get("boxes", []):
+		var nb: Dictionary = (b as Dictionary).duplicate(true)
+		nb["zone"] = "landing_bay"
+		nb["min"] = [float(b.min[0]) + cx, b.min[1], b.min[2]]
+		nb["max"] = [float(b.max[0]) + cx, b.max[1], b.max[2]]
+		_boxes.append(nb)
+	_box("bay_ground_n", "landing_bay", "floor", [cx - o, -0.5, half], [cx + o, 0, o])
+	_box("bay_ground_s", "landing_bay", "floor", [cx - o, -0.5, -o], [cx + o, 0, -half])
+	_box("bay_ground_w", "landing_bay", "floor", [cx - o, -0.5, -half], [cx - half, 0, half])
+	_box("bay_ground_e", "landing_bay", "floor", [cx + half, -0.5, -half], [cx + o, 0, half])
+	var sp: Array = pk.get("spawn", [6, -6, 13])
+	_marker("player_spawn", [float(sp[0]) + cx, float(sp[1]), float(sp[2])], "spawn")
+	_zones.append({ "id": "landing_bay", "min": [cx - o, -o], "max": [cx + o, o] })
 
 
 func _spaceport(x0: float, cols: int, bays: int, sh: float, cell: float) -> Dictionary:

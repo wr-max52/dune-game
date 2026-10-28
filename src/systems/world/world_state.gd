@@ -238,18 +238,33 @@ static func job(id: String) -> Dictionary:
 
 
 ## Jobs the cantina owner can offer at this trust tier, not yet taken.
+##
+## Issue #75: every other planet's cantina owner always has the smuggling run and
+## the contract (the bounty) to offer, without waiting on the port's story.
 static func open_jobs(tier: String) -> Array:
 	var out: Array = []
+	var away := always_jobs_here()
 	for j in board():
 		if jobs_taken.has(str(j.id)):
 			continue
-		if str(j.get("kind", "")) == "smuggle" and not smuggle_ready():
+		var kind := str(j.get("kind", ""))
+		if kind == "smuggle" and not smuggle_ready():
 			continue
-		if str(j.get("kind", "")) == "bounty" and not (bounty_ready() and Story.bounties_open()):
+		if kind == "bounty" and not (bounty_ready() and (away or Story.bounties_open())):
 			continue
-		if _conditions_hold(j.get("requires", {}), tier):
+		var req: Dictionary = j.get("requires", {})
+		if away and kind in ["smuggle", "bounty"]:
+			req = req.duplicate()
+			req.erase("story")
+		if _conditions_hold(req, tier):
 			out.append(job(str(j.id)))
 	return out
+
+
+## True off the home planet: there the smuggling run and the contract are always
+## on the board (issue #75).
+static func always_jobs_here() -> bool:
+	return GameFlow.current_planet_id() != PlanetGen.home_id()
 
 
 static func accept_job(id: String) -> bool:
@@ -293,6 +308,7 @@ static func smuggle_drop() -> Dictionary:
 		"id": id, "item": smuggle.item, "count": int(smuggle.count), "marker": smuggle.marker,
 		"offset": smuggle.offset, "ground": bool(smuggle.get("ground", false)), "hidden": true, "reach": 2.0,
 		"marked": bool(smuggle.get("marked", false)),
+		"location": str(smuggle.get("location", "")),
 	}
 
 
@@ -353,6 +369,7 @@ static func _roll_smuggle(j: Dictionary) -> void:
 		"area": str(a.id), "hint": str(a.get("hint", "")), "marker": str(a.get("marker", "")),
 		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)), "out": false,
 		"marked": bool(a.get("marked", false)),
+		"location": str(j.get("location", "")),    # issue #75: offered on any planet, dropped in this town
 	}
 
 

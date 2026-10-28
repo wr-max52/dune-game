@@ -33,13 +33,13 @@ where `at` puts it. Fly into it to land there.
 |---|---|
 | `id` | Lower case, underscores. Also the key its name is saved under. |
 | `name` | The planet's name. Leave it `""` and the name generator makes one (unique in the game). |
-| `type` | `sand`, `snow`, `red_desert` (biome planets: the town sits on dunes); `water`, `lava`, `gas` (element planets) and `asteroid` (a station on a rock). Element and asteroid towns float on a platform. |
-| `town_size` | 1 to 100. 50 is the port's scale, 100 is 5x its area, and 1 is just a cantina, one Remnant guard at its door, a merchant out back, and a landing bay. |
+| `type` | `sand`, `snow`, `red_desert` (biome planets: the town sits on dunes); `water`, `lava`, `gas` (element planets) and `asteroid` (a station on a rock ball). Element towns float on a platform; an asteroid town sits on top of its rock, under a glass dome. |
+| `town_size` | 1 to 100. 50 is the port's scale, 100 is 5x its area, and 1 is just a cantina (with its stage), one Remnant guard at its door, a merchant in front of the cantina, three locals walking the street, and a landing bay. |
 | `style` | How the town looks: `desert` (the port's own), `metallic`, `snowy`, `pastel`, or plain words like `red matte metal`. See below. Default: the type's own. |
 | `seed` | Optional. A different number lays the same size of town out differently. |
 | `near` / `at` | The planet whose sky it hangs in, and where in that sky, in metres from that planet's port: `[east, up, south]`. The return trip is automatic. `home_at` overrides where `near` appears from here. |
 | `town_name` | Optional. The town's name; otherwise generated. |
-| `cantina_owner` | Optional. `{ "card": "npcs/<file>.json", "look": "<archetype>" }`: who runs the cantina (their AI card) and how they look. Default: Oda. |
+| `cantina_owner` | Optional. `{ "card": "npcs/<file>.json", "look": "<archetype>" }`: who runs the cantina (their AI card) and how they look. With no `card`, a generated planet gets its own Oda (see below). The port's is Oda Vell. |
 | `encounter` | Optional. The space fight when you climb out of this planet's atmosphere (`"orbital_skirmish"`), or `""` for a quiet sky. Default: the landing pad's. |
 | `features` | The port only: `training_range`, `speeders`, `landforms`, `pickups`. |
 | `town` / `world` | The port only: use a hand-built town and world instead of generated ones. |
@@ -50,9 +50,16 @@ The types are defined in `content/core/planets/types.json`, and each one sets th
 following:
 
 - **ground:** `terrain` puts the town on the seamless dunes, recoloured by `sand`
-  and `rock`. `platform` floats it on a deck closed underneath.
-- **surface (platforms only):** what lies below the deck: sea, lava, cloud decks,
-  or the asteroid's own rock with debris drifting round it.
+  and `rock`. `platform` floats it on a deck closed underneath. `sphere` (the
+  asteroid, issue #75) makes the planet one cratered rock ball and sets the town
+  on top of it.
+- **surface (platforms and spheres):** what lies below the deck (sea, lava, cloud
+  decks), or the ball itself: its radius, colours, two sizes of crater, boulders
+  and the debris drifting round it.
+- **landing_bay:** `pit` puts the port's own round landing pit outside the gate,
+  past the apron, instead of bays inside the walls (the asteroid).
+- **dome (spheres):** the glass dome over the town: how far past the walls it
+  reaches, how tall it is, and the door over the gate.
 - **sky:** colours laid over every time of day, so the clock and F11 still work.
   The asteroid's sky is grey.
 - **atmosphere:** where space begins. It is 700 m on the asteroid and 4 km on the
@@ -68,9 +75,46 @@ and ships and open above, so ships can lift straight out. The gate stays open, w
 a translucent **energy shield** across it that you walk straight through. Go over
 the edge of the deck and you die, then wake up by the landing bay.
 
+On an asteroid, a **glass dome** covers the town instead. It is solid to people and
+ships, and its door over the gate has the same walk-through shield. The landing pit
+is outside the dome. The whole rock is ground: it is flat under the town and the
+pit, and cratered, rough and strewn with blocky boulders everywhere else. Gravity
+points straight down, as in every town, so you can walk over the top of the ball
+until it is too steep to stand on. Slide off its side and you die, then wake up by
+the landing bay.
+
+**Walking the planet:** on every planet except water, lava and gas worlds, you can
+walk out of the town and keep going: the dunes on biome planets, the rock on an
+asteroid.
+
 A new type is a new entry in `types.json`, with no code change, as long as its
-ground is `terrain` or `platform` and its surface is one of `water`, `lava`, `gas`
-or `rock`.
+ground is `terrain`, `platform` or `sphere` and its surface is one of `water`,
+`lava`, `gas` or `rock`.
+
+## What every generated planet has (issue #75)
+
+- **Merchants in front of the cantina:** every merchant's stall is in the square
+  outside the cantina door, both sides of the street. Stalls nobody keeps go to
+  the market.
+- **Locals walking the street:** at least three, who fight back like every local
+  if you hurt one (`roamers` in `town_kit.json`), on top of the residents.
+- **A stage in the cantina,** against the side wall, off the path to the bar.
+- **Its own Oda:** with no `card` set, the cantina owner is a new iteration of Oda,
+  built by `src/systems/planets/planet_owner.gd` from Oda's card and
+  `content/core/npcs/planet_owner.json`:
+  - Her last name comes from the name generator, and is the same every time.
+  - The planet's and the town's names are in her prompt.
+  - She has her own card id (`cantina_owner_<planet id>`). That gives her her own
+    brain, her own relationship with you, her own save entry and her own
+    transcripts. Nothing is shared with the port's Oda.
+- **Smuggling and contracts, always:** off the home planet, the board's smuggling
+  run and the contract on a Remnant officer are open without waiting on the
+  port's story. The drop and the outposts are still the port's, so the job takes
+  you back there.
+- **Z lands you:** flying near your bay (within `bay_land_radius` in
+  `launch_pads.json`, 4 km, below space), on any planet including home, press **Z**.
+  The ship flies itself over the bay and lands on its own pad. Press Z again to
+  take back control, or C to land where you are.
 
 ## Town styles
 
@@ -108,7 +152,10 @@ change.
   unchanged. Every size from 1 to 100 passes the town validator (V1 to V8). Its
   numbers are in `content/core/planets/town_kit.json`.
 - `PlatformWorld` (`platform_world.gd`) builds the deck, keel, glass, shield,
-  sea, lava, clouds or asteroid, and handles falling off.
+  sea, lava or clouds, and handles falling off. `AsteroidWorld`
+  (`asteroid_world.gd`) is its asteroid version: the rock ball (one height
+  function shared by the collider, the look and the ships' ground), the boulders,
+  the dome and the fall off its side.
 - `SpaceTravel` (`space_travel.gd`) draws the neighbours in the sky, labels them
   with their distance, and starts the trip when you fly into one.
 - `GameFlow.travel()` reloads the same town scene as the other planet. A planet
@@ -121,11 +168,14 @@ change.
 `content/core/planets/grit_station.json` is the planet the issue asks for:
 
 - An asteroid with a size-1 town, in `metallic`, 12 km from the port and 5 km up.
-- Its cantina is run by **Ilka Vell**, Oda's younger sister, on her own AI card
-  (`content/core/npcs/station_owner_card.json`).
+- The rock is a ball 900 m across, with the town under a glass dome on top and
+  the port's landing pit outside the gate.
+- Its cantina is run by its own Oda, with a generated last name (issue #75; until
+  then it was Ilka Vell, on a card of her own).
 - She wears Oda's model re-tinted steel-blue with cyan goggles (archetype
   `cantina_owner_station` in `content/look/characters.json`).
 
 `scenes/planets_trace.gd` flies the whole trip in CI. It takes off, flies to the
-station, lands, walks out through the shield, falls off the edge, finds the glass
-solid, and flies home.
+station, presses Z and is landed in the pit, then walks out through the dome's
+shield. It stands on the rock, slides off the side, finds the dome solid, and
+flies home.
