@@ -2,6 +2,28 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Character animations (2026-10-28, issue #87)
+
+- **Walking has some swagger.** The hips roll and shift over the planted foot,
+  the shoulders twist against them and the arms swing looser, so nobody marches
+  like a robot. Standing still, people shift their weight and glance around.
+- **Sprinting looks like sprinting:** leaned forward, longer and slower strides,
+  a high back kick and arms pumping with bent elbows.
+- **Jumps** tuck the knees on the way up, reach for the ground with arms out on
+  the way down, and split into a leap when you jump at a run.
+- **Crouching** drops to one knee when still and duck-walks low on bent knees
+  when moving.
+- **Guns rest when nobody is shooting.** Guards carry the rifle low across the
+  body, muzzle down, and raise it to the shoulder before they fire (they cannot
+  shoot until it is up). They lower it a few seconds after the fight goes quiet.
+  In third person the player does the same: a rifle across the body, a pistol
+  pointed down by the right thigh in one hand. Pressing fire or aim raises it in
+  a fraction of a second, and you can walk while aiming. Hands stay on the grips
+  the whole way. First person is unchanged.
+- **Speeders and ships react when you get in:** they sink under your weight,
+  then lift with a short engine shudder and settle.
+- `./tools/anim/shoot_poses.sh` renders a sheet of every pose
+  (`archetype=player` for the player's guns) to `test_results/anim/poses.png`.
 ## Planet generation cleanup: the asteroid, and what every planet has (2026-10-27, issue #75)
 
 - **The asteroid is a whole rock ball**, 900 m across, grey like the moon, with

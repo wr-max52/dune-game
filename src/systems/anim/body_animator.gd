@@ -34,6 +34,7 @@ var land_left := 0.0
 var land_time := 0.18
 var smoothing := 14.0          ## per second; higher = snappier joints
 var pelvis_y := PELVIS_Y
+var pelvis_x := 0.0            ## issue #87: side-to-side hip shift (metres, + = model's left)
 ## Sprint slide (issue #65): 0 = not sliding, 1 = full slide pose. It ramps (on top
 ## of the joint smoothing) so sprint -> slide -> sprint never pops.
 var slide_w := 0.0
@@ -50,9 +51,10 @@ var states_seen := {}          ## for tests/traces: every state name entered
 ##   grounded:    bool;   vy: vertical velocity
 ##   crouch / sprint: bool
 ##   upper:       one of the UPPER_* modes
+##   ready:       0..1, how far a gun is raised (1 = aiming, the default; 0 = at rest)
 ##   aim_pitch:   radians, + is up (aim modes bend the chest toward it)
 ##   twist:       degrees of chest yaw the caller adds (sword swings)
-## Returns { joints: {name: Vector3 deg}, pelvis_y: float, state: String }
+## Returns { joints: {name: Vector3 deg}, pelvis_y: float, pelvis_x: float, state: String }
 func step(dt: float, inp: Dictionary) -> Dictionary:
 	time += dt
 	var grounded: bool = inp.get("grounded", true)
@@ -80,9 +82,9 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 		states_seen["JUMP" if vy > 0.0 else "FALL"] = true
 
 	# ---- gait phase: one full cycle per stride (two steps)
-	var stride := lerpf(1.5, 2.4, clampf((speed - WALK_SPEED) / (SPRINT_SPEED - WALK_SPEED), 0.0, 1.0))
+	var stride := lerpf(1.5, 3.0, clampf((speed - WALK_SPEED) / (SPRINT_SPEED - WALK_SPEED), 0.0, 1.0))
 	if crouch:
-		stride = 1.0
+		stride = 0.9
 	if state == State.LOCOMOTION and speed > 0.05:
 		phase = fmod(phase + TAU * speed / stride * dt, TAU)
 
@@ -93,7 +95,8 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 		var v: Vector3 = target.joints[j]
 		_cur[j] = (_cur.get(j, v) as Vector3).lerp(v, k)
 	pelvis_y = lerpf(pelvis_y, target.pelvis_y, k)
-	return { "joints": _cur.duplicate(), "pelvis_y": pelvis_y, "state": state_name() }
+	pelvis_x = lerpf(pelvis_x, target.pelvis_x, k)
+	return { "joints": _cur.duplicate(), "pelvis_y": pelvis_y, "pelvis_x": pelvis_x, "state": state_name() }
 
 
 func state_name() -> String:
@@ -111,6 +114,7 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 	for n in JOINTS:
 		j[n] = Vector3.ZERO
 	var py := PELVIS_Y
+	var px := 0.0
 	var s := sin(phase)
 	var c := cos(phase)
 	var walk01 := clampf(speed / WALK_SPEED, 0.0, 1.0)
@@ -124,8 +128,12 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 
 	match state:
 		State.LOCOMOTION:
-			var hip_a := 30.0 * walk01 + 16.0 * sprint01
-			var knee_a := 35.0 * walk01 + 40.0 * sprint01
+			# Issue #87: a walk with some swagger (hips roll and shift over the planted
+			# foot, shoulders counter-twist, arms swing loose) and a sprint that leans
+			# into it with a long stride, a high back kick and pumping arms.
+			var hip_a := 28.0 * walk01 + 20.0 * sprint01
+			var knee_a := 38.0 * walk01 + 62.0 * sprint01
+			var strut := walk01 * (1.0 - sprint01)
 			# Legs: swing along the move direction (backwards walking reverses it).
 			j.l_hip = Vector3(-hip_a * s * fwd, 0, 16.0 * walk01 * s * side + 2.0)
 			j.r_hip = Vector3(hip_a * s * fwd, 0, 16.0 * walk01 * s * side - 2.0)
@@ -133,42 +141,62 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 			j.r_knee = Vector3(knee_a * maxf(0.0, -c) + 6.0 * walk01, 0, 0)
 			j.l_ankle = Vector3(-0.35 * j.l_knee.x + 8.0 * walk01 * s * fwd, 0, 0)
 			j.r_ankle = Vector3(-0.35 * j.r_knee.x - 8.0 * walk01 * s * fwd, 0, 0)
-			# Hips bob twice per stride and counter-twist with the shoulders.
-			py = PELVIS_Y - (0.025 + 0.03 * sprint01) * walk01 * s * s
-			j.pelvis = Vector3(0, -6.0 * walk01 * s, 0)
-			j.chest = Vector3(5.0 * walk01 + 10.0 * sprint01, 8.0 * walk01 * s, 0)
-			j.head = Vector3(-4.0 * walk01 - 8.0 * sprint01, -2.0 * walk01 * s, 0)
-			# Arms counter-swing; sprinting pumps with bent elbows.
-			var arm_a := 22.0 * walk01 + 30.0 * sprint01
-			j.l_shoulder = Vector3(arm_a * s, 0, 8.0)
-			j.r_shoulder = Vector3(-arm_a * s, 0, -8.0)
-			j.l_elbow = Vector3(-14.0 - 14.0 * walk01 - 60.0 * sprint01, 0, 0)
-			j.r_elbow = Vector3(-14.0 - 14.0 * walk01 - 60.0 * sprint01, 0, 0)
-			# Idle: breathe and settle.
+			# Hips bob twice per stride, twist with the legs, drop on the swing side and
+			# slide over the planted foot; the chest counters all three.
+			py = PELVIS_Y - (0.025 + 0.035 * sprint01) * walk01 * s * s
+			px = -0.028 * strut * s
+			j.pelvis = Vector3(0, -8.0 * walk01 * s, -5.0 * strut * s)
+			j.spine = Vector3(14.0 * sprint01, 0, 2.5 * strut * s)
+			j.chest = Vector3(4.0 * walk01 + 8.0 * sprint01, 11.0 * walk01 * s, 2.0 * strut * s)
+			j.head = Vector3(-4.0 * walk01 - 16.0 * sprint01, -3.0 * walk01 * s, 2.5 * strut * s)
+			# Arms counter-swing, a little wider and bent more on the way forward;
+			# sprinting pumps them hard with the elbows locked near 90.
+			var arm_a := 30.0 * walk01 + 32.0 * sprint01
+			var bend := 22.0 * walk01 * (1.0 - sprint01)
+			j.l_shoulder = Vector3(arm_a * s, 4.0 * strut * s, 9.0 + 3.0 * strut)
+			j.r_shoulder = Vector3(-arm_a * s, 4.0 * strut * s, -9.0 - 3.0 * strut)
+			j.l_elbow = Vector3(-14.0 - 8.0 * walk01 - bend * maxf(0.0, -s) - 66.0 * sprint01, 0, 0)
+			j.r_elbow = Vector3(-14.0 - 8.0 * walk01 - bend * maxf(0.0, s) - 66.0 * sprint01, 0, 0)
+			j.l_wrist = Vector3(-6.0 * walk01, 0, 0)
+			j.r_wrist = Vector3(-6.0 * walk01, 0, 0)
+			# Idle: breathe, shift the weight from foot to foot and glance around.
 			var idle := 1.0 - walk01
+			var sway := sin(time * 0.55)
 			j.chest.x += idle * 1.5 * sin(time * 1.7)
 			j.l_shoulder.z += idle * 0.8 * sin(time * 1.7)
 			j.r_shoulder.z -= idle * 0.8 * sin(time * 1.7)
+			px += idle * 0.018 * sway
+			j.pelvis.z += idle * 2.5 * sway
+			j.chest.z -= idle * 2.0 * sway
+			j.l_knee.x += idle * 5.0 * maxf(0.0, -sway)
+			j.r_knee.x += idle * 5.0 * maxf(0.0, sway)
+			j.head.y += idle * 14.0 * sin(time * 0.31) * sin(time * 0.17)
+			j.head.x += idle * 3.0 * sin(time * 0.23)
 			if crouch:
-				j.l_hip.x += -55.0
-				j.r_hip.x += -50.0
-				j.l_knee.x += 90.0
-				j.r_knee.x += 85.0
-				j.l_ankle.x += -35.0
-				j.r_ankle.x += -35.0
-				j.chest.x += 14.0
-				py = PELVIS_Y - 0.3
+				var pose := _crouch(inp, speed, s, c, fwd)
+				for n in pose.joints:
+					j[n] = pose.joints[n]
+				py = pose.pelvis_y
+				px = 0.0
 		State.AIRBORNE:
-			var rising := vy > 0.0
-			j.l_hip = Vector3(-35.0 if rising else -20.0, 0, 4)
-			j.r_hip = Vector3(10.0 if rising else -8.0, 0, -4)
-			j.l_knee = Vector3(55.0 if rising else 25.0, 0, 0)
-			j.r_knee = Vector3(30.0 if rising else 20.0, 0, 0)
-			j.l_shoulder = Vector3(-25.0, 0, 30.0)
-			j.r_shoulder = Vector3(-15.0, 0, -30.0)
-			j.l_elbow = Vector3(-35, 0, 0)
-			j.r_elbow = Vector3(-35, 0, 0)
-			j.chest = Vector3(8.0, 0, 0)
+			# Tucked on the way up, legs reaching for the ground and arms out on the
+			# way down; a running jump splits the legs into a leap.
+			var up01 := clampf(vy / 5.0, 0.0, 1.0)
+			var down01 := clampf(-vy / 6.0, 0.0, 1.0)
+			var leap := clampf(speed / WALK_SPEED, 0.0, 1.0)
+			j.l_hip = Vector3(-30.0 - 25.0 * up01 - 25.0 * leap, 0, 5)
+			j.r_hip = Vector3(-5.0 - 15.0 * up01 + 30.0 * leap - 10.0 * down01, 0, -5)
+			j.l_knee = Vector3(30.0 + 50.0 * up01 - 15.0 * down01, 0, 0)
+			j.r_knee = Vector3(25.0 + 30.0 * up01 + 35.0 * leap - 10.0 * down01, 0, 0)
+			j.l_ankle = Vector3(-15.0 + 10.0 * down01, 0, 0)
+			j.r_ankle = Vector3(10.0 * leap, 0, 0)
+			j.l_shoulder = Vector3(-35.0 * up01 + 20.0 * leap, 0, 25.0 + 30.0 * down01)
+			j.r_shoulder = Vector3(-35.0 * up01 - 30.0 * leap, 0, -25.0 - 30.0 * down01)
+			j.l_elbow = Vector3(-40.0 + 15.0 * down01, 0, 0)
+			j.r_elbow = Vector3(-50.0 + 15.0 * down01, 0, 0)
+			j.spine = Vector3(6.0 * leap, 0, 0)
+			j.chest = Vector3(10.0 * up01 - 4.0 * down01, 0, 0)
+			j.head = Vector3(-6.0 + 10.0 * down01, 0, 0)
 		State.LAND:
 			var dip := clampf(land_left / land_time, 0.0, 1.0)
 			j.l_hip = Vector3(-35.0 * dip, 0, 3)
@@ -196,25 +224,60 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 		for n in sl:
 			j[n] = (j[n] as Vector3).lerp(sl[n], slide_w)
 		py = lerpf(py, PELVIS_Y - 0.5, slide_w)
+		px = lerpf(px, 0.0, slide_w)
 
 	# ---- upper body overrides for weapons. Arms are placed by IK afterwards
-	# (player_avatar.gd), so here we only shape the torso.
+	# (player_avatar.gd, npc_body.gd), so here we only shape the torso. Issue #87:
+	# "ready" is how far the weapon is up (1 = aimed, 0 = resting low), so a body
+	# at rest keeps its walk's swagger and only squares up to aim.
 	var upper: String = inp.get("upper", UPPER_FREE)
+	var ready := clampf(float(inp.get("ready", 1.0)), 0.0, 1.0)
 	var pitch_deg := rad_to_deg(float(inp.get("aim_pitch", 0.0)))
 	if upper != UPPER_FREE:
 		# Stop the walk's shoulder twist so the weapon stays on the aim line.
-		j.pelvis.y *= 0.3
-		j.chest.y = 0.0
-		j.head.y = 0.0
+		# At rest a two-handed carry still damps the twist, or the gun swings about.
+		j.pelvis.y *= lerpf(0.7, 0.3, ready)
+		j.chest.y *= lerpf(0.35, 0.0, ready)
+		j.head.y *= 1.0 - ready
 	match upper:
 		UPPER_AIM, UPPER_RIFLE:
-			j.chest.x = -pitch_deg * 0.55 + 4.0
-			j.head.x = -pitch_deg * 0.35
-			j.spine.y = -8.0 if upper == UPPER_AIM else -14.0
+			j.chest.x = lerpf(j.chest.x * 0.6 + 2.0, -pitch_deg * 0.55 + 4.0, ready)
+			j.head.x = lerpf(j.head.x, -pitch_deg * 0.35, ready)
+			j.spine.y = (-8.0 if upper == UPPER_AIM else -14.0) * ready
 		UPPER_SWORD, UPPER_HOLSTER:
 			j.chest.x = j.chest.x * 0.5 - pitch_deg * 0.3 + 6.0
 			j.head.x = -pitch_deg * 0.3
 	j.chest.y += float(inp.get("twist", 0.0))
 	if slide_w > 0.0 and upper != UPPER_FREE:
 		j.chest.x -= 14.0 * slide_w  # weapon up: still lean back, the aim pass keeps the hands
+	return { "joints": j, "pelvis_y": py, "pelvis_x": px }
+
+
+## Issue #87: crouched. Still, down on the right knee with the left foot planted
+## ahead; moving, a low duck walk (deep knees, short steps, torso forward). Leg
+## angles are set so the feet and the knee land on the ground for CharacterKit's
+## 0.46 / 0.43 m thigh and shin.
+func _crouch(_inp: Dictionary, speed: float, s: float, c: float, fwd: float) -> Dictionary:
+	var kneel := {
+		"pelvis": Vector3(0, 6, 0), "spine": Vector3(4, 0, 0), "chest": Vector3(6, -4, 0), "head": Vector3(-6, 0, 0),
+		"l_hip": Vector3(-86, 0, 8), "l_knee": Vector3(88, 0, 0), "l_ankle": Vector3(-2, 0, 0),
+		"r_hip": Vector3(2, 0, -6), "r_knee": Vector3(92, 0, 0), "r_ankle": Vector3(-25, 0, 0),
+		"l_shoulder": Vector3(-14, 0, 6), "l_elbow": Vector3(-55, 0, 0), "l_wrist": Vector3.ZERO,
+		"r_shoulder": Vector3(4, 0, -10), "r_elbow": Vector3(-20, 0, 0), "r_wrist": Vector3.ZERO,
+	}
+	var step_a := 18.0 * fwd
+	var duck := {
+		"pelvis": Vector3(0, -5.0 * s, 0), "spine": Vector3(10, 0, 0), "chest": Vector3(16, 5.0 * s, 0), "head": Vector3(-18, 0, 0),
+		"l_hip": Vector3(-58.0 - step_a * s, 0, 8), "l_knee": Vector3(92.0 + 14.0 * maxf(0.0, c), 0, 0),
+		"l_ankle": Vector3(-34.0, 0, 0),
+		"r_hip": Vector3(-58.0 + step_a * s, 0, -8), "r_knee": Vector3(92.0 + 14.0 * maxf(0.0, -c), 0, 0),
+		"r_ankle": Vector3(-34.0, 0, 0),
+		"l_shoulder": Vector3(14.0 * s - 10.0, 0, 14), "l_elbow": Vector3(-40, 0, 0), "l_wrist": Vector3.ZERO,
+		"r_shoulder": Vector3(-14.0 * s - 10.0, 0, -14), "r_elbow": Vector3(-40, 0, 0), "r_wrist": Vector3.ZERO,
+	}
+	var m := clampf(speed / 1.2, 0.0, 1.0)
+	var j := {}
+	for n in kneel:
+		j[n] = (kneel[n] as Vector3).lerp(duck[n], m)
+	var py := lerpf(PELVIS_Y - 0.44, PELVIS_Y - 0.31 - 0.02 * s * s, m)
 	return { "joints": j, "pelvis_y": py }
