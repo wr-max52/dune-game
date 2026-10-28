@@ -64,3 +64,72 @@ func test_backwards_walk_reverses_the_stride() -> void:
 	var b := BodyAnimator.new()
 	var back := _step(b, 20, { "speed": 3.0, "move_local": Vector2(0, -1) })
 	assert_almost_eq(f.joints.l_hip.x, -back.joints.l_hip.x, 0.5)
+
+
+# ---- issue #87
+
+func test_crouch_still_kneels_and_moving_duck_walks() -> void:
+	var a := BodyAnimator.new()
+	var kneel := _step(a, 60, { "crouch": true, "speed": 0.0 })
+	assert_lt(kneel.joints.l_hip.x, -70.0, "front thigh forward")
+	assert_lt(absf(kneel.joints.r_hip.x), 15.0, "back thigh straight down to the knee")
+	assert_gt(kneel.joints.r_knee.x, 80.0, "shin flat behind")
+	var b := BodyAnimator.new()
+	var duck := _step(b, 60, { "crouch": true, "speed": 1.8 })
+	assert_gt(duck.pelvis_y, kneel.pelvis_y, "the duck walk rides higher than the kneel")
+	assert_lt(duck.pelvis_y, 0.75)
+	assert_gt(duck.joints.l_knee.x, 85.0, "both knees deep")
+	assert_gt(duck.joints.r_knee.x, 85.0)
+
+
+func test_sprint_leans_into_a_longer_stride() -> void:
+	var w := BodyAnimator.new()
+	var walk := _step(w, 60, { "speed": 3.5 })
+	var s := BodyAnimator.new()
+	var sprint := _step(s, 60, { "speed": 7.0, "sprint": true })
+	assert_gt(sprint.joints.spine.x + sprint.joints.chest.x, walk.joints.spine.x + walk.joints.chest.x + 10.0, "leans forward")
+	# Cadence: one second of each; the sprint covers twice the ground in well
+	# under twice the strides.
+	var w2 := BodyAnimator.new()
+	var s2 := BodyAnimator.new()
+	var cyc_w := 0.0
+	var cyc_s := 0.0
+	for i in 60:
+		var pw := w2.phase
+		var ps := s2.phase
+		w2.step(1.0 / 60.0, { "speed": 3.5 })
+		s2.step(1.0 / 60.0, { "speed": 7.0 })
+		cyc_w += wrapf(w2.phase - pw, 0.0, TAU)
+		cyc_s += wrapf(s2.phase - ps, 0.0, TAU)
+	assert_lt(cyc_s, cyc_w * 1.5, "longer, slower strides")
+
+
+func test_walk_shifts_the_hips_side_to_side() -> void:
+	var a := BodyAnimator.new()
+	var seen_l := false
+	var seen_r := false
+	for i in 90:
+		var o := a.step(1.0 / 60.0, { "speed": 3.0 })
+		seen_l = seen_l or o.pelvis_x > 0.01
+		seen_r = seen_r or o.pelvis_x < -0.01
+	assert_true(seen_l and seen_r, "the weight moves over each foot")
+
+
+func test_gun_at_rest_keeps_the_swagger_aimed_squares_up() -> void:
+	var r := BodyAnimator.new()
+	var rest := _step(r, 37, { "speed": 3.5, "upper": BodyAnimator.UPPER_RIFLE, "ready": 0.0 })
+	var a := BodyAnimator.new()
+	var aim := _step(a, 37, { "speed": 3.5, "upper": BodyAnimator.UPPER_RIFLE, "ready": 1.0 })
+	assert_eq(aim.joints.chest.y, 0.0, "aimed: no shoulder twist")
+	assert_gt(absf(rest.joints.chest.y), 0.5, "at rest the shoulders still swing a little")
+	assert_almost_eq(aim.joints.spine.y, -14.0, 0.5, "rifle stance turns the torso")
+	assert_almost_eq(rest.joints.spine.y, 0.0, 0.5)
+
+
+func test_airborne_tucks_rising_and_reaches_falling() -> void:
+	var a := BodyAnimator.new()
+	_step(a, 2, { "grounded": true })
+	var up := _step(a, 20, { "grounded": false, "vy": 5.0 })
+	var down := _step(a, 20, { "grounded": false, "vy": -7.0 })
+	assert_gt(up.joints.l_knee.x, down.joints.l_knee.x, "knees tucked on the way up")
+	assert_gt(absf(down.joints.l_shoulder.z), absf(up.joints.l_shoulder.z), "arms out for the landing")

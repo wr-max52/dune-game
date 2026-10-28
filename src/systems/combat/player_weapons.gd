@@ -167,9 +167,11 @@ func _physics_process(dt: float) -> void:
 			_hum.stop()
 
 	# Guns tick every frame (cooldowns, reloads) whether or not the trigger is down.
+	# Issue #87: in third person a resting gun comes up first, then fires.
+	avatar.aim_wanted = enabled and (_fire_held or _alt_on)
 	for id in guns:
 		var g: Weapon = guns[id]
-		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held
+		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held and avatar.gun_up()
 		var r: int = g.start_firing(dt, trigger)
 		if r == Weapon.Result.SHOT:
 			_shoot(id)
