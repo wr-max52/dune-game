@@ -230,6 +230,7 @@ class RangeTarget extends StaticBody3D:
 	var is_down := false
 	var reset_after := 4.0
 	var hits := 0
+	var damage_usec := -1000000000      ## Time.get_ticks_usec() of the last accepted hit (hit markers read it)
 	var _down_left := 0.0
 	var _pivot: Node3D
 	var _plate: MeshInstance3D
@@ -290,6 +291,7 @@ class RangeTarget extends StaticBody3D:
 		if is_down:
 			return
 		hits += 1
+		damage_usec = Time.get_ticks_usec()
 		hp -= amount
 		_wobble = 1.0
 		if hp <= 0.0:

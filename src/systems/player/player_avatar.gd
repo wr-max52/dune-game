@@ -20,6 +20,9 @@ extends Node3D
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
 const RETINT := preload("res://src/systems/look/shaders/weapon_retint.gdshader")
+const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
+const Ads := preload("res://src/systems/look/ads.gd")
+const GunSights := preload("res://src/systems/look/gun_sights.gd")
 const LOOK_PATH := "res://content/look/hand_weapons.json"
 
 const POLE_R := Vector3(-0.5, -0.7, -0.5)
@@ -41,11 +44,20 @@ var last_frame: Dictionary = {}
 var _recoil := 0.0                 ## 1 right after a shot, decays to 0
 var _flash_left := 0.0
 
+## Aim down sights (first person): the weapon blends to a pose solved from the
+## camera so the sight sits on the screen centre. weapons sets ads_on and the camera.
+var ads_on := false
+var ads_camera: Camera3D
+var ads_blend := 0.0               ## 0 = hip, 1 = fully aimed
+var _last_upper := ""
+var _last_pitch := 0.0
+
 var skin: SkinnedBody              ## the rigged model over the joints (null = primitives)
 
 var _arm_meshes: Array = []
 var _other_meshes: Array = []
-var _kit_arms: Array = []          ## kit forearms shown in first person over a skin
+var _kit_arms: Array = []          ## the kit's own forearms and hands (hidden in first person; see FpvArms)
+var _fpv: FpvArms                  ## the first person sleeves and gloves
 var _kit_chest: Array = []         ## the chest's own children, as the kit built it
 
 
@@ -54,6 +66,7 @@ func _init(materials: LookMaterials = null, outfit = null) -> void:
 	name = "Avatar"
 	kit = CharacterKit.new(materials if materials != null else LookMaterials.new(), -1000.0)
 	look = CharacterKit._read_json(LOOK_PATH)
+	process_priority = 1000          # after the camera rig, so the sight never lags it
 	_build_body(PlayerOutfit.load_outfit() if outfit == null else outfit)
 	_collect_meshes()
 
@@ -114,6 +127,8 @@ func build_weapons(ids: Array) -> void:
 			if model != null:
 				model.scale = Vector3.ONE * s
 				wrap.add_child(model)
+			if model != null:
+				GunSights.add_to(model, spec)
 			var g: Dictionary = spec.get("grips", {})
 			wrap.set_meta("grips", { "r": _v3(g.get("r", [0, 0, 0])) * s, "l": _v3(g.get("l", [0, 0, 0.3])) * s })
 			var muzzle := Marker3D.new()
@@ -173,6 +188,9 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 	if not (scene is PackedScene):
 		return null
 	var n: Node3D = scene.instantiate()
+	if spec.get("dark") is Dictionary:
+		_darken(n, spec.dark)
+		return n
 	if spec.get("retint", true) == false:
 		return n
 	var tint: Dictionary = spec.get("tint", {})
@@ -187,6 +205,30 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 		mat.set_shader_parameter("accent", Color.html(str(tint.get("accent", "#7a5636"))))
 		mi.material_override = mat
 	return n
+
+
+## Dark variant of a gun that keeps its own textures: neutral texels go dark, the
+## saturated glow panels stay (weapon_dark.gdshader).
+func _darken(n: Node3D, d: Dictionary) -> void:
+	for mi in _meshes_under(n):
+		if mi.mesh == null or mi.mesh.get_surface_count() == 0:
+			continue
+		var src: Material = mi.mesh.surface_get_material(0)
+		var mat := ShaderMaterial.new()
+		mat.shader = DARK
+		if src is BaseMaterial3D:
+			var b := src as BaseMaterial3D
+			mat.set_shader_parameter("albedo_tex", b.albedo_texture)
+			if b.normal_texture != null:
+				mat.set_shader_parameter("normal_tex", b.normal_texture)
+				mat.set_shader_parameter("use_normal", true)
+			if b.roughness_texture != null:
+				mat.set_shader_parameter("orm_tex", b.roughness_texture)
+				mat.set_shader_parameter("use_orm", true)
+		for k in ["body_mul", "accent_mul", "glow"]:
+			if d.has(k):
+				mat.set_shader_parameter(k, float(d[k]))
+		mi.material_override = mat
 
 
 func _emissive(c: Color, energy: float) -> StandardMaterial3D:
@@ -255,21 +297,28 @@ func set_first_person(on: bool) -> void:
 		(m as GeometryInstance3D).cast_shadow = shadow_only if on else normal
 	for m in _arm_meshes:
 		(m as GeometryInstance3D).cast_shadow = normal
-	# The kit forearms stand in for the skin's in first person; they cast no shadow
-	# (the skin already does).
+	# FpvArms replace the kit's forearms and hands in the view. Over a skin the kit's
+	# stay hidden always; primitives keep them for the shadow and third person.
 	for m in _kit_arms:
-		(m as GeometryInstance3D).visible = on
-		(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var g := m as GeometryInstance3D
+		g.visible = skin == null
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if skin != null \
+				else (shadow_only if on else normal)
+	if _fpv != null:
+		_fpv.set_visible(on)
 
 
 func _collect_meshes() -> void:
 	_arm_meshes.clear()
 	_other_meshes.clear()
 	_kit_arms.clear()
+	if _fpv == null or not _fpv.fits(joints):
+		_fpv = FpvArms.attach(joints, kit)
 	var keep := {}
 	for jn in ["l_elbow", "r_elbow"]:
 		for m in _meshes_under(joints[jn]):
-			keep[m] = true
+			if not FpvArms.owns(m):
+				keep[m] = true
 	var weapon_meshes := {}
 	for w in weapons.values():
 		for m in _meshes_under(w):
@@ -284,8 +333,12 @@ func _collect_meshes() -> void:
 				_kit_arms.append(m)
 		return
 	for m in _meshes_under(body):
-		if keep.has(m):
+		if FpvArms.owns(m):
+			continue
+		if weapon_meshes.has(m):
 			_arm_meshes.append(m)
+		elif keep.has(m):
+			_kit_arms.append(m)
 		else:
 			_other_meshes.append(m)
 
@@ -330,6 +383,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var out := anim.step(dt, {
 		"speed": speed, "move_local": move_local, "grounded": inp.get("grounded", true),
 		"vy": vel.y, "crouch": inp.get("crouch", false), "sprint": inp.get("sprint", false),
+		"slide": inp.get("slide", false),
 		"upper": upper, "aim_pitch": pitch * (1.6 if first_person else 1.0), "twist": twist,
 	})
 	last_frame = out
@@ -345,9 +399,26 @@ func animate(dt: float, inp: Dictionary) -> void:
 			var w := weapon_node(current)
 			if w != null and w.has_node("Muzzle/Flash"):
 				(w.get_node("Muzzle/Flash") as Node3D).visible = false
+	_last_upper = upper
+	_last_pitch = pitch
 	_place_weapon(upper, pitch)
+	_fpv_grips(upper, dt)
 	if skin != null:
 		skin.sync(body)
+
+
+## Runs after the camera moves each frame: step the ADS blend and, while any of it
+## is on, re-place the weapon against this frame's camera (animate only runs on
+## physics ticks, so the sight would otherwise trail the view).
+func _process(delta: float) -> void:
+	var want := ads_on and first_person and ads_camera != null and drawn >= 0.99 \
+		and Ads.has_ads(look, current) and _last_upper != BodyAnimator.UPPER_FREE
+	var t := maxf(0.01, float(Ads.spec(look, current).blend_s))
+	ads_blend = move_toward(ads_blend, 1.0 if want else 0.0, delta / t)
+	if ads_blend > 0.0 and current != "" and weapons.has(current):
+		_place_weapon(_last_upper, _last_pitch)
+		if skin != null:
+			skin.sync(body)
 
 
 func _place_weapon(upper: String, pitch: float) -> void:
@@ -364,6 +435,17 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		var k := _recoil * _recoil
 		ready = Transform3D(ready.basis * Basis(Vector3.RIGHT, -deg_to_rad(float(rc.get("up_deg", 7.0))) * k),
 			ready.origin + Vector3(0, 0.01, -float(rc.get("back", 0.05))) * k)
+	if ads_blend > 0.0 and first_person and ads_camera != null and is_inside_tree() and current != "energy_blade":
+		var a := Ads.spec(look, current)
+		var sc := float((look.get(current, {}) as Dictionary).get("scale", 1.0))
+		var aimed := Ads.weapon_global(ads_camera.global_transform, Ads.sight_point(look, current) * sc, float(a.relief))
+		if _recoil > 0.0:
+			var rc2: Dictionary = look.get("recoil", {})
+			var k2 := _recoil * _recoil * 0.5
+			aimed = aimed * Transform3D(Basis(Vector3.RIGHT, -deg_to_rad(float(rc2.get("up_deg", 7.0))) * k2),
+				Vector3(0, 0.005, -float(rc2.get("back", 0.05))) * k2)
+		var to_chest := (joints.chest as Node3D).global_transform.affine_inverse() * aimed
+		ready = ready.interpolate_with(to_chest, ads_blend * ads_blend * (3.0 - 2.0 * ads_blend))
 	w.transform = holster.interpolate_with(ready, f)
 	var grips: Dictionary = w.get_meta("grips", {})
 	if upper == BodyAnimator.UPPER_FREE:
@@ -377,6 +459,20 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
 	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+
+
+## Fingers close on a grip: the right hand whenever a weapon is out, the left while it
+## rides a grip (same test as _place_weapon); otherwise they hang relaxed.
+func _fpv_grips(upper: String, dt: float) -> void:
+	if _fpv == null:
+		return
+	var relaxed := float(_fpv._hand().get("relaxed", 0.3))
+	var armed := upper != BodyAnimator.UPPER_FREE and current != "" and weapons.has(current)
+	var left: bool = armed and (weapons[current] as Node3D).get_meta("grips", {}).has("l") and drawn > 0.6
+	if left and first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
+		left = false
+	_fpv.ease_grip("r", 1.0 if armed else relaxed, dt)
+	_fpv.ease_grip("l", 1.0 if left else relaxed, dt)
 
 
 func _ready_xf(id: String, _pitch: float) -> Transform3D:

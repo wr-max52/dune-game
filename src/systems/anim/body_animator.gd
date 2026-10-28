@@ -34,6 +34,10 @@ var land_left := 0.0
 var land_time := 0.18
 var smoothing := 14.0          ## per second; higher = snappier joints
 var pelvis_y := PELVIS_Y
+## Sprint slide (issue #65): 0 = not sliding, 1 = full slide pose. It ramps (on top
+## of the joint smoothing) so sprint -> slide -> sprint never pops.
+var slide_w := 0.0
+var slide_blend_s := 0.14
 
 var _cur: Dictionary = {}      ## joint -> Vector3 degrees (smoothed)
 var _last_state := State.LOCOMOTION
@@ -82,6 +86,7 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 	if state == State.LOCOMOTION and speed > 0.05:
 		phase = fmod(phase + TAU * speed / stride * dt, TAU)
 
+	slide_w = move_toward(slide_w, 1.0 if bool(inp.get("slide", false)) and grounded else 0.0, dt / slide_blend_s)
 	var target := _target(inp, speed, crouch, vy)
 	var k := 1.0 - exp(-smoothing * dt)
 	for j in target.joints:
@@ -177,6 +182,21 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 			j.r_shoulder = Vector3(0, 0, -20.0 * dip - 6.0)
 			py = PELVIS_Y - 0.18 * dip
 
+	# ---- sprint slide: lead leg out straight, the other tucked under, torso leaning
+	# back, pelvis near the ground, one arm out for balance.
+	if slide_w > 0.0 and state == State.LOCOMOTION:
+		var sl := {
+			"pelvis": Vector3(0, 0, 0), "spine": Vector3(0, 0, 0),
+			"chest": Vector3(-22.0, 0, 0), "neck": Vector3(0, 0, 0), "head": Vector3(14.0, 0, 0),
+			"l_hip": Vector3(-82.0, 0, 3), "l_knee": Vector3(6.0, 0, 0), "l_ankle": Vector3(-20.0, 0, 0),
+			"r_hip": Vector3(-30.0, 0, -6), "r_knee": Vector3(115.0, 0, 0), "r_ankle": Vector3(-25.0, 0, 0),
+			"l_shoulder": Vector3(-30.0, 0, 20.0), "l_elbow": Vector3(-35.0, 0, 0), "l_wrist": Vector3.ZERO,
+			"r_shoulder": Vector3(-10.0, 0, -75.0), "r_elbow": Vector3(-10.0, 0, 0), "r_wrist": Vector3.ZERO,
+		}
+		for n in sl:
+			j[n] = (j[n] as Vector3).lerp(sl[n], slide_w)
+		py = lerpf(py, PELVIS_Y - 0.5, slide_w)
+
 	# ---- upper body overrides for weapons. Arms are placed by IK afterwards
 	# (player_avatar.gd), so here we only shape the torso.
 	var upper: String = inp.get("upper", UPPER_FREE)
@@ -195,4 +215,6 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 			j.chest.x = j.chest.x * 0.5 - pitch_deg * 0.3 + 6.0
 			j.head.x = -pitch_deg * 0.3
 	j.chest.y += float(inp.get("twist", 0.0))
+	if slide_w > 0.0 and upper != UPPER_FREE:
+		j.chest.x -= 14.0 * slide_w  # weapon up: still lean back, the aim pass keeps the hands
 	return { "joints": j, "pelvis_y": py }

@@ -22,7 +22,7 @@ func test_player_wears_the_rigged_model() -> void:
 
 func test_primitives_are_hidden_but_joints_stay() -> void:
 	for m in PlayerAvatar._meshes_under(avatar.body):
-		if not avatar.skin.model.is_ancestor_of(m):
+		if not avatar.skin.model.is_ancestor_of(m) and not FpvArms.owns(m):   # first person arms hide by node
 			assert_false((m as GeometryInstance3D).visible, "primitive hidden: " + str(m.get_path()))
 	assert_true(avatar.body.has_meta("holster_grip"), "holster grip still there for the draw")
 
@@ -76,7 +76,8 @@ func test_oda_wears_her_model_and_it_follows_the_wipe() -> void:
 	if not oda.body.has_meta("skin"):
 		return
 	var skin: SkinnedBody = oda.body.get_meta("skin")
-	assert_string_contains(skin.model.scene_file_path, "oda", "Oda's model")
+	assert_string_contains(skin.model.scene_file_path, "kit/parts", "Oda wears the kit pieces (issue #79)")
+	assert_not_null(skin.model.find_child("cantina_owner_torso", true, false), "her own upper body")
 	var elbow: int = skin.bone_of.r_elbow
 	oda._process(0.0)
 	var before := skin.skeleton.get_bone_pose_rotation(elbow)

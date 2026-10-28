@@ -19,6 +19,7 @@ and cross-faded end into start, so they repeat without a click.
   droid_fix.wav     a ratchet and sparks: fixing a broken droid
   droid_wake.wav    a rising boot-up sweep: a fixed droid wakes
   droid_shot.wav    a droid's pistol bolt
+  slide_scuff.wav   boots and cloth skidding on the ground: the sprint slide
 
 Run: python3 tools/audio/make_game_sfx.py
 Writes 16-bit mono WAVs to assets/audio/sfx/. Mapping in content/look/sound.json.
@@ -284,6 +285,15 @@ def droid_shot():
     save("droid_shot.wav", mix(out, scale(crack, 0.25)), 0.7)
 
 
+def slide_scuff():
+    # Band-passed noise that swells and tails off, plus a soft low thump at the start.
+    n = n_of(0.55)
+    hiss = highpass(lowpass(noise(n), 3500), 400)
+    swell = [min(1.0, i / n_of(0.04)) * math.exp(-4.5 * i / SR) for i in range(n)]
+    thump = apply([math.sin(TAU * 90 * i / SR) for i in range(n_of(0.12))], env(n_of(0.12), 0.002, 30.0))
+    save("slide_scuff.wav", mix(apply(hiss, swell), scale(thump, 0.5)), 0.6)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     coin_gain()
@@ -303,3 +313,4 @@ if __name__ == "__main__":
     droid_fix()
     droid_wake()
     droid_shot()
+    slide_scuff()
