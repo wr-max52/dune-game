@@ -2,6 +2,25 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Shooter feel (2026-10-27, issue #65)
+
+- **Aim down the sights.** Right-click in first person brings the gun's own
+  sights onto the crosshair, worked out from the camera so it holds at any
+  angle. Pistol: iron sights (front post, rear notch), 1.25x. Rifle: a scope with
+  clear glass and a lit reticle, 2.5x (twice the pistol). The crosshair hides
+  while aimed in. Third person keeps the shoulder view with the same zoom.
+- **Dark guns.** Both blasters render dark, keeping their texture detail and
+  glow panels (`dark` in `content/look/hand_weapons.json`).
+- **Slide.** Crouch while sprinting slides (1.35x sprint, 0.75 s), then you
+  stand back up even with crouch held, so sprint, slide, sprint flows. The eye
+  drops and tilts a little. Guards never slide.
+- **Hit markers.** Any damage you deal flashes four ticks round the crosshair
+  with a thud; a kill is red, bigger and heavier.
+- **Health bars, not names.** Enemies (fighting you, or hurt) show a health bar
+  over their head within 40 m. Floating names are gone.
+- **First person arms.** Black sleeves and black gloves with fingers that curl
+  round the grip, for every outfit.
+
 ## Bigger, adjustable text (2026-10-27, issue #71)
 
 - **One number sizes every UI element.** `text_scale` (default 1.25, from
