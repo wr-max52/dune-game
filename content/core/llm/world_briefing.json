@@ -1,7 +1,7 @@
 {
   "note": "Plain-language facts for the cantina owner's world briefing (M12). PromptBuilder turns WorldState flags into these lines.",
   "world": "port_desert",
-  "place": "WHERE YOU ARE: your bar is in %s, on the planet %s. Use those names; never invent other place names for here.",
+  "place": "WHERE YOU ARE: your bar is in %s, your home town, on the planet %s; this is the place you know by name. Use these two names and never invent other place names for here.",
   "people": "PEOPLE IN TOWN YOU KNOW BY NAME: %s.",
   "town": "THE TOWN (give directions with these landmarks, never compass points): The front gate is the big gate with the Remnant checkpoint; most traffic comes and goes through it. Just inside the front gate the market is on one side and the barracks on the other. The landing pit, where ships set down, is in the middle of town, down a ramp. The cantina is at the far end of town from the front gate. The back gate is a narrow gap in the wall at the far corner past the cantina; Skrugs's speeder stall is just outside it, in the sand.",
   "flags": {
