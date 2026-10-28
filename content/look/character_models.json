@@ -263,7 +263,8 @@
           "decimate": 40000,
           "uniform": true,
           "axis": "y",
-          "rigged": true
+          "rigged": true,
+          "own_weights": true
         },
         "guard": {
           "source": "res://assets/characters/kit/source/guard_full.glb",
@@ -277,7 +278,8 @@
             },
             "tol": 0.2,
             "min_l": 0.12
-          }
+          },
+          "own_weights": true
         },
         "cantina_owner": {
           "source": "res://assets/characters/kit/source/cantina_owner_full.glb",
@@ -304,7 +306,8 @@
           ],
           "skip": [
             "legs"
-          ]
+          ],
+          "own_weights": true
         }
       },
       "parts": {

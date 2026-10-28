@@ -17,7 +17,8 @@ extends SceneTree
 ##            trim_top: share of the piece's height cut off the top first,
 ##            yaw: degrees to turn the piece about the vertical axis first } }
 ##   dress: { outfit name: { source: raw .glb of a whole dressed character, decimate,
-##            uniform, axis, scale, recolor: { swaps: { "#from": "#to" }, tol, min_l } bakes
+##            uniform, axis, scale, own_weights: true keeps a rigged source's own
+##            weights (bones matched by name) instead of the copied ones, recolor: { swaps: { "#from": "#to" }, tol, min_l } bakes
 ##            a new base colour into the outfit's texture, move: [{ from, to, hue, min_sv,
 ##            above }] hands triangles of one colour to another piece, trim_top: { part: share of its height cut off the
 ##            top, e.g. stray scarf bits above the collar }, trim_below: { part: [y, radius] }
@@ -203,7 +204,11 @@ func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> v
 	whole[Mesh.ARRAY_WEIGHTS] = ref_arr[2]
 	var per := (ref_arr[1] as PackedInt32Array).size() / (ref_arr[0] as PackedVector3Array).size()
 	var k := _place(arr, to, pc)
+	var own_b = arr[Mesh.ARRAY_BONES]
+	var own_w = arr[Mesh.ARRAY_WEIGHTS]
 	var near := _skin_from(arr, whole, per)
+	if pc.get("own_weights", false) and own_b != null:
+		_own_weights(arr, own_b, own_w, src[2], (bases[0] as MeshInstance3D).skin, base_skel, per)
 	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
 	var lab := PackedInt32Array()
 	lab.resize(near.size())
@@ -388,9 +393,10 @@ static func _smooth_labels(arr: Array, lab: PackedInt32Array, count: int, passes
 	return out
 
 
-## The source's first surface (decimated when asked) and its material, or [] when
-## it cannot be read. With `pose_to`, the source is skinned and is baked in the pose
-## that matches pose_to's rest (_repose).
+## The source's first surface (decimated when asked), its material and (when posed)
+## its bind bone names, or [] when it cannot be read. With `pose_to`, the source is
+## skinned and is baked in the pose that matches pose_to's rest (_repose); its own
+## bones and weights stay in the arrays.
 static func _source(pc: Dictionary, pose_to: Skeleton3D = null) -> Array:
 	var raw := _load(str(pc.source))
 	if raw == null:
@@ -399,12 +405,23 @@ static func _source(pc: Dictionary, pose_to: Skeleton3D = null) -> Array:
 	var src := smi.mesh
 	var arr := src.surface_get_arrays(0)
 	var mat := src.surface_get_material(0)
+	var names := PackedStringArray()     ## the source's bone per bind, for own_weights
 	if pose_to != null:
 		_repose(arr, smi, raw, pose_to)
+		names = _bind_names(smi.skin, smi.get_node(smi.skeleton) as Skeleton3D)
 	raw.free()
 	if pc.has("decimate"):
 		arr = Prep._decimate(arr, int(pc.decimate))
-	return [arr, mat]
+	return [arr, mat, names]
+
+
+## The bone name behind each of a skin's binds.
+static func _bind_names(skin: Skin, skel: Skeleton3D) -> PackedStringArray:
+	var out := PackedStringArray()
+	for i in skin.get_bind_count():
+		var bone := skin.get_bind_bone(i)
+		out.append(String(skin.get_bind_name(i)) if bone < 0 else skel.get_bone_name(bone))
+	return out
 
 
 ## Limb bones turned to the reference rest direction: bone -> the child it points at.
@@ -561,6 +578,49 @@ static func _subset(arr: Array, idx: PackedInt32Array) -> Array:
 		out[a] = dst
 	out[Mesh.ARRAY_INDEX] = out_idx
 	return out
+
+
+## Puts the source's own weights (its Hyper3D rig, the same human template as the
+## base body) back in place of the copied ones, each bone found by name among the
+## base body's binds. The copied weights only lend the cut; the source's rig knows a
+## belt pouch or an apron hangs from the hips even where the hands hang beside it.
+## A vertex keeps the copied weights when one of its bones has no match.
+static func _own_weights(arr: Array, own_b: PackedInt32Array, own_w: PackedFloat32Array, names: PackedStringArray, skin: Skin, skel: Skeleton3D, per: int) -> void:
+	var to := {}
+	var base_names := _bind_names(skin, skel)
+	for i in base_names.size():
+		to[base_names[i]] = i
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var src_per := own_b.size() / v.size()
+	var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var kept := 0
+	for i in v.size():
+		var pairs: Array = []
+		var ok := true
+		for k in src_per:
+			var w := own_w[i * src_per + k]
+			if w <= 0.0:
+				continue
+			var nm := names[own_b[i * src_per + k]] if own_b[i * src_per + k] < names.size() else ""
+			if not to.has(nm):
+				ok = false
+				break
+			pairs.append([to[nm], w])
+		if not ok or pairs.is_empty():
+			kept += 1
+			continue
+		pairs.sort_custom(func(a, b): return a[1] > b[1])
+		pairs = pairs.slice(0, per)
+		var sum := 0.0
+		for p in pairs:
+			sum += p[1]
+		for k in per:
+			bones[i * per + k] = pairs[k][0] if k < pairs.size() else 0
+			weights[i * per + k] = pairs[k][1] / sum if k < pairs.size() else 0.0
+	arr[Mesh.ARRAY_BONES] = bones
+	arr[Mesh.ARRAY_WEIGHTS] = weights
+	print("fit: own weights on %d of %d vertices" % [v.size() - kept, v.size()])
 
 
 ## Bones and weights of the nearest reference vertex, found in a grid of CELL cubes

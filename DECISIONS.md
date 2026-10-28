@@ -22,6 +22,12 @@ Every significant technical choice, the alternative, and why. Newest on top.
   her, so it hangs in front like a tattered apron. Her legs are a prompt-only generation (skin-tight leather trousers,
   boots) fitted into the legs slot. Alternative: fill the gap with the base body's
   hips in her trouser colour. Rejected: it read as a flat patch.
+- **Outfits keep their own Hyper3D weights.** Copying each vertex's weights from
+  the nearest base-body vertex gave belt pouches and the owner's apron hand and
+  forearm weights (the hands hang beside the hips in the A-pose), so they
+  stretched after the arms when running. Each outfit was rigged with the same
+  human template, so its own weights are kept, bones matched by name
+  (`own_weights`); the copied weights only decide the cut.
 - **Accents get their own tolerance.** A colour variant's swap can carry its own
   tolerance and brightness floor (`recolor_fitted.gd`): a saturated red spreads
   further in chroma than a grey, and its dark folds sit under the floor that keeps
