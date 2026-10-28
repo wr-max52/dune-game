@@ -115,23 +115,26 @@ gunmetal grey (`recolor` in the kit's `dress.guard`).
 references won over the prompt) and there is no body under it, so cutting at the
 belt left a hole. The tunic hem goes to her upper body (`move` in `dress`, by
 colour), front half only: the back of the hem is dropped (`drop_back`), so it hangs
-like a tattered apron. Her legs are a separate prompt-only generation fitted into
-the legs slot, so they go under anyone's torso. The prompt:
+like a tattered apron. Her legs are a separate generation fitted into the legs slot,
+so they go under anyone's torso.
 
-> A single pair of skin-tight dark brown leather riding trousers with pale grey-tan
-> lace-up combat boots, displayed empty and standing on their own, a plain fitted
-> waistband at the top. Slim close-fitting legs with subtle stitched knee panels,
-> smooth worn leather, no pockets, no holsters, no straps, no belt. Nothing above
-> the waistband: no body, no skin, no torso, no arms, no hands. Gritty painterly
-> realism, simple bold shapes, matte materials, no text. Single object, centred,
-> neutral background.
+They took four tries. "Lower body only" came back on a bare mannequin torso with arms
+(2cdc52de-0f37-43a1-aa91-849c8fe00d52), a looser retry had holsters and baggy legs
+(7f432ad5-37de-4558-b932-ee42f0fb676e), and the tight leather pair the owner liked
+(593757f4-e787-45ab-b8ee-b0a139aebdd6) stood mid-stride and turned, so it sat behind
+the hips on every body. The one used (4faf8200-a481-4c44-8a07-68b0b1999d2c) is that
+pair regenerated square, from front, side and back renders of it stood up straight,
+with this prompt:
 
-Two earlier tries are not used: "lower body only" came back on a bare mannequin
-torso with arms (2cdc52de-0f37-43a1-aa91-849c8fe00d52), and a looser retry had
-holsters and baggy legs (7f432ad5-37de-4558-b932-ee42f0fb676e). The picked one
-stands mid-stride and turned about 36 degrees, so the fit turns it to face forward
-(`yaw`), lines its waistband up with the hips (`align_top`), stands each leg up
-straight on the base body's legs (`straighten`) and trims the strip of bare skin
-above its waistband (`trim_top`).
+> The same pair of skin-tight dark brown leather trousers with lace-up leather combat
+> boots as in the reference images, standing perfectly square and symmetric facing
+> straight forward: both legs straight, vertical and parallel, side by side, feet
+> level and pointing straight ahead, no stride, no turn. Empty trousers on their own
+> with a plain waistband at the top; nothing above the waistband, no skin, no body.
+> Keep the same leather, stitching, belt loops and boots. Gritty painterly realism,
+> matte materials, no text. Single object, centred, neutral background.
+
+The fit lines its waistband up with the hips (`align_top`) and trims the strip above
+it (`trim_top`); it stands within 2 cm of the base body's legs at every height.
 
 Raw review sheet: `docs/kit/79_raw.png` (`tools/look/sheets/19_issue79_raw.json`).
