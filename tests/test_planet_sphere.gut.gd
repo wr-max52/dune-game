@@ -114,15 +114,16 @@ func test_far_horizon_mesh_is_finer_and_follows_the_sphere() -> void:
 	var arrays := t._far_chunk(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	assert_eq(t.far_cells, 64, "the far layer uses a bounded 64-cell chunk")
-	assert_eq(verts.size(), 64 * 64, "far chunk vertex budget stays explicit")
+	var side := t.far_cells + 1 # a 64-cell span has 65 vertices
+	assert_eq(verts.size(), side * side, "far chunk vertex budget stays explicit")
 	var i := 32
 	var j := 32
-	var p: Vector3 = verts[j * 64 + i]
+	var p: Vector3 = verts[j * side + i]
 	var dir := (p - t.sphere.center).normalized()
 	assert_almost_eq((p - t.sphere.center).length(),
 		t.sphere.radius + t.sphere.elevation(dir, t.sink_grow), 0.01,
 		"far mesh uses the sphere's terrain height on the curved surface")
-	assert_lt(verts[j * 64 + i + 1].distance_to(p), 40.0,
+	assert_lt(verts[j * side + i + 1].distance_to(p), 40.0,
 		"far cells are finer than the old roughly 40 m silhouettes")
 
 
