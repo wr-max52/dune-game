@@ -42,6 +42,8 @@ var people: Dictionary = {}           ## the species data
 var packs: Array = []                 ## see _make_pack
 var pigs: Array = []                  ## SandPig
 var survive_s := 300.0
+## Members far from the player (slid along the ground) step once in this many ticks.
+var far_stride := 4
 var trades := 0
 var butchered := 0
 var _rng := RandomNumberGenerator.new()
@@ -345,14 +347,25 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 	var npc: NpcBody = m.npc
 	var lod := float(people.get("pack", {}).get("far_lod_m", 90.0))
 	var far := ppos == Vector3.INF or npc.global_position.distance_to(ppos) > lod
-	var goal := _goal_for(p, m, ppos)
 	if far and p.state != "attack":
 		# Out of sight of the player: slid along the ground, no physics (there may
 		# be no collider under them out here).
 		if npc.process_mode != Node.PROCESS_MODE_DISABLED:
 			npc.process_mode = Node.PROCESS_MODE_DISABLED
+		# Nobody is looking: step at a fraction of the tick rate, each member on its
+		# own tick (by slot), with the time of the ticks in between so the speed and
+		# the route progress are the same as stepping every tick.
+		var acc := float(m.get("far_acc", 0.0)) + dt
+		var n := int(m.get("far_n", 0)) + 1
+		m["far_acc"] = acc
+		m["far_n"] = n
+		if far_stride > 1 and (n + int(m.slot)) % far_stride != 0:
+			return
+		m["far_acc"] = 0.0
+		dt = acc
+		var far_goal := _goal_for(p, m, ppos)
 		var speed := float(people.get("pack", {}).get("travel_speed", 1.6))
-		var to := goal - npc.global_position
+		var to := far_goal - npc.global_position
 		var step := to.normalized() * minf(speed * dt, to.length()) if to.length() > 0.5 else Vector3.ZERO
 		var at := _on_ground(npc.global_position + step)
 		npc.global_position = at
@@ -361,6 +374,8 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 			npc.controller.velocity = Vector3.ZERO
 			npc.controller.body_pos = at
 		return
+	m["far_acc"] = 0.0
+	var goal := _goal_for(p, m, ppos)
 	if npc.process_mode == Node.PROCESS_MODE_DISABLED:
 		npc.process_mode = Node.PROCESS_MODE_INHERIT
 		if demo.terrain != null and ppos != Vector3.INF:
