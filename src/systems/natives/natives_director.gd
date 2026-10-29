@@ -42,6 +42,8 @@ var people: Dictionary = {}           ## the species data
 var packs: Array = []                 ## see _make_pack
 var pigs: Array = []                  ## SandPig
 var survive_s := 300.0
+## Members far from the player (slid along the ground) step once in this many ticks.
+var far_stride := 4
 var trades := 0
 var butchered := 0
 var _rng := RandomNumberGenerator.new()
@@ -77,13 +79,47 @@ func _ready() -> void:
 	_timer_label.add_theme_constant_override("outline_size", 6)
 	_timer_label.visible = false
 	_hud.add_child(_timer_label)
+	_queue_build()
+	if not staged:
+		while not build_step():
+			pass
+
+
+# ------------------------------------------------------------------ build (issue #121)
+
+## True: _ready only queues the bodies and build_step() makes them, one per call
+## (a staged planet handoff builds the scene over several frames). Set before
+## add_child. Each body is a whole procedural character, tens to hundreds of ms.
+var staged := false
+var _build_queue: Array = []          ## Callables, run in order: the same order (and the
+                                      ## same random draws) as building everything at once
+
+
+func _queue_build() -> void:
+	_build_queue.clear()
 	if not people.is_empty():
 		var i := 0
 		for p in natives.get("packs", []):
-			packs.append(_make_pack(p, i))
+			var idx := i
+			_build_queue.append(func(): _start_pack(p, idx))
 			i += 1
 	for f in natives.get("fauna", []):
-		_spawn_fauna(f)
+		var state := { "f": f }
+		_build_queue.append(func(): return _fauna_step(state))
+
+
+## Make the next body (or start the next pack). True once everything is built.
+func build_step() -> bool:
+	while not _build_queue.is_empty():
+		var job: Callable = _build_queue.pop_front()
+		if job.call() == true:
+			return _build_queue.is_empty()  # a body was made: one per call
+	return true
+
+
+## Whether every pack member and animal exists.
+func is_built() -> bool:
+	return _build_queue.is_empty()
 
 
 func _line(key: String) -> String:
@@ -115,6 +151,14 @@ func _on_ground(p: Vector3) -> Vector3:
 
 # ------------------------------------------------------------------ packs
 
+## A pack's record and root now, its members as the next jobs (in order). The
+## pack is listed at once; one with no members yet is skipped every tick.
+func _start_pack(p: Dictionary, index: int) -> bool:
+	var pack := _make_pack(p, index)
+	packs.append(pack)
+	return false
+
+
 func _make_pack(p: Dictionary, index: int) -> Dictionary:
 	var id := str(p.get("id", "pack_%d" % index))
 	var rec := WorldState.native_pack(id, str(p.get("attitude", "friendly")))
@@ -133,22 +177,31 @@ func _make_pack(p: Dictionary, index: int) -> Dictionary:
 	root.name = "Pack_" + id
 	add_child(root)
 	pack["root"] = root
-	var weapons: Dictionary = people.get("weapons", {})
-	var melee: Array = weapons.get("melee", [])
-	var thrown: Array = weapons.get("thrown", [])
+	var jobs: Array = []
 	for i in size:
-		var child := i >= size - kids
-		var thrower := not child and i > 0 and not thrown.is_empty() and _rng.randf() < float(weapons.get("thrower_share", 0.4))
-		var w: Dictionary = (thrown[_rng.randi() % thrown.size()] if thrower else (melee[_rng.randi() % melee.size()] if not melee.is_empty() else {}))
-		var at := _on_ground(route[0] + _ring_offset(i, route[0]))
-		var npc := _make_member(pack, i == 0, child, thrower, w, style, at)
-		root.add_child(npc)
-		(pack.members as Array).append({ "npc": npc, "child": child, "thrower": thrower, "weapon": w, "cd": _rng.randf_range(0.0, 1.0), "slot": i })
-		npc.died.connect(_on_member_died.bind(pack, npc))
-		npc.hit_by.connect(_on_member_hit.bind(pack))
+		var slot := i
+		jobs.append(func(): _add_member(pack, slot, size, kids, style); return true)
+	_build_queue = jobs + _build_queue
 	if bool(rec.get("friendly", false)) == false and bool(rec.get("won", false)):
 		rec.friendly = true
 	return pack
+
+
+## Member `i` of `pack` (the leader is 0, the children last).
+func _add_member(pack: Dictionary, i: int, size: int, kids: int, style: Dictionary) -> void:
+	var weapons: Dictionary = people.get("weapons", {})
+	var melee: Array = weapons.get("melee", [])
+	var thrown: Array = weapons.get("thrown", [])
+	var route: Array = pack.route
+	var child := i >= size - kids
+	var thrower := not child and i > 0 and not thrown.is_empty() and _rng.randf() < float(weapons.get("thrower_share", 0.4))
+	var w: Dictionary = (thrown[_rng.randi() % thrown.size()] if thrower else (melee[_rng.randi() % melee.size()] if not melee.is_empty() else {}))
+	var at := _on_ground(route[0] + _ring_offset(i, route[0]))
+	var npc := _make_member(pack, i == 0, child, thrower, w, style, at)
+	(pack.root as Node3D).add_child(npc)
+	(pack.members as Array).append({ "npc": npc, "child": child, "thrower": thrower, "weapon": w, "cd": _rng.randf_range(0.0, 1.0), "slot": i })
+	npc.died.connect(_on_member_died.bind(pack, npc))
+	npc.hit_by.connect(_on_member_hit.bind(pack))
 
 
 func _style(id: String, index: int) -> Dictionary:
@@ -345,14 +398,25 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 	var npc: NpcBody = m.npc
 	var lod := float(people.get("pack", {}).get("far_lod_m", 90.0))
 	var far := ppos == Vector3.INF or npc.global_position.distance_to(ppos) > lod
-	var goal := _goal_for(p, m, ppos)
 	if far and p.state != "attack":
 		# Out of sight of the player: slid along the ground, no physics (there may
 		# be no collider under them out here).
 		if npc.process_mode != Node.PROCESS_MODE_DISABLED:
 			npc.process_mode = Node.PROCESS_MODE_DISABLED
+		# Nobody is looking: step at a fraction of the tick rate, each member on its
+		# own tick (by slot), with the time of the ticks in between so the speed and
+		# the route progress are the same as stepping every tick.
+		var acc := float(m.get("far_acc", 0.0)) + dt
+		var n := int(m.get("far_n", 0)) + 1
+		m["far_acc"] = acc
+		m["far_n"] = n
+		if far_stride > 1 and (n + int(m.slot)) % far_stride != 0:
+			return
+		m["far_acc"] = 0.0
+		dt = acc
+		var far_goal := _goal_for(p, m, ppos)
 		var speed := float(people.get("pack", {}).get("travel_speed", 1.6))
-		var to := goal - npc.global_position
+		var to := far_goal - npc.global_position
 		var step := to.normalized() * minf(speed * dt, to.length()) if to.length() > 0.5 else Vector3.ZERO
 		var at := _on_ground(npc.global_position + step)
 		npc.global_position = at
@@ -361,6 +425,8 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 			npc.controller.velocity = Vector3.ZERO
 			npc.controller.body_pos = at
 		return
+	m["far_acc"] = 0.0
+	var goal := _goal_for(p, m, ppos)
 	if npc.process_mode == Node.PROCESS_MODE_DISABLED:
 		npc.process_mode = Node.PROCESS_MODE_INHERIT
 		if demo.terrain != null and ppos != Vector3.INF:
@@ -609,29 +675,41 @@ func _toast(text: String) -> void:
 
 # ------------------------------------------------------------------ animals
 
-func _spawn_fauna(f: Dictionary) -> void:
-	var cfg := NativesData.fauna(str(f.get("species", "")))
+## One animal of fauna entry state.f (state keeps the count and tries between
+## calls). True when one was placed (call again for the next), false when done.
+func _fauna_step(state: Dictionary) -> bool:
+	var f: Dictionary = state.f
+	if not state.has("cfg"):
+		state.cfg = NativesData.fauna(str(f.get("species", "")))
+		state.around = f.get("around", Vector2.ZERO)
+		state.r = float(f.get("radius", 900.0))
+		state.site = demo.desert_site().walls.grow(60.0) if demo.has_method("desert_site") else Rect2()
+		state.placed = 0
+		state.tries = 0
+	var cfg: Dictionary = state.cfg
 	if cfg.is_empty():
-		return
-	var around: Vector2 = f.get("around", Vector2.ZERO)
-	var r := float(f.get("radius", 900.0))
-	var site: Rect2 = demo.desert_site().walls.grow(60.0) if demo.has_method("desert_site") else Rect2()
-	var placed := 0
-	var tries := 0
-	while placed < int(f.get("count", 4)) and tries < 200:
-		tries += 1
+		return false
+	var around: Vector2 = state.around
+	var r: float = state.r
+	var site: Rect2 = state.site
+	while int(state.placed) < int(f.get("count", 4)) and int(state.tries) < 200:
+		state.tries = int(state.tries) + 1
 		var a := _rng.randf() * TAU
 		var d := _rng.randf_range(r * 0.3, r)
 		var m := around + Vector2(cos(a), sin(a)) * d
 		if site.has_area() and site.has_point(m):
 			continue
 		var pig := SandPig.new()
-		pig.setup(cfg, ground, surface(m), 1000 + placed, demo._flat_mats() if demo.use_look else null)
+		pig.setup(cfg, ground, surface(m), 1000 + int(state.placed), demo._flat_mats() if demo.use_look else null)
 		pig.target = player
 		add_child(pig)
 		pig.killed.connect(func(_p): WorldState.bump("animals_killed"))
 		pigs.append(pig)
-		placed += 1
+		state.placed = int(state.placed) + 1
+		if int(state.placed) < int(f.get("count", 4)) and int(state.tries) < 200:
+			_build_queue.push_front(func(): return _fauna_step(state))
+		return true
+	return false
 
 
 func carcass_near(reach: float = 2.8) -> SandPig:

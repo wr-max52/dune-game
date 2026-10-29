@@ -26,6 +26,12 @@ var _rng := RandomNumberGenerator.new()
 var _look: Node3D
 var _t := 0.0
 var _heading := Vector3.FORWARD
+## Far from the player and calm, it moves once every `lod_stride` ticks with the
+## time of the ticks in between (nobody can see it, and each step costs a ground query).
+var lod_stride := 4
+var _lod_dt := 0.0
+var _lod_n := 0
+var _lod_slot := 0
 
 
 func setup(fauna_cfg: Dictionary, world_ground: WorldGround, at: Vector3, rng_seed: int, mats: LookMaterials = null) -> void:
@@ -34,6 +40,7 @@ func setup(fauna_cfg: Dictionary, world_ground: WorldGround, at: Vector3, rng_se
 	home = at
 	hp = int(cfg.get("hp", 30))
 	_rng.seed = rng_seed
+	_lod_slot = absi(rng_seed) % maxi(1, lod_stride)
 	name = "SandPig"
 	var sz: Array = cfg.get("size", [0.9, 0.7, 1.5])
 	var size := Vector3(float(sz[0]), float(sz[1]), float(sz[2]))
@@ -100,6 +107,17 @@ func _physics_process(dt: float) -> void:
 		var tv: Vector3 = (target as CharacterBody3D).velocity if target is CharacterBody3D else Vector3.ZERO
 		if d < float(cfg.get("flee_range", 18.0)) and tv.length() > 4.0:
 			_spook(target.global_position)
+		if d > float(cfg.get("lod_m", 120.0)) and _flee <= 0.0 and lod_stride > 1:
+			_lod_dt += dt
+			_lod_n += 1
+			if (_lod_n + _lod_slot) % lod_stride != 0:
+				return
+			dt = _lod_dt
+			_lod_dt = 0.0
+		else:
+			_lod_dt = 0.0
+	else:
+		_lod_dt = 0.0
 	if _flee > 0.0:
 		_flee -= dt
 		speed = float(cfg.get("run_speed", 6.5))
