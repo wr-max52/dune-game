@@ -25,6 +25,39 @@ Plain English, newest on top. One entry per milestone.
   depend on the speech-speed slider. Moving the slider no longer regenerates
   them. The slider now changes only live conversation lines.
 
+## The energy saber, redrawn (2026-10-29)
+
+- **A glowing staff on a metal hilt.** The energy sword's forged spine and brass
+  crossguard are gone: the blade is a straight, round staff of light (a white-hot
+  core, a coloured shell, a soft halo) out of a Hyper3D hilt. The blade is still
+  drawn in code, so it ignites, recolours, lights the room and hits as before.
+- **Blue on light metal by default.** The player's and the duelist's blade is blue
+  now (was yellow), on a brushed-silver hilt.
+- **The red saber is red on black metal.** Owning the saber from the wreck turns
+  the blade red and swaps in a blackened gunmetal hilt with a red stud. The pickup
+  in the wreck uses the same hilt, and now lies flat with its blade in the emitter
+  (its parts were turned in radians read as degrees).
+
+## Dogfights in the port's sky (2026-10-29, issue #76 part 3)
+
+- **The outposts' ships are the Remnant's, and you can fly them.** The near
+  outpost keeps a dark interceptor, the other two a dark freighter (the port's
+  models painted dark: textured ones through the dark-gun shader, the flat-colour
+  interceptor by hand, accents in oxblood). Each is a berth like the pit's ships.
+  Climbing into one sets off that outpost's alarm. If it goes down (shot or
+  crashed) it is gone and you wake in the pit.
+- **The barracks has a landing pad with a dark interceptor on it.** It takes off
+  after you when you fly a stolen ship, or when the Remnant wants you (the
+  garrison's alarm, a hostile standing, or the fleet is beaten) and you are
+  300 m out past the town.
+- **It fights like the space fighters.** Same AI pilot (pursue, attack, break,
+  extend), guns, shield and hull as the space dogfights, flying with your ship's
+  atmosphere flight. It pulls up near the ground and stays under the edge of
+  space. Nothing to chase for 10 s and it flies home and lands on its pad.
+- **Shot down, a new one is on the pad two minutes later.** If it shoots you
+  down, you both start again in town: you in the pit, it on its pad.
+- **Your flight HUD boxes it** like a space target: a box, its hull, the range,
+  the lead dot to aim at, and an arrow when it is off screen.
 ## Villagers join the character kit; collar and hoses on the right pieces (2026-10-29)
 
 - **Villagers are kit pieces now.** The villager outfit (scarf head, linen shirt,

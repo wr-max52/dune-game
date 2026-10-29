@@ -1,0 +1,17 @@
+{
+  "id": "remnant_hunter",
+  "label": "Remnant hunter",
+  "steer_gain": 3.4,
+  "aim_cone_deg": 5.0,
+  "aim_error": 0.03,
+  "engage_range": 520.0,
+  "break_distance": 70.0,
+  "break_time": 1.3,
+  "break_on_hit": 0.35,
+  "extend_distance": 300.0,
+  "evade_missile": 0.5,
+  "attack_throttle": 0.8,
+  "retarget_interval": 1.5,
+  "missile_use": false,
+  "note": "Issue #76: the barracks interceptor's pilot, tuned for the air over the port: the space veteran's habits on shorter ranges (ships are faster and the ground is close). Its ground and ceiling rules are the ship's 'scramble' block."
+}

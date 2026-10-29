@@ -9,6 +9,21 @@
     "titles": "remnant_officer_rank",
     "nameplate_range": 30.0
   },
-  "note": "Issue #64: the officer Oda puts a price on. A red Remnant at one of the desert outposts (WorldState.bounty names which); killing them makes the bounty collectable at the fence. Tougher than a trooper, and the name floats over them from further away so you know who you are hunting.",
-  "hp": 140
+  "note": "Issue #64: the officer Oda puts a price on. A red Remnant at one of the desert outposts (WorldState.bounty names which); killing them makes the bounty collectable at the fence. Tougher than a trooper, and the name floats over them from further away so you know who you are hunting. Issue #76: carries a dark pistol (CharacterKit._pistol), not a rifle, and shoots straighter than the troopers round them.",
+  "hp": 160,
+  "weapon": {
+    "base": "pistol_blaster",
+    "damage": 13,
+    "bolt_speed": 40.0,
+    "rate": 0.28,
+    "range": 60.0,
+    "mag": 15,
+    "reload_time": 1.4,
+    "noise_radius": 45.0
+  },
+  "combat": {
+    "aim_error_deg": 1.6,
+    "burst_min": 2,
+    "burst_max": 4
+  }
 }

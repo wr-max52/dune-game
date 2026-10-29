@@ -19,6 +19,7 @@ var space_fraction := 0.0
 var space_altitude := 8000.0
 var boost := 1.0
 var vessel_name := ""            ## issue #15: shown above the read-out
+var target: Dictionary = {}       ## issue #76: an enemy in the air (AtmoFighter.hud_target), or {}
 var _toast_left := 0.0
 var _fade: ColorRect
 
@@ -122,6 +123,7 @@ func _draw_gauge() -> void:
 	gauge.draw_arc(c, 12.0, 0.0, TAU, 24, DIM, 1.5)
 	gauge.draw_line(c + Vector2(-26, 0), c + Vector2(-16, 0), DIM, 1.5)
 	gauge.draw_line(c + Vector2(16, 0), c + Vector2(26, 0), DIM, 1.5)
+	_draw_target()
 	# Edge-of-space bar on the right edge.
 	var h := vp.y * 0.5
 	var x := vp.x - 34.0
@@ -134,3 +136,41 @@ func _draw_gauge() -> void:
 	var fs := RetroUI.size("flight_gauge", 17)
 	gauge.draw_string(font, Vector2(x - 200, top - 10), space_label, HORIZONTAL_ALIGNMENT_RIGHT, 210, fs, SPACE)
 	gauge.draw_string(font, Vector2(x - 200, top + fs + 4), "%d m" % int(space_altitude), HORIZONTAL_ALIGNMENT_RIGHT, 190, fs - 2, DIM)
+
+
+## Issue #76: the space fight's target box and lead pip, for an enemy in the air: a
+## box on it (with its hull under it), the dot where to aim, and an arrow at the
+## screen's edge pointing to it when it is behind or off screen.
+func _draw_target() -> void:
+	if target.is_empty():
+		return
+	var cam := gauge.get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var col := Color(1.0, 0.35, 0.25, 0.95)
+	var tp: Vector3 = target.pos
+	var vp := gauge.get_viewport_rect().size
+	var on_screen := not cam.is_position_behind(tp)
+	var sp := cam.unproject_position(tp) if on_screen else Vector2.ZERO
+	if on_screen and Rect2(Vector2.ZERO, vp).has_point(sp):
+		gauge.draw_rect(Rect2(sp - Vector2(18, 18), Vector2(36, 36)), col, false, 1.5)
+		var hp := clampf(float(target.get("hull", 1.0)), 0.0, 1.0)
+		gauge.draw_rect(Rect2(sp + Vector2(-18, 22), Vector2(36, 4)), Color(0, 0, 0, 0.5))
+		gauge.draw_rect(Rect2(sp + Vector2(-18, 22), Vector2(36 * hp, 4)), col)
+		var font := ThemeDB.fallback_font
+		var fs := RetroUI.size("flight_gauge", 17) - 3
+		gauge.draw_string(font, sp + Vector2(24, -8), "%d m" % int(target.get("dist", 0.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+		if bool(target.get("lead_ok", false)) and not cam.is_position_behind(target.lead):
+			gauge.draw_circle(cam.unproject_position(target.lead), 5.0, Color(1.0, 0.85, 0.4, 0.9))
+		return
+	# Off screen: an arrow on a ring round the reticle, toward it.
+	var c := vp * 0.5
+	var local := cam.global_transform.basis.inverse() * (tp - cam.global_position)
+	var dir := Vector2(local.x, -local.y)
+	if dir.length() < 0.001:
+		dir = Vector2(0, 1)
+	dir = dir.normalized()
+	var at := c + dir * minf(vp.x, vp.y) * 0.38
+	var side := Vector2(-dir.y, dir.x)
+	gauge.draw_colored_polygon(PackedVector2Array([at + dir * 14.0, at - dir * 6.0 + side * 9.0, at - dir * 6.0 - side * 9.0]), col)
+

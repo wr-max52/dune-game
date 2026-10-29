@@ -77,6 +77,7 @@ var alarm_t := -1.0               ## game seconds when the alarm last went up
 var cards_shown := 0
 var knockouts := 0
 var kills := 0
+var rewards_paid := 0             ## issue #76: credits paid for troopers the player killed
 var klaxon_plays := 0
 var confiscated: Array = []       ## item ids taken by searches
 
@@ -548,6 +549,12 @@ func _on_guard_died(g: NpcBody) -> void:
 	var delta := int(g.profile.get("checkpoint", profile.get("checkpoint", {})).get("standing", {}).get("guard_killed", -15))
 	# An outpost's garrison has no gate: its dead never take the checkpoint down.
 	WorldState.on_guard_killed(delta, handles_gate() and left.filter(func(x): return guards.has(x)).is_empty())
+	# Issue #76: a Remnant soldier you killed is worth its kill_reward (20 cr).
+	var reward := int(g.profile.get("kill_reward", 0))
+	if reward > 0 and _is_player(g.last_hit_by):
+		WorldState.on_guard_reward(reward)
+		rewards_paid += reward
+		hud.toast("+%d cr" % reward, 2.0)
 	if not left.is_empty():
 		_say(_nearest(left, g.global_position), "man_down")
 		_attacked = true      # a trooper dropping is a fight, whoever started it
