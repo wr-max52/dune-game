@@ -134,3 +134,25 @@ ones. Use agentic mode with reference renders for anything blade-shaped.
 
 Naming the thing it must not be ("not a revolver", "no wheels") fixed the drift
 both times.
+
+## Saber hilts (2026-10-29)
+
+The owner asked for the energy saber redrawn as a glowing staff on a metal hilt,
+so the hilt is now a model (the earlier "no tube hilts" rule is set aside for it).
+Only the hilt is generated; the blade stays in code. Text mode, Gen-2.5-High,
+30k triangles, texture de-lighting on. Both were picked on the first try and came
+out upright, emitter up, so prep only scales them (0.28 m along Y).
+
+- **Light (`saber_hilt`, generation 458f66da):** "A single sci-fi energy sword
+  hilt, no blade, isolated object. Long straight cylindrical handle about 28 cm,
+  polished light brushed silver and pale chrome metal, fine machined ridges and grip
+  rings, a small flared emitter collar at the top end ..." Darkened to 0.78 in prep
+  so it reads as metal, not chalk.
+- **Dark (`saber_hilt_dark`, generation 1685f4c4):** the same, in "matte black and
+  dark gunmetal metal with blackened steel accents, angular machined grip ridges
+  ... a heavy faceted pommel ... a small dark red control stud". Darkened to 0.4:
+  the textures came out mid-grey.
+
+Unlike the 2026-10-27 sword tries, saying "no blade" and asking only for the
+handle kept the model whole: a hilt is short and chunky enough for text mode.
+

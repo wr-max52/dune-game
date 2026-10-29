@@ -113,5 +113,33 @@
     "jetpack_rejected": "06d13e4d (a yellow diving rig on wheels)",
     "jetpack": "9113a77e-7590-4635-8dc5-bf64f8179301 (second try, the owner's pick)",
     "pistol": "c9c7c1ec-8f32-451b-8844-367c6f3f8f73 (second try)"
+  },
+  "saber_hilt": {
+    "source": "res://assets/gear/source/saber_hilt_a.glb",
+    "out": "res://assets/gear/saber_hilt.glb",
+    "rot_deg": [
+      0,
+      0,
+      0
+    ],
+    "axis": "y",
+    "size": 0.28,
+    "origin": "center",
+    "max_texture": 1024,
+    "darken": 0.78
+  },
+  "saber_hilt_dark": {
+    "source": "res://assets/gear/source/saber_hilt_dark_a.glb",
+    "out": "res://assets/gear/saber_hilt_dark.glb",
+    "rot_deg": [
+      0,
+      0,
+      0
+    ],
+    "axis": "y",
+    "size": 0.28,
+    "origin": "center",
+    "max_texture": 1024,
+    "darken": 0.4
   }
 }

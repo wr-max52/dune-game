@@ -1,0 +1,9 @@
+{
+  "title": "Energy saber hilts, raw from Hyper3D",
+  "out": "res://docs/lookdev/saber/01_raw.png",
+  "views": ["front", "side", "front34", "top"],
+  "cells": [
+    { "name": "saber_hilt", "model": "res://assets/gear/source/saber_hilt_a.glb" },
+    { "name": "saber_hilt_dark", "model": "res://assets/gear/source/saber_hilt_dark_a.glb" }
+  ]
+}

@@ -212,27 +212,34 @@ func _case(body: Node3D, p: Dictionary) -> void:
 
 
 ## "saber" (issue #148): a hilt with its blade lit, lying flat (along +X) so it
-## reads as a sword from across a room.
+## reads as a sword from across a room. "hilt_model" is the hilt .glb (0.28 m
+## along +Y, emitter up); without it the hilt is built from parts.
 func _saber(body: Node3D, p: Dictionary) -> void:
 	var length := float(p.get("length", 0.9))
-	var hilt := StandardMaterial3D.new()
-	hilt.albedo_color = _c(p, "hilt", "#2a2826")
-	hilt.metallic = 0.6
-	var trim := StandardMaterial3D.new()
-	trim.albedo_color = _c(p, "trim", "#b08e50")
-	trim.metallic = 0.7
-	var flat := Vector3(0, 0, -90)
+	var flat := Vector3(0, 0, -PI * 0.5)   # radians, as _mi takes them: +Y turned to +X
 	var blade := _c(p, "blade", "#ff2a2a")
-	_mi(body, _cyl(0.02, 0.022, 0.26), hilt, Vector3(-0.13, 0.05, 0), flat, "Hilt")
-	_mi(body, _sphere(0.03), trim, Vector3(-0.27, 0.05, 0), Vector3.ZERO, "Pommel")
-	for i in 3:
-		_mi(body, _cyl(0.024, 0.024, 0.015), trim, Vector3(-0.2 + i * 0.05, 0.05, 0), flat, "Grip%d" % i)
-	_mi(body, _cyl(0.026, 0.02, 0.04), trim, Vector3(0.02, 0.05, 0), flat, "Emitter")
-	_mi(body, _box(Vector3(0.03, 0.2, 0.045)), trim, Vector3(0.0, 0.05, 0), Vector3.ZERO, "Guard")
-	_mi(body, _cyl(0.006, 0.01, length), _glow(blade.lerp(Color.WHITE, 0.55), 5.0),
-		Vector3(length * 0.5 + 0.04, 0.05, 0), flat, "Blade")
-	_mi(body, _cyl(0.014, 0.02, length * 1.04), _glow(blade, 2.0),
-		Vector3(length * 0.5 + 0.04, 0.05, 0), flat, "BladeGlow")
+	var model := _load_model(str(p.get("hilt_model", "")))
+	if model != null:
+		model.name = "Hilt"
+		model.position = Vector3(-0.13, 0.05, 0)
+		model.rotation = flat
+		body.add_child(model)
+	else:
+		var hilt := StandardMaterial3D.new()
+		hilt.albedo_color = _c(p, "hilt", "#2a2826")
+		hilt.metallic = 0.6
+		var trim := StandardMaterial3D.new()
+		trim.albedo_color = _c(p, "trim", "#b08e50")
+		trim.metallic = 0.7
+		_mi(body, _cyl(0.02, 0.022, 0.26), hilt, Vector3(-0.13, 0.05, 0), flat, "Hilt")
+		_mi(body, _sphere(0.03), trim, Vector3(-0.27, 0.05, 0), Vector3.ZERO, "Pommel")
+		for i in 3:
+			_mi(body, _cyl(0.024, 0.024, 0.015), trim, Vector3(-0.2 + i * 0.05, 0.05, 0), flat, "Grip%d" % i)
+		_mi(body, _cyl(0.026, 0.02, 0.04), trim, Vector3(0.02, 0.05, 0), flat, "Emitter")
+	_mi(body, _cyl(0.011, 0.013, length), _glow(blade.lerp(Color.WHITE, 0.6), 5.0),
+		Vector3(length * 0.5 + 0.015, 0.05, 0), flat, "Blade")
+	_mi(body, _cyl(0.016, 0.018, length * 1.03), _glow(blade, 2.0),
+		Vector3(length * 0.5 + 0.015, 0.05, 0), flat, "BladeGlow")
 
 
 ## "twin_tank": two upright fuel tanks on a back plate with straps, a trim band,

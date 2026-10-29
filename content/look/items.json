@@ -76,6 +76,7 @@
     },
     "red_saber": {
    "frame": "saber",
+   "hilt_model": "res://assets/gear/saber_hilt_dark.glb",
    "hilt": "#2a2826",
    "trim": "#b08e50",
    "blade": "#ff2a2a",
