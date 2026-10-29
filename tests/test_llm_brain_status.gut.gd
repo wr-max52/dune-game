@@ -60,6 +60,35 @@ func test_second_health_check_waits_instead_of_dropping() -> void:
 	assert_eq(calls[0], 1, "the queued callback ran")
 
 
+func test_repeat_sidecar_start_preserves_owned_instance() -> void:
+	var svc := LLMService.new()
+	add_child_autofree(svc)
+	var cfg := LLMConfig.new()
+	cfg.load_all()
+	cfg.set_value("profiles/local/sidecar/enabled", true)
+	svc.configure(cfg)
+	var owned := LLMSidecar.new(cfg.profile("local"))
+	owned.state = LLMSidecar.State.READY
+	svc.sidecar = owned
+	svc.start_sidecar()
+	assert_same(svc.sidecar, owned, "keep ownership so quit can stop our child")
+
+
+func test_repeat_sidecar_start_queues_only_one_health_callback() -> void:
+	var svc := LLMService.new()
+	add_child_autofree(svc)
+	var cfg := LLMConfig.new()
+	cfg.load_all()
+	cfg.set_value("profiles/local/sidecar/enabled", true)
+	cfg.set_value("profiles/local/health_url", "http://127.0.0.1:9/health")
+	svc.configure(cfg)
+	svc.start_sidecar()
+	var first := svc.sidecar
+	svc.start_sidecar()
+	assert_same(svc.sidecar, first)
+	assert_eq(svc._health_cbs.get("local", []).size(), 1, "one startup callback, not two launches")
+
+
 func test_schema_numbers_are_integers_on_the_wire() -> void:
 	# llama-server rejected "maxItems": 3.0 with HTTP 400, so every turn was canned.
 	var b := NpcBrain.new()

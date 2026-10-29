@@ -288,3 +288,30 @@ real display, so it cannot run headless. The headless proof of the same content 
   path (start it locally and it replaces the canned client through the same interface).
 - Kokoro voice and the whisper STT are **optional runtimes**; typed input is
   dependency-free and works without them.
+
+## Persistent startup errors (#143)
+
+The sidecar now checks its loopback port before launching. A listener that is
+still loading is allowed to become healthy; it is not killed through a PID from
+another game run, and no second process is started on its port. Only the child
+started by this game instance is stopped on quit. If an occupied port never
+becomes healthy, the status explains that instead of repeatedly spawning servers.
+The wait defaults to 180 seconds (`profiles/local/sidecar/startup_timeout_s`).
+
+For a cheap runtime check without importing models, textures, or the game:
+
+```sh
+./scripts/test_issue_143.sh
+```
+
+This runs the full sidecar lifecycle against an isolated TCP listener and harmless
+child processes, plus the exact chirp/quirk and service-start methods in small
+fixtures. It prints the engine version and fails on Godot runtime errors even
+when the engine exits zero. It is not a full GUT suite or a real-model test.
+
+The merged #141 droid fix calls `u.quirk().x`, not `u.hash()`. If a debugger still
+reports `DroidController._chirps: Nonexistent function 'hash'`, stop the running
+game, confirm this is the checkout containing #141, clear old debugger messages,
+and start a fresh run (restart the editor if it retained an older script).
+A new error should include the script path and line from that fresh run; a merge
+does not replace code already running in another process or another checkout.

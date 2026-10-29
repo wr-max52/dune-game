@@ -18,6 +18,10 @@ PIN="$(cat scripts/pin.txt)"
 GODOT_VER="$("$GODOT_BIN" --version 2>/dev/null || true)"
 echo "CI: pinned=$PIN  actual=$GODOT_VER"
 
+# Catch the startup/chirp regressions before the expensive asset import.
+echo "CI: isolated sidecar + droid runtime regressions..."
+GODOT_BIN="$GODOT_BIN" ./scripts/test_issue_143.sh
+
 # Register class_names (and import assets) first. On a fresh checkout without
 # .godot/, GUT and the class_name scripts are unknown until this runs, and the
 # suite would not start at all.

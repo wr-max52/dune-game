@@ -1,8 +1,8 @@
 class_name LLMSidecar
 extends RefCounted
-## The bundled llama-server (M12). The game starts it, reuses a healthy one that
-## is already running, and kills what it started on quit. Its pid goes in
-## user://llm/sidecar.pid so the next boot can kill an orphan left by a crash.
+## The bundled llama-server (M12). The game starts it, reuses one that is
+## already listening (including one still loading), and kills only the child it
+## started on quit. A PID saved by another game process is not kill authority.
 ##
 ## Finding the binary: the configured path first, then $LLAMA_SERVER, then the
 ## project's runtime/bin, the usual install folders (Homebrew on Apple Silicon and
@@ -15,6 +15,7 @@ extends RefCounted
 
 const PID_PATH := "user://llm/sidecar.pid"
 const LOG_PATH := "user://logs/llama-server.log"
+const PORT_PROBE_TIMEOUT_MS := 2000
 
 enum State { IDLE, NO_BINARY, NO_MODEL, STARTING, READY, REUSED, CRASHED, FAILED }
 
@@ -33,6 +34,7 @@ var search := true                 ## false: only the configured path (tests)
 var _stdio: FileAccess
 var _stderr: FileAccess
 var _log: FileAccess
+var _port_probe: StreamPeerTCP
 
 
 func _init(prof: Dictionary) -> void:
@@ -141,15 +143,54 @@ func args() -> PackedStringArray:
 	return a
 
 
-## Start the server. Returns true if a process was launched.
+## Begin startup without blocking a frame. A listening port means wait for the
+## service's health check, not spawn a second server or kill a saved PID.
 func start() -> bool:
-	kill_orphan()
+	if state in [State.STARTING, State.READY, State.REUSED]:
+		return true
 	if find_bin() == "":
 		push_warning("LLMSidecar: " + error)
 		return false
 	if find_model() == "":
 		push_warning("LLMSidecar: " + error)
 		return false
+	var port := int(spec().get("port", 8088))
+	if port < 1 or port > 65535:
+		state = State.FAILED
+		error = "invalid local server port: %d" % port
+		return false
+	error = ""
+	reused = false
+	state = State.STARTING
+	started_ms = Time.get_ticks_msec()
+	_port_probe = StreamPeerTCP.new()
+	var err := _port_probe.connect_to_host("127.0.0.1", port)
+	if err != OK:
+		_close_probe()
+		state = State.FAILED
+		error = "could not check local server port: " + error_string(err)
+		return false
+	return true
+
+
+func _poll_port() -> void:
+	var err := _port_probe.poll()
+	var status := _port_probe.get_status()
+	if status == StreamPeerTCP.STATUS_CONNECTED:
+		_close_probe()
+		reused = true
+		print("LLMSidecar: local port is occupied; waiting for existing server health (no second process)")
+	elif status in [StreamPeerTCP.STATUS_ERROR, StreamPeerTCP.STATUS_NONE] or err != OK:
+		_close_probe()
+		_launch()
+	elif Time.get_ticks_msec() - started_ms > PORT_PROBE_TIMEOUT_MS:
+		_close_probe()
+		state = State.FAILED
+		error = "local port check timed out; no duplicate server was started"
+
+
+func _launch() -> bool:
+	_close_pipes()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(LOG_PATH.get_base_dir()))
 	_log = FileAccess.open(LOG_PATH, FileAccess.WRITE)
 	var r: Dictionary = OS.execute_with_pipe(bin_found, args(), false)
@@ -177,6 +218,8 @@ func start() -> bool:
 ## Call every frame or so: drains the server's output into the log and notices a
 ## server that died.
 func poll() -> void:
+	if _port_probe != null:
+		_poll_port()
 	for pipe in [_stdio, _stderr]:
 		if pipe == null:
 			continue
@@ -197,12 +240,21 @@ func poll() -> void:
 			var last := log_tail[log_tail.size() - 1] if not log_tail.is_empty() else "no output"
 			error = "llama-server exited (%s). Full log: %s" % [last, ProjectSettings.globalize_path(LOG_PATH)]
 			push_warning("LLMSidecar: " + error)
+			_remove_owned_pid_file(pid)
 			pid = -1
+			_close_pipes()
+		elif reused and loading_seconds() > maxf(1.0, float(spec().get("startup_timeout_s", 180.0))):
+			state = State.FAILED
+			error = "local port is occupied but server health did not become ready; no duplicate server was started"
 
 
 func mark_ready() -> void:
 	if state == State.STARTING:
-		state = State.READY
+		# A health response can arrive while the TCP probe is still pending.
+		if _port_probe != null:
+			_close_probe()
+			reused = true
+		state = State.REUSED if reused else State.READY
 		print("LLMSidecar: ready after %.1f s" % ((Time.get_ticks_msec() - started_ms) / 1000.0))
 
 
@@ -229,18 +281,33 @@ func reason() -> String:
 
 
 func stop() -> void:
-	if pid > 0:
-		OS.kill(pid)
-		pid = -1
-	if FileAccess.file_exists(PID_PATH):
+	_close_probe()
+	if pid > 0 and not reused:
+		if OS.is_process_running(pid):
+			OS.kill(pid)
+		_remove_owned_pid_file(pid)
+	pid = -1
+	_close_pipes()
+	reused = false
+	state = State.IDLE
+
+
+func _close_probe() -> void:
+	if _port_probe != null:
+		_port_probe.disconnect_from_host()
+		_port_probe = null
+
+
+## Do not delete a marker another game instance replaced while we were running.
+func _remove_owned_pid_file(owned_pid: int) -> void:
+	if FileAccess.file_exists(PID_PATH) and FileAccess.get_file_as_string(PID_PATH).strip_edges() == str(owned_pid):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PID_PATH))
 
 
-## A pid file from a previous run means that server outlived its game.
-func kill_orphan() -> void:
-	if not FileAccess.file_exists(PID_PATH):
-		return
-	var old := int(FileAccess.get_file_as_string(PID_PATH).strip_edges())
-	if old > 0 and OS.is_process_running(old):
-		OS.kill(old)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(PID_PATH))
+func _close_pipes() -> void:
+	for pipe in [_stdio, _stderr, _log]:
+		if pipe != null:
+			(pipe as FileAccess).close()
+	_stdio = null
+	_stderr = null
+	_log = null
