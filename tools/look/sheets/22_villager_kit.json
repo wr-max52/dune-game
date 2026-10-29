@@ -1,0 +1,82 @@
+{
+ "title": "Villager in the kit; player collar and owner hoses re-cut",
+ "out": "res://test_results/parts/22_villager_kit.png",
+ "cells": [
+  {
+   "label": "Villager",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "local_head",
+    "local_torso",
+    "local_legs"
+   ]
+  },
+  {
+   "label": "Player",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head",
+    "player_torso",
+    "player_legs"
+   ]
+  },
+  {
+   "label": "Owner",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_head",
+    "cantina_owner_torso",
+    "cantina_owner_legs"
+   ]
+  },
+  {
+   "label": "Player upper",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_torso"
+   ]
+  },
+  {
+   "label": "Player head",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "player_head"
+   ]
+  },
+  {
+   "label": "Owner upper",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_torso"
+   ]
+  },
+  {
+   "label": "Owner head",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "cantina_owner_head"
+   ]
+  },
+  {
+   "label": "Villager head",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "local_head"
+   ]
+  },
+  {
+   "label": "Villager upper",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "local_torso"
+   ]
+  },
+  {
+   "label": "Villager lower",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "local_legs"
+   ]
+  }
+ ]
+}

@@ -20,7 +20,7 @@ extends Node3D
 ## the same code paths as the keys.
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
-const OUTFIT := { "head": "darker", "torso": "blue", "legs": "blue" }
+const OUTFIT := { "head": "local:darker", "torso": "local:blue", "legs": "local:blue" }
 
 var demo                              ## town_demo.gd
 var ground: WorldGround

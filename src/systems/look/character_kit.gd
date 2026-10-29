@@ -119,10 +119,10 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 	return root
 
 
-## A split model (the locals) has one mesh per part (prep_character.gd, split), all on
-## one shared texture, and one recoloured copy of that texture per colour
-## (recolor_parts.gd). Each part gets a colour; the model's own texture is "sand".
-## A kit model ("pieces": true; the player and the guards) holds several pieces of
+## A split model has one mesh per part (prep_character.gd, split), all on one shared
+## texture, and one recoloured copy of that texture per colour (recolor_parts.gd).
+## Each part gets a colour; the model's own texture is "sand".
+## A kit model ("pieces": true; the player, the guards and the locals) holds several pieces of
 ## every part on one skeleton (fit_parts.gd, dress), the mesh "<piece>_<part>". A
 ## choice is "<piece>" or "<piece>:<colour>", the colour a texture of that piece
 ## ("colors" % "<piece>_<part>_<colour>" when the part has its own texture, else

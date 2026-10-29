@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cngwlgmu2txu5"
-path="res://.godot/imported/local_darker.png-7970b0393c30cf496475555cd22a70a2.ctex"
+uid="uid://byhcm5158chik"
+path="res://.godot/imported/local_red.png-3efc93ff13f9ad5b4f245d373f072604.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/local/colors/local_darker.png"
-dest_files=["res://.godot/imported/local_darker.png-7970b0393c30cf496475555cd22a70a2.ctex"]
+source_file="res://assets/characters/kit/colors/local_red.png"
+dest_files=["res://.godot/imported/local_red.png-3efc93ff13f9ad5b4f245d373f072604.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
