@@ -161,6 +161,29 @@ func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
 		"generated towns without the station flag stay unchanged")
 
 
+func test_four_short_gray_homes_face_the_station_cantina_street() -> void:
+	var station_town := TownLayout.new()
+	station_town.load_from_dict(PlanetGen.build("grit_station", cc).town)
+	assert_eq(station_town.validate(), [], "the station town still validates with the homes")
+	var homes: Array = station_town.boxes().filter(func(b):
+		return str(b.get("id", "")).begins_with("cantina_home_"))
+	assert_eq(homes.size(), 4)
+	var north := 0
+	for b in homes:
+		assert_eq(b.get("style"), "gray")
+		assert_eq(b.get("zone"), "cantina_homes")
+		assert_lte(float(b.max[1]), 4.0, "short houses, not towers")
+		if str(b.id).contains("_n_"):
+			north += 1
+			assert_eq(b.get("face"), "-z", "north doors face toward the street")
+		else:
+			assert_eq(b.get("face"), "+z", "south doors face toward the street")
+	assert_eq(north, 2)
+	var other := PlanetGen.make({ "id": "homes_test", "type": "sand", "town_size": 1, "seed": 45 }, cc)
+	assert_eq((other.town.boxes as Array).filter(func(b): return str(b.id).begins_with("cantina_home_")).size(), 0,
+		"only the sealed station gets them")
+
+
 func test_the_asteroid_station() -> void:
 	var p := PlanetGen.build("grit_station", cc)
 	assert_eq(p.type, "asteroid")

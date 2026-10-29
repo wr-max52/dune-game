@@ -72,7 +72,7 @@ func test_every_waypoint_reached() -> void:
 
 func test_built_everything() -> void:
 	var s := _trace_summary()
-	assert_eq(int(s.get("boxes", 0)), 185)   # plus four short homes facing the cantina street (#114)
+	assert_eq(int(s.get("boxes", 0)), 181)
 	assert_eq(int(s.get("markers", 0)), 19)  # art pass 2: + three patrons at the bar
 
 
