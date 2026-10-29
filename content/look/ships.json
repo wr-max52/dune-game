@@ -1,5 +1,5 @@
 {
-  "note": "Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md. Issue #43: the four flyable ships (interceptor, freighter, courier, gunship) use Hyper3D models from assets/vehicles/ (content/look/vehicle_models.json, tools/look/prep_vehicle.gd); their stand-in fields stay as the fallback.",
+  "note": "Issue #76: a look with 'darken' { body_mul, accent_mul, glow } shows its model through the dark-gun shader (weapon_dark.gdshader): the Remnant's dark interceptor and freighter. Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md. Issue #43: the four flyable ships (interceptor, freighter, courier, gunship) use Hyper3D models from assets/vehicles/ (content/look/vehicle_models.json, tools/look/prep_vehicle.gd); their stand-in fields stay as the fallback.",
   "looks": {
     "interceptor": {
       "frame": "dart",
@@ -72,7 +72,9 @@
       "dark": "#2a2c33",
       "canopy": "#1f7a78",
       "engine": "#8fd8ff"
-    }
+    },
+    "interceptor_dark": {"frame": "dart", "scene": "res://assets/vehicles/interceptor.glb", "length": 9.0, "span": 7.6, "height": 1.6, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f7a78", "engine": "#8fd8ff", "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}},
+    "freighter_dark": {"frame": "hauler", "scene": "res://assets/vehicles/freighter.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}}
   },
   "bolts": {
     "player": {

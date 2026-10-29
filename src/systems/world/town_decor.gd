@@ -308,6 +308,10 @@ func _dress_spaceport(town) -> void:
 			var p := Vector3(bc.x + cos(a) * 6.9, fy, bc.z + sin(a) * 6.9)
 			kit.put(kit.cyl(0.06, 0.09, 1.6, 8), kit.metal, Transform3D(Basis.IDENTITY, p + Vector3(0, 0.8, 0)))
 			kit.put(kit.ball(0.11, 0.22, false, 8), kit.door_glow, Transform3D(Basis.IDENTITY, p + Vector3(0, 1.66, 0)))
+		kit.solid = false
+		if str(b.get("zone", "")) != "spaceport":
+			continue                  # issue #76: the barracks pad has no pit wall for a fuel pod
+		kit.solid = true
 		var out := Vector3(bc.x - c.x, 0, bc.z - c.z).normalized()
 		var fp := c + out * (r - 2.2) + Vector3(0, y0, 0)
 		var yaw := -atan2(out.z, out.x) + PI * 0.5 + rng.randf_range(-0.3, 0.3)

@@ -358,3 +358,33 @@ func test_remnant_droid_gun_is_dark() -> void:
 			assert_gt(dark.size(), 0, "the Remnant's is dark")
 		else:
 			assert_eq(dark.size(), 0, "a bought one keeps its own")
+
+
+## Issue #76: an outpost's cargo droid runs off when its outpost is in a fight and
+## is left in the desert as a wreck you can fix; it comes back at the outpost later.
+func test_outpost_cargo_droid_flees_and_becomes_a_wreck() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	p.global_position = Vector3(-4, 0, 0)
+	var spec := { "kind": "cargo", "variant": "remnant", "hp": 40, "outpost": "test",
+		"patrol": [Vector3(0, 0, 0), Vector3(2, 0, 0)], "flee": { "speed": 6.0, "distance": 12.0, "max_s": 10.0 } }
+	var u = ctl._spawn_remnant(spec, 0)
+	var wrecks0: int = WorldState.droids.wrecks.size()
+	for i in 20:
+		await wait_physics_frames(1)
+	assert_lt(u.global_position.distance_to(Vector3.ZERO), 3.0, "calm: it potters about its spot")
+	u.provoked = true
+	for i in 180:
+		await wait_physics_frames(1)
+		if u.dead:
+			break
+	assert_true(u.dead, "it ran off and gave out")
+	assert_eq(ctl.stranded, 1)
+	assert_eq(WorldState.droids.wrecks.size(), wrecks0 + 1, "a wreck in the desert")
+	var w: Dictionary = WorldState.droids.wrecks.back()
+	var at := Vector3(float(w.pos[0]), 0, float(w.pos[2]))
+	assert_gt(at.distance_to(Vector3.ZERO), 8.0, "out away from the outpost")
+	assert_gt(at.x, 0.0, "away from the player")
+	assert_true(ctl.wreck_nodes.has(int(w.uid)), "lying there to be fixed")
+	assert_gt(u.respawn_left, 0.0, "the outpost gets another")

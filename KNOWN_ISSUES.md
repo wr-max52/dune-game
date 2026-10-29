@@ -2,6 +2,27 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #76 part 3, dogfights in the port's sky (2026-10-29)
+
+**Checked:** headless tests drive the real town with the ship and the
+interceptor stepped by hand (`tests/test_atmo_dogfight.gut.gd`). They cover
+stealing, the scramble rules, the hunt (it closes, attacks and fires without
+hitting the ground), being shot down both ways, giving up and landing home, and
+the post-fleet rule. The dark ships were rendered on the GPU and looked at.
+
+**Not done, honestly:**
+- **A stolen ship is not saved.** It stays yours for the session (land it
+  anywhere and it waits there). A new session finds it back at its outpost.
+- **The dogfight has not been flown by hand on screen.** How hard the
+  interceptor is, its pilot's ranges (`content/core/pilots/remnant_hunter.json`)
+  and its ground margin (`scramble` in `remnant_interceptor.json`) are first
+  guesses that need tuning at the Mac.
+- **After the fleet is beaten it hunts every flight out of town** (the Remnant
+  shoot on sight then). That may get tiresome; `wanted()` in
+  `src/systems/flight/atmo_fighter.gd` is the one place to change it.
+- It only fights in the air. If you land and get out it goes home; it never
+  strafes you on foot.
+
 ## After issue #162, handoff stalls (2026-10-29)
 
 **Checked** (headless, with the look on, `DUNE_PERF_VISUALS=1` planets trace):

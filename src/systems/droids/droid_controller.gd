@@ -16,6 +16,9 @@ extends Node3D
 ##     (RemnantOutposts.droid_specs). Destroyed Remnant droids come back like the
 ##     troopers do (behind the barracks / at their outpost); after the fleet is
 ##     beaten the town's two are gone and the outposts' shoot on sight.
+##   - issue #76: and a floating droid and a cargo droid (droids.json
+##     remnant.outpost_units). When the outpost's alarm goes up the cargo droid
+##     runs off into the desert and is left there broken: a wreck to fix and keep.
 ##   - issue #148: what is left of the Remnant aboard the crashed starcruiser
 ##     patrols its bridge and hold and shoots on sight, answering to no garrison,
 ##     and an old cargo droid in its deep hold carries a red energy saber.
@@ -48,6 +51,7 @@ var focus: Dictionary = {}          ## what E would act on: { kind: "vendor"|"wr
 var fixing: Dictionary = {}         ## { uid, left }
 var rng := RandomNumberGenerator.new()
 var shots_fired := 0
+var stranded := 0                   ## issue #76: outpost cargo droids that ran off and broke down
 var _wreck_clock := 0.0
 var _heading := Vector3.FORWARD
 var _follow_t := 0.0
@@ -769,14 +773,16 @@ func _build_remnant() -> void:
 	var outposts = demo.outposts if demo != null and "outposts" in demo else null
 	if outposts == null:
 		return
-	var oc: Dictionary = rc.get("outpost_unit", {})
+	var units: Array = rc.get("outpost_units", [rc.get("outpost_unit", {})])
 	for o in outposts.droid_specs():
-		if (o.patrol as Array).is_empty():
-			continue
-		var sp: Dictionary = oc.duplicate()
-		sp["patrol"] = o.patrol
-		sp["outpost"] = o.outpost
-		_spawn_remnant(sp, 0)
+		for oc in units:
+			var route: Array = o.routes.get(str(oc.get("route", "patrol")), [])
+			if route.is_empty():
+				continue
+			var sp: Dictionary = oc.duplicate()
+			sp["patrol"] = route
+			sp["outpost"] = o.outpost
+			_spawn_remnant(sp, 0)
 
 
 ## Issue #148: the wreck's Remnant droids and its hauler, on routes from the data
@@ -900,7 +906,12 @@ func _remnant_step(dt: float) -> void:
 		var pts: Array = u.patrol
 		u.gun_cd -= dt
 		var sees := false
-		if remnant_hostile(u) and not player.piloting:
+		if u.spec.has("flee"):
+			# Issue #76: no gun; it bolts when its outpost is in a fight.
+			if u.has_meta("flee_to") or u.provoked or _alarm_up(u):
+				_flee(u, dt)
+				continue
+		elif remnant_hostile(u) and not player.piloting:
 			var d: float = u.global_position.distance_to(player.global_position)
 			sees = d <= float(rc.get("sight", 22.0)) and _clear_shot(u, player)
 		if sees:
@@ -921,10 +932,56 @@ func _remnant_step(dt: float) -> void:
 		if to.length() < 0.6:
 			u.patrol_i = (u.patrol_i + 1) % pts.size()
 			continue
-		var pos: Vector3 = u.global_position + to.normalized() * minf(float(rc.get("walk_speed", 2.2)) * dt, to.length())
+		var pace := float(u.spec.get("walk_speed", rc.get("walk_speed", 2.2)))
+		var pos: Vector3 = u.global_position + to.normalized() * minf(pace * dt, to.length())
 		_put(u, pos)
 		_face(u, to)
-		u.walk(dt, true, float(rc.get("walk_speed", 2.2)))
+		u.walk(dt, true, pace)
+
+
+func _alarm_up(u: DroidUnit) -> bool:
+	var g = _garrison(u)
+	return g != null and g.alarm.active()
+
+
+## Issue #76: run `flee.distance` metres away from the player (and on from the
+## outpost), then give out there: see _strand.
+func _flee(u: DroidUnit, dt: float) -> void:
+	var fc: Dictionary = u.spec.get("flee", {})
+	var up := _up(u.global_position)
+	if not u.has_meta("flee_to"):
+		var away := _flat(u.global_position - player.global_position, up)
+		if away.length() < 0.5:
+			away = _flat(u.global_position - (u.patrol[0] as Vector3), up)
+		if away.length() < 0.05:
+			away = _flat(Vector3(1, 0, 0), up)
+		away = away.normalized().rotated(up, rng.randf_range(-0.6, 0.6))
+		u.set_meta("flee_to", u.global_position + away * float(fc.get("distance", 150.0)))
+		u.set_meta("flee_left", float(fc.get("max_s", 45.0)))
+		_beep(u)
+	var left: float = float(u.get_meta("flee_left")) - dt
+	u.set_meta("flee_left", left)
+	var to := _flat((u.get_meta("flee_to") as Vector3) - u.global_position, up)
+	if to.length() < 1.0 or left <= 0.0:
+		_strand(u)
+		return
+	var speed := float(fc.get("speed", 5.0))
+	_put(u, u.global_position + to.normalized() * minf(speed * dt, to.length()))
+	_face(u, to)
+	u.walk(dt, true, speed)
+
+
+## The runaway gives out where it stopped: a wreck there (saved; [E] fixes it and
+## it is yours), and the outpost gets a new one when its troopers come back.
+func _strand(u: DroidUnit) -> void:
+	var w := roster().add_wreck(u.kind, u.variant, u.global_position)
+	_build_wreck(w)
+	stranded += 1
+	u.remove_meta("flee_to")
+	u.dead = true
+	u.visible = false
+	u.collision_layer = 0
+	u.respawn_left = float(Story.remnant_cfg().get("outpost_respawn_s", 180.0))
 
 
 ## A bolt hit a droid. Yours and wrecks shrug it off; the Remnant's take damage

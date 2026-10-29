@@ -85,6 +85,11 @@
           "body": "#3d5a7a",
           "trim": "#c8c8c0",
           "eye": "#4ad0ff"
+        },
+        "remnant": {
+          "body": "#2a2b2f",
+          "trim": "#5a1e1c",
+          "eye": "#ff3a2a"
         }
       },
       "look": {
@@ -331,12 +336,13 @@
         }
       }
     ],
-    "outpost_unit": {
-   "kind": "assassin",
-   "variant": "remnant",
-   "hp": 60
-  },
-  "note": "Issue #64: outpost_unit is the assassin droid each desert outpost keeps (walking the outpost's 'patrol' points). The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
+    "outpost_units": [
+      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "patrol" },
+      { "kind": "floating", "variant": "remnant", "hp": 30, "route": "floater", "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
+      { "kind": "cargo", "variant": "remnant", "hp": 40, "route": "cargo", "walk_speed": 0.8,
+        "flee": { "speed": 5.5, "distance": 150.0, "max_s": 45.0 } }
+    ],
+  "note": "Issue #64/#76: outpost_units are the droids each desert outpost keeps, each walking the outpost's point list named by 'route': an assassin droid on 'patrol', an armed floating droid on 'floater', and a cargo droid on 'cargo' ('walk_speed' sets its own pace). 'flee': when its outpost's alarm goes up (or it is shot) it runs 'distance' metres into the desert, away from you, at 'speed' (giving up after 'max_s'), and is left there broken: a wreck you can fix and keep. A new one turns up at the outpost when the troopers come back. The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
   },
   "wreck": {
     "landmark": "starcruiser_wreck",

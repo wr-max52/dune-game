@@ -8,10 +8,13 @@ extends Node3D
 ##   - the ground: a heightmap collider of the sand round it, so the people there
 ##     stand on something even when the town's terrain collider (which follows the
 ##     player) is far away,
-##   - the look: one dark grey, black and red building (the far ones add a comms
-##     mast and a lookout), and a cargo ship parked beside it,
+##   - the look: one dark, panelled metal building in black and red (the far ones
+##     add a comms mast and a lookout), and a cargo ship parked beside it,
+##   - issue #76: crates, canisters and drums lying about ("props"), solid, so
+##     they are cover,
 ##   - three troopers (soldiers/outpost_trooper.json) for the town's Garrison, and
-##     the patrol of one assassin droid (DroidController reads droid_specs()),
+##     the routes of its droids: an assassin droid, a floating droid and a cargo
+##     droid (DroidController reads droid_specs()),
 ##   - the bounty target: whoever Oda's contract names (WorldState.bounty_target)
 ##     stands at the outpost it names, in red. Killing them is
 ##     WorldState.on_bounty_killed().
@@ -84,9 +87,10 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 			o.origin = sp.surface_at(at.x, at.z)
 		o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
 		outposts.append(o)
-		var parts: Array = [_build_ground.bind(o), _build_nav.bind(o)]
+		var parts: Array = [_build_ground.bind(o), _build_nav.bind(o), _build_props.bind(o)]
 		if demo.use_look:
-			parts.append_array([_dress.bind(o), _park_ship.bind(o)])
+			parts.append(_dress.bind(o))
+		parts.append(_park_ship.bind(o))
 		for p in ["guard_a", "guard_b", "guard_c"]:
 			parts.append(_add_guard.bind(o, p))
 		_queue = parts + _queue          # this outpost's pieces next, then the others
@@ -115,14 +119,18 @@ func point(o: Dictionary, key: String) -> Vector3:
 	return world_point(o, o.cfg.get("points", {}).get(key, [0, 0, 0]))
 
 
-## The assassin droid each outpost keeps: where it walks.
+## The droids each outpost keeps: where they walk. "patrol" (the assassin's) and
+## "routes": every point list in the location's points by name (issue #76: the
+## floating droid's "floater", the cargo droid's "cargo").
 func droid_specs() -> Array:
 	var out: Array = []
 	for o in outposts:
-		var pts: Array = []
-		for p in o.cfg.get("points", {}).get("patrol", []):
-			pts.append(world_point(o, p))
-		out.append({ "outpost": o.id, "patrol": pts })
+		var routes := {}
+		var pts: Dictionary = o.cfg.get("points", {})
+		for k in pts:
+			if pts[k] is Array and not (pts[k] as Array).is_empty() and pts[k][0] is Array:
+				routes[str(k)] = (pts[k] as Array).map(func(p): return world_point(o, p))
+		out.append({ "outpost": o.id, "patrol": routes.get("patrol", []), "routes": routes, "origin": o.origin })
 	return out
 
 
@@ -230,6 +238,11 @@ func _build_nav(o: Dictionary) -> void:
 			Vector3(pos.x - size.x * 0.5, 0.0, pos.z + size.z * 0.5),
 		])
 		obstructions.append({ "outline": outline, "bottom": pos.y, "height": size.y + 1.0 })
+	for pr in props(o):
+		var r: float = pr.radius
+		var at: Vector3 = pr.at
+		obstructions.append({ "outline": PackedVector3Array([at + Vector3(-r, 0, -r), at + Vector3(r, 0, -r),
+			at + Vector3(r, 0, r), at + Vector3(-r, 0, r)]), "bottom": 0.0, "height": float(pr.height) + 0.5 })
 	demo.nav.add_terrain_region(demo.terrain, o.origin, GROUND_HALF, GROUND_STEP,
 		o.xf, obstructions)
 
@@ -260,74 +273,228 @@ func _build_ground(o: Dictionary) -> void:
 
 # ------------------------------------------------------------------ the look
 
-## Dark grey walls, a black roof and plinth, a red band and door frame, a red
-## banner. look.mast: a comms mast on the roof; look.tower: a lookout at one corner.
+## Issue #76: cleaner and more metallic, same footprint. Panelled dark metal walls
+## (the hull shader, a little sand at the foot), steel corner posts and ribs, a
+## black roof and plinth, a red band and door frame, a lit door, vents, a roof
+## unit, red corner lamps and a banner. look.mast: a comms mast on the roof;
+## look.tower: a lookout at one corner.
 func _dress(o: Dictionary) -> void:
 	var mats: LookMaterials = demo._flat_mats()
-	var wall := mats.plaster(o.origin.y, o.origin.y + 3.0, Color("#8a1a16"), Color("#3a3c40"))
-	var black := mats.flat(Color("#141416"), 0.6, 0.3)
-	var red := mats.flat(Color("#a81e1a"), 0.7)
-	var steel := mats.flat(Color("#55585e"), 0.45, 0.6)
+	var y0: float = (o.origin as Vector3).y
+	var wall := mats._shader(LookMaterials.HULL, "outpost_wall_%s" % y0, {
+		"sand_y": y0 - 3.5, "panel_size": 1.5, "marking_y": -1000.0,
+		"metal": Color("#34373d"), "metal_light": Color("#4a4e55"), "scorch": Color("#2f3238"),
+		"sand": Color("#b89468"), "metal_scale": 0.8, "rough_add": 0.05 })
+	var black := mats.flat(Color("#141416"), 0.55, 0.4)
+	var red := mats.flat(Color("#a81e1a"), 0.6, 0.2)
+	var steel := mats.flat(Color("#5d6168"), 0.35, 0.75)
+	var grille := mats.flat(Color("#0c0c0e"), 0.7, 0.5)
+	var lamp := mats.glow(Color("#ff3020"))
 	var look: Dictionary = o.cfg.get("look", {})
 	for b in o.cfg.get("buildings", []):
 		var s := WorldGround._v3(b.get("size", [1, 1, 1]))
 		var c := WorldGround._v3(b.get("position", [0, 0, 0]))
+		var hx := s.x * 0.5
+		var hz := s.z * 0.5
 		_mesh(o, _box(s + Vector3(0, 1.0, 0)), wall, c + Vector3(0, s.y * 0.5 - 0.5, 0))
 		_mesh(o, _box(Vector3(s.x + 0.6, 0.35, s.z + 0.6)), black, c + Vector3(0, s.y + 0.17, 0))
 		_mesh(o, _box(Vector3(s.x + 0.3, 0.5, s.z + 0.3)), black, c + Vector3(0, 0.1, 0))
 		_mesh(o, _box(Vector3(s.x + 0.04, 0.3, s.z + 0.04)), red, c + Vector3(0, s.y - 0.6, 0))
-		# The door, toward the town, framed in red, and a banner beside it.
-		_mesh(o, _box(Vector3(0.14, 2.5, 1.8)), red, c + Vector3(s.x * 0.5 + 0.02, 1.25, 0))
-		_mesh(o, _box(Vector3(0.16, 2.2, 1.4)), black, c + Vector3(s.x * 0.5 + 0.06, 1.1, 0))
-		_mesh(o, _box(Vector3(0.05, 2.6, 0.9)), red, c + Vector3(s.x * 0.5 + 0.05, s.y - 1.7, s.z * 0.5 - 0.9))
+		# Corner posts, and steel ribs down the long sides.
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				_mesh(o, _box(Vector3(0.34, s.y + 0.1, 0.34)), steel, c + Vector3(hx * sx, s.y * 0.5, hz * sz))
+		var ribs := maxi(1, int(s.x / 2.4))
+		for i in range(1, ribs):
+			var x := -hx + s.x * float(i) / float(ribs)
+			for sz in [-1.0, 1.0]:
+				_mesh(o, _box(Vector3(0.14, s.y - 0.4, 0.1)), steel, c + Vector3(x, s.y * 0.5, (hz + 0.03) * sz))
+		# The door, toward the town: a red frame, a dark door with a seam, a step, a lamp over it.
+		_mesh(o, _box(Vector3(0.14, 2.5, 1.8)), red, c + Vector3(hx + 0.02, 1.25, 0))
+		_mesh(o, _box(Vector3(0.16, 2.2, 1.4)), black, c + Vector3(hx + 0.06, 1.1, 0))
+		_mesh(o, _box(Vector3(0.17, 2.1, 0.03)), steel, c + Vector3(hx + 0.07, 1.1, 0))
+		_mesh(o, _box(Vector3(0.8, 0.18, 2.0)), steel, c + Vector3(hx + 0.4, 0.09, 0))
+		_mesh(o, _box(Vector3(0.22, 0.12, 0.7)), mats.glow(Color("#ffb04a")), c + Vector3(hx + 0.12, 2.75, 0))
+		_mesh(o, _box(Vector3(0.05, 2.6, 0.9)), red, c + Vector3(hx + 0.05, s.y - 1.7, hz - 0.9))
+		# Vents: two on the back, one on each side.
+		for v in [Vector3(-hx - 0.05, 1.4, -hz * 0.45), Vector3(-hx - 0.05, 1.4, hz * 0.45)]:
+			_vent(o, c + v, Basis.IDENTITY, grille, steel)
+		for sz in [-1.0, 1.0]:
+			_vent(o, c + Vector3(-hx * 0.35, 1.9, (hz + 0.05) * sz), Basis(Vector3.UP, PI * 0.5), grille, steel)
+		# Red lamps at the front corners of the roof.
+		for sz in [-1.0, 1.0]:
+			_mesh(o, _box(Vector3(0.18, 0.18, 0.18)), lamp, c + Vector3(hx + 0.1, s.y + 0.45, (hz + 0.1) * sz))
+		# A roof unit with a fan and a hatch.
+		var ru := c + Vector3(hx * 0.3, s.y + 0.35, -hz * 0.35)
+		_mesh(o, _box(Vector3(1.4, 0.6, 1.0)), steel, ru + Vector3(0, 0.3, 0))
+		_mesh(o, _cyl(0.38, 0.04), grille, ru + Vector3(0, 0.62, 0))
+		_mesh(o, _box(Vector3(0.9, 0.12, 0.9)), black, c + Vector3(-hx * 0.4, s.y + 0.41, hz * 0.3))
 		if bool(look.get("mast", false)):
 			_mesh(o, _cyl(0.12, 6.0), steel, c + Vector3(-s.x * 0.25, s.y + 3.0, -s.z * 0.25))
 			_mesh(o, _box(Vector3(1.6, 0.1, 0.1)), steel, c + Vector3(-s.x * 0.25, s.y + 5.4, -s.z * 0.25))
-			_mesh(o, _box(Vector3(0.25, 0.25, 0.25)), mats.glow(Color("#ff3020")), c + Vector3(-s.x * 0.25, s.y + 6.1, -s.z * 0.25))
+			_mesh(o, _box(Vector3(0.25, 0.25, 0.25)), lamp, c + Vector3(-s.x * 0.25, s.y + 6.1, -s.z * 0.25))
+		else:
+			_mesh(o, _cyl(0.04, 1.6), steel, c + Vector3(-hx + 0.5, s.y + 1.1, -hz + 0.5))
 		if bool(look.get("tower", false)):
-			var t := c + Vector3(-s.x * 0.5 - 1.2, 0, s.z * 0.5 + 1.2)
+			var t := c + Vector3(-hx - 1.2, 0, hz + 1.2)
 			for dx in [-1.0, 1.0]:
 				for dz in [-1.0, 1.0]:
 					_mesh(o, _box(Vector3(0.25, 7.0, 0.25)), black, t + Vector3(dx, 3.5, dz))
 			_mesh(o, _box(Vector3(2.8, 0.25, 2.8)), steel, t + Vector3(0, 7.0, 0))
 			_mesh(o, _box(Vector3(2.8, 0.9, 0.12)), red, t + Vector3(0, 7.5, 1.35))
-	# Crates by the wall, so it reads as a supply post.
-	for i in 3:
-		_mesh(o, _box(Vector3(1.0, 0.9, 1.0)), steel if i % 2 == 0 else black, Vector3(2.0 + i * 1.2, 0.45, -4.6 - (i % 2) * 0.6))
+	# The light over the door, so the outpost reads at night.
+	var light := OmniLight3D.new()
+	light.light_color = Color("#ff9a50")
+	light.light_energy = 1.2
+	light.omni_range = 7.0
+	add_child(light)
+	var b0: Dictionary = (o.cfg.get("buildings", []) as Array).front()
+	var s0 := WorldGround._v3(b0.get("size", [1, 1, 1]))
+	light.global_position = (o.xf as Transform3D) * (WorldGround._v3(b0.get("position", [0, 0, 0])) + Vector3(s0.x * 0.5 + 0.8, 2.6, 0))
 
 
-## The cargo ship (the location's "ship"): its model on the sand at the ship
-## point, with a box collider round it so nobody walks through it.
+## A vent grille facing out of a wall (its basis turns +X to the wall's normal).
+func _vent(o: Dictionary, at: Vector3, basis: Basis, grille: Material, frame: Material) -> void:
+	_mesh(o, _box(Vector3(0.08, 0.6, 1.0)), frame, at, basis)
+	for k in 3:
+		_mesh(o, _box(Vector3(0.1, 0.07, 0.86)), grille, at + basis * Vector3(0.0, -0.18 + k * 0.18, 0.0), basis)
+
+
+# ------------------------------------------------------------------ props (issue #76)
+
+const PROP_SIZE := {                ## kind -> [radius (half width), height]: crate is a box
+	"crate": [0.5, 0.9], "canister": [0.28, 1.0], "drum": [0.38, 0.95],
+}
+
+
+## The outpost's crates, canisters and drums ("props" in its location file), each
+## { kind, at (local, on the sand), yaw, lying, height, radius }; a stack is one per crate.
+func props(o: Dictionary) -> Array:
+	var out: Array = []
+	for pr in o.cfg.get("props", []):
+		var kind := str(pr.get("kind", "crate"))
+		var size: Array = PROP_SIZE.get(kind, PROP_SIZE.crate)
+		var lp := WorldGround._v3(pr.get("at", [0, 0, 0]))
+		var at := (o.xf as Transform3D).affine_inverse() * world_point(o, lp)   # sitting on the sand
+		var lying := bool(pr.get("lying", false))
+		var yaw := deg_to_rad(float(pr.get("yaw", 0.0)))
+		var base := 0.0
+		for k in maxi(1, int(pr.get("stack", 1))):
+			var shrink := 1.0 - 0.12 * k
+			var h := float(size[1]) * shrink
+			out.append({ "kind": kind, "at": at, "yaw": yaw + 0.35 * k, "lying": lying, "level": k,
+				"radius": float(size[0]) * shrink, "height": h, "base": base })
+			base += h
+	return out
+
+
+## The props as solid shapes (always: cover with or without the look), and their
+## looks when the town is dressed.
+func _build_props(o: Dictionary) -> void:
+	var list := props(o)
+	if list.is_empty():
+		return
+	var body := StaticBody3D.new()
+	body.name = "Props_" + str(o.id)
+	add_child(body)
+	body.global_transform = o.xf
+	var mats: LookMaterials = demo._flat_mats() if demo.use_look else null
+	for pr in list:
+		var xf := _prop_xf(pr)
+		var cs := CollisionShape3D.new()
+		var r: float = pr.radius
+		var h: float = pr.height
+		if str(pr.kind) == "crate":
+			var bx := BoxShape3D.new()
+			bx.size = Vector3(r * 2.0, h, r * 2.0)
+			cs.shape = bx
+		else:
+			var cy := CylinderShape3D.new()
+			cy.radius = r
+			cy.height = h
+			cs.shape = cy
+		cs.transform = xf
+		body.add_child(cs)
+		if mats != null:
+			_prop_look(body, pr, xf, mats)
+
+
+## Where a prop's centre sits, in the outpost's frame: turned by its yaw, a lying
+## one tipped onto its side, a stacked one on the one below.
+func _prop_xf(pr: Dictionary) -> Transform3D:
+	var b := Basis(Vector3.UP, float(pr.yaw))
+	var lift: float = float(pr.base) + float(pr.height) * 0.5
+	if bool(pr.lying):
+		b = b * Basis(Vector3.RIGHT, PI * 0.5)
+		lift = float(pr.radius)
+	return Transform3D(b, (pr.at as Vector3) + Vector3(0, lift, 0))
+
+
+func _prop_look(parent: Node3D, pr: Dictionary, xf: Transform3D, mats: LookMaterials) -> void:
+	var r: float = pr.radius
+	var h: float = pr.height
+	var add := func(mesh: Mesh, mat: Material, local: Transform3D) -> void:
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = mat
+		mi.transform = xf * local
+		parent.add_child(mi)
+	match str(pr.kind):
+		"crate":
+			var body_mat := mats.flat(Color("#3d4046") if int(pr.level) % 2 == 0 else Color("#2a2c30"), 0.5, 0.55)
+			var band := mats.flat(Color("#1a1a1c"), 0.6, 0.4)
+			add.call(_box(Vector3(r * 2.0, h, r * 2.0)), body_mat, Transform3D.IDENTITY)
+			for y in [-h * 0.36, h * 0.36]:
+				add.call(_box(Vector3(r * 2.04, 0.08, r * 2.04)), band, Transform3D(Basis.IDENTITY, Vector3(0, y, 0)))
+			add.call(_box(Vector3(r * 0.9, h * 0.25, 0.02)), mats.flat(Color("#a81e1a"), 0.7), Transform3D(Basis.IDENTITY, Vector3(0, 0, r + 0.01)))
+		"canister":
+			var shell := mats.flat(Color("#4f535a"), 0.35, 0.8)
+			add.call(_cyl(r, h * 0.82), shell, Transform3D(Basis.IDENTITY, Vector3(0, -h * 0.05, 0)))
+			add.call(_cyl(r * 0.55, h * 0.14), mats.flat(Color("#1a1a1c"), 0.5, 0.6), Transform3D(Basis.IDENTITY, Vector3(0, h * 0.42, 0)))
+			add.call(_cyl(r * 1.02, 0.1), mats.flat(Color("#c8a02a"), 0.6, 0.3), Transform3D(Basis.IDENTITY, Vector3(0, h * 0.12, 0)))
+		"drum":
+			add.call(_cyl(r, h), mats.flat(Color("#202226"), 0.55, 0.5), Transform3D.IDENTITY)
+			for y in [-h * 0.3, h * 0.3]:
+				add.call(_cyl(r * 1.03, 0.06), mats.flat(Color("#8a1a16"), 0.6, 0.3), Transform3D(Basis.IDENTITY, Vector3(0, y, 0)))
+
+
+## The outpost's ship (the location's "ship"; issue #76: the Remnant's dark
+## interceptor or freighter): its model on the sand at the ship point, or a bare
+## node in the greybox. The pilot makes it a berth you can fly (its own hull is
+## what you bump into); boarding it sets off this outpost's alarm.
 func _park_ship(o: Dictionary) -> void:
-	var look_id := str(_cc.get_ship(str(o.cfg.get("ship", ""))).get("look", ""))
+	var ship_id := str(o.cfg.get("ship", ""))
+	var look_id := str(_cc.get_ship(ship_id).get("look", ""))
 	if look_id == "":
 		return
-	var ship := ShipKit.new().build(look_id)
-	ship.name = "Ship_" + str(o.id)
-	add_child(ship)
 	var at := point(o, "ship")
-	# Measured upright at the origin, then stood on the sand in the outpost's frame.
-	var a := TownDecor.visual_aabb(ship)
 	var b: Basis = (o.xf as Transform3D).basis * Basis(Vector3.UP, PI * 0.5)
-	var lift := Vector3(-a.get_center().x, -a.position.y, -a.get_center().z)
-	ship.global_transform = Transform3D(b, at + b * lift)
-	var body := StaticBody3D.new()
-	body.name = "ShipCollider_" + str(o.id)
-	var cs := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = a.size * Vector3(0.8, 0.9, 0.8)
-	cs.shape = box
-	body.add_child(cs)
-	add_child(body)
-	body.global_transform = Transform3D(b, at + b * (lift + a.get_center()))
+	var ship: Node3D
+	if demo.use_look:
+		ship = ShipKit.new().build(look_id)
+		add_child(ship)
+		# Measured upright at the origin, then stood on the sand in the outpost's frame.
+		var a := TownDecor.visual_aabb(ship)
+		var lift := Vector3(-a.get_center().x, -a.position.y, -a.get_center().z)
+		ship.global_transform = Transform3D(b, at + b * lift)
+	else:
+		ship = Node3D.new()
+		add_child(ship)
+		ship.global_transform = Transform3D(b, at + b * Vector3(0, 1.0, 0))
+	ship.name = "Ship_" + str(o.id)
+	ship.set_meta("ship_id", ship_id)
+	ship.set_meta("outpost", str(o.id))
+	o["ship"] = ship
+	if demo.pilot != null:
+		demo.pilot.add_outpost_berth(ship, ship_id, str(o.id))
 
 
-func _mesh(o: Dictionary, mesh: Mesh, mat: Material, local: Vector3) -> MeshInstance3D:
+func _mesh(o: Dictionary, mesh: Mesh, mat: Material, local: Vector3, basis := Basis.IDENTITY) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
 	add_child(mi)
-	mi.global_transform = (o.xf as Transform3D) * Transform3D(Basis.IDENTITY, local)
+	mi.global_transform = (o.xf as Transform3D) * Transform3D(basis, local)
 	return mi
 
 

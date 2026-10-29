@@ -64,6 +64,7 @@ var cantina_owner: Node3D                 ## M12 (null in the CI greybox)
 var bar: Node
 var gear: GearController              ## M13
 var pilot: ShipPilot                  ## M14
+var interceptor: AtmoFighter          ## issue #76: the Remnant's dark interceptor on the barracks pad
 var characters: Dictionary = {}       ## marker id -> built character
 var terrain: DesertTerrain            ## null when with_desert is off
 var dust: DustWind                    ## issue #93: blowing sand round the camera (look only)
@@ -233,6 +234,7 @@ func build_plan(staged_build: bool) -> Array:
 			# One piece of an outpost a frame: its ground, nav, look, ship or a trooper.
 			add.call("outpost_sites", LATER, func(_left): return outposts == null or outposts.build_step(), true)
 		add.call("npc_brains", LATER, func(): _npc_brains(); return true)
+		add.call("interceptor", LATER, func(): _build_interceptor(); return true)
 	add.call("speeders", LATER, func():
 		if with_speeders and pilot != null and has_feature("speeders"):
 			_build_speeder_post()
@@ -763,6 +765,20 @@ func _park_gate_speeders() -> void:
 		s.name = str(m.id).to_pascal_case()
 		s.place(town.marker_pos(str(m.id)), deg_to_rad(float(m.get("yaw_deg", 0.0))))
 		gate_speeders.append(s)
+
+
+## Issue #76: the barracks pad's interceptor (the town box with a "remnant_ship").
+## After the garrison: it reads its alarm. It stays when the garrison leaves (the
+## Remnant then shoot on sight, so it hunts you whenever you fly out of town).
+func _build_interceptor() -> void:
+	if pilot == null:
+		return
+	for b in town.boxes():
+		if b.has("remnant_ship"):
+			interceptor = AtmoFighter.new()
+			interceptor.setup(self, b, pilot)
+			add_child(interceptor)
+			return
 
 
 ## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)
