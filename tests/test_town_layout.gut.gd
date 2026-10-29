@@ -42,7 +42,7 @@ func test_town_loads_with_expected_counts() -> void:
 	assert_eq(t.boxes().size(), 185)   # plus four short gray homes facing the cantina street (#114)
 	assert_eq(t.markers().size(), 26)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89
 	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
-	assert_eq(t.zones().size(), 8)
+	assert_eq(t.zones().size(), 9)
 
 
 func test_town_validates_clean() -> void:
@@ -66,6 +66,7 @@ func test_four_short_gray_homes_face_the_cantina_street() -> void:
 	var south := 0
 	for b in homes:
 		assert_eq(b.get("style"), "gray")
+		assert_eq(b.get("zone"), "cantina_homes")
 		assert_lte(float(b.max[1]), 4.0, "short houses, not towers")
 		if str(b.id).contains("_n_"):
 			north += 1
@@ -75,6 +76,13 @@ func test_four_short_gray_homes_face_the_cantina_street() -> void:
 			assert_eq(b.get("face"), "+z", "south doors face toward the street")
 	assert_eq(north, 2)
 	assert_eq(south, 2)
+
+
+func test_backgap_route_clears_the_cantina_homes() -> void:
+	var errs := _town().validate()
+	var route_errs := errs.filter(func(e):
+		return str(e).begins_with("V8 route backgap_to_cantina"))
+	assert_eq(route_errs, [], "the route must pass around, not through, the homes")
 
 
 func test_npc_markers_match_data_layer() -> void:
