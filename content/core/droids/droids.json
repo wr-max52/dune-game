@@ -250,11 +250,15 @@
     "check_seconds": 120.0,
     "chance": 0.6,
     "max_out": 3,
+    "ball_starting_count": 8,
+    "ball_max_out": 12,
+    "ball_min_radius": 900.0,
+    "ball_min_separation": 500.0,
     "min_radius": 160.0,
     "max_radius": 520.0,
     "min_separation": 180.0,
     "reach": 3.0,
-    "note": "Broken droids stranded in the desert. Every check_seconds of play, with this chance, one more turns up (issue #64: was every 300 s at 0.4, about one every 12 minutes; now about one every 3 to 4) (one of each kind at most, never near another). Fixing one takes fix_seconds; it resets and follows you. Radii are metres from the town's centre."
+    "note": "Broken droids stranded in the desert. On the home planet's ball the first visit seeds ball_starting_count wrecks across the whole sphere, then every check_seconds of play, with this chance, one more turns up until ball_max_out. They stay at least ball_min_radius from town and ball_min_separation apart along the surface. Flat worlds keep max_out and the ring radii. Fixing one takes fix_seconds; it resets and follows you."
   },
   "pit_hauler": {
     "variant": "tan",

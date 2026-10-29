@@ -18,6 +18,7 @@ static var _cfg: Dictionary = {}
 
 var owned: Array = []       ## [{ uid, kind, variant, cargo: { item id -> count } }]
 var wrecks: Array = []      ## [{ uid, kind, variant, pos: [x, y, z] }]
+var wrecks_seeded := false  ## the home ball's starting field is generated once and saved
 var streak := 0             ## range remote bolts blocked in a row
 var next_uid := 1
 
@@ -188,35 +189,61 @@ func find_wreck(uid: int) -> Dictionary:
 	return {}
 
 
-## Maybe strand one more broken droid in the desert: a kind not already out there,
-## at a spot in the ring around `center`, far from the other wrecks. `ground` maps
-## (x, z) to the sand height (invalid = flat at center.y). Returns the wreck or {}.
-func roll_wreck(rng: RandomNumberGenerator, center: Vector3, ground: Callable = Callable(), force := false) -> Dictionary:
+## Maybe strand one more broken droid in the desert. Flat worlds keep the old ring
+## around `center`; on the ball, map coordinates cover the whole sphere and
+## `surface` returns the actual ground point. `clear` rejects landmarks, and
+## sphere_center/radius make spacing geodesic instead of map-plane distance.
+func roll_wreck(rng: RandomNumberGenerator, center: Vector3, ground: Callable = Callable(), force := false,
+		surface: Callable = Callable(), sphere_center := Vector3.ZERO, sphere_radius := 0.0,
+		spot_clear: Callable = Callable()) -> Dictionary:
 	var wc: Dictionary = config().get("wrecks", {})
-	if wrecks.size() >= int(wc.get("max_out", 3)):
+	var on_ball := sphere_radius > 0.0 and surface.is_valid()
+	var max_out := int(wc.get("ball_max_out", 12)) if on_ball else int(wc.get("max_out", 3))
+	if wrecks.size() >= max_out:
 		return {}
 	if not force and rng.randf() >= float(wc.get("chance", 0.4)):
 		return {}
 	var kinds: Array = []
 	for k in (config().get("kinds", {}) as Dictionary):
-		if not has_wreck_of(str(k)):
+		if on_ball or not has_wreck_of(str(k)):
 			kinds.append(str(k))
 	if kinds.is_empty():
 		return {}
 	var kind: String = kinds[rng.randi() % kinds.size()]
-	var sep := float(wc.get("min_separation", 180.0))
-	for _try in 24:
+	var sep := float(wc.get("ball_min_separation", 500.0)) if on_ball else float(wc.get("min_separation", 180.0))
+	for _try in (120 if on_ball else 24):
 		var a := rng.randf() * TAU
-		var r := rng.randf_range(float(wc.get("min_radius", 160.0)), float(wc.get("max_radius", 520.0)))
-		var p := center + Vector3(cos(a) * r, 0.0, sin(a) * r)
+		var p: Vector3
+		if on_ball:
+			# Uniform area over the sphere outside a generous keep-out around the port.
+			var min_angle := float(wc.get("ball_min_radius", 900.0)) / sphere_radius
+			var max_angle := PI - min_angle
+			var theta := acos(rng.randf_range(cos(max_angle), cos(min_angle)))
+			var map_radius := theta * sphere_radius
+			var x := center.x + cos(a) * map_radius
+			var z := center.z + sin(a) * map_radius
+			p = surface.call(x, z)
+		else:
+			var r := rng.randf_range(float(wc.get("min_radius", 160.0)), float(wc.get("max_radius", 520.0)))
+			p = center + Vector3(cos(a) * r, 0.0, sin(a) * r)
 		var clear := true
 		for w in wrecks:
-			if Vector2(p.x - float(w.pos[0]), p.z - float(w.pos[2])).length() < sep:
+			var old := Vector3(float(w.pos[0]), float(w.pos[1]), float(w.pos[2]))
+			var apart: float
+			if on_ball:
+				var d1 := (p - sphere_center).normalized()
+				var d2 := (old - sphere_center).normalized()
+				apart = acos(clampf(d1.dot(d2), -1.0, 1.0)) * sphere_radius
+			else:
+				apart = Vector2(p.x - old.x, p.z - old.z).length()
+			if apart < sep:
 				clear = false
 				break
 		if not clear:
 			continue
-		if ground.is_valid():
+		if on_ball and spot_clear.is_valid() and not bool(spot_clear.call(p)):
+			continue
+		if not on_ball and ground.is_valid():
 			p.y = float(ground.call(p.x, p.z))
 		var w := { "uid": next_uid, "kind": kind, "variant": pick_variant(kind, rng), "pos": [p.x, p.y, p.z] }
 		next_uid += 1
@@ -238,7 +265,8 @@ func fix_wreck(uid: int) -> Dictionary:
 # ---- save -----------------------------------------------------------------------
 
 func to_save() -> Dictionary:
-	return { "owned": owned.duplicate(true), "wrecks": wrecks.duplicate(true), "streak": streak, "next_uid": next_uid }
+	return { "owned": owned.duplicate(true), "wrecks": wrecks.duplicate(true), "wrecks_seeded": wrecks_seeded,
+		"streak": streak, "next_uid": next_uid }
 
 
 func from_save(d: Dictionary) -> void:
@@ -252,6 +280,7 @@ func from_save(d: Dictionary) -> void:
 		wrecks.append({ "uid": int(w.uid), "kind": str(w.kind), "variant": str(w.get("variant", "")),
 			"pos": (w.get("pos", [0, 0, 0]) as Array).duplicate() })
 	streak = int(d.get("streak", 0))
+	wrecks_seeded = bool(d.get("wrecks_seeded", false))
 	next_uid = int(d.get("next_uid", 1))
 	for o in owned + wrecks:
 		next_uid = maxi(next_uid, int(o.uid) + 1)

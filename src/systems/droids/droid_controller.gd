@@ -77,6 +77,12 @@ func _ready() -> void:
 			var vm: Dictionary = demo.town.get_marker(str(v.marker))
 			if vm.has("face"):
 				vendor_face = Vector3(float(vm.face[0]) - vendor_pos.x, 0, float(vm.face[2]) - vendor_pos.z).normalized()
+	if _on_ball() and not roster().wrecks_seeded:
+		var starting_count := int(cfg.get("wrecks", {}).get("ball_starting_count", 8))
+		while roster().wrecks.size() < starting_count:
+			if _roll_wreck(true).is_empty():
+				break
+		roster().wrecks_seeded = true
 	for w in roster().wrecks:
 		_build_wreck(w)
 	_build_remnant()
@@ -362,11 +368,49 @@ func _tick_wrecks(dt: float) -> void:
 
 ## Roll for a wreck now (force: skip the chance). Returns its uid or -1.
 func spawn_wreck(force := true) -> int:
-	var w := roster().roll_wreck(rng, Vector3.ZERO, ground_at, force)
+	var w := _roll_wreck(force)
 	if w.is_empty():
 		return -1
 	_build_wreck(w)
 	return int(w.uid)
+
+
+func _roll_wreck(force: bool) -> Dictionary:
+	if _on_ball():
+		var sp := ground.sphere()
+		return roster().roll_wreck(rng, Vector3.ZERO, ground_at, force,
+			Callable(self, "_wreck_surface_at"), sp.center, sp.radius, Callable(self, "_wreck_spot_clear"))
+	return roster().roll_wreck(rng, Vector3.ZERO, ground_at, force)
+
+
+## The map sampler asks for (x, z); the ball's surface and its landmarks are in
+## WorldGround, not the flat terrain-height callback used by the older worlds.
+func _wreck_surface_at(x: float, z: float) -> Vector3:
+	var sp := ground.sphere()
+	var base := sp.surface_at(x, z)
+	return ground.surface_below(base + sp.up_at(base) * 200.0)
+
+
+## Do not leave a wreck on a town/outpost building, a mesa or a boulder.
+func _wreck_spot_clear(p: Vector3) -> bool:
+	for b in ground.boxes:
+		var local: Vector3 = WorldGround.box_xf(b).affine_inverse() * p
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		if local.x >= mn.x - 24.0 and local.x <= mx.x + 24.0 \
+				and local.z >= mn.z - 24.0 and local.z <= mx.z + 24.0:
+			return false
+	for c in ground.columns:
+		var up: Vector3 = c.get("up", Vector3.UP)
+		var rel: Vector3 = p - (c.center as Vector3)
+		if (rel - up * rel.dot(up)).length() <= float(c.radius) + 24.0:
+			return false
+	for b in ground.boulders:
+		var up: Vector3 = b.up
+		var rel: Vector3 = p - (b.center as Vector3)
+		if (rel - up * rel.dot(up)).length() <= float(b.radius) * WorldGround.RAMP_SPREAD + 24.0:
+			return false
+	return true
 
 
 func _build_wreck(w: Dictionary) -> void:
@@ -374,7 +418,9 @@ func _build_wreck(w: Dictionary) -> void:
 	u.broken = true
 	u.uid = int(w.uid)
 	add_child(u)
-	u.global_position = Vector3(float(w.pos[0]), float(w.pos[1]), float(w.pos[2]))
+	var at := Vector3(float(w.pos[0]), float(w.pos[1]), float(w.pos[2]))
+	u.global_position = ground.surface_below(at + _up(at) * 200.0) if _on_ball() else _ground_point(at)
+	w.pos = [u.global_position.x, u.global_position.y, u.global_position.z]
 	u.yaw = rng.randf() * TAU
 	_orient(u)
 	_lay_down(u)

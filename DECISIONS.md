@@ -2,6 +2,20 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — Dead droids across the home planet (issue #93)
+
+- **Seed a field once, then replenish slowly.** The home ball starts with eight
+  saved wrecks and can hold twelve; later finds keep the existing timed chance.
+  Flat worlds retain their old three-wreck ring. Alternatives: only raise the
+  timer chance (a new game would still start empty) or seed every scene load
+  (fixed wrecks would immediately be replaced). The initial field is sampled by
+  spherical area, kept 900 m from town and 500 m apart along the surface, then
+  checked against WorldGround's buildings and landforms.
+- **Place against WorldGround, not the flat height callback.** A wreck's stored
+  position is the spherical ground point and its body is aligned to local up.
+  This uses the same surface and tangent frame as the ship and living droids;
+  flat worlds continue using their existing height callback and placement.
+
 ## 2026-10-27 — New player, guard and cantina owner art, built like the locals (issue #79)
 
 - **Do not run the full test suite.** We are not going to run this because it takes way too long, and the human builders can test if it matters for gameplay faster than the tests can run. Instead, run a small baseline tests and smoke tests (e.g. app loads, new feature seems to work), if it seems to pass, open the PR and tell them **how** to test it.
