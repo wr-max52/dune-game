@@ -2,6 +2,18 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Smoother terrain uploads in flight (2026-10-29, issue #123)
+
+- **Ground meshes no longer pile up on one frame.** When the sand under the
+  player and the wider ring around the camera finish building at the same time,
+  they now go onto the graphics card one per frame (near first) instead of
+  together. A small per-frame budget (`mesh_upload_budget_ms`, 2 ms) lets both
+  through at once when they are cheap.
+- **No wasted rebuilds.** A finished mesh waiting for its turn counts as the
+  current one, so the terrain never starts a second build of the same ring.
+- The trace snapshot gains `ready_terrain_meshes` and
+  `main_thread_mesh_upload_worst_frame_ms`.
+
 ## Station smuggling (2026-10-29)
 
 - **The asteroid has its own smuggling loop.** The station's Oda offers a run
