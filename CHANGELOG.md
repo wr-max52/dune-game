@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The energy saber, redrawn (2026-10-29)
+
+- **A glowing staff on a metal hilt.** The energy sword's forged spine and brass
+  crossguard are gone: the blade is a straight, round staff of light (a white-hot
+  core, a coloured shell, a soft halo) out of a Hyper3D hilt. The blade is still
+  drawn in code, so it ignites, recolours, lights the room and hits as before.
+- **Blue on light metal by default.** The player's and the duelist's blade is blue
+  now (was yellow), on a brushed-silver hilt.
+- **The red saber is red on black metal.** Owning the saber from the wreck turns
+  the blade red and swaps in a blackened gunmetal hilt with a red stud. The pickup
+  in the wreck uses the same hilt, and now lies flat with its blade in the emitter
+  (its parts were turned in radians read as degrees).
+
 ## Dogfights in the port's sky (2026-10-29, issue #76 part 3)
 
 - **The outposts' ships are the Remnant's, and you can fly them.** The near

@@ -721,9 +721,9 @@ func _dress_duelist(body: Node3D, p: Dictionary) -> void:
 	_energy_sword(body)
 
 
-## The default melee weapon: a forged sword spine sheathed in an energy edge.
-## Yellow by default; colour and length come from content/core/weapons/energy_blade.json.
-## Local +Y runs up the blade from the guard.
+## The default melee weapon: a metal hilt and a glowing staff of energy.
+## Colour, length and hilt model come from content/core/weapons/energy_blade.json.
+## Local +Y runs up the blade from the emitter.
 func _energy_sword(body: Node3D) -> Node3D:
 	var sword := make_energy_sword()
 	_j(body, "chest").add_child(sword)
@@ -733,38 +733,41 @@ func _energy_sword(body: Node3D) -> Node3D:
 
 ## A free-standing energy sword (not attached to a body). The player's weapon
 ## controller uses this too, so the hero's blade and the duelist's are one design.
-## Children: "Blade" (scale.y 0..1 ignites it) holding "BladeLight".
-func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_override: float = -1.0) -> Node3D:
-	var color := Color.html(blade_cfg.get("blade_color", "#ffc93a"))
+## Children: "Hilt" (the model, or a stand-in grip) and "Blade" (scale.y 0..1
+## ignites it) holding "BladeLight". `hilt_override` is a hilt .glb path.
+func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_override: float = -1.0,
+		hilt_override: String = "") -> Node3D:
+	var color := Color.html(blade_cfg.get("blade_color", "#3aa0ff"))
 	if color_override.a > 0.0:
 		color = color_override
 	var length := float(blade_cfg.get("blade_length", 1.05)) if length_override <= 0.0 else length_override
 	var sword := Node3D.new()
 	sword.name = "EnergySword"
-	var metal := _m(Color("#2a2826"), "metal", 0.4)
-	var brass := _m(Color("#b08e50"), "metal", 0.3)
-	_mi(sword, _cyl(0.019, 0.021, 0.25, 10), _m(Color("#3a2a20"), "leather", 0.4), Vector3(0, -0.13, 0))   # grip
-	_mi(sword, _sphere(0.03, 0.05, 10), brass, Vector3(0, -0.265, 0))                                        # pommel
-	_mi(sword, _box(Vector3(0.2, 0.03, 0.045)), brass, Vector3(0, 0.0, 0))                                  # guard
-	for sx in [-1.0, 1.0]:
-		_mi(sword, _box(Vector3(0.055, 0.025, 0.04)), brass, Vector3(0.115 * sx, 0.018, 0), Vector3(0, 0, 25 * sx))
+	sword.add_child(_sword_hilt(hilt_override if hilt_override != "" else str(blade_cfg.get("hilt", ""))))
 	var blade := Node3D.new()
 	blade.name = "Blade"
 	blade.position = Vector3(0, 0.015, 0)
 	sword.add_child(blade)
-	_mi(blade, LookMeshKit.frustum(0.03, 0.012, length * 0.92, 0.75), metal, Vector3(0, length * 0.46, 0))
 	var core := ShaderMaterial.new()
 	core.shader = ENERGY
-	core.set_shader_parameter("color", color.lerp(Color.WHITE, 0.55))
-	core.set_shader_parameter("energy", 6.0)
+	core.set_shader_parameter("color", color.lerp(Color.WHITE, 0.6))
+	core.set_shader_parameter("energy", 4.0)
 	core.set_shader_parameter("core", 1.0)
 	var glow := ShaderMaterial.new()
 	glow.shader = ENERGY
 	glow.set_shader_parameter("color", color)
-	glow.set_shader_parameter("energy", 2.4)
-	glow.set_shader_parameter("falloff", 1.6)
-	_mi(blade, _cyl(0.004, 0.026, length, 10), core, Vector3(0, length * 0.5, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.32)).name = "Core"
-	_mi(blade, _cyl(0.016, 0.065, length * 1.06, 12), glow, Vector3(0, length * 0.52, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.55)).name = "Glow"
+	glow.set_shader_parameter("energy", 1.5)
+	glow.set_shader_parameter("falloff", 1.2)
+	var halo := ShaderMaterial.new()
+	halo.shader = ENERGY
+	halo.set_shader_parameter("color", color)
+	halo.set_shader_parameter("energy", 0.6)
+	halo.set_shader_parameter("falloff", 2.2)
+	# A round staff: white-hot core, a coloured shell, and a wide soft halo.
+	_mi(blade, _cyl(0.008, 0.01, length, 12), core, Vector3(0, length * 0.5, 0)).name = "Core"
+	_mi(blade, _sphere(0.008, 0.016, 12), core, Vector3(0, length, 0)).name = "Tip"
+	_mi(blade, _cyl(0.022, 0.025, length * 1.03, 14), glow, Vector3(0, length * 0.515, 0)).name = "Glow"
+	_mi(blade, _cyl(0.05, 0.055, length * 1.06, 14), halo, Vector3(0, length * 0.52, 0)).name = "Halo"
 	var light := OmniLight3D.new()
 	light.name = "BladeLight"
 	light.light_color = color
@@ -778,21 +781,53 @@ func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_overrid
 	return sword
 
 
+## The sword's "Hilt": the model at `path` (assets/gear/, 0.28 m along +Y, centred,
+## emitter up) with its emitter at the blade's root, or a plain grip without one.
+func _sword_hilt(path: String) -> Node3D:
+	var hilt := Node3D.new()
+	hilt.name = "Hilt"
+	hilt.set_meta("path", path)
+	var packed = ModelCache.scene(path) if path != "" and ResourceLoader.exists(path) else null
+	if packed is PackedScene:
+		var model: Node3D = (packed as PackedScene).instantiate()
+		model.position = Vector3(0, -0.13, 0)
+		hilt.add_child(model)
+		return hilt
+	var metal := _m(Color("#9a9ea4"), "metal", 0.6)
+	_mi(hilt, _cyl(0.019, 0.021, 0.25, 10), _m(Color("#2a2826"), "leather", 0.4), Vector3(0, -0.13, 0))
+	_mi(hilt, _cyl(0.024, 0.02, 0.04, 10), metal, Vector3(0, 0.0, 0))
+	_mi(hilt, _sphere(0.024, 0.04, 10), metal, Vector3(0, -0.26, 0))
+	return hilt
+
+
 ## Issue #148: give a built energy sword a new colour (the red saber from the wreck).
 static func recolor_energy_sword(sword: Node3D, color: Color) -> void:
 	var blade := sword.get_node_or_null("Blade")
 	if blade == null:
 		return
-	var core := blade.get_node_or_null("Core") as MeshInstance3D
-	if core != null:
-		(core.material_override as ShaderMaterial).set_shader_parameter("color", color.lerp(Color.WHITE, 0.55))
-	var glow := blade.get_node_or_null("Glow") as MeshInstance3D
-	if glow != null:
-		(glow.material_override as ShaderMaterial).set_shader_parameter("color", color)
+	for part in ["Core", "Tip"]:
+		var mi := blade.get_node_or_null(part) as MeshInstance3D
+		if mi != null:
+			(mi.material_override as ShaderMaterial).set_shader_parameter("color", color.lerp(Color.WHITE, 0.6))
+	for part in ["Glow", "Halo"]:
+		var mi := blade.get_node_or_null(part) as MeshInstance3D
+		if mi != null:
+			(mi.material_override as ShaderMaterial).set_shader_parameter("color", color)
 	var light := blade.get_node_or_null("BladeLight") as OmniLight3D
 	if light != null:
 		light.light_color = color
 	sword.set_meta("color", color)
+
+
+## Swap a built energy sword's hilt for the model at `path` (the red saber's black one).
+func set_sword_hilt(sword: Node3D, path: String) -> void:
+	var old := sword.get_node_or_null("Hilt")
+	if path == "" or (old != null and str(old.get_meta("path", "")) == path):
+		return
+	if old != null:
+		sword.remove_child(old)
+		old.queue_free()
+	sword.add_child(_sword_hilt(path))
 
 
 # ------------------------------------------------------------------ cantina owner
