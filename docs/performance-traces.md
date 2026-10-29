@@ -6,11 +6,11 @@ Issue #125 adds a repeatable route capture; it does not turn headless timing int
 
 Run from the repository root. The trace scripts use the same physics-frame routes and warm up the scene before collecting samples.
 
-Headless logic control (not a GPU measurement):
+Headless logic control (not a GPU measurement; leave frame pacing uncapped for wall-time samples):
 
 ~~~sh
-DUNE_PERF_OUT=res://test_results/m14-headless.json godot --headless --fixed-fps 60 --path . -s res://scenes/m14_flight_trace.gd
-DUNE_PERF_OUT=res://test_results/planets-headless.json godot --headless --fixed-fps 60 --path . -s res://scenes/planets_trace.gd
+DUNE_PERF_OUT=res://test_results/m14-headless.json godot --headless --path . -s res://scenes/m14_flight_trace.gd
+DUNE_PERF_OUT=res://test_results/planets-headless.json godot --headless --path . -s res://scenes/planets_trace.gd
 ~~~
 
 Rendered route capture with the full look enabled (do not add --headless or --fixed-fps):
@@ -22,7 +22,7 @@ DUNE_PERF_VISUALS=1 DUNE_PERF_OUT=res://test_results/planets-rendered.json DUNE_
 
 The JSON reports nearest-rank frame-time p50/p95/p99/max, Godot process and physics-process CPU time distributions, per-phase frame-time summaries, scene-ready wall time, and terrain metrics when the scene exposes them. Terrain metrics include far patches visible/culled, queued terrain jobs, far-build and worker-wait wall time, and main-thread mesh creation/submission time. Mesh submission timing is CPU-side work; it is not GPU completion time. GPU frame time is recorded as null because these in-engine samples do not provide it.
 
-The planets trace captures the same stationary opening frame when DUNE_PERF_SCREENSHOT is set. Save that image with the baseline and compare it after visual changes; the trace does not claim an automated perceptual image-diff.
+The planets trace captures the same stationary opening frame when DUNE_PERF_SCREENSHOT is set, with screenshot readback excluded from the timed samples. Save that image with the baseline and compare it after visual changes; the trace does not claim an automated perceptual image-diff.
 
 ## Comparing results
 

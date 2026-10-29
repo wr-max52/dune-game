@@ -93,11 +93,15 @@ func _capture_hero_frame() -> void:
 	if DisplayServer.get_name() == "headless":
 		out("HERO_FRAME", "skipped_headless")
 		return
+	var was_measuring := _measure
+	_measure = false # screenshot readback can stall; do not fold it into route timing
 	await RenderingServer.frame_post_draw
 	var image: Image = get_root().get_texture().get_image()
 	var absolute_path := ProjectSettings.globalize_path(path)
 	DirAccess.make_dir_recursive_absolute(absolute_path.get_base_dir())
 	var image_error: Error = image.save_png(absolute_path)
+	_last = Time.get_ticks_usec()
+	_measure = was_measuring
 	out("HERO_FRAME", path if image_error == OK else "error_%d" % image_error)
 
 
