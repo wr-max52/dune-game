@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Walkable starcruiser wreck (issue #93, wreck only)
+
+- A 600 m ribbed transport lies nose-down far beyond the starting town's front
+  gate (map 1350, -120). Its bow is buried; the raised stern, radiator
+  comb and four dead engines form a landmark above the dunes.
+- A huge tear in the town-facing flank exposes the hold. A fallen hull plate
+  leads from the sand onto a continuous lower deck; small salvage boxes and
+  door frames give it human scale. No NPCs, loot or missions are added.
+- Plates, decks and ribs share their visible geometry with player collision
+  and the ship/speeder ground model. The breach is genuinely open, not a painted
+  hole on a solid box.
+- `tools/review/wreck_probe.gd` is a standalone, wreck-only collision/landing
+  check with optional screenshots. The CI suite was not run for this change.
+- Visual refinement: wreck-only scorched/chipped metal, irregular pointed
+  fracture plates around the breach, and layered engine collars, vents, braces
+  and recessed dark throats. Engines remain unpowered (no emission or exhaust).
+  Hull dimensions, placement, boarding plate and lower deck are unchanged.
+
 ## Speeder upgrades at the mechanic's yard (2026-10-28, issue #95)
 
 - **Dorrin Vask's yard** is out in the desert, about a 30 second drive from the

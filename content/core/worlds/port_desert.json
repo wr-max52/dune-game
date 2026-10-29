@@ -16,6 +16,15 @@
   },
   "landmarks": [
     {
+      "id": "starcruiser_wreck",
+      "kind": "wreck",
+      "at": [1350, 0, -120],
+      "yaw_deg": -175,
+      "pitch_deg": -34,
+      "bury_height": 58,
+      "clear": 370
+    },
+    {
       "id": "outpost",
       "kind": "location",
       "location": "outpost",
