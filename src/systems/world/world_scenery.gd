@@ -115,6 +115,9 @@ func _build_landmark_visuals() -> void:
 	add_child(root)
 	var op: Dictionary = look.get("outpost", {})
 	for b in landmark_boxes():
+		if b.has("wreck_finish"):
+			_build_wreck_plate(root, b)
+			continue
 		if not bool(b.get("visual", true)):
 			continue                 # dressed elsewhere (issue #42: Skrugs's post)
 		var mn: Vector3 = b.min
@@ -128,3 +131,26 @@ func _build_landmark_visuals() -> void:
 			Color(str(op.get("trim", "#6b1e1e"))), Color(str(op.get("color", "#b9a48a"))))
 		mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY, (mn + mx) * 0.5 - Vector3(0, 1.0, 0))
 		root.add_child(mi)
+
+
+## Exact same oriented plates as the physics/flight boxes: no wall skirt across
+## the opening and no distant impostor that disappears when approached.
+func _build_wreck_plate(root: Node3D, b: Dictionary) -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = (b.max as Vector3) - (b.min as Vector3)
+	var mi := MeshInstance3D.new()
+	mi.name = str(b.id).replace("/", "_")
+	mi.mesh = mesh
+	var finish := str(b.wreck_finish)
+	match finish:
+		"rib":
+			mi.material_override = _mats.flat(Color("#626166"), 0.85, 0.35)
+		"scorch":
+			mi.material_override = _mats.flat(Color("#29282c"), 1.0, 0.15)
+		"marking":
+			mi.material_override = _mats.flat(Color("#6b1e1e"), 0.9, 0.25)
+		_:
+			mi.material_override = _mats.hull(float(b.sand_y), 8.0)
+	mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY,
+		((b.min as Vector3) + (b.max as Vector3)) * 0.5)
+	root.add_child(mi)
