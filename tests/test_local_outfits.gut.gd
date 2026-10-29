@@ -106,10 +106,22 @@ func test_seams_keep_collar_on_the_jacket_and_hoses_on_the_helmet() -> void:
 	var o := kit.build("cantina_owner")
 	var helmet := _box(o, "cantina_owner_head")
 	var tunic := _box(o, "cantina_owner_torso")
+	var oskin: SkinnedBody = o.get_meta("skin")
+	var tarr := (oskin.model.find_child("cantina_owner_torso", true, false) as MeshInstance3D).mesh.surface_get_arrays(0)
 	o.free()
 	assert_gt(jacket.end.y, 0.7, "the collar stands up from the jacket")
 	assert_lt(tunic.end.y, 0.68, "no hoses reach up from the tunic")
 	assert_gt(helmet.size.x, 0.38, "the hoses hang off the helmet")
+	# The hood rim's two tufts, once hidden under the hoses, stick out in front of the
+	# shoulders; they go with the helmet so another head shows a clean hood.
+	var tv: PackedVector3Array = tarr[Mesh.ARRAY_VERTEX]
+	var ti: PackedInt32Array = tarr[Mesh.ARRAY_INDEX]
+	var tufts := 0
+	for t in range(0, ti.size(), 3):
+		var c := (tv[ti[t]] + tv[ti[t + 1]] + tv[ti[t + 2]]) / 3.0
+		if c.y > 0.5 and c.y < 0.6 and c.z > 0.18 and absf(c.x) > 0.1:
+			tufts += 1
+	assert_eq(tufts, 0, "no hood tufts stick out in front of the tunic")
 
 
 func _box(c: Node3D, mesh: String) -> AABB:
