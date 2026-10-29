@@ -135,6 +135,8 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 	var cantina := _cantina(x, cl, cw, float(cdim.get("height", 5.5)), float(ccfg.get("door_half", 2.0)), opts,
 		size >= int(ccfg.get("patrons_from_size", 10)), full)
 	_front_stalls(cantina.end, square, front, sh)
+	if round:
+		_cantina_homes(cantina, sh)
 	x = cantina.end + square
 	if pit and round:
 		var pk: Dictionary = kit.get("pit", {})
@@ -304,6 +306,27 @@ func _front_stalls(x0: float, length: float, n: int, sh: float) -> void:
 			"soldier": "local_merchant", "face": [sx + 2.0, 0, 0] })
 	_core.append(Rect2(x0, -(sh + 5.5), length, 2.0 * (sh + 5.5)))
 	_zones.append({ "id": "square", "min": [x0, -(sh + 5.5)], "max": [x0 + length, sh + 5.5] })
+
+
+## Issue #114: on the station, four short gray homes beside the cantina, two
+## each side of the street past the square's stalls, their doors facing in.
+func _cantina_homes(cantina: Dictionary, sh: float) -> void:
+	var z0 := maxf(sh + 5.5, float(cantina.z1)) + 1.0
+	var looks := [["hut_block", "hut_round"], ["hut_stepped", "hut_block"]]
+	for side in 2:
+		var north := side == 0
+		var sg := 1.0 if north else -1.0
+		for k in 2:
+			var x0 := float(cantina.end) - 2.0 + k * 10.0
+			var h := 3.5 if k == 0 else 4.0
+			var extra := { "look": looks[side][k], "face": "-z" if north else "+z", "style": "gray" }
+			if looks[side][k] == "hut_round":
+				extra["shape"] = "round"
+			_box("cantina_home_%s_%02d" % ["n" if north else "s", k + 1], "cantina_homes", "solid",
+				[x0, 0, minf(sg * z0, sg * (z0 + 6.0))], [x0 + 6.0, h, maxf(sg * z0, sg * (z0 + 6.0))], extra)
+	var x := float(cantina.end) - 2.0
+	_core.append(Rect2(x, -(z0 + 6.0), 16.0, 2.0 * (z0 + 6.0)))
+	_zones.append({ "id": "cantina_homes", "min": [x, -(z0 + 6.0)], "max": [x + 16.0, z0 + 6.0] })
 
 
 ## Issue #75: locals who walk the streets (and fight, like every local): loops up

@@ -10,7 +10,7 @@ extends PlatformWorld
 ##     energy shield you walk through, and a covered hallway beyond it
 ##   - the hallway: wide windows for walls, lit along its ceiling, out to the
 ##     landing pit, in through a door in the pit's tall round liner and down over
-##     the pit's ramp, opening on the pit floor through a round energy shield
+##     the pit's ramp, opening on the pit floor through a square energy shield
 ##   - the pit: the port's own round pit, its wall carried up above the rock as a
 ##     tall liner, an energy shield over the top that ships fly through
 ##   - blocky boulders strewn over the rock round the station
@@ -153,7 +153,7 @@ func _dome_triangles() -> PackedVector3Array:
 
 
 ## The hallway's solid parts as boxes: [centre, size] each (walls full height,
-## the roof, and the end wall round its round shield).
+## the roof, and the end wall round its square shield).
 func _hall_boxes() -> Array:
 	var out: Array = []
 	if hall.is_empty():
@@ -169,7 +169,7 @@ func _hall_boxes() -> Array:
 		out.append([Vector3((x0 + rim) * 0.5, h * 0.5, sg * (hw + 0.15)), Vector3(rim - x0, h, 0.3)])
 		out.append([Vector3((rim + x1) * 0.5, (bottom + h) * 0.5, sg * (hw + 0.15)), Vector3(x1 - rim, h - bottom, 0.3)])
 	out.append([Vector3((x0 + x1) * 0.5, h + 0.15, 0.0), Vector3(x1 - x0, 0.3, hw * 2.0 + 0.6)])
-	# The end wall: round the shield's circle (radius sr, centred cy above the pit floor).
+	# The end wall: round the shield's square opening (sr either side, up to cy + sr).
 	var sr := 3.0
 	var cy := bottom + 3.2
 	out.append([Vector3(x1 + 0.15, (cy + sr + h) * 0.5, 0.0), Vector3(0.3, h - cy - sr, hw * 2.0)])
@@ -597,7 +597,7 @@ func _strip(stl: SurfaceTool, a: Vector3, b: Vector3, w: float) -> void:
 
 
 ## The hallway: metal sills and headers with wide windows between, posts, a roof,
-## strip lights down both sides of the ceiling and lamps along it, and the round
+## strip lights down both sides of the ceiling and lamps along it, and the square
 ## shield it opens through onto the pit floor.
 func _dress_hall(metal: Material, glass: Material, _env: LookEnvironment, mats: LookMaterials) -> void:
 	if hall.is_empty():
@@ -626,20 +626,10 @@ func _dress_hall(metal: Material, glass: Material, _env: LookEnvironment, mats: 
 	var boxes := _hall_boxes()
 	for k in range(boxes.size() - 3, boxes.size()):
 		_box(root, boxes[k][0], boxes[k][1], metal)
-	var disc := MeshInstance3D.new()
-	disc.name = "HallShield"
-	var cm := CylinderMesh.new()
-	cm.top_radius = 3.0
-	cm.bottom_radius = 3.0
-	cm.height = 0.08
-	cm.radial_segments = 48
-	disc.mesh = cm
-	disc.material_override = _shield_mat()
-	disc.rotation = Vector3(0, 0, PI * 0.5)
-	disc.position = Vector3(x1 + 0.15, bottom + 3.2, 0.0)
-	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(disc)
-	shields.append(disc)
+	# A square shield filling the end wall's whole opening (floor to the lintel).
+	var top: float = boxes[boxes.size() - 3][0].y - boxes[boxes.size() - 3][1].y * 0.5
+	var door_w: float = hw * 2.0 - boxes[boxes.size() - 1][1].z * 2.0
+	_shield("HallShield", Vector3(x1 + 0.15, (bottom + top) * 0.5, 0.0), Vector3(0.08, top - bottom, door_w))
 	# Lights: two glowing strips under the roof, and a lamp every 7 m, always on
 	# (see _station_lighting); past the rim the floor drops beside the ramp, so a
 	# second lamp hangs lower there.
