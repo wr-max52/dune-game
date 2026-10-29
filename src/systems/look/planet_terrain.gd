@@ -373,7 +373,7 @@ func _start(layer: String, center: Vector2, cells_override: int = -1, step_overr
 	var request := { "center": center, "cells": cells, "step": step }
 	if _jobs.has(layer):
 		var active: Dictionary = _jobs[layer]
-		var same_request := active.center == center and int(active.cells) == cells and is_equal_approx(float(active.step), step)
+		var same_request: bool = active.center == center and int(active.cells) == cells and is_equal_approx(float(active.step), step)
 		if same_request:
 			_pending_jobs.erase(layer)
 			return
@@ -421,7 +421,7 @@ func _finish_jobs() -> void:
 			if j1 >= n:
 				var p := { "xform": sphere.patch_frame(job.center.x, job.center.y), "heights": job.heights,
 					"verts": job.verts, "center": job.center, "cells": job.cells, "step": job.step }
-			_apply_collider(p)
+				_apply_collider(p)
 				recenters += 1
 				worst_swap_ms = maxf(worst_swap_ms, (Time.get_ticks_usec() - ts) / 1000.0)
 				if _with_mesh:
@@ -614,7 +614,7 @@ const _FACES := [
 ]
 
 
-func _far_chunk(k: int) -> Array:
+func _far_chunk(k: int) -> Dictionary:
 	var per := far_chunks * far_chunks
 	var face: Array = _FACES[k / per]
 	var ci := (k % per) % far_chunks
