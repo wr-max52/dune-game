@@ -16,6 +16,16 @@
       "note": "Issue #64: rides on the pit hauler, the old cargo droid that roams the pit (droids/droids.json, pit_hauler); its position here is only where it starts. taken_flag: set when someone takes it (Oda's rumor r_pit_hauler stops)."
     },
     {
+      "id": "wreck_red_saber",
+      "item": "red_energy_saber",
+      "marker": "desert_exit",
+      "offset": [0.0, 0.0, 0.0],
+      "reach": 2.6,
+      "taken_flag": "wreck_red_saber_taken",
+      "carried": true,
+      "note": "Issue #148: rides on the old cargo droid in the crashed starcruiser's deep hold (droids/droids.json, wreck.hauler); its position here is only where it starts."
+    },
+    {
       "id": "desert_cache",
       "item": "unmarked_cells",
       "count": 3,

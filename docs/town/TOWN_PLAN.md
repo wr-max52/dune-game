@@ -171,7 +171,7 @@ validator in T3 must reproduce them.
 | V4 | Every box whose zone is not `ground` or `perimeter` has its x/z footprint fully inside that zone. Unknown zone ids are errors. |
 | V5 | No two boxes overlap in 3D. Touching faces are fine (use strict `<`). |
 | V6 | No marker sits inside a blocking box. A marker is blocked when the box's y range contains the marker y (`min.y <= y < max.y`) and the 2D distance from the marker to the box footprint is `<= player_clearance`. |
-| V7 | Every marker stands on something: a `floor` or `solid` box whose top (`max.y`) is within 0.05 of the marker y and whose footprint contains the marker x/z. |
+| V7 | Every marker stands on something: a `floor` or `solid` box (or any box with `"standable": true`, e.g. the cantina stage) whose top (`max.y`) is within 0.05 of the marker y and whose footprint contains the marker x/z. |
 | V8 | No route segment passes within `player_clearance` of any blocking box (2D distance, segment to rectangle). |
 
 Reference output (yours must match these numbers to one decimal):

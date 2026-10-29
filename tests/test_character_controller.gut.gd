@@ -78,3 +78,31 @@ func test_body_height_differs_by_pose() -> void:
 	cc.pose = 1  # CROUCH
 	var h_crouch: float = cc.body_height()
 	assert_lt(h_crouch, h_stand, "crouch is shorter than stand")
+
+
+# ---- issue #133: the Shift sprint
+
+func _dash(frames: int) -> void:
+	cc.set_command(Vector2(0.0, 1.0), true, false, false, false, true)
+	for i in range(frames):
+		cc.step(1.0 / 60.0, 0.0, 0.0)
+
+
+func test_shift_sprint_is_faster_than_the_run() -> void:
+	_dash(120)
+	assert_almost_eq(_hvel(), cc.dash_speed, 0.2, "sprint reaches 10 m/s")
+	assert_gt(cc.dash_speed, cc.sprint_speed)
+	assert_true(cc.is_dashing())
+
+
+func test_out_of_stamina_drops_to_the_run() -> void:
+	cc.dash_allowed = false
+	_dash(120)
+	assert_almost_eq(_hvel(), cc.sprint_speed, 0.2, "winded: back to the 7 m/s run")
+	assert_false(cc.is_dashing())
+
+
+func test_standing_still_with_shift_is_not_sprinting() -> void:
+	cc.set_command(Vector2.ZERO, false, false, false, false, true)
+	cc.step(1.0 / 60.0, 0.0, 0.0)
+	assert_false(cc.is_dashing())

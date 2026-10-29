@@ -136,7 +136,8 @@ func validate() -> Array:
 			if _aabb_overlap(bs[i], bs[j]):
 				errs.append("V5 overlap: %s / %s" % [bs[i].id, bs[j].id])
 
-	# V6 marker not blocked, V7 marker supported
+	# V6 marker not blocked, V7 marker supported (a floor or solid top, or any box
+	# marked "standable", like the cantina stage the station's dancer is on)
 	for m in markers():
 		var p := _v3(m.pos)
 		var supported := false
@@ -146,7 +147,8 @@ func validate() -> Array:
 			if str(b.kind) in blocking and mn.y <= p.y and p.y < mx.y:
 				if _point_rect_dist(p.x, p.z, b) <= clearance:
 					errs.append("V6 marker blocked: %s by %s" % [m.id, b.id])
-			if (str(b.kind) == "floor" or str(b.kind) == "solid") and absf(mx.y - p.y) < 0.05 \
+			var standable: bool = str(b.kind) == "floor" or str(b.kind) == "solid" or bool(b.get("standable", false))
+			if standable and absf(mx.y - p.y) < 0.05 \
 					and p.x >= mn.x and p.x <= mx.x and p.z >= mn.z and p.z <= mx.z:
 				supported = true
 		if not supported:

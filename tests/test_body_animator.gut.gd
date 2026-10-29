@@ -135,23 +135,54 @@ func test_airborne_tucks_rising_and_reaches_falling() -> void:
 	assert_gt(absf(down.joints.l_shoulder.z), absf(up.joints.l_shoulder.z), "arms out for the landing")
 
 
-func test_cantina_dance_is_a_ten_second_loop_with_a_wall_turn_and_bend() -> void:
+func test_cantina_dance_is_a_twenty_second_loop_with_a_turn_and_bend() -> void:
+	assert_eq(BodyAnimator.DANCE_LOOP_S, 20.0)
 	var start := BodyAnimator.dance_pose(0.0)
 	var end := BodyAnimator.dance_pose(BodyAnimator.DANCE_LOOP_S)
 	assert_almost_eq(start.yaw, end.yaw, 0.001, "the loop closes facing the audience")
 	assert_almost_eq(start.pelvis_x, end.pelvis_x, 0.001)
 	for joint in start.joints:
 		assert_almost_eq(start.joints[joint].x, end.joints[joint].x, 0.001, str(joint) + " loops cleanly")
-	var facing_wall := BodyAnimator.dance_pose(4.5)
-	assert_gt(facing_wall.yaw, 2.9, "the dancer turns to face the wall")
-	var bent := BodyAnimator.dance_pose(5.55)
-	assert_gt(bent.joints.chest.x, 20.0, "the bend reaches the waist")
-	assert_lt(bent.pelvis_y, start.pelvis_y, "the bend lowers the hips")
+	var turned := BodyAnimator.dance_pose(14.0)
+	assert_gt(turned.yaw, 2.9, "the dancer turns her back to the audience")
+	assert_gt(turned.joints.chest.x, 20.0, "the bend reaches the waist")
+	assert_lt(turned.pelvis_y, start.pelvis_y, "the bend lowers the hips")
+	var t := 0.0
+	var last := BodyAnimator.dance_pose(0.0)
+	while t < BodyAnimator.DANCE_LOOP_S:
+		t += 0.05
+		var p := BodyAnimator.dance_pose(t)
+		for joint in p.joints:
+			assert_lt((p.joints[joint] as Vector3).distance_to(last.joints[joint]), 25.0, "no pop in %s at %.2fs" % [joint, t])
+		last = p
 
 
 func test_cantina_dance_state_advances_without_walking() -> void:
 	var a := BodyAnimator.new()
-	var out := _step(a, 600, { "dance": true, "speed": 0.0, "grounded": true })
+	var out := _step(a, 1200, { "dance": true, "speed": 0.0, "grounded": true })
 	assert_eq(out.state, "DANCE")
-	assert_almost_eq(a.dance_time, 0.0, 0.001, "600 frames at 60 Hz complete one loop")
+	assert_almost_eq(a.dance_time, 0.0, 0.001, "1200 frames at 60 Hz complete one loop")
 	assert_eq(a.phase, 0.0, "dancing never advances the walk cycle")
+
+
+# ---- issue #133: walk, run, sprint
+
+func test_three_gaits_lengthen_the_stride() -> void:
+	assert_almost_eq(BodyAnimator.stride_for(4.0), BodyAnimator.WALK_STRIDE, 0.001)
+	assert_almost_eq(BodyAnimator.stride_for(7.0), BodyAnimator.RUN_STRIDE, 0.001)
+	assert_almost_eq(BodyAnimator.stride_for(10.0), BodyAnimator.SPRINT_STRIDE, 0.001)
+	# Steps a second: walk 4 / 2.1 * 2 = 3.8, run 4.7, sprint 5.0 (a quicker beat each time).
+	var walk_cad := 4.0 / BodyAnimator.stride_for(4.0)
+	var run_cad := 7.0 / BodyAnimator.stride_for(7.0)
+	var sprint_cad := 10.0 / BodyAnimator.stride_for(10.0)
+	assert_lt(walk_cad, run_cad)
+	assert_lt(run_cad, sprint_cad)
+
+
+func test_sprint_leans_harder_than_the_run() -> void:
+	var r := BodyAnimator.new()
+	var run := _step(r, 60, { "speed": 7.0 })
+	var s := BodyAnimator.new()
+	var sprint := _step(s, 60, { "speed": 10.0 })
+	assert_gt(sprint.joints.spine.x, run.joints.spine.x + 8.0, "sprint leans in")
+	assert_lt(sprint.pelvis_y, run.pelvis_y + 0.03, "and rides a little lower")

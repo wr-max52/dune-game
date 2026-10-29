@@ -46,3 +46,13 @@ func test_blend_ends_at_each_pose() -> void:
 	var aim := Transform3D(Basis(), Vector3(0, 0, 0.4))
 	assert_true(WeaponCarry.blend(rest, aim, 0.0).is_equal_approx(rest))
 	assert_almost_eq((WeaponCarry.blend(rest, aim, 1.0).origin - aim.origin).length(), 0.0, 0.0001)
+
+
+func test_sprinting_drops_the_gun_at_once() -> void:
+	# Issue #133: no hold-up time while sprinting, even with the trigger down.
+	var c := WeaponCarry.new()
+	_run(c, 0.5, true)
+	for i in int((WeaponCarry.LOWER_S + 0.05) * 60.0):
+		c.step(1.0 / 60.0, true, true)
+	assert_almost_eq(c.ready, 0.0, 0.001, "down within the lower time")
+	assert_false(c.on_target())
