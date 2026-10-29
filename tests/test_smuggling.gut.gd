@@ -12,6 +12,7 @@ var content
 
 
 func before_each() -> void:
+	GameFlow.reset()                            # the port's job is the home job
 	WorldState.reset()
 	Story.skip_to("smuggle_1")                 # issue #64: the story opens the run
 	content = CoreContent.new()
@@ -56,6 +57,8 @@ func test_goods_are_contraband_the_fence_buys() -> void:
 func test_offer_names_the_goods_and_the_area() -> void:
 	var j := _offered()
 	assert_false(j.is_empty(), "Oda offers the run once the story reaches it")
+	assert_eq(str(j.location), "port_town", "the home job stays at the port")
+	assert_eq(str(WorldState.smuggle.location), "port_town")
 	assert_false(str(j.text).contains("%"), "the text is filled in")
 	assert_true(str(j.text).contains(str(WorldState.smuggle.hint)), "she says where")
 	var value := int(content.get_item(str(WorldState.smuggle.item)).value)

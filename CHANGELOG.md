@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Station smuggling (2026-10-29)
+
+- **The asteroid has its own smuggling loop.** The station's Oda offers a run
+  that belongs to `grit_station_town`: the drop lands on the open rock outside
+  the sealed station, and the merchant in front of the cantina buys it. The
+  port's run stays at the port, gated by the port's story.
+- **Smuggling jobs are per town.** The board filters a `kind: "smuggle"` job by
+  its `location`, so home and station cannot offer each other's drops. The drop
+  data lives in `content/core/pickups/<town_id>.json`.
+- **Rock drops sit on the rock.** Drop areas can set `surface: true` to use the
+  terrain height exactly instead of the old "never below the marker" floor.
+- **A station merchant with a fence's rates.** The existing merchant by the
+  cantina buys contraband; bounty payouts stay at the port's fence. The station
+  drops are marked with a beacon because they are far out on the rock.
+
 ## Desert packs and sand pigs, first milestone (2026-10-28, issue #96)
 
 - **The dune people** now live on the home planet: one primitive people,

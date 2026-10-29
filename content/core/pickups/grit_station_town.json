@@ -1,0 +1,52 @@
+{
+  "id": "grit_station_town",
+  "location": "grit_station_town",
+  "pickups": [],
+  "note": "Smuggling drops for the asteroid station (board/bar_board.json, j_station_smuggle_run). The station is sealed, so the drops lie on the open rock outside the ring and the landing pit; the player flies out to them. surface: sit exactly on the asteroid's ground (not just on or above floor level). marked: these are far out on the rock, so each gets a beam of light.",
+  "drops": {
+    "areas": [
+      {
+        "id": "rock_past_pit",
+        "hint": "out on the rock past the landing pit",
+        "marker": "gate",
+        "ground": true,
+        "surface": true,
+        "marked": true,
+        "spots": [
+          [150, 0, 8],
+          [175, 0, -18],
+          [200, 0, 22],
+          [220, 0, -6]
+        ]
+      },
+      {
+        "id": "rock_behind_cantina",
+        "hint": "on the rock behind the cantina",
+        "marker": "gate",
+        "ground": true,
+        "surface": true,
+        "marked": true,
+        "spots": [
+          [-130, 0, 10],
+          [-155, 0, -14],
+          [-180, 0, 20],
+          [-205, 0, -4]
+        ]
+      },
+      {
+        "id": "rock_beside_dome",
+        "hint": "on the rock beside the dome",
+        "marker": "gate",
+        "ground": true,
+        "surface": true,
+        "marked": true,
+        "spots": [
+          [-8, 0, 130],
+          [24, 0, 155],
+          [-18, 0, 180],
+          [12, 0, 205]
+        ]
+      }
+    ]
+  }
+}

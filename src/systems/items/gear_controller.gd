@@ -197,9 +197,12 @@ func _place(entry: Dictionary) -> Vector3:
 	if town != null and not town.get_marker(str(entry.get("marker", ""))).is_empty():
 		at = town.marker_pos(str(entry.get("marker", "")))
 	at += Vector3(float(off[0]), float(off[1]), float(off[2]))
-	# Out in the desert the sand is not flat: sit on it, never under it.
+	# Out in the desert the sand is not flat: sit on it, never under it. A drop
+	# on open rock (surface) sits exactly on the ground, even below the marker's
+	# height.
 	if bool(entry.get("ground", false)) and ground_at.is_valid():
-		at.y = maxf(at.y, float(ground_at.call(at.x, at.z)))
+		var floor_y := float(ground_at.call(at.x, at.z))
+		at.y = floor_y if bool(entry.get("surface", false)) else maxf(at.y, floor_y)
 	return at
 
 

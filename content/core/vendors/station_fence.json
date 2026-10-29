@@ -1,0 +1,16 @@
+{
+  "id": "station_fence",
+  "label": "Fence",
+  "location": "grit_station_town",
+  "marker": "vendor_1",
+  "reach": 3.5,
+  "buys": [
+    "contraband"
+  ],
+  "bounties": false,
+  "buy_rate": 1.0,
+  "sell_rate": 1.6,
+  "stock": [],
+  "pitch": "The %s pays well for things with no serial numbers",
+  "note": "The merchant in front of the station cantina. Buys Oda's rock drops at full value and asks no questions. Bounties stay at the port's fence: the Remnant officers are out in the home planet's desert."
+}
