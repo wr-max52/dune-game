@@ -2,6 +2,31 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #96, desert packs (first milestone) (2026-10-28)
+
+**Proven by the trace** (`scenes/natives_trace.gd`, run on its own; the full
+suite was not run):
+- food bought, traded for quartz and the quartz sold;
+- a pig killed and butchered;
+- the horn and the attack;
+- 5 minutes survived ending in trade;
+- a kill that locks the pack.
+
+**Not done, honestly:**
+- **Later milestones are not built:** camps, tents, resting, stealing, packs
+  fighting each other and the Remnant, sandstorms, stealing vehicles.
+- **Packs walk straight at their goal** (no navmesh out in the desert). They
+  walk through boulders and up dune faces like anyone would, and round nothing.
+- **No new animations:** no gesture poses, swings or throws. Gestures are lines
+  over the leader's head, a hit lands when a member is in reach, and a throw is
+  a slow brown bolt.
+- **The horn is synthesized** (`tools/audio/make_npc_sfx.py battle_horn.wav`),
+  and yells are text only.
+- **Looks checked only in two stills** (`docs/natives/packs.jpg`, rendered with
+  lavapipe). Spears and clubs hang at a fixed angle from the hand.
+- **Teardown errors:** quitting the trace aborts at teardown (the trace's file is
+  already written), as other traces in this project sometimes do.
+
 ## After issue #99, the asteroid as a real ball (2026-10-28)
 
 **Checked:** `scenes/planets_trace.gd` was run on its own (not the full suite, as

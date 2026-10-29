@@ -1,0 +1,13 @@
+{
+  "id": "food_stall",
+  "label": "Food Stall",
+  "location": "port_town",
+  "marker": "vendor_1",
+  "reach": 3.5,
+  "buys": ["trade"],
+  "buy_rate": 1.0,
+  "sell_rate": 1.0,
+  "stock": ["food"],
+  "endless": true,
+  "note": "IP-neutral. Issue #96: a market stall that sells food (never runs out: 'endless') and buys the quartz the desert packs trade for it."
+}

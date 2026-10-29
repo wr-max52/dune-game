@@ -293,6 +293,17 @@ if [ ! -f test_results/planets_trace.txt ]; then
 fi
 echo "CI: planets trace present ($(wc -l < test_results/planets_trace.txt) lines)"
 
+# Issue #96: the desert packs' first milestone: food for quartz with the friendly
+# pack, a sand pig hunt, the hostile pack's horn and attack, five minutes survived
+# into a trade, and a kill that locks a pack hostile. (About 5 game minutes.)
+echo "CI: generating natives trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/natives_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/natives_trace.txt ]; then
+  echo "CI: ERROR -- natives trace was not generated" >&2
+  exit 1
+fi
+echo "CI: natives trace present ($(wc -l < test_results/natives_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.

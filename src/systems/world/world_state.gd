@@ -33,6 +33,7 @@ static var droids := DroidRoster.new()     ## issue #51: the player's companion 
 static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
 static var ships_destroyed: Array = []     ## issue #64: town boxes whose parked ship was shot to pieces (never back)
+static var native_packs: Dictionary = {}       ## issue #96: pack id -> { rep, friendly, locked, trades, kills }
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 
@@ -63,6 +64,7 @@ static func reset() -> void:
 	bounty = {}
 	ships_destroyed = []
 	speeder_fits = []
+	native_packs = {}
 
 
 # ------------------------------------------------------------------ writes
@@ -569,6 +571,7 @@ static func to_save() -> Dictionary:
 		"bounty": bounty.duplicate(),
 		"ships_destroyed": ships_destroyed.duplicate(),
 		"speeder_fits": speeder_fits.duplicate(true),
+		"native_packs": native_packs.duplicate(true),
 	}
 
 
@@ -598,6 +601,7 @@ static func from_save(d: Dictionary) -> void:
 	bounty = d.get("bounty", {}).duplicate()
 	ships_destroyed = d.get("ships_destroyed", []).duplicate()
 	speeder_fits = d.get("speeder_fits", []).duplicate(true)
+	native_packs = d.get("native_packs", {}).duplicate(true)
 
 
 static func _read_json(path: String) -> Variant:
@@ -605,3 +609,14 @@ static func _read_json(path: String) -> Variant:
 	if f == null:
 		return null
 	return JSON.parse_string(f.get_as_text())
+
+
+# ------------------------------------------------------------------ native packs (issue #96)
+
+## What pack `id` thinks of the player, made the first time it is asked from the
+## pack's own data (its starting attitude). Reputation is per pack, never shared,
+## and has nothing to do with the player's standing with the Remnant.
+static func native_pack(id: String, attitude: String = "friendly") -> Dictionary:
+	if not native_packs.has(id):
+		native_packs[id] = { "rep": 0, "friendly": attitude == "friendly", "locked": false, "trades": 0, "kills": 0 }
+	return native_packs[id]

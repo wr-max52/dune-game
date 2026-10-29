@@ -7,5 +7,79 @@
   "town_size": 50,
   "world": "port_desert",
   "style": "desert",
-  "features": ["training_range", "speeders", "landforms", "pickups"]
+  "features": [
+    "training_range",
+    "speeders",
+    "landforms",
+    "pickups"
+  ],
+  "natives": {
+    "note": "Issue #96, first milestone: the dune people in one friendly and one hostile pack (no camps yet), and sand pigs. Routes are map points (metres along the ground from the port).",
+    "species": "dune_nomads",
+    "packs": [
+      {
+        "id": "red_wind",
+        "label": "Red Wind pack",
+        "attitude": "friendly",
+        "size": 12,
+        "children": 2,
+        "style": "sun_bleached",
+        "route": [
+          [
+            -300,
+            350
+          ],
+          [
+            -560,
+            520
+          ],
+          [
+            -720,
+            260
+          ],
+          [
+            -460,
+            170
+          ]
+        ]
+      },
+      {
+        "id": "bone_teeth",
+        "label": "Bone Teeth pack",
+        "attitude": "hostile",
+        "size": 10,
+        "children": 2,
+        "style": "rust",
+        "route": [
+          [
+            150,
+            -460
+          ],
+          [
+            460,
+            -620
+          ],
+          [
+            300,
+            -860
+          ],
+          [
+            -60,
+            -660
+          ]
+        ]
+      }
+    ],
+    "fauna": [
+      {
+        "species": "sand_pig",
+        "count": 8,
+        "around": [
+          0,
+          0
+        ],
+        "radius": 900
+      }
+    ]
+  }
 }

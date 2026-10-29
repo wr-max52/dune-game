@@ -1,0 +1,15 @@
+{
+  "id": "sand_pig",
+  "kind": "animal",
+  "label": "sand pig",
+  "note": "IP-neutral. Issue #96: a solitary animal that roams the desert alone. Shoot or cut one down and butcher it ([E] at the carcass) for food: another way to feed a pack. Read by src/systems/natives/sand_pig.gd (any animal with this shape of data).",
+  "hp": 30,
+  "walk_speed": 1.4,
+  "run_speed": 6.5,
+  "wander_radius": 40.0,
+  "flee_range": 18.0,
+  "flee_s": 6.0,
+  "food": { "item": "food", "count": 2 },
+  "size": [0.9, 0.7, 1.5],
+  "look": { "hide": "#b08a62", "belly": "#d2b48c", "snout": "#7a4e3a", "dark": "#3a2a20" }
+}

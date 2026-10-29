@@ -1,6 +1,6 @@
 {
   "id": "types",
-  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava or gas), and falling off the deck kills you (you wake by the bay); 'ball' (issue #99, the asteroid) = the planet is a real ball of surface.radius like the home planet (src/systems/planets/asteroid_sphere.gd): cratered rock all the way round, gravity toward its centre, flown round and walked round; with 'enclosed' the station is sealed under a dome (src/systems/planets/asteroid_world.gd, 'station'). landing_bay 'pit': the port's round landing pit outside the gate instead of bays inside the walls. space.handoff: how close to this ball (metres above its surface) its own scene takes over from its parent's, with no fade. sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
+  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava or gas), and falling off the deck kills you (you wake by the bay); 'ball' (issue #99, the asteroid) = the planet is a real ball of surface.radius like the home planet (src/systems/planets/asteroid_sphere.gd): cratered rock all the way round, gravity toward its centre, flown round and walked round; with 'enclosed' the station is sealed under a dome (src/systems/planets/asteroid_world.gd, 'station'). landing_bay 'pit': the port's round landing pit outside the gate instead of bays inside the walls. space.handoff: how close to this ball (metres above its surface) its own scene takes over from its parent's, with no fade. sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json). natives (issue #96, terrain planets only): the people template (content/core/species/) each planet of the type turns into a people of its own, how many packs of what size, how many hostile, with children or adults only, how far out their routes run, and the wild animals (content/core/fauna/); a planet's own 'natives' block replaces this (false = none). See src/systems/natives/natives_data.gd.",
   "home": "port_desert",
   "detail": {
     "hysteresis": 40.0,
@@ -23,6 +23,7 @@
   "types": {
     "sand": {
       "label": "sand desert",
+      "natives": { "people": "desert_folk", "packs": [2, 3], "pack_size": [10, 20], "hostile_share": 0.5, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1400.0], "fauna": [ { "species": "sand_pig", "count": 8, "radius": 900.0 } ] },
       "ground": "terrain",
       "default_style": "desert",
       "sand": {},
@@ -35,6 +36,7 @@
     },
     "snow": {
       "label": "snow world",
+      "natives": { "people": "frost_folk", "packs": [1, 3], "pack_size": [10, 16], "hostile_share": 0.4, "children_share": 0.15, "adults_only_share": 0.3, "route_radius": [500.0, 1300.0], "fauna": [] },
       "ground": "terrain",
       "default_style": "snowy",
       "sand": { "sand_light": "#f4f7fb", "sand_mid": "#d6e0ea", "sand_shadow": "#8c9aae", "glitter": 1.6 },
@@ -48,6 +50,7 @@
     },
     "red_desert": {
       "label": "red desert",
+      "natives": { "people": "desert_folk", "packs": [2, 4], "pack_size": [10, 18], "hostile_share": 0.6, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1500.0], "fauna": [ { "species": "sand_pig", "count": 6, "radius": 900.0 } ] },
       "ground": "terrain",
       "default_style": "desert",
       "sand": { "sand_light": "#d9845a", "sand_mid": "#b0532f", "sand_shadow": "#5e2a1e" },

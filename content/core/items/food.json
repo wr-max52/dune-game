@@ -1,0 +1,8 @@
+{
+  "id": "food",
+  "label": "Food",
+  "kind": "food",
+  "value": 4,
+  "look": "crate",
+  "note": "IP-neutral. Issue #96: dried meat and flatbread. Cheap and plentiful at the town's food stall; also cut from a sand pig. The desert packs take nothing else in trade."
+}

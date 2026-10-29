@@ -44,6 +44,9 @@ var target_crouched: Callable  ## -> bool
 ## Issue #55: a garrison trooper also watches the target's speeder or ship while
 ## it is a threat in town (the vehicle's hostile_in_town()). Townsfolk do not.
 var sees_vehicles := false
+## Issue #96: a desert pack walks open ground with no navmesh: straight at its
+## goal, along the ground (the ball's up), instead of standing still.
+var free_walk := false
 
 var dead := false
 var faction := ""              ## from the profile; bolts from the same faction do no harm
@@ -148,6 +151,9 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	if materials != null:
 		kit = CharacterKit.new(materials, -1000.0)
 		look_body = kit.build(str(soldier.get("archetype", "remnant_trooper")), "", soldier.get("outfit", {}))
+		# Issue #96: a smaller body (a desert pack's children) from the same model.
+		if soldier.has("look_scale"):
+			look_body.scale *= float(soldier.look_scale)
 		look_body.name = "Look"
 		add_child(look_body)
 		joints = look_body.get_meta("joints")
@@ -330,6 +336,9 @@ func is_moving() -> bool:
 
 
 func arrived() -> bool:
+	if free_walk and (nav == null or not nav.is_ready) and command.go_to != Vector3.INF:
+		var d: Vector3 = tilt.inverse() * (command.go_to - global_position)
+		return Vector2(d.x, d.z).length() < 1.0
 	return command.go_to == Vector3.INF or (locomotion.arrived and _path_goal != Vector3.INF \
 		and NpcLocomotion._flat(global_position - _path_goal).length() <= locomotion.arrive_radius + 0.25)
 
@@ -486,6 +495,8 @@ func _walk(dt: float) -> Vector3:
 			locomotion.clear()
 		return Vector3.ZERO
 	if nav == null or not nav.is_ready:
+		if free_walk:
+			return _free_walk(goal)
 		return Vector3.ZERO
 	_repath_clock -= dt
 	var goal_moved := _path_goal == Vector3.INF or goal.distance_to(_path_goal) > _repath_move
@@ -496,6 +507,17 @@ func _walk(dt: float) -> Vector3:
 		stuck_events += 1
 		_repath(goal)
 	return (out.move as Vector3) * float(out.speed)
+
+
+## Issue #96: straight at `goal` across open ground, in the body's own (tilted)
+## frame, so it walks along the ball like the player does.
+func _free_walk(goal: Vector3) -> Vector3:
+	var d := goal - global_position
+	var local := tilt.inverse() * d
+	local.y = 0.0
+	if local.length() < 0.8:
+		return Vector3.ZERO
+	return local.normalized() * clampf(local.length() / 2.0, 0.35, 1.0)
 
 
 func _repath(goal: Vector3) -> void:

@@ -1,0 +1,69 @@
+{
+  "id": "dune_nomads",
+  "kind": "people",
+  "label": "the dune people",
+  "note": "IP-neutral. Issue #96: the home planet's native people. One people in travelling packs of 10 to 20, primitive: melee and thrown weapons only, simple sun-faded clothes, no off-world or Remnant kit. They call the Remnant 'the sky ones' and live under its thumb. They want food. Read by src/systems/natives/ (NativesDirector, PackBrain). A planet lists its packs in its own config ('natives', content/core/planets/port_desert.json); a generated planet gets packs from its type (types.json 'natives', with a people template like desert_folk.json). Draft content: the product owner edits freely.",
+  "body": {
+    "archetype": "desert_nomad",
+    "child_scale": 0.6,
+    "child_hp": 0.5,
+    "leader_head": "cantina_owner",
+    "standard": { "height": 4.2, "cloth": "#b8762e", "note": "The leader's pole with a rag on top, so a pack can be seen coming from far off." }
+  },
+  "styles": [
+    { "id": "sun_bleached", "head": "goggles:sand", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand" },
+    { "id": "rust", "head": "goggles:oxblood", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder" },
+    { "id": "dull_dye", "head": "goggles:violet", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate" },
+    { "id": "bone", "head": "goggles:sand", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal" }
+  ],
+  "soldier": {
+    "label": "Dune nomad",
+    "faction": "dune_nomads",
+    "role": "native",
+    "hp": 44,
+    "walk_speed": 1.7,
+    "sprint_speed": 5.6,
+    "turn_rate_deg": 240.0,
+    "perception": { "sight_range": 45.0, "fov_deg": 140.0, "close_range": 4.0, "reaction_s": 0.5, "decay_per_s": 0.2, "forget_s": 12.0,
+                    "notice_at": 1.0, "lose_at": 0.3, "crouch_sight_mult": 0.7, "armed_rise_mult": 1.0, "hearing_range": 40.0,
+                    "heard_awareness": 0.6, "ray_hz": 3.0 },
+    "nav": { "arrive_radius": 1.2, "repath_s": 1.5, "repath_move": 2.0 }
+  },
+  "weapons": {
+    "melee": [
+      { "id": "club", "label": "club", "damage": 9, "reach": 2.0, "cooldown_s": 1.1, "look": "club" },
+      { "id": "spear", "label": "spear", "damage": 11, "reach": 2.4, "cooldown_s": 1.4, "look": "spear" },
+      { "id": "knife", "label": "bone knife", "damage": 7, "reach": 1.7, "cooldown_s": 0.8, "look": "knife" }
+    ],
+    "thrown": [
+      { "id": "throwing_stick", "label": "throwing stick", "damage": 7, "speed": 22.0, "range": 16.0, "min_range": 5.0, "cooldown_s": 3.2, "color": "#8a6a3a" },
+      { "id": "light_spear", "label": "light spear", "damage": 10, "speed": 26.0, "range": 18.0, "min_range": 6.0, "cooldown_s": 4.5, "color": "#c8b48a" }
+    ],
+    "thrower_share": 0.4,
+    "note": "Melee and thrown only: slings and bows are too hard to come by in the desert, and Remnant rifles are never their kit."
+  },
+  "pack": { "spacing": 2.6, "travel_speed": 1.6, "notice_range": 45.0, "greet_range": 30.0, "trade_reach": 4.5, "far_lod_m": 90.0 },
+  "trade": { "wants": ["food"], "gives": "quartz", "per_food": 1, "reputation_per_trade": 1, "adults_only_bonus": 1,
+             "note": "Packs only take food. Food is cheap in town (the food stall at the market); quartz sells there. An adults-only pack throws in a little more." },
+  "hostile": { "survive_s": 300.0, "horn": "res://assets/audio/npc/battle_horn.wav", "chase_leash_m": 160.0,
+               "note": "A hostile pack attacks on sight and fights to the last. Survive survive_s seconds without killing any of them (and without being downed) and they stop, offer trade, and the pack turns friendly. Kill one and that pack never will." },
+  "voice": {
+    "yells": ["Hyaa!", "Rrah! Rrah!", "Hoo-hoo-hoo!", "Ayaaa!", "Kshh! Kshh!", "Hah!"],
+    "greet": ["Hoo?", "Mmh. Mmh.", "Eh-ya."],
+    "gesture_offer": "(the leader mimes eating, then holds out a fistful of quartz)",
+    "gesture_thanks": "(they touch their foreheads and press the quartz into your hand)",
+    "gesture_no_food": "(the leader rubs its belly and shakes its head: no food, no quartz)",
+    "gesture_truce": "(they lower their weapons and the leader mimes eating, palms open)"
+  },
+  "lines": {
+    "prompt_trade": "[E]  Gesture back: offer food  (%d food)",
+    "prompt_no_food": "[E]  Gesture back  (you have no food)",
+    "traded": "Traded 1 food for %d quartz with the %s. Reputation %d.",
+    "horn": "A battle horn! The %s are coming for you.",
+    "survive": "SURVIVE  %d:%02d   (do not kill any of them)",
+    "won": "The %s lower their weapons. They will trade with you now.",
+    "locked": "You killed one of the %s. They will never forgive it.",
+    "butcher": "[E]  Butcher the %s",
+    "butchered": "You cut %d food from the %s."
+  }
+}

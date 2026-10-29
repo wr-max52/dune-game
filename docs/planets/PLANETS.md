@@ -114,6 +114,13 @@ A new type is a new entry in `types.json`, with no code change, as long as its
 ground is `terrain`, `platform` or `ball` and its surface is one of `water`,
 `lava`, `gas` or `rock`.
 
+## Native peoples and wild animals (issue #96)
+
+A planet's native packs and wild animals come from the planet generator too. A
+type's `natives` block gives every generated planet of that type a people of its
+own, plus its animals; a planet's own `natives` block (the home planet's dune
+people) replaces it, and `false` means none. See `docs/natives/NATIVES.md`.
+
 ## What every generated planet has (issue #75)
 
 - **Merchants in front of the cantina:** every merchant's stall is in the square
