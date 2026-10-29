@@ -124,6 +124,32 @@ func test_wrecks_one_per_kind_far_apart() -> void:
 	assert_eq(kinds.size(), 3)
 
 
+func test_ball_wrecks_cover_both_sides_and_use_surface_spacing() -> void:
+	var sphere := PlanetSphere.new(5000.0)
+	var surface := func(x: float, z: float) -> Vector3: return sphere.surface_at(x, z)
+	for i in int(DroidRoster.config().wrecks.ball_starting_count):
+		assert_false(r.roll_wreck(rng, Vector3.ZERO, Callable(), true, surface, sphere.center, sphere.radius).is_empty())
+	assert_eq(r.wrecks.size(), 8, "the ball starts with a field of wrecks")
+	var far_side := 0
+	var sep := float(DroidRoster.config().wrecks.ball_min_separation)
+	var kinds := {}
+	for w in r.wrecks:
+		kinds[w.kind] = true
+		var p := Vector3(float(w.pos[0]), float(w.pos[1]), float(w.pos[2]))
+		var dir := (p - sphere.center).normalized()
+		if dir.y < 0.0:
+			far_side += 1
+		assert_almost_eq(sphere.height_above_ground(p), 0.0, 0.01, "wreck is seated on spherical terrain")
+		for other in r.wrecks:
+			if other == w:
+				continue
+			var q := Vector3(float(other.pos[0]), float(other.pos[1]), float(other.pos[2]))
+			var arc := acos(clampf(dir.dot((q - sphere.center).normalized()), -1.0, 1.0)) * sphere.radius
+			assert_gt(arc, sep - 0.01, "wrecks stay separated over the curved surface")
+	assert_gt(far_side, 0, "wrecks are not confined to the town-facing hemisphere")
+	assert_lt(kinds.size(), r.wrecks.size(), "the larger field allows multiple wrecks of a kind")
+
+
 func test_fix_wreck_and_save_round_trip() -> void:
 	var w := r.roll_wreck(rng, Vector3.ZERO, Callable(), true)
 	var d := r.fix_wreck(int(w.uid))
@@ -133,10 +159,12 @@ func test_fix_wreck_and_save_round_trip() -> void:
 	var c := r.add("cargo", "olive")
 	r.stash(int(c.uid), WorldState.inventory, "holocrystals", 2)
 	r.roll_wreck(rng, Vector3.ZERO, Callable(), true)
+	r.wrecks_seeded = true
 	var saved := WorldState.to_save()
 	WorldState.from_save(JSON.parse_string(JSON.stringify(saved)))
 	assert_eq(WorldState.droids.owned.size(), 2)
 	assert_eq(WorldState.droids.wrecks.size(), 1)
+	assert_true(WorldState.droids.wrecks_seeded, "the starting field is not re-seeded after a save")
 	assert_eq(WorldState.droids.all_cargo().get("holocrystals"), 2)
 	assert_eq(WorldState.inventory.count("holocrystals"), 0)
 
