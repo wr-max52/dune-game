@@ -90,6 +90,18 @@
    ]
   },
   {
+   "id": "cantina_homes",
+   "min": [
+    -53,
+    -23
+   ],
+   "max": [
+    -35,
+    23
+   ],
+   "note": "The four homes beside the cantina (issue #114); they sit outside residential_w."
+  },
+  {
    "id": "residential_w",
    "min": [
     -98,
@@ -3136,46 +3148,78 @@
    "look": "bridge",
    "axis": "x",
    "style": "garrison"
-   },
-   {
-    "id": "cantina_home_n_01",
-    "zone": "residential_w",
-    "kind": "solid",
-    "min": [-52, 0, 16],
-    "max": [-46, 3.5, 22],
-    "look": "hut_block",
-    "face": "-z",
-    "style": "gray"
-   },
-   {
-    "id": "cantina_home_n_02",
-    "zone": "residential_w",
-    "kind": "solid",
-    "min": [-42, 0, 16],
-    "max": [-36, 4, 22],
-    "look": "hut_round",
-    "face": "-z",
-    "style": "gray"
-   },
-   {
-    "id": "cantina_home_s_01",
-    "zone": "residential_w",
-    "kind": "solid",
-    "min": [-52, 0, -22],
-    "max": [-46, 3.5, -16],
-    "look": "hut_stepped",
-    "face": "+z",
-    "style": "gray"
-   },
-   {
-    "id": "cantina_home_s_02",
-    "zone": "residential_w",
-    "kind": "solid",
-    "min": [-42, 0, -22],
-    "max": [-36, 4, -16],
-    "look": "hut_block",
-    "face": "+z",
-    "style": "gray"
+  },
+  {
+   "id": "cantina_home_n_01",
+   "zone": "cantina_homes",
+   "kind": "solid",
+   "min": [
+    -52,
+    0,
+    16
+   ],
+   "max": [
+    -46,
+    3.5,
+    22
+   ],
+   "look": "hut_block",
+   "face": "-z",
+   "style": "gray"
+  },
+  {
+   "id": "cantina_home_n_02",
+   "zone": "cantina_homes",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    16
+   ],
+   "max": [
+    -36,
+    4,
+    22
+   ],
+   "look": "hut_round",
+   "face": "-z",
+   "style": "gray"
+  },
+  {
+   "id": "cantina_home_s_01",
+   "zone": "cantina_homes",
+   "kind": "solid",
+   "min": [
+    -52,
+    0,
+    -22
+   ],
+   "max": [
+    -46,
+    3.5,
+    -16
+   ],
+   "look": "hut_stepped",
+   "face": "+z",
+   "style": "gray"
+  },
+  {
+   "id": "cantina_home_s_02",
+   "zone": "cantina_homes",
+   "kind": "solid",
+   "min": [
+    -42,
+    0,
+    -22
+   ],
+   "max": [
+    -36,
+    4,
+    -16
+   ],
+   "look": "hut_block",
+   "face": "+z",
+   "style": "gray"
   }
  ],
  "markers": [
@@ -3669,11 +3713,11 @@
      -34
     ],
     [
-     -50,
+     -44,
      -34
     ],
     [
-     -50,
+     -44,
      0
     ],
     [
