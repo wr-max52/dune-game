@@ -116,57 +116,150 @@ const JOINTS := ["pelvis", "spine", "chest", "neck", "head",
 	"l_shoulder", "r_shoulder", "l_elbow", "r_elbow", "l_wrist", "r_wrist",
 	"l_hip", "r_hip", "l_knee", "r_knee", "l_ankle", "r_ankle"]
 
-const DANCE_LOOP_S := 10.0
+## Five playful stage moves of DANCE_SEG_S each, crossfaded over DANCE_BLEND_S, so the
+## loop is DANCE_LOOP_S long and closes on its own first pose: hip swirl, a twirl,
+## a shimmy and blown kiss, a turn-around bend with a hip shake, and a back-facing
+## body roll that spins round to face the audience again.
+const DANCE_SEG_S := 4.0
+const DANCE_BLEND_S := 0.8
+const DANCE_MOVES := 5
+const DANCE_LOOP_S := DANCE_SEG_S * DANCE_MOVES
 
 
-## A slow, repeatable stage loop: hip-led sway, a deliberate turn toward the wall,
-## a controlled forward bend, then an unhurried return to the audience. The first
-## and last poses match so the loop has no visible reset.
+## Move i runs on its own clock: it starts DANCE_BLEND_S before its segment so the
+## crossfade out of the previous move already shows it, and every move is tuned to
+## begin near upright, facing the audience (or the wall, for the one after the bend).
 static func dance_pose(seconds: float) -> Dictionary:
 	var t := fposmod(seconds, DANCE_LOOP_S)
+	var i := int(t / DANCE_SEG_S) % DANCE_MOVES
+	var u := t - float(i) * DANCE_SEG_S
+	var cur := _dance_move(i, u + DANCE_BLEND_S)
+	var into := u - (DANCE_SEG_S - DANCE_BLEND_S)
+	if into <= 0.0:
+		return cur
+	var nxt := _dance_move((i + 1) % DANCE_MOVES, into)
+	var w := _smooth01(into / DANCE_BLEND_S)
 	var joints := {}
 	for n in JOINTS:
-		joints[n] = Vector3.ZERO
-	var fold := 0.0
-	if t < 4.0:
-		fold = 0.0
-	elif t < 5.25:
-		fold = _smooth01((t - 4.0) / 1.25)
-	elif t < 5.9:
-		fold = 1.0
-	elif t < 7.25:
-		fold = 1.0 - _smooth01((t - 5.9) / 1.35)
-	var sway := sin(TAU * t / 2.5) * (1.0 - 0.35 * fold)
-	joints.pelvis = Vector3(0.0, sway * 8.0, sway * 5.0)
-	joints.spine = Vector3(fold * 12.0, -sway * 4.0, -sway * 2.0)
-	joints.chest = Vector3(fold * 25.0, -sway * 7.0, -sway * 3.0)
-	joints.neck = Vector3(-fold * 5.0, sway * 2.0, 0.0)
-	joints.head = Vector3(-fold * 17.0, sin(TAU * t / 5.0) * 5.0, -sway * 2.0)
-	joints.l_shoulder = Vector3(-8.0 + fold * 25.0 + sway * 4.0, 0.0, 9.0 + sway * 5.0)
-	joints.r_shoulder = Vector3(-8.0 + fold * 25.0 - sway * 4.0, 0.0, -9.0 - sway * 5.0)
-	joints.l_elbow = Vector3(-18.0 - fold * 22.0, 0.0, 0.0)
-	joints.r_elbow = Vector3(-18.0 - fold * 22.0, 0.0, 0.0)
-	joints.l_wrist = Vector3(-fold * 6.0, 0.0, 0.0)
-	joints.r_wrist = Vector3(-fold * 6.0, 0.0, 0.0)
-	joints.l_hip = Vector3(-2.0 - sway * 2.0, 0.0, 2.0 + sway * 2.0)
-	joints.r_hip = Vector3(-2.0 + sway * 2.0, 0.0, -2.0 + sway * 2.0)
-	joints.l_knee = Vector3(7.0 + fold * 17.0, 0.0, 0.0)
-	joints.r_knee = Vector3(7.0 + fold * 17.0, 0.0, 0.0)
-	joints.l_ankle = Vector3(-2.0 - fold * 4.0, 0.0, 0.0)
-	joints.r_ankle = Vector3(-2.0 - fold * 4.0, 0.0, 0.0)
-	var turn := 0.0
-	if t >= 2.5 and t < 4.0:
-		turn = PI * _smooth01((t - 2.5) / 1.5)
-	elif t >= 4.0 and t < 7.25:
-		turn = PI
-	elif t >= 7.25 and t < 8.75:
-		turn = PI * (1.0 - _smooth01((t - 7.25) / 1.5))
+		joints[n] = (cur.joints[n] as Vector3).lerp(nxt.joints[n], w)
 	return {
 		"joints": joints,
-		"pelvis_y": PELVIS_Y - fold * 0.12 + 0.008 * cos(TAU * t / 2.5),
-		"pelvis_x": sway * 0.025,
-		"yaw": turn,
+		"pelvis_y": lerpf(cur.pelvis_y, nxt.pelvis_y, w),
+		"pelvis_x": lerpf(cur.pelvis_x, nxt.pelvis_x, w),
+		"yaw": lerp_angle(cur.yaw, nxt.yaw, w),
 	}
+
+
+static func _dance_move(i: int, s: float) -> Dictionary:
+	var j := {}
+	for n in JOINTS:
+		j[n] = Vector3.ZERO
+	var py := PELVIS_Y
+	var px := 0.0
+	var yaw := 0.0
+	match i:
+		0:  # hip swirl: slow circles, arms overhead, a cheeky head tilt
+			var w := TAU * s / 2.0
+			j.pelvis = Vector3(6.0 * cos(w), 12.0 * sin(w + 0.8), 9.0 * sin(w))
+			j.spine = Vector3(-3.0 * cos(w), -6.0 * sin(w + 0.8), -5.0 * sin(w))
+			j.chest = Vector3(2.0, -8.0 * sin(w + 0.8), -6.0 * sin(w))
+			j.head = Vector3(-4.0, 6.0 * sin(w - 0.6), 9.0 * sin(w + 0.9))
+			j.l_shoulder = Vector3(-18.0, 0.0, 142.0 + 12.0 * sin(w))
+			j.r_shoulder = Vector3(-18.0, 0.0, -142.0 - 12.0 * sin(w + 1.1))
+			j.l_elbow = Vector3(-26.0 - 10.0 * sin(w), 0.0, 0.0)
+			j.r_elbow = Vector3(-26.0 - 10.0 * sin(w + 1.1), 0.0, 0.0)
+			j.l_wrist = Vector3(0.0, 0.0, 14.0 * sin(w * 2.0))
+			j.r_wrist = Vector3(0.0, 0.0, -14.0 * sin(w * 2.0))
+			j.l_hip = Vector3(-3.0, 0.0, 3.0 + 3.0 * sin(w))
+			j.r_hip = Vector3(-3.0, 0.0, -3.0 + 3.0 * sin(w))
+			j.l_knee = Vector3(9.0 + 9.0 * maxf(0.0, sin(w)), 0.0, 0.0)
+			j.r_knee = Vector3(9.0 + 9.0 * maxf(0.0, -sin(w)), 0.0, 0.0)
+			px = 0.05 * sin(w)
+			py = PELVIS_Y - 0.02 + 0.015 * cos(w * 2.0)
+		1:  # twirl: one hand high, the other on the hip, a full spin and a flourish
+			var spin := _smooth01((s - 0.5) / 2.4)
+			yaw = TAU * spin
+			var bob := sin(TAU * s * 2.0)
+			j.pelvis = Vector3(0.0, 5.0 * bob, 4.0 * bob)
+			j.chest = Vector3(-3.0, -4.0 * bob, -2.0 * bob)
+			j.head = Vector3(-6.0, 0.0, 7.0 * sin(TAU * s / 1.6))
+			j.l_shoulder = Vector3(-10.0, 0.0, 155.0 + 8.0 * sin(TAU * s * 1.5))
+			j.l_elbow = Vector3(-22.0, 0.0, 0.0)
+			j.l_wrist = Vector3(0.0, 0.0, 18.0 * sin(TAU * s * 3.0))
+			j.r_shoulder = Vector3(8.0, 0.0, -34.0)
+			j.r_elbow = Vector3(-105.0, 0.0, 0.0)
+			j.l_hip = Vector3(-4.0, 0.0, 2.0)
+			j.r_hip = Vector3(6.0, 0.0, -2.0)
+			j.l_knee = Vector3(8.0 + 6.0 * absf(bob), 0.0, 0.0)
+			j.r_knee = Vector3(14.0 + 6.0 * absf(bob), 0.0, 0.0)
+			j.l_ankle = Vector3(-6.0, 0.0, 0.0)
+			j.r_ankle = Vector3(-6.0, 0.0, 0.0)
+			py = PELVIS_Y + 0.02 + 0.012 * absf(bob)
+		2:  # shimmy: fast shoulders, a beckoning hand and a blown kiss
+			var shim := sin(TAU * s * 3.5)
+			var kiss := _smooth01((s - 2.2) / 0.5) * (1.0 - _smooth01((s - 3.3) / 0.6))
+			var dip := sin(TAU * s * 1.75)
+			j.pelvis = Vector3(0.0, -6.0 * dip, 6.0 * dip)
+			j.spine = Vector3(2.0, 4.0 * shim * 0.5, 0.0)
+			j.chest = Vector3(-2.0, 14.0 * shim, 5.0 * shim)
+			j.neck = Vector3(0.0, -4.0 * shim, 0.0)
+			j.head = Vector3(-2.0 - 6.0 * kiss, 8.0 * sin(TAU * s / 2.0), -10.0 * kiss + 4.0 * dip)
+			j.l_shoulder = Vector3(-38.0 + 6.0 * shim, 0.0, 38.0)
+			j.l_elbow = Vector3(-62.0 - 22.0 * sin(TAU * s * 1.5), 0.0, 0.0)
+			j.l_wrist = Vector3(0.0, 0.0, 16.0 * sin(TAU * s * 3.0))
+			j.r_shoulder = Vector3(-22.0 - 62.0 * kiss, 0.0, -48.0 + 34.0 * kiss - 6.0 * shim)
+			j.r_elbow = Vector3(-40.0 - 90.0 * kiss, 0.0, 0.0)
+			j.r_wrist = Vector3(0.0, 0.0, -10.0 * kiss)
+			j.l_hip = Vector3(-4.0, 0.0, 4.0 + 3.0 * dip)
+			j.r_hip = Vector3(-4.0, 0.0, -4.0 + 3.0 * dip)
+			j.l_knee = Vector3(12.0 + 10.0 * maxf(0.0, dip), 0.0, 0.0)
+			j.r_knee = Vector3(12.0 + 10.0 * maxf(0.0, -dip), 0.0, 0.0)
+			px = 0.03 * dip
+			py = PELVIS_Y - 0.03 - 0.012 * absf(dip)
+		3:  # turn around, bend over and shake it, glancing back at the crowd
+			var turn := _smooth01((s - 0.2) / 1.2)
+			var fold := _smooth01((s - 1.3) / 0.9)
+			var shake := sin(TAU * s * 3.0) * fold
+			yaw = PI * turn
+			j.pelvis = Vector3(fold * 40.0, 16.0 * shake, 11.0 * shake)
+			j.spine = Vector3(fold * 20.0, -8.0 * shake, -4.0 * shake)
+			j.chest = Vector3(fold * 24.0, -6.0 * shake, 0.0)
+			j.neck = Vector3(-fold * 20.0, 0.0, 0.0)
+			j.head = Vector3(-fold * 38.0, 34.0 * fold * sin(TAU * s / 3.2), 6.0 * shake)
+			j.l_shoulder = Vector3(-fold * 12.0 - 8.0, 0.0, 14.0 + fold * 6.0)
+			j.r_shoulder = Vector3(-fold * 12.0 - 8.0, 0.0, -14.0 - fold * 6.0)
+			j.l_elbow = Vector3(-12.0 - fold * 10.0, 0.0, 0.0)
+			j.r_elbow = Vector3(-12.0 - fold * 10.0, 0.0, 0.0)
+			j.l_hip = Vector3(-fold * 38.0 - 2.0, 0.0, 4.0 + 4.0 * shake)
+			j.r_hip = Vector3(-fold * 38.0 - 2.0, 0.0, -4.0 + 4.0 * shake)
+			j.l_knee = Vector3(8.0 + fold * 14.0, 0.0, 0.0)
+			j.r_knee = Vector3(8.0 + fold * 14.0, 0.0, 0.0)
+			j.l_ankle = Vector3(-fold * 6.0, 0.0, 0.0)
+			j.r_ankle = Vector3(-fold * 6.0, 0.0, 0.0)
+			px = 0.035 * shake
+			py = PELVIS_Y - 0.1 * fold
+		_:  # back-facing body roll, a hand trailing down a thigh, then round to the front
+			var w := TAU * s / 1.6
+			var round_up := _smooth01((s - 2.5) / 1.4)
+			var open := _smooth01((s - 2.7) / 1.0)
+			yaw = PI * (1.0 - round_up)
+			j.pelvis = Vector3(16.0 * sin(w + 1.0), 14.0 * sin(w), 5.0 * sin(w + 0.5))
+			j.spine = Vector3(14.0 * sin(w + 0.2), -5.0 * sin(w), 0.0)
+			j.chest = Vector3(14.0 * sin(w - 0.6), -7.0 * sin(w), 3.0 * sin(w))
+			j.neck = Vector3(-8.0 * sin(w - 1.0), 0.0, 0.0)
+			j.head = Vector3(-4.0, 46.0 * (1.0 - open) + 6.0 * sin(w), 8.0 * sin(w - 0.8))
+			j.l_shoulder = Vector3(lerpf(8.0, -20.0, open), 0.0, lerpf(24.0, 75.0, open))
+			j.l_elbow = Vector3(lerpf(-24.0, -20.0, open), 0.0, 0.0)
+			j.r_shoulder = Vector3(-14.0, 0.0, lerpf(-150.0, -75.0, open) - 8.0 * sin(w))
+			j.r_elbow = Vector3(-28.0, 0.0, 0.0)
+			j.r_wrist = Vector3(0.0, 0.0, -12.0 * sin(w * 2.0))
+			j.l_hip = Vector3(-6.0 - 8.0 * maxf(0.0, sin(w + 1.0)), 0.0, 4.0)
+			j.r_hip = Vector3(-6.0 - 8.0 * maxf(0.0, -sin(w + 1.0)), 0.0, -4.0)
+			j.l_knee = Vector3(12.0 + 8.0 * maxf(0.0, sin(w + 1.0)), 0.0, 0.0)
+			j.r_knee = Vector3(12.0 + 8.0 * maxf(0.0, -sin(w + 1.0)), 0.0, 0.0)
+			px = 0.04 * sin(w)
+			py = PELVIS_Y - 0.04 + 0.02 * cos(w * 2.0)
+	return { "joints": j, "pelvis_y": py, "pelvis_x": px, "yaw": yaw }
 
 
 static func _smooth01(x: float) -> float:
