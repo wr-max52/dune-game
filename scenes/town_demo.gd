@@ -790,6 +790,7 @@ func _build_desert() -> void:
 		terrain.resolution = terrain_resolution
 		terrain.collider_size = 512.0
 	terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
+	terrain.configure_flat_sites(_droid_merchant_flat_sites())
 	add_child(terrain)
 	terrain.build(use_look)          # greybox: collider only
 	if terrain is PlanetTerrain:
@@ -797,6 +798,29 @@ func _build_desert() -> void:
 		tree_exiting.connect(func():
 			if PlanetSphere.current == (terrain as PlanetTerrain).sphere:
 				PlanetSphere.current = null)
+
+
+## Keep the droid relay yards from inheriting dune slopes. The height is sampled
+## before registering the pad, so each one stays at the terrain's original level.
+func _droid_merchant_flat_sites() -> Array:
+	if str(planet.get("id", "")) != PlanetGen.home_id():
+		return []
+	var sites: Array = []
+	for lm in world.get("landmarks", []):
+		var location_id := str(lm.get("location", ""))
+		if not location_id.begins_with("droid_post_"):
+			continue
+		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
+		var y := terrain.height_at(at.x, at.z)
+		if terrain is PlanetTerrain:
+			var sp: PlanetSphere = (terrain as PlanetTerrain).sphere
+			y = sp.elevation(sp.map_dir(at.x, at.z))
+		sites.append({
+			"rect": Rect2(at.x - 10.0, at.z - 10.0, 20.0, 20.0),
+			"y": y,
+			"blend": 8.0,
+		})
+	return sites
 
 
 ## Look only: the aprons outside the walls are hidden (still solid) so the terrain's

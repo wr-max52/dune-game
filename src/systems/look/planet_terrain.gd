@@ -85,6 +85,11 @@ func configure_site(floor_rect: Rect2, walls_rect: Rect2, sunken: Array, floor_y
 	sphere.sink_ramp = sink_ramp
 
 
+func configure_flat_sites(sites: Array) -> void:
+	super.configure_flat_sites(sites)
+	sphere.configure_flat_sites(sites)
+
+
 func height_at(x: float, z: float) -> float:
 	return sphere.height_at(x, z, sink_grow)
 

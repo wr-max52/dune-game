@@ -5,7 +5,8 @@
   "note": "Issue #93: a compact independent droid-trading post on the home planet. Its small footprint is deliberately topped by a tall, layered communications array.",
   "buildings": [
     { "id": "relay_hut", "shape": "box", "size": [7, 3.4, 5.5], "position": [0, 0, 0], "visual": false },
-    { "id": "trade_counter", "shape": "box", "size": [2.2, 1.0, 0.8], "position": [4.2, 0, 0.8], "visual": false }
+    { "id": "trade_counter", "shape": "box", "size": [2.2, 1.0, 0.8], "position": [4.2, 0, 0.8], "visual": false },
+    { "id": "merchant_table", "shape": "box", "size": [1.6, 0.82, 1.0], "position": [5.8, 0, 0.8], "visual": false }
   ],
   "look": { "accent": "#769b9a", "antenna_height": 9.0, "array_style": "stacked" },
   "points": {

@@ -32,6 +32,7 @@ var up_blend := 450.0
 var site_rect := Rect2()
 var under_rect := Rect2()
 var sinks: Array = []                ## [{ rect: Rect2, y: float }]
+var flat_sites: Array = []           ## small level pads around remote landmarks
 var pad_y := 0.0
 var under_y := -0.12
 var pad_margin := 30.0
@@ -78,6 +79,10 @@ func configure_site(floor_rect: Rect2, walls_rect: Rect2, sunken: Array, floor_y
 		sinks.append({ "rect": s.rect, "y": float(s.y) - 1.5 })
 
 
+func configure_flat_sites(sites: Array) -> void:
+	flat_sites = sites.duplicate(true)
+
+
 # ---------------------------------------------------------------- map <-> ball
 
 ## Unit direction from the centre for map (x, z).
@@ -99,6 +104,15 @@ func dir_map(dir: Vector3) -> Vector2:
 		return Vector2.ZERO if dir.y > 0.0 else Vector2(PI * radius, 0.0)
 	var th := atan2(hl, dir.y)
 	return h / hl * th * radius
+
+
+## Map coordinates for a planet-wide latitude/longitude feature. Latitude is
+## relative to the port's +Y pole; longitude rotates around that axis.
+func map_from_lat_lon(latitude_deg: float, longitude_deg: float) -> Vector2:
+	var lat := deg_to_rad(latitude_deg)
+	var lon := deg_to_rad(longitude_deg)
+	var dir := Vector3(cos(lat) * sin(lon), sin(lat), -cos(lat) * cos(lon))
+	return dir_map(dir)
 
 
 ## Map (x, z) of a world point (straight down onto the ball).
@@ -157,15 +171,30 @@ func elevation(dir: Vector3, grow: float = 2.0) -> float:
 	var m := dir_map(dir)
 	var p := dir * radius
 	if not site_rect.has_area() or dir.y < 0.5:   # the town is never 60 degrees round
-		return _dunes(p) - dune_offset
+		return _apply_flat_sites(m.x, m.y, _dunes(p) - dune_offset)
 	var d := _rect_dist(site_rect, m)
 	var k := smoothstep(pad_margin, pad_margin + blend, d)
 	var flat := 0.0
 	if k < 1.0:
 		flat = _plateau(dir) + _site_y(m.x, m.y, d, p, grow)
 	if k <= 0.0:
-		return flat
-	return lerpf(flat, _dunes(p) - dune_offset, k)
+		return _apply_flat_sites(m.x, m.y, flat)
+	return _apply_flat_sites(m.x, m.y, lerpf(flat, _dunes(p) - dune_offset, k))
+
+
+func _apply_flat_sites(x: float, z: float, base_height: float) -> float:
+	var h := base_height
+	var p := Vector2(x, z)
+	for site in flat_sites:
+		var rect: Rect2 = site.get("rect", Rect2())
+		var distance := _rect_dist(rect, p)
+		var y := float(site.get("y", base_height))
+		var blend_distance := maxf(0.1, float(site.get("blend", 8.0)))
+		if distance <= 0.0:
+			return y
+		if distance < blend_distance:
+			h = lerpf(y, h, smoothstep(0.0, blend_distance, distance))
+	return h
 
 
 ## World y of the ground on the vertical line through world (x, z): what flat-world
@@ -220,7 +249,7 @@ func _dunes(p: Vector3) -> float:
 	var ridge := 1.0 - absf(_dune.get_noise_3d(wx * 0.0021, wy * 0.0042, wz * 0.0042))
 	var h := pow(ridge, 2.6) * 26.0
 	h += _swell.get_noise_3d(p.x * 0.0006, p.y * 0.0006, p.z * 0.0006) * 24.0 + 10.0
-	h += _small.get_noise_3d(p.x * 0.012, p.y * 0.012, p.z * 0.012) * 1.6
+	h += _small.get_noise_3d(p.x * 0.004, p.y * 0.004, p.z * 0.004) * 0.65
 	return h
 
 

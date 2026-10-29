@@ -129,6 +129,16 @@ func _dress(root: Node3D, loc: Dictionary) -> void:
 			_part(root, _box(size), dark, pos + Vector3(0, size.y * 0.5, 0))
 			_part(root, _box(Vector3(size.x + 0.2, 0.14, size.z + 0.18)), trim,
 				pos + Vector3(0, size.y + 0.07, 0))
+		elif str(b.get("id", "")) == "merchant_table":
+			var top := Vector3(size.x, 0.12, size.z)
+			_part(root, _box(top), steel, pos + Vector3(0, size.y - top.y * 0.5, 0))
+			for x_sign in [-1.0, 1.0]:
+				for z_sign in [-1.0, 1.0]:
+					_part(root, _box(Vector3(0.1, size.y - top.y, 0.1)),
+						dark, pos + Vector3(x_sign * (size.x * 0.5 - 0.08), (size.y - top.y) * 0.5,
+							z_sign * (size.z * 0.5 - 0.08)))
+			_part(root, _box(Vector3(size.x * 0.7, 0.06, size.z * 0.58)), trim,
+				pos + Vector3(0, size.y - top.y - 0.04, 0))
 	# Chocked cargo cases and a small repair trolley keep the yard detailed,
 	# without expanding its building footprint.
 	_part(root, _box(Vector3(0.85, 0.8, 0.85)), steel, Vector3(-3.2, 0.4, -2.7))

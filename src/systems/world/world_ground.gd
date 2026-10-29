@@ -211,7 +211,7 @@ static func _rise_local(rise: String, yaw: float) -> String:
 ## DesertLandforms builds them from), as columns a ship can hit or land on top of.
 ## Same skip rule as DesertLandforms: nothing within keep_out (grown by the data's
 ## margin), so the columns are exactly the rocks on screen. Sizes follow its meshes:
-##   mesa   -- tapered cylinder r..0.8r, h tall, centred 0.42h above the ground
+##   mesa   -- tapered shelf, its feet buried 2 m under the ground
 ##   hoodoo -- column 0.55r..r, h tall, centred 0.45h up, capped by a 0.9r stone
 func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 	var clear := keep_out.grow(float(data.get("keep_out_margin", 25.0)))
@@ -223,7 +223,7 @@ func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 			var gy := terrain.height_at(m[0], m[1])
 			columns.append({ "id": "mesa_%d_%d" % [int(m[0]), int(m[1])], "kind": "mesa",
 				"center": Vector3(m[0], gy, m[1]), "radius": float(m[2]) * 0.9,
-				"top": gy + float(m[3]) * 0.92 })
+				"top": gy + float(m[3]) * 0.92 - DesertLandforms.MESA_BURY })
 	for hd in data.get("hoodoos", []):
 		if not clear.grow(float(hd[2])).has_point(Vector2(hd[0], hd[1])):
 			var gy := terrain.height_at(hd[0], hd[1])
@@ -236,10 +236,16 @@ func add_landforms(data: Dictionary, keep_out: Rect2) -> void:
 ## (where DesertLandforms puts them).
 func _add_landforms_on_ball(data: Dictionary, clear: Rect2) -> void:
 	var sp := sphere()
-	for m in data.get("mesas", []):
-		if not clear.grow(float(m[2])).has_point(Vector2(m[0], m[1])):
-			var base := sp.surface_at(m[0], m[1])
-			var h := float(m[3]) * 0.92
+	var planet_mesas: Array = data.get("planet_mesas", [])
+	var use_planet_mesas := not planet_mesas.is_empty()
+	if not use_planet_mesas:
+		planet_mesas = data.get("mesas", [])
+	for m in planet_mesas:
+		var map := sp.map_from_lat_lon(float(m[0]), float(m[1])) if use_planet_mesas \
+			else Vector2(float(m[0]), float(m[1]))
+		if not clear.grow(float(m[2])).has_point(map):
+			var base := sp.surface_at(map.x, map.y)
+			var h := float(m[3]) * 0.92 - DesertLandforms.MESA_BURY
 			columns.append({ "id": "mesa_%d_%d" % [int(m[0]), int(m[1])], "kind": "mesa", "center": base,
 				"radius": float(m[2]) * 0.9, "up": sp.up_at(base), "h": h, "top": base.y + h })
 	for hd in data.get("hoodoos", []):

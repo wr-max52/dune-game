@@ -61,11 +61,17 @@ func build_exterior(station: Dictionary, mats: LookMaterials) -> void:
 	if st.is_empty():
 		return
 	var metal := mats.hull(-50.0, 3.0)
+	var panel := mats.hull(-50.0, 1.6)
+	var trim := mats.flat(Color("#899195"), 0.6, 0.7)
+	var dark := mats.flat(Color("#252a2d"), 0.88, 0.55)
+	var status := mats.glow(Color("#f0c77c"))
 	_mesh("RingWall", _cylinder(rc, rw, 0.0, wall_h, RING_SEG / 2, 1, _ring_gap), metal, true)
+	_panelled_wall("RingWallExteriorPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, 1)
 	var dome := _mesh("Dome", _dome_triangles(), _glass(), true)
 	dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_dome_ribs(metal)
 	_mesh("Liner", _cylinder(pit_c, pit_r, 0.0, liner_h, LINER_SEG / 2, 1, _liner_gap), metal, true)
+	_panelled_wall("LinerExteriorPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, 1)
 	_pit_shield()
 	_dress_hall(metal, _glass(), null, mats)
 
@@ -268,19 +274,130 @@ func dress(env: LookEnvironment, mats: LookMaterials) -> void:
 	if st.is_empty():
 		return
 	var metal := mats.hull(-50.0, 3.0)
+	var panel := mats.hull(-50.0, 1.6)
+	var trim := mats.flat(Color("#899195"), 0.6, 0.7)
+	var dark := mats.flat(Color("#252a2d"), 0.88, 0.55)
+	var status := mats.glow(Color("#f0c77c"))
+	status.emission_energy_multiplier = 1.8
 	var glass := _glass()
 	_floors(mats)
 	_mesh("RingWall", _cylinder(rc, rw, 0.0, wall_h, RING_SEG, 4, _ring_gap), metal, true)
 	_mesh("RingCap", _cylinder(rc, rw + 0.01, wall_h - 0.25, wall_h + 0.15, RING_SEG, 1, Callable()), metal, true)
+	_panelled_wall("RingWallPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, -1)
+	_panelled_wall("RingWallExteriorPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, 1)
 	var dome := _mesh("Dome", _dome_triangles(), glass, true)
 	dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_dome_ribs(metal)
 	_shield("GateShield", Vector3(rc.x + rw, float(hall.get("height", 5.0)) * 0.5, rc.z), Vector3(0.08, float(hall.get("height", 5.0)), gate_half * 2.0))
 	_mesh("Liner", _cylinder(pit_c, pit_r, 0.0, liner_h, LINER_SEG, 6, _liner_gap), metal, true)
 	_mesh("LinerCap", _cylinder(pit_c, pit_r + 0.02, liner_h - 0.3, liner_h + 0.2, LINER_SEG, 1, Callable()), metal, true)
+	_panelled_wall("LinerPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, -1)
+	_panelled_wall("LinerExteriorPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, 1)
 	_pit_shield()
 	_dress_hall(metal, glass, env, mats)
+	_station_lighting(env, status)
 	_dress_boulders()
+	if env != null:
+		env.set_ambient_energy_scale(1.25)
+
+
+## Repeated hull plates, seams, and service lights give the station walls the
+## layered, manufactured surface already used on the town's metal structures.
+func _panelled_wall(node_name: String, center: Vector3, radius: float, height: float, count: int,
+		gate_direction: int, panel: Material, trim: Material, dark: Material,
+		status: StandardMaterial3D, face_sign: int) -> void:
+	var root := Node3D.new()
+	root.name = node_name
+	add_child(root)
+	var arc := TAU * radius / float(count)
+	var width := arc - 0.42
+	var panel_h := maxf(1.0, height - 1.4)
+	var panel_xforms: Array[Transform3D] = []
+	var dark_xforms: Array[Transform3D] = []
+	var trim_xforms: Array[Transform3D] = []
+	var status_xforms: Array[Transform3D] = []
+	for i in count:
+		var angle := TAU * (float(i) + 0.5) / float(count)
+		if gate_direction != 0 and cos(angle) * gate_direction > 0.0 \
+				and absf(sin(angle) * radius) < gate_half + 2.0:
+			continue
+		var basis := _radial_basis(angle)
+		if face_sign < 0:
+			basis = Basis(-basis.x, basis.y, -basis.z)
+		var panel_radius := radius + float(face_sign) * 0.06
+		var at := center + Vector3(cos(angle) * panel_radius, height * 0.5, sin(angle) * panel_radius)
+		panel_xforms.append(Transform3D(basis, at))
+		dark_xforms.append(Transform3D(basis, at + basis.z * 0.027))
+		trim_xforms.append(Transform3D(basis,
+			at + Vector3(0, panel_h * 0.5 - 0.08, 0) + basis.z * 0.025))
+		trim_xforms.append(Transform3D(basis,
+			at - Vector3(0, panel_h * 0.5 - 0.08, 0) + basis.z * 0.025))
+		if i % 4 == 0:
+			status_xforms.append(Transform3D(basis,
+				at + Vector3(width * 0.34, 0, 0) + basis.z * 0.025))
+	_instances(root, "PanelPlates", Vector3(width, panel_h, 0.1), panel, panel_xforms)
+	_instances(root, "PanelInserts", Vector3(width * 0.5, panel_h * 0.72, 0.035), dark, dark_xforms)
+	_instances(root, "PanelTrim", Vector3(width, 0.1, 0.04), trim, trim_xforms)
+	_instances(root, "PanelStatus", Vector3(0.12, 0.22, 0.035), status, status_xforms)
+
+
+func _instances(root: Node3D, node_name: String, size: Vector3, mat: Material,
+		transforms: Array[Transform3D]) -> void:
+	if transforms.is_empty():
+		return
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = mesh
+	mm.instance_count = transforms.size()
+	var bounds := AABB(transforms[0].origin, Vector3.ZERO)
+	for i in transforms.size():
+		mm.set_instance_transform(i, transforms[i])
+		bounds = bounds.expand(transforms[i].origin)
+	mm.custom_aabb = bounds.grow(size.length() * 0.5)
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = mm
+	instance.material_override = mat
+	root.add_child(instance)
+
+
+func _radial_basis(angle: float) -> Basis:
+	return Basis(Vector3(sin(angle), 0, -cos(angle)), Vector3.UP,
+		Vector3(cos(angle), 0, sin(angle)))
+
+
+func _station_lighting(env: LookEnvironment, status: StandardMaterial3D) -> void:
+	if env == null:
+		return
+	env.track_glow(status)
+	_add_wall_lamps(env, rc, rw, wall_h, 8, 1, status, 1.45, 15.0)
+	_add_wall_lamps(env, pit_c, pit_r, liner_h, 8, -1, status, 1.1, 13.0)
+
+
+func _add_wall_lamps(env: LookEnvironment, center: Vector3, radius: float, height: float,
+		count: int, gate_direction: int, status: StandardMaterial3D, energy: float,
+		range_m: float) -> void:
+	var root := Node3D.new()
+	root.name = "StationLamps_%d" % int(radius)
+	add_child(root)
+	for i in count:
+		var angle := TAU * (float(i) + 0.5) / float(count)
+		if cos(angle) * gate_direction > 0.0 and absf(sin(angle) * radius) < gate_half + 2.0:
+			continue
+		var basis := _radial_basis(angle)
+		var at := center + Vector3(cos(angle) * (radius - 0.3), height - 0.85,
+			sin(angle) * (radius - 0.3))
+		_box(root, at, Vector3(0.55, 0.34, 0.12), status, basis)
+		var lamp := OmniLight3D.new()
+		lamp.light_color = Color("#ffe1ac")
+		lamp.light_energy = energy
+		lamp.omni_range = range_m
+		lamp.shadow_enabled = false
+		lamp.position = at - Vector3(cos(angle) * 1.2, 0.2, sin(angle) * 1.2)
+		root.add_child(lamp)
+		env.track_lamp(lamp)
 
 
 func _pit_shield() -> void:
@@ -475,13 +592,15 @@ func _dress_hall(metal: Material, glass: Material, env: LookEnvironment, mats: L
 		x += 10.0
 
 
-func _box(root: Node3D, at: Vector3, size: Vector3, mat: Material) -> void:
+func _box(root: Node3D, at: Vector3, size: Vector3, mat: Material,
+		basis: Basis = Basis.IDENTITY) -> void:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
 	mi.material_override = mat
 	mi.position = at
+	mi.basis = basis
 	root.add_child(mi)
 
 

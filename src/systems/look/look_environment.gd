@@ -20,8 +20,10 @@ var env: Environment
 var sky_mat: ShaderMaterial
 var sun_dir := Vector3(0, 0.15, -1)
 var lamp_level := 0.0
+var ambient_energy_scale := 1.0
 var suppressed := {}                 ## issue #46: feature -> true, held off (set_suppressed)
 var _wanted := {}                    ## what the preset asks for: ssao, ssil, sdfgi, volumetric, shadows
+var _ambient_energy_base := 1.0
 var _tracked: Array[ShaderMaterial] = []
 var _lamps: Array[Light3D] = []
 var _lamp_mats: Array[StandardMaterial3D] = []
@@ -130,6 +132,13 @@ func track_glow(m: StandardMaterial3D) -> void:
 	_apply_lamps()
 
 
+## A sealed or shadow-heavy scene can raise ambient fill without changing presets.
+func set_ambient_energy_scale(scale: float) -> void:
+	ambient_energy_scale = maxf(0.0, scale)
+	if env != null:
+		env.ambient_light_energy = _ambient_energy_base * ambient_energy_scale
+
+
 func apply(preset_id: String = "") -> void:
 	if preset_id == "":
 		preset_id = default_preset
@@ -227,7 +236,8 @@ func _apply_values(p: Dictionary) -> void:
 	sky_mat.set_shader_parameter("planet_color_b", Color.html(k["planet_b"]))
 	sky_mat.set_shader_parameter("ring_color", Color.html(k["ring"]))
 
-	env.ambient_light_energy = float(p["ambient"]["energy"])
+	_ambient_energy_base = float(p["ambient"]["energy"])
+	env.ambient_light_energy = _ambient_energy_base * ambient_energy_scale
 	env.fog_enabled = true
 	env.fog_density = float(fog["density"])
 	env.fog_aerial_perspective = float(fog["aerial"])

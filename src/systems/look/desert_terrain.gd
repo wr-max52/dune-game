@@ -28,6 +28,7 @@ const SAND_SHADER := preload("res://src/systems/look/shaders/sand.gdshader")
 var site_rect := Rect2()             ## xz: everything at town floor level (town + aprons)
 var under_rect := Rect2()            ## xz: inside the walls, where paving covers the ground
 var sinks: Array = []                ## [{ rect: Rect2, y: float }] sunken floors to dip under
+var flat_sites: Array = []           ## small level pads around remote landmarks: { rect, y, blend }
 var pad_y := 0.0                     ## the town's floor level, carried out onto the sand
 var under_y := -0.12                 ## ground level hidden under the paving
 var pad_margin := 30.0               ## flat sand around the town before the dunes start
@@ -85,8 +86,8 @@ func _init() -> void:
 ## Height in metres at a world (x, z). Pure function, so gameplay can ask it too.
 func height_at(x: float, z: float) -> float:
 	if site_rect.has_area():
-		return _site_height(x, z, sink_grow)
-	return _plinth_height(x, z)
+		return _apply_flat_sites(x, z, _site_height(x, z, sink_grow))
+	return _apply_flat_sites(x, z, _plinth_height(x, z))
 
 
 ## The ground the player stands on (the collider). Same as height_at except the
@@ -94,8 +95,29 @@ func height_at(x: float, z: float) -> float:
 ## collider never props up an invisible slope inside the pit.
 func ground_at(x: float, z: float) -> float:
 	if site_rect.has_area():
-		return _site_height(x, z, sink_grow + _cell_step() + 1.0)
-	return _plinth_height(x, z)
+		return _apply_flat_sites(x, z, _site_height(x, z, sink_grow + _cell_step() + 1.0))
+	return _apply_flat_sites(x, z, _plinth_height(x, z))
+
+
+## Level small remote building footprints before the visible mesh and collider
+## are built. Each pad eases back to the original dunes beyond its rectangle.
+func configure_flat_sites(sites: Array) -> void:
+	flat_sites = sites.duplicate(true)
+
+
+func _apply_flat_sites(x: float, z: float, base_height: float) -> float:
+	var h := base_height
+	var p := Vector2(x, z)
+	for site in flat_sites:
+		var rect: Rect2 = site.get("rect", Rect2())
+		var distance := _rect_dist(rect, p)
+		var y := float(site.get("y", base_height))
+		var blend_distance := maxf(0.1, float(site.get("blend", 8.0)))
+		if distance <= 0.0:
+			return y
+		if distance < blend_distance:
+			h = lerpf(y, h, smoothstep(0.0, blend_distance, distance))
+	return h
 
 
 ## The open dunes, before any port is seated on them. Long crested dunes: ridged
@@ -106,7 +128,7 @@ func _dunes(x: float, z: float) -> float:
 	var ridge := 1.0 - absf(_dune.get_noise_2d(wx * 0.0021, wz * 0.0042))
 	var dunes := pow(ridge, 2.6) * 26.0
 	dunes += _swell.get_noise_2d(x * 0.0006, z * 0.0006) * 24.0 + 10.0
-	dunes += _small.get_noise_2d(x * 0.012, z * 0.012) * 1.6
+	dunes += _small.get_noise_2d(x * 0.004, z * 0.004) * 0.65
 	return dunes
 
 

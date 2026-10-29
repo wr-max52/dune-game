@@ -8,6 +8,7 @@ extends GutTest
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
+const AsteroidWorld := preload("res://src/systems/planets/asteroid_world.gd")
 
 var cc
 
@@ -162,6 +163,31 @@ func test_the_asteroid_station() -> void:
 	assert_eq(off, Vector3(9000, 6700, -6500))
 	assert_eq(n[0].offset, -off, "the same shift, back the other way")
 	assert_eq(n[0].at, Vector3(0, -5000, 0) - off, "the home ball's centre, seen from the station")
+
+
+func test_asteroid_station_walls_have_panel_detail() -> void:
+	var p := PlanetGen.build("grit_station", cc)
+	var station := AsteroidWorld.new()
+	station.build_exterior(p.town.station, LookMaterials.new())
+	add_child_autofree(station)
+	assert_not_null(station.get_node_or_null("RingWallExteriorPanels/PanelPlates"), "the town wall is panelled")
+	assert_not_null(station.get_node_or_null("LinerExteriorPanels/PanelPlates"), "the landing pit is panelled")
+	var ring: MultiMesh = station.get_node("RingWallExteriorPanels/PanelPlates").multimesh
+	var liner: MultiMesh = station.get_node("LinerExteriorPanels/PanelPlates").multimesh
+	assert_gt(ring.instance_count, 40, "repeated hull plates around the whole station")
+	assert_gt(liner.instance_count, 30, "repeated hull plates around the landing pad")
+
+
+func test_asteroid_ambient_fill_scale_preserves_the_preset() -> void:
+	var look := LookEnvironment.new()
+	look.apply(look.default_preset)
+	var base := look.env.ambient_light_energy
+	look.set_ambient_energy_scale(1.25)
+	assert_almost_eq(look.env.ambient_light_energy, base * 1.25, 0.001,
+		"sealed station can be brighter without replacing time-of-day settings")
+	look.set_ambient_energy_scale(1.0)
+	assert_almost_eq(look.env.ambient_light_energy, base, 0.001, "reset keeps the original preset level")
+	look.free()
 
 
 func test_a_new_planet_is_only_a_config() -> void:
