@@ -1,0 +1,15 @@
+{
+  "id": "droid_post_wash",
+  "kind": "droid_merchant_outpost",
+  "label": "Drywash Droid Relay",
+  "note": "Issue #93: a compact independent droid-trading post on the home planet. Its small footprint is deliberately topped by a tall, layered communications array.",
+  "buildings": [
+    { "id": "relay_hut", "shape": "box", "size": [7, 3.4, 5.5], "position": [0, 0, 0], "visual": false },
+    { "id": "trade_counter", "shape": "box", "size": [2.2, 1.0, 0.8], "position": [4.2, 0, 0.8], "visual": false }
+  ],
+  "look": { "accent": "#b68a42", "antenna_height": 8.5, "array_style": "wide" },
+  "points": {
+    "merchant": [4.2, 0, 2.2],
+    "customer": [4.2, 0, 4.3]
+  }
+}

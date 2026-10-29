@@ -9,8 +9,8 @@ extends Node3D
 ## so the live game bakes on a worker thread and NPCs stand still until
 ## `is_ready`. Traces and tests can bake synchronously.
 ##
-## Scope: the town and its desert apron only. The dunes outside are not in it,
-## so nothing paths out into the desert yet.
+## Desert locations can add small, local terrain regions through
+## `add_terrain_region`; the planet is never baked as one enormous mesh.
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
@@ -39,6 +39,7 @@ var is_ready := false
 var bake_ms := 0.0
 var settings: Dictionary = DEFAULTS.duplicate()
 var _bake_start := 0
+var desert_regions: Array[NavigationRegion3D] = []
 
 
 ## Triangles for every box in the town, ramps tilted the way the scene builds them.
@@ -152,6 +153,105 @@ func make_navmesh(town) -> NavigationMesh:
 	nm.agent_max_slope = float(settings.agent_max_slope)
 	nm.filter_baking_aabb = town_bounds(town, float(settings.bounds_margin))
 	return nm
+
+
+## A bounded patch of walkable terrain in a local tangent frame. Sampling the
+## terrain's public ground API keeps nav geometry on the same surface as collision;
+## on a planet the region is tilted to the local ground-up direction. `obstructions`
+## contains { outline: PackedVector3Array, bottom: float, height: float } in that frame.
+static func terrain_source(terrain: DesertTerrain, center: Vector3, half_extent: float,
+	step: float, frame: Transform3D, obstructions: Array = []) -> NavigationMeshSourceGeometryData3D:
+	var src := NavigationMeshSourceGeometryData3D.new()
+	var cells := int(ceil(half_extent * 2.0 / step))
+	var sphere: PlanetSphere = (terrain as PlanetTerrain).sphere if terrain is PlanetTerrain else null
+	var verts := PackedVector3Array()
+	verts.resize((cells + 1) * (cells + 1))
+	for j in cells + 1:
+		for i in cells + 1:
+			var lx := -half_extent + i * step
+			var lz := -half_extent + j * step
+			var sample: Vector3 = frame * Vector3(lx, 0.0, lz)
+			var world: Vector3
+			if sphere != null:
+				var map := sphere.world_to_map(sample)
+				world = sphere.surface_at(map.x, map.y)
+			else:
+				world = Vector3(sample.x, terrain.ground_at(sample.x, sample.z), sample.z)
+			verts[j * (cells + 1) + i] = frame.affine_inverse() * world
+	var faces := PackedVector3Array()
+	var bottom := PackedVector3Array()
+	bottom.resize(verts.size())
+	for j in cells + 1:
+		for i in cells + 1:
+			var p: Vector3 = verts[j * (cells + 1) + i]
+			bottom[j * (cells + 1) + i] = Vector3(p.x, -79.0, p.z)
+	for j in cells:
+		for i in cells:
+			var a := j * (cells + 1) + i
+			var b := a + 1
+			var c := a + cells + 1
+			var d := c + 1
+			# Recast treats the walkable top as a solid when it is closed. The
+			# buried underside and edge skirts are never walkable, but keep this
+			# small terrain patch bakeable as a bounded volume.
+			# Positive local Y winding (the terrain frame's ground-up axis).
+			faces.append_array(PackedVector3Array([verts[a], verts[c], verts[b],
+				verts[b], verts[c], verts[d]]))
+			# The underside faces down.
+			faces.append_array(PackedVector3Array([bottom[a], bottom[b], bottom[c],
+				bottom[b], bottom[d], bottom[c]]))
+	# Close the volume around its boundary with vertical, non-walkable skirts.
+	for i in cells:
+		var a := i
+		var b := i + 1
+		var c := cells * (cells + 1) + i
+		var d := c + 1
+		# z = -half_extent (outward -Z)
+		faces.append_array(PackedVector3Array([verts[a], verts[b], bottom[a],
+			verts[b], bottom[b], bottom[a]]))
+		# z = +half_extent (outward +Z)
+		faces.append_array(PackedVector3Array([verts[c], bottom[c], verts[d],
+			verts[d], bottom[c], bottom[d]]))
+		var left_a := i * (cells + 1)
+		var left_c := left_a + cells + 1
+		var right_a := left_a + cells
+		var right_c := left_c + cells
+		# x = -half_extent (outward -X)
+		faces.append_array(PackedVector3Array([verts[left_a], bottom[left_a], verts[left_c],
+			verts[left_c], bottom[left_a], bottom[left_c]]))
+		# x = +half_extent (outward +X)
+		faces.append_array(PackedVector3Array([verts[right_a], verts[right_c], bottom[right_a],
+			verts[right_c], bottom[right_c], bottom[right_a]]))
+	src.add_faces(faces, Transform3D.IDENTITY)
+	for obstruction in obstructions:
+		src.add_projected_obstruction(obstruction.outline, float(obstruction.bottom),
+			float(obstruction.height), false)
+	return src
+
+
+## Add a small terrain tile to the shared navigation map (e.g. an outpost's
+## walkable clearing). The local frame must map +Y to ground-up at `center`.
+func add_terrain_region(terrain: DesertTerrain, center: Vector3, half_extent: float = 40.0,
+	step: float = 2.0, frame: Transform3D = Transform3D.IDENTITY,
+	obstructions: Array = []) -> NavigationRegion3D:
+	var nm := NavigationMesh.new()
+	nm.cell_size = float(settings.cell_size)
+	nm.cell_height = float(settings.cell_height)
+	nm.agent_radius = float(settings.agent_radius)
+	nm.agent_height = float(settings.agent_height)
+	nm.agent_max_climb = float(settings.agent_max_climb)
+	nm.agent_max_slope = float(settings.agent_max_slope)
+	nm.filter_baking_aabb = AABB(Vector3(-half_extent, -80.0, -half_extent),
+		Vector3(half_extent * 2.0, 160.0, half_extent * 2.0))
+	NavigationServer3D.bake_from_source_geometry_data(nm,
+		terrain_source(terrain, center, half_extent, step, frame, obstructions))
+	var tile := NavigationRegion3D.new()
+	tile.name = "DesertNavRegion"
+	tile.navigation_mesh = nm
+	tile.transform = frame
+	add_child(tile)
+	desert_regions.append(tile)
+	return tile
 
 
 ## Build the region and bake. `async` = on a worker thread (the live game).

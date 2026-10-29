@@ -64,6 +64,7 @@ func build() -> void:
 			o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
 			outposts.append(o)
 			_build_ground(o)
+			_build_nav(o)
 			if demo.use_look:
 				_dress(o)
 				_park_ship(o)
@@ -119,10 +120,10 @@ func _add_guard(o: Dictionary, key: String) -> NpcBody:
 	return g
 
 
-## An outpost body: no navmesh out here (it holds its ground), and it sleeps
-## while the player is far away.
+## Outpost guards use the shared map, which includes a small terrain tile around
+## each outpost; they still sleep while the player is far away.
 func adopt(g: NpcBody, outpost_id: String) -> void:
-	g.nav = null
+	g.nav = demo.nav
 	g.set_meta("outpost", outpost_id)
 
 
@@ -191,6 +192,26 @@ func _on_target_died(t: NpcBody) -> void:
 
 
 # ------------------------------------------------------------------ ground
+
+## Bake only this outpost's clearing, not the whole planet. Geometry uses the same
+## terrain height source as the collision and the outpost's tangent frame for local
+## ground-up on the spherical home world.
+func _build_nav(o: Dictionary) -> void:
+	if demo.nav == null or demo.terrain == null:
+		return
+	var obstructions: Array = []
+	for b in o.cfg.get("buildings", []):
+		var size := WorldGround._v3(b.get("size", [1, 1, 1]))
+		var pos := WorldGround._v3(b.get("position", [0, 0, 0]))
+		var outline := PackedVector3Array([
+			Vector3(pos.x - size.x * 0.5, 0.0, pos.z - size.z * 0.5),
+			Vector3(pos.x + size.x * 0.5, 0.0, pos.z - size.z * 0.5),
+			Vector3(pos.x + size.x * 0.5, 0.0, pos.z + size.z * 0.5),
+			Vector3(pos.x - size.x * 0.5, 0.0, pos.z + size.z * 0.5),
+		])
+		obstructions.append({ "outline": outline, "bottom": pos.y, "height": size.y + 1.0 })
+	demo.nav.add_terrain_region(demo.terrain, o.origin, GROUND_HALF, GROUND_STEP,
+		o.xf, obstructions)
 
 ## The sand round the outpost as a heightmap, at the terrain's own heights.
 func _build_ground(o: Dictionary) -> void:

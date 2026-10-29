@@ -77,6 +77,30 @@
       "at": [-900, 0, -620],
       "yaw_deg": 325,
       "clear": 40
+    },
+    {
+      "id": "droid_post_wash",
+      "kind": "location",
+      "location": "droid_post_wash",
+      "at": [1000, 0, 850],
+      "yaw_deg": 155,
+      "clear": 28
+    },
+    {
+      "id": "droid_post_ridge",
+      "kind": "location",
+      "location": "droid_post_ridge",
+      "at": [-1450, 0, 700],
+      "yaw_deg": 35,
+      "clear": 28
+    },
+    {
+      "id": "droid_post_basin",
+      "kind": "location",
+      "location": "droid_post_basin",
+      "at": [700, 0, -1550],
+      "yaw_deg": 250,
+      "clear": 28
     }
   ],
   "atmosphere": {

@@ -21,7 +21,8 @@ func _initialize() -> void:
 			_only = a.substr(7).split(",")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_scenes = [
-		{ "id": "grit_station", "bar": true, "shots": ["overview", "gate", "cantina", "out_back", "below", "from_port_sky"] },
+		{ "id": "grit_station", "bar": true, "shots": ["overview", "gate_from_hall", "hall", "pit", "cantina", "out_back", "rock", "ball", "home_from_station"] },
+		{ "id": "port_desert", "shots": ["station_from_port_space"] },
 		{ "id": "style_metallic", "cfg": { "type": "sand", "town_size": 30, "style": "metallic", "seed": 7 }, "shots": ["aerial"] },
 		{ "id": "style_snowy", "cfg": { "type": "snow", "town_size": 30, "style": "snowy", "seed": 7 }, "shots": ["aerial", "street"] },
 		{ "id": "style_pastel", "cfg": { "type": "water", "town_size": 30, "style": "pastel", "seed": 7 }, "shots": ["aerial", "street"] },
@@ -117,4 +118,25 @@ func _view(demo, shot: String) -> Array:
 			return [g2 + Vector3(40, 6, 30), g2 + Vector3(0, -40, 0)]
 		"from_port_sky":
 			return [c + Vector3(-500, 260, 300), c + Vector3(0, -80, 0)]
+		# Issue #99: the sealed station, the asteroid's ball, and each planet from the other.
+		"gate_from_hall":
+			var hg: Dictionary = demo.platform.hall
+			return [Vector3(float(hg.x0) + 12.0, 1.7, 2.0), Vector3(float(hg.x0) - 6.0, 1.5, -1.0)]
+		"hall":
+			var hl: Dictionary = demo.platform.hall
+			return [Vector3(float(hl.x0) + 3.0, 1.7, -2.5), Vector3(float(hl.end), -1.5, 0.5)]
+		"pit":
+			var pc: Vector3 = demo.platform.pit_c
+			return [pc + Vector3(14, -4.3, 10), pc + Vector3(-28, 2.0, 0)]
+		"rock":
+			return [c + Vector3(160, 40, 260), c + Vector3(40, 0, 0)]
+		"ball":
+			var r: float = demo.terrain.sphere.radius
+			return [Vector3(r * 2.2, r * 0.4, r * 2.2), Vector3(0, -r, 0)]
+		"home_from_station":
+			var hn: Dictionary = demo.planet.neighbours[0]
+			return [Vector3(0, 2600, 0), hn.at]
+		"station_from_port_space":
+			var sn: Dictionary = demo.planet.neighbours[0]
+			return [(sn.at as Vector3) + Vector3(-2500, 1800, 3500), sn.at]
 	return [c + Vector3(0, 50, 80), c]

@@ -49,19 +49,16 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	noise.seed = 31
 	noise.fractal_octaves = 3
 
-	# Mesas: big, simple, layered by fog. [x, z, radius, height]
+	# Mesas: big, weathered shelves with broad caps, layered by fog. [x, z, radius, height]
 	for m in data.get("mesas", []):
 		var r: float = m[2]
 		var h: float = m[3]
 		if _hits(clear, m[0], m[1], r) or _in_circles(m[0], m[1], r):
 			continue
-		noise.frequency = 0.9 / r
-		var base := _cyl(r * 0.8, r, h, 40)
-		base.rings = 14
-		var mesh := LookMeshKit.rock(base, noise, 0.18, 28.0 / h, float(m[0]) * 0.01, 0.35)
+		var mesh := _mesa_mesh(r, h, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
 		var g := _ground(terrain, m[0], m[1])
 		var gy := _ground_h(terrain, g, m[0], m[1])
-		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.42, Vector3(0, rng.randf_range(0, 360), 0))
+		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.46, Vector3(0, rng.randf_range(0, 360), 0))
 		if solid:
 			_solid(mi)
 
@@ -177,6 +174,72 @@ func _cyl(top: float, bottom: float, h: float, seg: int) -> CylinderMesh:
 	c.radial_segments = seg
 	c.rings = 1
 	return c
+
+
+## A broad, weathered plateau with broken shelves and cliff-cut gullies. The
+## outline stays inside WorldGround's existing mesa column, so the improved
+## silhouette does not change the ship's conservative landmark collision.
+static func _mesa_mesh(radius: float, height: float, noise: FastNoiseLite, seed_offset: float) -> ArrayMesh:
+	const SEGMENTS := 64
+	const PROFILE := [
+		Vector2(0.00, 0.76), Vector2(0.10, 0.84), Vector2(0.22, 0.82),
+		Vector2(0.31, 0.78), Vector2(0.35, 0.73), Vector2(0.49, 0.72),
+		Vector2(0.54, 0.67), Vector2(0.67, 0.66), Vector2(0.71, 0.61),
+		Vector2(0.84, 0.60), Vector2(0.88, 0.56), Vector2(0.98, 0.55),
+		Vector2(1.00, 0.52)
+	]
+	noise.frequency = 1.0
+	var rings: Array[PackedVector3Array] = []
+	for ring in PROFILE:
+		var row := PackedVector3Array()
+		var t := float(ring.x)
+		var base_radius := float(ring.y)
+		for i in SEGMENTS:
+			var angle := TAU * float(i) / SEGMENTS
+			var ca := cos(angle)
+			var sa := sin(angle)
+			var broad := noise.get_noise_2d(ca * 2.0 + seed_offset, sa * 2.0 + seed_offset)
+			var fine := noise.get_noise_3d(ca * 5.0 + seed_offset, t * 3.0, sa * 5.0 + seed_offset)
+			# Vertical flutes are strongest on the cliff face, not the broad cap.
+			var cliff_band := smoothstep(0.12, 0.30, t) * (1.0 - smoothstep(0.72, 0.92, t))
+			var gully := pow(maxf(0.0, cos(angle * 6.0 + broad * 0.55)), 8.0) * 0.045 * cliff_band
+			var radial := base_radius + broad * 0.026 + fine * 0.009 - gully
+			var cap_wave := 1.0 - smoothstep(0.92, 1.0, t)
+			var y_noise := (broad * 0.012 + fine * 0.006) * cap_wave
+			row.append(Vector3(
+				ca * radius * radial,
+				(t - 0.5) * height * 0.92 + y_noise * height,
+				sa * radius * radial
+			))
+		rings.append(row)
+
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+	for j in rings.size() - 1:
+		for i in SEGMENTS:
+			var next := (i + 1) % SEGMENTS
+			var radial := Vector3(
+				cos(TAU * (float(i) + 0.5) / SEGMENTS), 0.0,
+				sin(TAU * (float(i) + 0.5) / SEGMENTS)
+			)
+			LookMeshKit.add_quad(st, rings[j][i], rings[j][next],
+				rings[j + 1][next], rings[j + 1][i], radial)
+	var cap_center := Vector3.ZERO
+	for point in rings[-1]:
+		cap_center += point
+	cap_center /= SEGMENTS
+	for i in SEGMENTS:
+		var next := (i + 1) % SEGMENTS
+		LookMeshKit.add_tri(st, cap_center, rings[-1][i], rings[-1][next], Vector3.UP)
+	var base_center := Vector3.ZERO
+	for point in rings[0]:
+		base_center += point
+	base_center /= float(SEGMENTS)
+	for i in SEGMENTS:
+		var next := (i + 1) % SEGMENTS
+		LookMeshKit.add_tri(st, base_center, rings[0][next], rings[0][i], Vector3.DOWN)
+	return st.commit()
 
 
 ## Where a landform at map (x, z) stands: the ground there, y along its up. On the

@@ -109,6 +109,24 @@ func test_collider_matches_the_ground_it_was_built_from() -> void:
 	assert_lt(worst, 0.005, "collider and ground agree to within 5 mm")
 
 
+func test_far_horizon_mesh_is_finer_and_follows_the_sphere() -> void:
+	var t := _terrain()
+	var arrays := t._far_chunk(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	assert_eq(t.far_cells, 64, "the far layer uses a bounded 64-cell chunk")
+	var side := t.far_cells + 1 # a 64-cell span has 65 vertices
+	assert_eq(verts.size(), side * side, "far chunk vertex budget stays explicit")
+	var i := 32
+	var j := 32
+	var p: Vector3 = verts[j * side + i]
+	var dir := (p - t.sphere.center).normalized()
+	assert_almost_eq((p - t.sphere.center).length(),
+		t.sphere.radius + t.sphere.elevation(dir, t.sink_grow), 0.01,
+		"far mesh uses the sphere's terrain height on the curved surface")
+	assert_lt(verts[j * side + i + 1].distance_to(p), 40.0,
+		"far cells are finer than the old roughly 40 m silhouettes")
+
+
 func test_collider_follows_round_the_curve() -> void:
 	var t := _terrain()
 	add_child_autofree(t)

@@ -40,6 +40,7 @@ var wreck_nodes: Dictionary = {}    ## uid -> DroidUnit (broken, in the desert)
 var remnant: Array = []             ## DroidUnit (the Remnant's patrol)
 var vendor_pos := Vector3.INF
 var vendor_face := Vector3.ZERO     ## issue #80: the way the droid merchant faces (the aisle); behind = the other way
+var vendor_sites: Array = []        ## town stall plus independent planet relays
 var focus: Dictionary = {}          ## what E would act on: { kind: "vendor"|"wreck"|"cargo", uid }
 var fixing: Dictionary = {}         ## { uid, left }
 var rng := RandomNumberGenerator.new()
@@ -73,10 +74,21 @@ func _ready() -> void:
 		var v: Dictionary = cfg.get("vendor", {})
 		if not demo.town.get_marker(str(v.get("marker", ""))).is_empty():
 			var off: Array = v.get("offset", [0, 0, 0])
-			vendor_pos = demo.town.marker_pos(str(v.marker)) + Vector3(float(off[0]), float(off[1]), float(off[2]))
+			var town_pos: Vector3 = demo.town.marker_pos(str(v.marker)) + Vector3(float(off[0]), float(off[1]), float(off[2]))
 			var vm: Dictionary = demo.town.get_marker(str(v.marker))
+			var face := Vector3.ZERO
 			if vm.has("face"):
-				vendor_face = Vector3(float(vm.face[0]) - vendor_pos.x, 0, float(vm.face[2]) - vendor_pos.z).normalized()
+				face = Vector3(float(vm.face[0]) - town_pos.x, float(vm.face[1]) - town_pos.y,
+					float(vm.face[2]) - town_pos.z)
+				var up := _up(town_pos)
+				face = (face - up * face.dot(up)).normalized()
+			vendor_sites.append({ "id": "port_market", "pos": town_pos, "face": face,
+				"label": str(v.get("label", "Droid Merchant")) })
+			vendor_pos = town_pos
+			vendor_face = face
+	if demo != null and "droid_merchant_outposts" in demo and demo.droid_merchant_outposts != null:
+		for site in demo.droid_merchant_outposts.sites:
+			vendor_sites.append(site)
 	if _on_ball() and not roster().wrecks_seeded:
 		var starting_count := int(cfg.get("wrecks", {}).get("ball_starting_count", 8))
 		while roster().wrecks.size() < starting_count:
@@ -151,9 +163,19 @@ func _tick_focus() -> void:
 
 func _find_focus() -> Dictionary:
 	var p := player.global_position
-	if vendor_pos != Vector3.INF and _flat_dist(p, vendor_pos) <= float(cfg.get("vendor", {}).get("reach", 3.5)) \
-			and absf(p.y - vendor_pos.y) <= 2.0 and _vendor_open():
-		return { "kind": "vendor" }
+	var closest := -1
+	var distance := float(cfg.get("vendor", {}).get("reach", 3.5))
+	for i in vendor_sites.size():
+		if not _vendor_site_open(i):
+			continue
+		var pos: Vector3 = vendor_sites[i].pos
+		var up := _up(pos)
+		var d := _flat_dist(p, pos)
+		if d <= distance and absf((p - pos).dot(up)) <= 2.0:
+			closest = i
+			distance = d
+	if closest >= 0:
+		return { "kind": "vendor", "site": closest }
 	for uid in wreck_nodes:
 		if _flat_dist(p, wreck_nodes[uid].global_position) <= float(cfg.get("wrecks", {}).get("reach", 3.0)):
 			return { "kind": "wreck", "uid": uid }
@@ -171,6 +193,13 @@ func _vendor_open() -> bool:
 	return gear.is_open(cfg.get("vendor", {}))
 
 
+func _vendor_site_open(site: int) -> bool:
+	if site >= 0 and site < vendor_sites.size() \
+			and str(vendor_sites[site].get("id", "")).begins_with("droid_post_"):
+		return true
+	return _vendor_open()
+
+
 func prompt_text() -> String:
 	if not fixing.is_empty():
 		var n: DroidUnit = wreck_nodes.get(int(fixing.uid))
@@ -179,7 +208,7 @@ func prompt_text() -> String:
 			return _l("fixing") % [DroidRoster.label(n.kind).to_lower(), int(100.0 * (1.0 - float(fixing.left) / total))]
 	match str(focus.get("kind", "")):
 		"vendor":
-			return _l("trade") % str(cfg.get("vendor", {}).get("label", "droid merchant")).to_lower()
+			return _l("trade") % _vendor_label(int(focus.get("site", -1))).to_lower()
 		"wreck":
 			var w := roster().find_wreck(int(focus.uid))
 			return _l("fix") % [DroidRoster.label(str(w.get("kind", ""))).to_lower(), int(cfg.get("fix_seconds", 10.0))]
@@ -196,7 +225,8 @@ func interact() -> String:
 		focus = _find_focus()
 	match str(focus.get("kind", "")):
 		"vendor":
-			_open_menu(_l("menu_trade") % [str(cfg.get("vendor", {}).get("label", "")), WorldState.credits,
+			_select_vendor(int(focus.get("site", -1)))
+			_open_menu(_l("menu_trade") % [_vendor_label(int(focus.get("site", -1))), WorldState.credits,
 				roster().owned.size(), DroidRoster.max_owned()], trade_options(), _on_trade)
 			return "menu"
 		"wreck":
@@ -213,6 +243,19 @@ func interact() -> String:
 			_open_menu(_l("menu_hold"), opts, _on_hold.bind(int(focus.uid)))
 			return "menu"
 	return ""
+
+
+func _vendor_label(site: int) -> String:
+	if site >= 0 and site < vendor_sites.size():
+		return str(vendor_sites[site].get("label", "Droid Merchant"))
+	return str(cfg.get("vendor", {}).get("label", "Droid Merchant"))
+
+
+func _select_vendor(site: int) -> void:
+	if site < 0 or site >= vendor_sites.size():
+		return
+	vendor_pos = vendor_sites[site].pos
+	vendor_face = vendor_sites[site].face
 
 
 func _open_menu(title: String, opts: Array, pick: Callable) -> void:
@@ -257,7 +300,8 @@ func buy(kind: String) -> String:
 		# Issue #80: it comes out from the back of the stall and walks round to you.
 		var v: Dictionary = cfg.get("vendor", {})
 		var back := -vendor_face * float(v.get("spawn_behind", 2.6))
-		var side := vendor_face.cross(Vector3.UP).normalized() * float(v.get("walk_round", 3.4))
+		var up := _up(vendor_pos)
+		var side := vendor_face.cross(up).normalized() * float(v.get("walk_round", 3.4))
 		if side.dot(player.global_position - vendor_pos) < 0.0:
 			side = -side                       # round the side nearer the player
 		at = vendor_pos + back

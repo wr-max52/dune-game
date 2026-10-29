@@ -2,6 +2,34 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #99, the asteroid as a real ball (2026-10-28)
+
+**Checked:** `scenes/planets_trace.gd` was run on its own (not the full suite, as
+asked) and every step passed:
+- Port to station with no fade (ARRIVAL_MODE=handoff, 2.5 km over the station).
+- Z landed the ship on its pad, 0.0 m off.
+- The player walked out through the gate shield; the hallway's windows held.
+- The player walked down over the ramp and through the round shield into the pit.
+- The player stood on the rock 500 m out, and on the far side of the ball.
+- The dome held people and ships.
+- The trip home also had no fade.
+
+Review stills were rendered with lavapipe (`docs/planets/issue_99_station.jpg`).
+The unit tests and the trace's GUT test were updated but not run.
+
+**Not done, honestly:**
+- **The switch freezes the frame while the other planet's scene builds.** The
+  picture before and after is the same (same spot, sun and stars), but the town
+  scene takes as long to build as a landing does. In this container that was
+  8 to 14 s, and it will be much less on a real GPU. Building the town in
+  stages while you fly in would hide it; that is a follow-up.
+- **WORST_MS in the planets trace was 273 ms.** Frame-budget tests already fail
+  on main, and the trace teleports the player round the ball, which rebuilds
+  the ground under them.
+- **From the home planet the station is drawn coarse** (no floors, people or
+  boulders), and only its outline shows from kilometres away.
+- **In golden-hour light the grey rock reads tan.** It is grey at midday.
+
 ## After issue #75, planet generation cleanup (2026-10-27)
 
 **Checked, not run in CI for this PR:** every town size passes the validator with and
@@ -13,11 +41,11 @@ run and a contract on the station. The full suite was not run (as asked); the
 planets trace and tests were updated to the new station but not run.
 
 **Not done, honestly:**
-- **Gravity is the town's, straight down.** You can walk over the top of the
+- **(Fixed in #99: the asteroid is a real ball.)** ~~Gravity is the town's, straight down.~~ You could walk over the top of the
   asteroid until it gets too steep (about 450 m out from the town), not all the
   way round it. Walking round a ball needs gravity toward its centre for the
   player, the locals and the ship, which is a bigger change.
-- **The rock was not looked at on a screen.** The headless runs cannot render, so
+- **(Fixed in #99: review stills.)** ~~The rock was not looked at on a screen.~~ The headless runs cannot render, so
   the crater sizes, the faceted look, the boulders and the dome's ribs are only
   checked by numbers.
 - **Jobs off the home planet lead home.** The smuggling drop and the Remnant
