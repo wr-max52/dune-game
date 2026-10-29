@@ -210,46 +210,47 @@ func _layer_mesh(n: String) -> MeshInstance3D:
 
 ## The mid ring follows whatever this returns (the camera); none = the player.
 func follow(node: Node3D) -> void:
-    super.follow(node)
-    if node == null and (_camera_source.is_valid() or not _jobs.is_empty() or not _pending_jobs.is_empty()):
-        set_physics_process(true)
+	super.follow(node)
+	if node == null and (_camera_source.is_valid() or not _jobs.is_empty() or not _pending_jobs.is_empty()):
+		set_physics_process(true)
 
 
 func follow_camera(source: Callable) -> void:
-    _camera_source = source
-    if source.is_valid():
-        set_physics_process(true)
+	_camera_source = source
+	if source.is_valid():
+		set_physics_process(true)
 
 
 func _visual_eye() -> Vector3:
-    if _camera_source.is_valid():
-        return _camera_source.call()
-    if _target != null and is_instance_valid(_target):
-        return _target.global_position
-    return Vector3.ZERO
+	if _camera_source.is_valid():
+		var eye: Vector3 = _camera_source.call()
+		return eye
+	if _target != null and is_instance_valid(_target):
+		return _target.global_position
+	return Vector3.ZERO
 
 
 func _mid_cells_for_quality() -> int:
-    return fast_mid_cells if _fast_flight_quality else mid_cells
+	return fast_mid_cells if _fast_flight_quality else mid_cells
 
 
 func _mid_step_for_quality() -> float:
-    return fast_mid_step if _fast_flight_quality else mid_step
+	return fast_mid_step if _fast_flight_quality else mid_step
 
 
 ## Lower only visual mid-terrain resolution during sustained flight; the old mesh
 ## stays installed until its replacement is complete, so coverage never blanks.
 func set_fast_flight_quality(active: bool) -> void:
-    if _fast_flight_quality == active:
-        return
-    _fast_flight_quality = active
-    if not _with_mesh or mid_mesh == null:
-        return
-    var map_pos := sphere.world_to_map(_visual_eye())
-    var cells := _mid_cells_for_quality()
-    var step := _mid_step_for_quality()
-    var center := Vector2(snappedf(map_pos.x, step), snappedf(map_pos.y, step))
-    _start("mid", center, cells, step)
+	if _fast_flight_quality == active:
+		return
+	_fast_flight_quality = active
+	if not _with_mesh or mid_mesh == null:
+		return
+	var map_pos := sphere.world_to_map(_visual_eye())
+	var cells := _mid_cells_for_quality()
+	var step := _mid_step_for_quality()
+	var center := Vector2(snappedf(map_pos.x, step), snappedf(map_pos.y, step))
+	_start("mid", center, cells, step)
 
 
 
@@ -345,8 +346,9 @@ func _physics_process(_dt: float) -> void:
 			var current_mid: Dictionary = _pending_jobs.get("mid", _jobs.get("mid", {}))
 			var changed := current_mid.is_empty()
 			if not changed:
-				changed = center.distance_to(current_mid.center) >= mid_recenter \
-					or int(current_mid.cells) != cells or not is_equal_approx(float(current_mid.step), step)
+				changed = center.distance_to(current_mid.center) >= mid_recenter
+				if int(current_mid.cells) != cells or not is_equal_approx(float(current_mid.step), step):
+					changed = true
 			if changed:
 				_start("mid", center, cells, step)
 	if not following and not _camera_source.is_valid() and _jobs.is_empty() and _pending_jobs.is_empty():
@@ -371,8 +373,7 @@ func _start(layer: String, center: Vector2, cells_override: int = -1, step_overr
 	var request := { "center": center, "cells": cells, "step": step }
 	if _jobs.has(layer):
 		var active: Dictionary = _jobs[layer]
-		var same_request := active.center == center and int(active.cells) == cells \
-			and is_equal_approx(float(active.step), step)
+		var same_request := active.center == center and int(active.cells) == cells and is_equal_approx(float(active.step), step)
 		if same_request:
 			_pending_jobs.erase(layer)
 			return
