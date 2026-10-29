@@ -22,6 +22,10 @@ echo "CI: pinned=$PIN  actual=$GODOT_VER"
 echo "CI: isolated sidecar + droid runtime regressions..."
 GODOT_BIN="$GODOT_BIN" ./scripts/test_issue_143.sh
 
+# Parse the complete terrain class before the expensive full-game import.
+echo "CI: terrain parser + incremental collider regressions..."
+GODOT_BIN="$GODOT_BIN" ./scripts/test_planet_terrain.sh
+
 # Register class_names (and import assets) first. On a fresh checkout without
 # .godot/, GUT and the class_name scripts are unknown until this runs, and the
 # suite would not start at all.
