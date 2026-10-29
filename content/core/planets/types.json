@@ -117,7 +117,7 @@
       "station": { "wall_height": 6.0, "gate_half": 6.0, "dome_height": 0.85, "hall_width": 9.0, "hall_height": 5.0,
                    "liner_height": 13.0, "liner_door_height": 6.0, "note": "Issue #99: the station is sealed (the locals cannot breathe outside): a round wall under a glass dome, a shield door in the gate, a windowed hallway lit along its ceiling from the gate to the landing pit, through a door in the pit's tall round liner, over the pit's ramp to a round shield; and a shield over the pit itself. Metres; dome_height is its height over the wall's radius." },
       "sky": { "ambient": { "energy": 0.85 },
-               "sky": { "zenith": "#26282c", "horizon": "#6a6d72", "ground": "#3a3c40", "sun_glow": "#d8d8d8", "cloud_cover": 0.0, "planet_visibility": 1.0, "energy": 0.8 },
+               "sky": { "zenith": "#26282c", "horizon": "#6a6d72", "ground": "#3a3c40", "cloud_cover": 0.0, "planet_visibility": 1.0, "energy": 0.8 },
                "fog": { "color": "#5a5d62", "density": 0.00004, "sky_affect": 0.1 }, "volumetric": { "enabled": false } },
       "atmosphere": { "upper_start": 0.0, "cloud_deck": 200.0, "sky_black_at": 900.0, "space_altitude": 700.0 },
       "space": { "handoff": 2600.0, "note": "Issue #99: no fade between planets. Within handoff metres of this ball's surface its own scene flies you (switched in mid-flight, the ship where it was, the same sun and stars); further out you are in its parent's (near) sky." },

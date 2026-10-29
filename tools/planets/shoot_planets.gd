@@ -24,7 +24,7 @@ func _initialize() -> void:
 			_preset = a.substr(7)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_scenes = [
-		{ "id": "grit_station", "bar": true, "shots": ["overview", "street", "gate_from_hall", "hall", "pit", "cantina", "out_back", "rock", "ball", "home_from_station"] },
+		{ "id": "grit_station", "bar": true, "shots": ["overview", "street", "gate_from_hall", "hall", "pit", "cantina", "out_back", "rock", "ball", "home_from_station", "sun"] },
 		{ "id": "port_desert", "shots": ["station_from_port_space"] },
 		{ "id": "style_metallic", "cfg": { "type": "sand", "town_size": 30, "style": "metallic", "seed": 7 }, "shots": ["aerial"] },
 		{ "id": "style_snowy", "cfg": { "type": "snow", "town_size": 30, "style": "snowy", "seed": 7 }, "shots": ["aerial", "street"] },
@@ -139,6 +139,9 @@ func _view(demo, shot: String) -> Array:
 		"home_from_station":
 			var hn: Dictionary = demo.planet.neighbours[0]
 			return [Vector3(0, 2600, 0), hn.at]
+		"sun":
+			var se := c + Vector3(0, 20, 0)
+			return [se, se + demo.look.sun_dir * 100.0]
 		"station_from_port_space":
 			var sn: Dictionary = demo.planet.neighbours[0]
 			return [(sn.at as Vector3) + Vector3(-2500, 1800, 3500), sn.at]
