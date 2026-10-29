@@ -4,13 +4,14 @@ extends SceneTree
 ## below), the town style kit on generated towns, every planet type, and towns at
 ## sizes 1 to 100 from the air. Saves PNGs to test_results/planets/.
 ##
-## Needs a real renderer: ./tools/planets/shoot_planets.sh [scenes=a,b]
+## Needs a real renderer: ./tools/planets/shoot_planets.sh [scenes=a,b] [preset=dusk]
 ## Each scene builds the town scene for one planet (a manifest planet, or a config
 ## made up here), places a fixed camera per shot, lets it settle and saves.
 
 const OUT := "res://test_results/planets"
 
 var _only: Array = []
+var _preset := "golden"
 var _scenes: Array = []
 
 
@@ -19,9 +20,11 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("scenes="):
 			_only = a.substr(7).split(",")
+		elif a.begins_with("preset="):
+			_preset = a.substr(7)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_scenes = [
-		{ "id": "grit_station", "bar": true, "shots": ["overview", "gate_from_hall", "hall", "pit", "cantina", "out_back", "rock", "ball", "home_from_station"] },
+		{ "id": "grit_station", "bar": true, "shots": ["overview", "street", "gate_from_hall", "hall", "pit", "cantina", "out_back", "rock", "ball", "home_from_station"] },
 		{ "id": "port_desert", "shots": ["station_from_port_space"] },
 		{ "id": "style_metallic", "cfg": { "type": "sand", "town_size": 30, "style": "metallic", "seed": 7 }, "shots": ["aerial"] },
 		{ "id": "style_snowy", "cfg": { "type": "snow", "town_size": 30, "style": "snowy", "seed": 7 }, "shots": ["aerial", "street"] },
@@ -49,7 +52,7 @@ func _run() -> void:
 			PlanetGen._cache[s.id] = PlanetGen.make(cfg)
 		GameFlow.planet_id = s.id
 		var demo = load("res://scenes/town_demo.gd").new()
-		demo.preset = "golden"
+		demo.preset = _preset
 		demo.with_bar = bool(s.get("bar", false))
 		demo.npc_brains = false
 		get_root().add_child(demo)
