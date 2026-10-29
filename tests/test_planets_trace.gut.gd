@@ -119,3 +119,37 @@ func test_and_home_again() -> void:
 
 func test_no_frame_over_budget() -> void:
 	assert_lt(float(t.get("WORST_MS", 999)), 50.0)
+
+
+## Issue #121: both handoffs build a flight shell on the first frame and the
+## rest over the frames after, without touching the ship.
+func test_handoffs_are_staged() -> void:
+	for leg in ["STATION", "HOME"]:
+		var k := "HANDOFF_%s_" % leg
+		_true(k + "STAGED", leg + ": a handoff stages its build")
+		_true(k + "DONE", leg + ": and finishes it")
+		assert_eq(t.get(k + "FAILED_STEP"), "", leg + ": no step failed")
+		assert_gt(int(t.get(k + "STAGED_STEPS", 0)), 10, leg + ": most of the build is staged")
+		assert_gt(int(t.get(k + "STAGED_FRAMES", 0)), 1, leg + ": over more than one frame")
+		assert_lt(float(t.get(k + "READY_MS", 9999)), 400.0, leg + ": the first frame is the shell only")
+		assert_lt(float(t.get(k + "READY_MS", 9999)), float(t.get(k + "STAGED_TOTAL_MS", 0)),
+			leg + ": less on the first frame than after it")
+		# The runner never stacks work on a frame past its budget: the worst frame
+		# is at most one step that alone is over it, plus the budget.
+		assert_lte(float(t.get(k + "WORST_STAGED_FRAME_MS", 9999)),
+			float(t.get(k + "HEAVIEST_STEP_MS", 0)) + float(t.get(k + "BUDGET_MS", 0)) + 5.0, leg + ": budget respected")
+		assert_eq(int(t.get(k + "WORLDS_IN_TREE", 0)), 1, leg + ": the old scene is not kept as a hidden world")
+		_true(k + "OLD_SCENE_FREED")
+
+
+func test_the_ship_carries_on_through_a_handoff() -> void:
+	for leg in ["STATION", "HOME"]:
+		var k := "HANDOFF_%s_" % leg
+		assert_lt(float(t.get(k + "POS_ERR_M", 99)), 0.01, leg + ": exactly where it was")
+		assert_lt(float(t.get(k + "SPEED_ERR", 99)), 0.01, leg + ": at the same speed")
+		assert_lt(float(t.get(k + "BASIS_ERR", 99)), 0.001, leg + ": facing the same way")
+		assert_lt(float(t.get(k + "THROTTLE_ERR", 99)), 0.001, leg + ": on the same throttle")
+		_true(k + "FLEW_THROUGH", leg + ": flying all through the staged build")
+		assert_lte(float(t.get(k + "MAX_STEP_JUMP", 99)), 1.05, leg + ": no step moves it further than its speed")
+		assert_lt(float(t.get(k + "MAX_SPEED_STEP", 99)), 10.0, leg + ": no jump in speed")
+		_true(k + "PEOPLE_HIDDEN", leg + ": people built while high up stay hidden")
