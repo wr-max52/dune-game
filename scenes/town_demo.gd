@@ -640,7 +640,9 @@ func _build_detail() -> void:
 		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null,
 		droid_merchant_outposts])
 	if decor != null:
-		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
+		var small_props := [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")]
+		detail.add_group("props", small_props)
+		detail.add_group("small_props", small_props)
 	if landforms != null:
 		detail.add_group("props", [landforms.get_node_or_null("Boulders")])
 	if dust != null:
