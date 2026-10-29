@@ -436,16 +436,16 @@ func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	_speech.text = text
 	_speech.visible = text != ""
 	_speech_left = seconds
-	if text == "" or not bool(profile.get("radio_voice", true)):
+	if text.strip_edges() == "":
 		return
-	# Under the words, helmet-radio chatter (no speech engine: the line is on screen).
-	var v: Dictionary = sound_cfg().get("voice", {})
-	var list: Array = v.get("shout" if shout else "calm", [])
-	if list.is_empty():
-		return
-	var path := str(list[_rng_sfx.randi() % list.size()])
-	if ResourceLoader.exists(path):
-		play_sfx("voice", load(path), float(v.get("shout_db" if shout else "volume_db", -4.0)))
+	var stable_id := post_id if post_id != "" else display_name
+	if stable_id == "":
+		stable_id = soldier_id
+	var voice_profile := NpcVoice.profile_for_npc(stable_id, profile)
+	var mood := str(profile.get("voice_mood", ""))
+	if mood == "":
+		mood = "angry" if hostile else ("wary" if faction == "imperial_remnant" else "warm")
+	NpcVoice.speak(text, voice_profile, mood, self, shout)
 
 
 func speaking() -> String:

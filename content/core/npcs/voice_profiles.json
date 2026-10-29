@@ -1,0 +1,52 @@
+{
+  "model_id": "eleven_v4",
+  "voice_profiles": {
+    "guard": {
+      "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+      "stability": 0.64
+    },
+    "guard_rough": {
+      "voice_id": "TxGEqnHWrfWFTfGW9XjX",
+      "stability": 0.68
+    },
+    "merchant": {
+      "voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "stability": 0.52
+    },
+    "relaxed": {
+      "voice_id": "ErXwobaYiN019PkySvjV",
+      "stability": 0.54
+    },
+    "woman_relaxed": {
+      "voice_id": "21m00Tcm4TlvDq8ikWAM",
+      "stability": 0.56
+    },
+    "t89": {
+      "voice_id": "VR6AewLTigWG4xSOukaG",
+      "stability": 0.82,
+      "style_tag": "[low, metallic, robotic voice]"
+    }
+  },
+  "role_profiles": {
+    "gate": ["guard", "guard_rough"],
+    "guard": ["guard", "guard_rough"],
+    "trooper": ["guard", "guard_rough"],
+    "merchant": ["merchant"],
+    "local": ["relaxed", "woman_relaxed", "merchant"]
+  },
+  "npc_profiles": {
+    "cantina_owner": "woman_relaxed",
+    "skrugs": "merchant",
+    "t89": "t89"
+  },
+  "mood_tags": {
+    "amused": "[amused, playful delivery]",
+    "warm": "[warm, friendly delivery]",
+    "friendly": "[warm, friendly delivery]",
+    "angry": "[angry, forceful delivery]",
+    "hostile": "[angry, forceful delivery]",
+    "sad": "[sad, subdued delivery]",
+    "wary": "[cautious, restrained delivery]",
+    "concerned": "[concerned, gentle delivery]"
+  }
+}
