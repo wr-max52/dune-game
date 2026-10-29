@@ -123,7 +123,7 @@ func _load_model(path: String) -> Node3D:
 		if path != "":
 			push_warning("ItemKit: model not found, using stand-in: ", path)
 		return null
-	var res = load(path)
+	var res = ModelCache.scene(path)
 	if res is PackedScene:
 		var inst = res.instantiate()
 		if inst is Node3D:
