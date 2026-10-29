@@ -203,7 +203,7 @@ func _load_model(path: String, spec: Dictionary) -> Node3D:
 	if path == "" or not ResourceLoader.exists(path):
 		push_warning("PlayerAvatar: missing weapon model " + path)
 		return null
-	var scene = load(path)
+	var scene = ModelCache.scene(path)
 	if not (scene is PackedScene):
 		return null
 	var n: Node3D = scene.instantiate()

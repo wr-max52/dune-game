@@ -43,7 +43,7 @@ static func dress(body: Node3D, cfg: Dictionary) -> SkinnedBody:
 	var path := str(cfg.get("scene", ""))
 	if path == "" or not ResourceLoader.exists(path):
 		return null
-	var packed = load(path)
+	var packed = ModelCache.scene(path)
 	if not packed is PackedScene:
 		return null
 	var inst := (packed as PackedScene).instantiate() as Node3D

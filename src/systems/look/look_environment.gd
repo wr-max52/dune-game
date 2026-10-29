@@ -40,7 +40,19 @@ static func load_presets(path: String = PRESETS_PATH) -> Dictionary:
 
 ## One shared seamless noise texture. Made synchronously from an Image so the
 ## first rendered frame already has it (NoiseTexture2D generates on a thread).
+## Made once per (size, seed, freq) a run and shared (a 512 one is ~25 ms, and a
+## planet handoff's first frame asked for several): nothing writes to them.
 static func make_noise_texture(size: int = 512, seed_value: int = 7, freq: float = 0.012) -> ImageTexture:
+	var key := Vector3(size, seed_value, freq)
+	if not _noise_cache.has(key):
+		_noise_cache[key] = _new_noise_texture(size, seed_value, freq)
+	return _noise_cache[key]
+
+
+static var _noise_cache: Dictionary = {}     ## Vector3(size, seed, freq) -> ImageTexture
+
+
+static func _new_noise_texture(size: int, seed_value: int, freq: float) -> ImageTexture:
 	var n := FastNoiseLite.new()
 	n.seed = seed_value
 	n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH

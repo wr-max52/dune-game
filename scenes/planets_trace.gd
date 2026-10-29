@@ -167,6 +167,11 @@ func follow_handoff(label: String, carried: Dictionary, old_ref: WeakRef) -> voi
 	out(k + "WORST_STAGED_FRAME_MS", snappedf(sb.worst_frame_ms, 0.1))
 	out(k + "HEAVIEST_STEP_MS", snappedf(heaviest, 0.1))
 	out(k + "HEAVIEST_STEP", heaviest_name)
+	# Every step over the budget, shell (frame -1) and staged alike, heaviest first.
+	var slow := sb.history.filter(func(h): return float(h.ms) > sb.budget_ms)
+	slow.sort_custom(func(a, b): return float(a.ms) > float(b.ms))
+	out(k + "SLOW_STEPS", ", ".join(slow.map(func(h): return "%s%s=%.1f" % [
+		"shell:" if int(h.frame) < 0 else "", h.name, float(h.ms)])))
 	out(k + "BUDGET_MS", sb.budget_ms)
 	out(k + "STAGED_PHYSICS_STEPS", n)
 	out(k + "MAX_STEP_JUMP", snappedf(jump, 0.01))

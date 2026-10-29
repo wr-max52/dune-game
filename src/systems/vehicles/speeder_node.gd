@@ -443,7 +443,7 @@ func _build_visual() -> void:
 func _build_model(path: String, base_y: float) -> bool:
 	if path == "" or not ResourceLoader.exists(path):
 		return false
-	var res = load(path)
+	var res = ModelCache.scene(path)
 	var inst = (res as PackedScene).instantiate() if res is PackedScene else null
 	if not (inst is Node3D):
 		if inst != null:

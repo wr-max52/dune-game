@@ -224,7 +224,10 @@ func build_plan(staged_build: bool) -> Array:
 		for m in town.markers():
 			if _is_live_npc(m):
 				add.call("npc:" + str(m.id), LATER, func(): _build_npc(m); return true)
-		add.call("outposts", LATER, func(): _build_outposts(); return true)
+		add.call("outposts", LATER, func(): _build_outposts(not staged_build); return true)
+		if staged_build:
+			# One outpost a frame: each is its ground, nav and troopers (tens of ms).
+			add.call("outpost_sites", LATER, func(_left): return outposts == null or outposts.build_step(), true)
 		add.call("npc_brains", LATER, func(): _npc_brains(); return true)
 	add.call("speeders", LATER, func():
 		if with_speeders and pilot != null and has_feature("speeders"):
@@ -575,13 +578,15 @@ func _build_npc(m: Dictionary) -> void:
 
 
 ## Once every town NPC stands: the desert outposts and their guards.
-func _build_outposts() -> void:
+## `now` false (issue #121, a staged handoff): the outpost_sites step builds them.
+func _build_outposts(now: bool = true) -> void:
 	# The Remnant's outposts are the port's desert's (issue #75: not on other planets).
 	if with_outposts and pilot != null and str(planet.get("id", "")) == PlanetGen.home_id():
 		outposts = RemnantOutposts.new()
 		outposts.setup(self, pilot.ground)
 		add_child(outposts)
-		outposts.build()
+		if now:
+			outposts.build()
 
 
 ## Then the brains that run them all.

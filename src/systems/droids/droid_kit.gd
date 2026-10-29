@@ -40,7 +40,7 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 	var path := str(look.get("model", ""))
 	if path == "" or not ResourceLoader.exists(path):
 		return false
-	var scene = load(path)
+	var scene = ModelCache.scene(path)
 	if not (scene is PackedScene):
 		return false
 	var n: Node3D = (scene as PackedScene).instantiate()

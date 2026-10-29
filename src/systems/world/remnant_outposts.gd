@@ -44,32 +44,50 @@ func setup(town_demo, world_ground: WorldGround) -> void:
 ## Read the outposts and build them, troopers included. Called by the town before
 ## its Garrison is set up (the troopers join it).
 func build() -> void:
-	var cc := CoreContent.new()
-	cc.load_from()
-	var world: Dictionary = cc.world_for_town("port_town")
-	for id in Story.OUTPOSTS:
-		for lm in world.get("landmarks", []):
-			if str(lm.get("location", "")) != id:
-				continue
-			var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
-			var loc: Dictionary = cc.get_location(id)
-			var yaw := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
-			var o := { "id": id, "label": str(loc.get("label", id)), "cfg": loc,
-				"origin": Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z), "yaw": yaw }
-			# Issue #77: on the home planet's ball the outpost stands along the ground's
-			# up there, in the same frame WorldGround gives its buildings.
-			var sp := ground.sphere()
-			if sp != null:
-				o.origin = sp.surface_at(at.x, at.z)
-			o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
-			outposts.append(o)
-			_build_ground(o)
-			_build_nav(o)
-			if demo.use_look:
-				_dress(o)
-				_park_ship(o)
-			for p in ["guard_a", "guard_b"]:
-				_add_guard(o, p)
+	while not build_step():
+		pass
+
+
+var _cc: CoreContent                ## issue #121: the content a staged build reads from
+var _left: Array = []               ## outpost ids still to build
+
+
+## Issue #121: build the next outpost (ground, nav, look, troopers: tens of ms).
+## True once all are built. A staged handoff calls this once a frame.
+func build_step() -> bool:
+	if _cc == null:
+		_cc = CoreContent.new()
+		_cc.load_from()
+		_left = Story.OUTPOSTS.duplicate()
+	if _left.is_empty():
+		return true
+	_build_outpost(str(_left.pop_front()), _cc.world_for_town("port_town"))
+	return _left.is_empty()
+
+
+func _build_outpost(id: String, world: Dictionary) -> void:
+	for lm in world.get("landmarks", []):
+		if str(lm.get("location", "")) != id:
+			continue
+		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
+		var loc: Dictionary = _cc.get_location(id)
+		var yaw := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
+		var o := { "id": id, "label": str(loc.get("label", id)), "cfg": loc,
+			"origin": Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z), "yaw": yaw }
+		# Issue #77: on the home planet's ball the outpost stands along the ground's
+		# up there, in the same frame WorldGround gives its buildings.
+		var sp := ground.sphere()
+		if sp != null:
+			o.origin = sp.surface_at(at.x, at.z)
+		o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
+		outposts.append(o)
+		_build_ground(o)
+		_build_nav(o)
+		if demo.use_look:
+			_dress(o)
+			_park_ship(o)
+		for p in ["guard_a", "guard_b"]:
+			_add_guard(o, p)
 
 
 func outpost(id: String) -> Dictionary:
