@@ -24,6 +24,7 @@ const OUT := "res://test_results/m14_flight_trace.txt"
 const TOWN := "res://scenes/town_demo.tscn"
 const FighterBrain := preload("res://src/systems/ai/fighter_brain.gd")
 const Dogfight := preload("res://src/systems/flight/dogfight.gd")
+const PerfTrace := preload("res://src/systems/diagnostics/performance_trace.gd")
 
 var demo
 var pilot: ShipPilot
@@ -36,6 +37,8 @@ var _frames := 0
 var _measure := false
 var _phase := "setup"
 var phase_worst := {}
+var _perf := PerfTrace.new()
+var scene_ready_ms: Array[float] = []
 
 
 func _initialize() -> void:
@@ -48,6 +51,8 @@ func _initialize() -> void:
 
 func _process(_d: float) -> bool:
 	var now := Time.get_ticks_usec()
+	if _measure:
+		_perf.sample(_d, _phase)
 	if _measure and _last > 0:
 		var ms := (now - _last) / 1000.0
 		worst_ms = maxf(worst_ms, ms)
@@ -72,11 +77,19 @@ func make_town() -> void:
 		await frames(2)
 	demo = load("res://scenes/town_demo.gd").new()
 	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
-	demo.use_look = false              # greybox: the same collision, fast
+	demo.use_look = OS.get_environment("DUNE_PERF_VISUALS") == "1"
+	var ready_started := Time.get_ticks_usec()
 	get_root().add_child(demo)
+	scene_ready_ms.append((Time.get_ticks_usec() - ready_started) / 1000.0)
 	await frames(5)
 	pilot = demo.pilot
 	player = demo._player
+
+
+func _terrain_performance() -> Dictionary:
+	if demo != null and is_instance_valid(demo) and demo.terrain != null and demo.terrain.has_method("performance_snapshot"):
+		return demo.terrain.performance_snapshot()
+	return {}
 
 
 func place_player(p: Vector3) -> void:
@@ -398,6 +411,27 @@ func _run() -> void:
 	for k in phase_worst:
 		pw.append("%s:%.1f" % [k, phase_worst[k]])
 	out("WORST_MS_BY_PHASE", " ".join(pw))
+
+	var terrain_metrics := _terrain_performance()
+	var perf_report := _perf.report("m14_flight", {
+		"scene_ready_ms": scene_ready_ms,
+		"terrain": terrain_metrics,
+		"visuals_enabled": OS.get_environment("DUNE_PERF_VISUALS") == "1"
+	})
+	var frame_stats: Dictionary = perf_report.frame_time_ms
+	var process_stats: Dictionary = perf_report.main_thread_process_ms
+	var physics_stats: Dictionary = perf_report.physics_process_ms
+	out("FRAME_P50_MS", frame_stats.get("p50", -1.0))
+	out("FRAME_P95_MS", frame_stats.get("p95", -1.0))
+	out("FRAME_P99_MS", frame_stats.get("p99", -1.0))
+	out("CPU_PROCESS_P95_MS", process_stats.get("p95", -1.0))
+	out("CPU_PHYSICS_P95_MS", physics_stats.get("p95", -1.0))
+	out("GPU_FRAME_MS", "unavailable" if perf_report.gpu_frame_ms == null else perf_report.gpu_frame_ms)
+	var perf_path := OS.get_environment("DUNE_PERF_OUT")
+	if not perf_path.is_empty():
+		var perf_error: Error = _perf.write_json(perf_path, perf_report)
+		out("PERF_JSON_PATH", perf_path)
+		out("PERF_JSON_ERROR", perf_error)
 
 	var f := FileAccess.open(OUT, FileAccess.WRITE)
 	if f == null:
