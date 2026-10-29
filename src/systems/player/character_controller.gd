@@ -9,8 +9,14 @@ extends RefCounted
 enum Pose { STAND, CROUCH, JUMP }
 
 # Speeds and accelerations (units/second).
+# Issue #133: "sprint" in the command is the run (W held for the player, a
+# guard's hurry), kept under its old name so every bot and trace still works.
+# "dash" is the player's Shift sprint: faster, and only while dash_allowed
+# (the player's stamina says so).
 var walk_speed := 4.0
 var sprint_speed := 7.0
+var dash_speed := 10.0
+var dash_allowed := true
 var crouch_speed := 2.0
 var ground_accel := 30.0
 var gravity := 20.0
@@ -22,7 +28,7 @@ var crouch_height := 1.0
 # A movement command: direction in the player's local XZ plane (-1..1 each),
 # plus sprint / crouch / jump booleans. "jump" is the press (one frame);
 # "jump_held" is whether jump is still down (M13: the jetpack reads it).
-var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "jump": false, "jump_held": false }
+var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "jump": false, "jump_held": false, "dash": false }
 
 # M13: extra upward acceleration this frame (a jetpack's thrust), set by the node
 # before step(). While it is on, upward speed is capped at max_rise (0 = no cap).
@@ -52,12 +58,20 @@ var on_ground := true
 var velocity := Vector3.ZERO
 var body_pos := Vector3.ZERO
 
-func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
+func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false, dash: bool = false) -> void:
 	command.dir = dir
 	command.sprint = sprint
 	command.crouch = crouch
 	command.jump = jump
 	command.jump_held = jump_held or jump
+	command.dash = dash
+
+
+## Issue #133: the Shift sprint is on this frame (moving, standing, stamina left).
+## The weapons read it to lower the gun and hold the trigger.
+func is_dashing() -> bool:
+	return bool(command.dash) and dash_allowed and command.dir.length() > 0.1 \
+		and not sliding and not crouching()
 
 
 ## True while the crouch pose applies: a slide, or crouch held and not spent.
@@ -97,7 +111,7 @@ func _tick_slide(delta: float, world_dir: Vector3) -> bool:
 	var horiz := Vector3(velocity.x, 0.0, velocity.z)
 	if not sliding:
 		var pressed: bool = bool(command.crouch) and not _prev_crouch
-		if can_slide and pressed and on_ground and bool(command.sprint) and pose != Pose.JUMP \
+		if can_slide and pressed and on_ground and (bool(command.sprint) or bool(command.dash)) and pose != Pose.JUMP \
 				and horiz.length() > walk_speed:
 			sliding = true
 			slide_time = 0.0
@@ -126,6 +140,8 @@ func current_speed() -> float:
 		Pose.CROUCH:
 			return crouch_speed
 		Pose.STAND:
+			if is_dashing():
+				return dash_speed
 			return sprint_speed if command.sprint else walk_speed
 	return walk_speed
 

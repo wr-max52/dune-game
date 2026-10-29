@@ -24,8 +24,17 @@ const UPPER_SWORD := "sword"        ## guard / swing / block come from SwordPose
 const UPPER_HOLSTER := "holster"    ## mid weapon swap: weapon_xf comes from the caller
 
 const PELVIS_Y := 0.97
+## Issue #133: three gaits. A walk, the run (W held, what used to be the Shift
+## sprint) and the Shift sprint. The animation blends by speed, so guards and
+## NPCs at their own speeds land somewhere on the same curve.
 const WALK_SPEED := 4.0
-const SPRINT_SPEED := 7.0
+const RUN_SPEED := 7.0
+const SPRINT_SPEED := 10.0
+## Metres per full cycle (two steps) at each gait's speed. The walk's step is long
+## and unhurried (about 3.8 steps a second) so it no longer reads as a jog.
+const WALK_STRIDE := 2.1
+const RUN_STRIDE := 3.0
+const SPRINT_STRIDE := 4.0
 
 var state := State.LOCOMOTION
 var phase := 0.0               ## gait phase, radians
@@ -86,7 +95,7 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 		states_seen["JUMP" if vy > 0.0 else "FALL"] = true
 
 	# ---- gait phase: one full cycle per stride (two steps)
-	var stride := lerpf(1.5, 3.0, clampf((speed - WALK_SPEED) / (SPRINT_SPEED - WALK_SPEED), 0.0, 1.0))
+	var stride := stride_for(speed)
 	if crouch:
 		stride = 0.9
 	if state == State.LOCOMOTION and speed > 0.05:
@@ -105,6 +114,13 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 		"state": "DANCE" if dancing else state_name(),
 		"dance_yaw": float(target.get("yaw", 0.0)),
 	}
+
+
+## Issue #133: stride length (one full cycle, metres) for a ground speed.
+static func stride_for(speed: float) -> float:
+	if speed <= RUN_SPEED:
+		return lerpf(WALK_STRIDE, RUN_STRIDE, clampf((speed - WALK_SPEED) / (RUN_SPEED - WALK_SPEED), 0.0, 1.0))
+	return lerpf(RUN_STRIDE, SPRINT_STRIDE, clampf((speed - RUN_SPEED) / (SPRINT_SPEED - RUN_SPEED), 0.0, 1.0))
 
 
 func state_name() -> String:
@@ -278,7 +294,8 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 	var s := sin(phase)
 	var c := cos(phase)
 	var walk01 := clampf(speed / WALK_SPEED, 0.0, 1.0)
-	var sprint01 := clampf((speed - WALK_SPEED) / (SPRINT_SPEED - WALK_SPEED), 0.0, 1.0)
+	var run01 := clampf((speed - WALK_SPEED) / (RUN_SPEED - WALK_SPEED), 0.0, 1.0)
+	var dash01 := clampf((speed - RUN_SPEED) / (SPRINT_SPEED - RUN_SPEED), 0.0, 1.0)
 	var move: Vector2 = inp.get("move_local", Vector2(0, 1))
 	if move.length() < 0.01:
 		move = Vector2(0, 1)
@@ -288,35 +305,46 @@ func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictiona
 
 	match state:
 		State.LOCOMOTION:
-			# Issue #87: a walk with some swagger (hips roll and shift over the planted
-			# foot, shoulders counter-twist, arms swing loose) and a sprint that leans
-			# into it with a long stride, a high back kick and pumping arms.
-			var hip_a := 28.0 * walk01 + 20.0 * sprint01
-			var knee_a := 38.0 * walk01 + 62.0 * sprint01
-			var strut := walk01 * (1.0 - sprint01)
-			# Legs: swing along the move direction (backwards walking reverses it).
-			j.l_hip = Vector3(-hip_a * s * fwd, 0, 16.0 * walk01 * s * side + 2.0)
-			j.r_hip = Vector3(hip_a * s * fwd, 0, 16.0 * walk01 * s * side - 2.0)
-			j.l_knee = Vector3(knee_a * maxf(0.0, c) + 6.0 * walk01, 0, 0)
-			j.r_knee = Vector3(knee_a * maxf(0.0, -c) + 6.0 * walk01, 0, 0)
-			j.l_ankle = Vector3(-0.35 * j.l_knee.x + 8.0 * walk01 * s * fwd, 0, 0)
-			j.r_ankle = Vector3(-0.35 * j.r_knee.x - 8.0 * walk01 * s * fwd, 0, 0)
-			# Hips bob twice per stride, twist with the legs, drop on the swing side and
-			# slide over the planted foot; the chest counters all three.
-			py = PELVIS_Y - (0.025 + 0.035 * sprint01) * walk01 * s * s
-			px = -0.028 * strut * s
-			j.pelvis = Vector3(0, -8.0 * walk01 * s, -5.0 * strut * s)
-			j.spine = Vector3(14.0 * sprint01, 0, 2.5 * strut * s)
-			j.chest = Vector3(4.0 * walk01 + 8.0 * sprint01, 11.0 * walk01 * s, 2.0 * strut * s)
-			j.head = Vector3(-4.0 * walk01 - 16.0 * sprint01, -3.0 * walk01 * s, 2.5 * strut * s)
-			# Arms counter-swing, a little wider and bent more on the way forward;
-			# sprinting pumps them hard with the elbows locked near 90.
-			var arm_a := 30.0 * walk01 + 32.0 * sprint01
-			var bend := 22.0 * walk01 * (1.0 - sprint01)
-			j.l_shoulder = Vector3(arm_a * s, 4.0 * strut * s, 9.0 + 3.0 * strut)
-			j.r_shoulder = Vector3(-arm_a * s, 4.0 * strut * s, -9.0 - 3.0 * strut)
-			j.l_elbow = Vector3(-14.0 - 8.0 * walk01 - bend * maxf(0.0, -s) - 66.0 * sprint01, 0, 0)
-			j.r_elbow = Vector3(-14.0 - 8.0 * walk01 - bend * maxf(0.0, s) - 66.0 * sprint01, 0, 0)
+			# Issue #133: three gaits on one curve.
+			#   walk:   long easy steps, heel first, knees nearly straight, a little
+			#           hip sway (issue #87's swagger, toned down) and loose arms.
+			#   run:    a light jog; slight lean, the body bounces up between steps
+			#           and the arms bend to about 80 degrees.
+			#   sprint: a hard forward lean, high knee drive in front, a high kick
+			#           behind and arms pumping with the elbows locked near 90.
+			var hip_a := 26.0 * walk01 + 18.0 * run01 + 12.0 * dash01
+			var drive := (10.0 * run01 + 22.0 * dash01) * maxf(0.0, fwd)
+			var knee_a := 40.0 * walk01 + 45.0 * run01 + 30.0 * dash01
+			var stance := 5.0 * walk01 + 12.0 * run01
+			var strut := walk01 * (1.0 - run01)
+			# Legs: swing along the move direction (backwards walking reverses it); the
+			# leg in front lifts a little higher as the pace picks up.
+			j.l_hip = Vector3(-hip_a * s * fwd - drive * maxf(0.0, s), 0, 14.0 * walk01 * s * side + 2.0)
+			j.r_hip = Vector3(hip_a * s * fwd - drive * maxf(0.0, -s), 0, 14.0 * walk01 * s * side - 2.0)
+			j.l_knee = Vector3(knee_a * maxf(0.0, c) + stance, 0, 0)
+			j.r_knee = Vector3(knee_a * maxf(0.0, -c) + stance, 0, 0)
+			j.l_ankle = Vector3(-0.35 * j.l_knee.x + 10.0 * walk01 * s * fwd, 0, 0)
+			j.r_ankle = Vector3(-0.35 * j.r_knee.x - 10.0 * walk01 * s * fwd, 0, 0)
+			# Hips: a walk is highest over the planted foot and dips between steps; a
+			# run is lowest mid-stance (knee taking the load) and rises into the flight.
+			py = PELVIS_Y - 0.022 * strut * s * s - 0.035 * run01 * (1.0 - s * s) \
+				- 0.02 * run01 - 0.03 * dash01
+			px = -0.026 * strut * s
+			j.pelvis = Vector3(0, -8.0 * walk01 * s, -4.0 * strut * s)
+			j.spine = Vector3(8.0 * run01 + 12.0 * dash01, 0, 2.0 * strut * s)
+			j.chest = Vector3(3.0 * walk01 + 4.0 * run01 + 6.0 * dash01, 11.0 * walk01 * s, 1.5 * strut * s)
+			j.head = Vector3(-3.0 * walk01 - 6.0 * run01 - 12.0 * dash01, -3.0 * walk01 * s, 2.0 * strut * s)
+			# Arms counter-swing the legs: loose from the shoulder on a walk (the
+			# forearm swings up a touch on the way forward), bent on the run, pumping
+			# hard on the sprint.
+			var arm_a := 24.0 * walk01 + 18.0 * run01 + 30.0 * dash01
+			var bend := 18.0 * strut
+			var elbow := -14.0 - 8.0 * walk01 - 55.0 * run01 - 20.0 * dash01
+			var arm_out := 9.0 + 3.0 * strut - 3.0 * dash01
+			j.l_shoulder = Vector3(arm_a * s, 4.0 * strut * s, arm_out)
+			j.r_shoulder = Vector3(-arm_a * s, 4.0 * strut * s, -arm_out)
+			j.l_elbow = Vector3(elbow - bend * maxf(0.0, -s), 0, 0)
+			j.r_elbow = Vector3(elbow - bend * maxf(0.0, s), 0, 0)
 			j.l_wrist = Vector3(-6.0 * walk01, 0, 0)
 			j.r_wrist = Vector3(-6.0 * walk01, 0, 0)
 			# Idle: breathe, shift the weight from foot to foot and glance around.
