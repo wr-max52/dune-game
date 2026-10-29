@@ -28,7 +28,7 @@ func test_gear_content_loads_by_id() -> void:
 	assert_eq(jet.get("slot"), "back", "the jetpack is worn on the back")
 	assert_true(jet.has("jetpack"), "it carries jetpack tuning")
 	assert_eq(trader.get("id"), "gear_trader")
-	assert_eq(content.get_pickups("port_town").size(), 2, "the pit jetpack and (M15) the cache outside the gate")
+	assert_eq(content.get_pickups("port_town").size(), 3, "the pit jetpack, (M15) the cache outside the gate and (#148) the wreck's red saber")
 	assert_eq(content.vendors_in("port_town").size(), 2, "the gear trader and (M15) the fence")
 
 

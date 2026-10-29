@@ -29,7 +29,7 @@ for m in t["markers"]:
         if b["kind"] in BK and b["min"][1]<=y<b["max"][1]:
             dx=max(b["min"][0]-x,0,x-b["max"][0]); dz=max(b["min"][2]-z,0,z-b["max"][2])
             if math.hypot(dx,dz)<=C: E.append(f"marker {m['id']} blocked by {b['id']}")
-    sup=[b for b in B if b["kind"] in ("floor","solid") and abs(b["max"][1]-y)<0.05 and b["min"][0]<=x<=b["max"][0] and b["min"][2]<=z<=b["max"][2]]
+    sup=[b for b in B if (b["kind"] in ("floor","solid") or b.get("standable")) and abs(b["max"][1]-y)<0.05 and b["min"][0]<=x<=b["max"][0] and b["min"][2]<=z<=b["max"][2]]
     if not sup: E.append(f"marker {m['id']} unsupported")
 for r in t["routes"]:
     L=0

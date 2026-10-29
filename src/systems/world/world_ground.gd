@@ -94,17 +94,132 @@ static func box_xf(b: Dictionary) -> Transform3D:
 ## How high p is over the highest surface beneath it (along up_at(p)): the sand,
 ## a roof, a mesa's top. Surfaces up to 0.5 m above p count (a step up), as in
 ## ground_at. Negative when p is under the ground.
+##
+## Spatially culled, with exactly the result of testing every box, column and
+## boulder: an item only counts when its contribution is at least -0.5 (a step up)
+## and only lowers h when it is below the current h, and the point it is measured
+## to lies on the item itself, |contribution| * (the length of the axis it is
+## measured along) from p. So an item whose bounding sphere is further than
+## max(h, 0.5) * axis_length from p cannot change the answer and is skipped without
+## running its own test; the tests that do run are the old ones, unchanged.
 func height_above(p: Vector3) -> float:
 	var sp := sphere()
 	if sp == null:
 		return p.y - ground_at(p.x, p.z, p.y)
 	var h := sp.height_above_ground(p)
+	if not is_finite(h):
+		return _height_above_linear(p, h)
+	if h < -0.5:
+		return h            # every contribution is >= -0.5: none can lower it
+	if _ix_stale():
+		_build_index()
+	if not _ix_ok:
+		return _height_above_linear(p, h)
+	# The cells that can hold a small item reaching p (they are binned by centre).
+	var reach := maxf(h, 0.5) * _ix_small_scale + _ix_small_radius
+	var rv := Vector3(reach, reach, reach)
+	var lo := ((p - rv) / IX_CELL).floor()
+	var hi := ((p + rv) / IX_CELL).floor()
+	var cells := (hi.x - lo.x + 1.0) * (hi.y - lo.y + 1.0) * (hi.z - lo.z + 1.0)
+	if cells > IX_MAX_CELLS and reach > IX_LINEAR_REACH:
+		return _height_above_linear(p, h)
+	var wreck_up := Vector3.ZERO
+	var wreck_up_set := false
+	var nb := _ix_nb
+	var nc := _ix_nc
+	var ctr := _ix_ctr
+	var rad := _ix_rad
+	var scl := _ix_scl
+	var q := maxf(h, 0.5)
+	# Big (and malformed) items first, then the grid cells in reach.
+	var lists: Array = [_ix_big]
+	if cells <= IX_MAX_CELLS:
+		for cz in range(int(lo.z), int(hi.z) + 1):
+			for cy in range(int(lo.y), int(hi.y) + 1):
+				for cx in range(int(lo.x), int(hi.x) + 1):
+					var ci: int = _ix_grid.get(_ix_key(cx, cy, cz), -1)
+					if ci >= 0:
+						lists.append(_ix_cells[ci])
+	else:
+		# Wide query: test each occupied cell's own sphere instead of walking the grid.
+		var qs := q * _ix_small_scale
+		for ci in _ix_cells.size():
+			if p.distance_to(_ix_cell_ctr[ci]) <= qs + _ix_cell_rad[ci]:
+				lists.append(_ix_cells[ci])
+	for list in lists:
+		for i in (list as PackedInt32Array):
+			if p.distance_to(ctr[i]) > q * scl[i] + rad[i]:
+				continue
+			if i < nb:
+				var b: Dictionary = boxes[i]
+				if b.has("wreck_finish"):
+					if not wreck_up_set:
+						wreck_up = up_at(p)
+						wreck_up_set = true
+					h = minf(h, box_height_below(b, p, wreck_up))
+				else:
+					h = _box_contrib(b, p, h)
+			elif i < nb + nc:
+				h = _column_contrib(columns[i - nb], p, h)
+			else:
+				h = _boulder_contrib(boulders[i - nb - nc], p, h)
+			q = maxf(h, 0.5)
+	return h
+
+
+## What a plain box does to h (a wreck plate is handled by the caller).
+static func _box_contrib(b: Dictionary, p: Vector3, h: float) -> float:
+	var lp := p
+	if b.has("xf"):
+		lp = box_xf(b).affine_inverse() * p
+	var mn: Vector3 = b.min
+	var mx: Vector3 = b.max
+	if lp.x < mn.x or lp.x > mx.x or lp.z < mn.z or lp.z > mx.z:
+		return h
+	var top := box_top(b, lp.x, lp.z)
+	if top <= lp.y + 0.5:
+		return minf(h, lp.y - top)
+	return h
+
+
+static func _column_contrib(c: Dictionary, p: Vector3, h: float) -> float:
+	var up: Vector3 = c.get("up", Vector3.UP)
+	var rel: Vector3 = p - (c.center as Vector3)
+	var along := rel.dot(up)
+	if (rel - up * along).length() > float(c.radius):
+		return h
+	var top: float = c.get("h", float(c.top) - (c.center as Vector3).y)
+	if top <= along + 0.5:
+		return minf(h, along - top)
+	return h
+
+
+static func _boulder_contrib(bd: Dictionary, p: Vector3, h: float) -> float:
+	var bu: Vector3 = bd.up
+	var rel: Vector3 = p - (bd.center as Vector3)
+	if rel.length_squared() > pow(float(bd.radius) * RAMP_SPREAD + float(bd.height) + 50.0, 2.0):
+		return h
+	var along := rel.dot(bu)
+	var bt := boulder_top(bd, (rel - bu * along).length())
+	if bt > -INF and bt <= along + 0.5:
+		return minf(h, along - bt)
+	return h
+
+
+## The plain test of every box, column and boulder (the index falls back to this
+## for a query too wide for it to help, and it is what the index must equal). A box
+## with no frame of its own is tested in the world frame directly: identical to
+## multiplying by the inverse of the identity, without building it.
+func _height_above_linear(p: Vector3, h_start: float) -> float:
+	var h := h_start
 	var wreck_up := up_at(p)
 	for b in boxes:
 		if b.has("wreck_finish"):
 			h = minf(h, box_height_below(b, p, wreck_up))
 			continue
-		var lp: Vector3 = box_xf(b).affine_inverse() * p
+		var lp := p
+		if b.has("xf"):
+			lp = box_xf(b).affine_inverse() * p
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
 		if lp.x < mn.x or lp.x > mx.x or lp.z < mn.z or lp.z > mx.z:
@@ -131,6 +246,165 @@ func height_above(p: Vector3) -> float:
 		if bt > -INF and bt <= along + 0.5:
 			h = minf(h, along - bt)
 	return h
+
+
+# ---------------------------------------------------------------- spatial index
+
+## Items (boxes, then columns, then boulders; one list, numbered in that order) get
+## a world-space bounding sphere each. Small ones are binned by centre into a sparse
+## 3D grid; big ones (floors, mesas, wreck plates) and malformed ones are kept in a
+## short list tested by sphere. Built lazily on the first height_above after the
+## geometry changes.
+const IX_CELL := 96.0
+const IX_SMALL_RADIUS := 48.0      ## items with a bigger sphere go to the big list
+const IX_SLACK := 2.0              ## metres added to every sphere: float rounding is nowhere near it
+const IX_MAX_CELLS := 48.0         ## a query touching more cells than this tests the occupied cells' spheres
+const IX_LINEAR_REACH := 1200.0    ## ... and past this reach (a ship high up) just scans everything
+const IX_MIN_ITEMS := 24           ## fewer items than this: scanning is as cheap
+
+var _ix_ok := false                ## the index is built and usable
+var _ix_built := false
+var _ix_boxes: Array
+var _ix_columns: Array
+var _ix_boulders: Array
+var _ix_nb := 0
+var _ix_nc := 0
+var _ix_nbd := 0
+var _ix_ctr := PackedVector3Array()
+var _ix_rad := PackedFloat64Array()
+var _ix_scl := PackedFloat64Array()
+var _ix_big := PackedInt32Array()
+var _ix_grid := {}                 ## cell key -> index into _ix_cells
+var _ix_cells: Array = []          ## per occupied cell: PackedInt32Array of item numbers
+var _ix_cell_ctr := PackedVector3Array()
+var _ix_cell_rad := PackedFloat64Array()
+var _ix_small_radius := 0.0
+var _ix_small_scale := 1.0
+
+
+## Geometry edited after it was registered (a box's min/max/xf, a column's or
+## boulder's centre/radius/top/up/height, or an item swapped for another one) is
+## not noticed: call this so the next query rebuilds the index. Adding or removing
+## items, or replacing the arrays, is noticed by itself.
+func invalidate_index() -> void:
+	_ix_built = false
+
+
+func _ix_stale() -> bool:
+	return not _ix_built or boxes.size() != _ix_nb or columns.size() != _ix_nc \
+		or boulders.size() != _ix_nbd or not is_same(boxes, _ix_boxes) \
+		or not is_same(columns, _ix_columns) or not is_same(boulders, _ix_boulders)
+
+
+static func _ix_key(cx: int, cy: int, cz: int) -> int:
+	return (cx + 4096) | ((cy + 4096) << 13) | ((cz + 4096) << 26)
+
+
+func _build_index() -> void:
+	_ix_built = true
+	_ix_boxes = boxes
+	_ix_columns = columns
+	_ix_boulders = boulders
+	_ix_nb = boxes.size()
+	_ix_nc = columns.size()
+	_ix_nbd = boulders.size()
+	var n := _ix_nb + _ix_nc + _ix_nbd
+	_ix_ctr = PackedVector3Array()
+	_ix_ctr.resize(n)
+	_ix_rad = PackedFloat64Array()
+	_ix_rad.resize(n)
+	_ix_scl = PackedFloat64Array()
+	_ix_scl.resize(n)
+	_ix_big = PackedInt32Array()
+	_ix_grid = {}
+	_ix_cells = []
+	_ix_small_radius = 0.0
+	_ix_small_scale = 1.0
+	_ix_ok = n >= IX_MIN_ITEMS
+	if not _ix_ok:
+		return
+	for i in n:
+		var s := _item_sphere(i)       # (centre.xyz, radius); its axis length goes to _ix_scl[i]
+		var ok := is_finite(s.w) and is_finite(s.x) and is_finite(s.y) and is_finite(s.z) \
+			and is_finite(_ix_scl[i]) and absf(s.x) < 390000.0 and absf(s.y) < 390000.0 \
+			and absf(s.z) < 390000.0
+		if not ok:
+			# Always tested: infinite reach, nothing assumed about it.
+			_ix_ctr[i] = Vector3.ZERO
+			_ix_rad[i] = INF
+			_ix_scl[i] = 1.0
+			_ix_big.append(i)
+			continue
+		_ix_ctr[i] = Vector3(s.x, s.y, s.z)
+		_ix_rad[i] = s.w + IX_SLACK
+		if s.w > IX_SMALL_RADIUS or _ix_scl[i] > 4.0:
+			_ix_big.append(i)
+			continue
+		_ix_small_radius = maxf(_ix_small_radius, _ix_rad[i])
+		_ix_small_scale = maxf(_ix_small_scale, _ix_scl[i])
+		var key := _ix_key(int(floorf(s.x / IX_CELL)), int(floorf(s.y / IX_CELL)), int(floorf(s.z / IX_CELL)))
+		var ci: int = _ix_grid.get(key, -1)
+		if ci < 0:
+			ci = _ix_cells.size()
+			_ix_grid[key] = ci
+			_ix_cells.append(PackedInt32Array())
+		var cell: PackedInt32Array = _ix_cells[ci]
+		cell.append(i)
+		_ix_cells[ci] = cell
+	# A sphere round each occupied cell's items.
+	_ix_cell_ctr = PackedVector3Array()
+	_ix_cell_ctr.resize(_ix_cells.size())
+	_ix_cell_rad = PackedFloat64Array()
+	_ix_cell_rad.resize(_ix_cells.size())
+	for ci in _ix_cells.size():
+		var items: PackedInt32Array = _ix_cells[ci]
+		var c := Vector3.ZERO
+		for i in items:
+			c += _ix_ctr[i]
+		c /= items.size()
+		var r := 0.0
+		for i in items:
+			r = maxf(r, c.distance_to(_ix_ctr[i]) + _ix_rad[i])
+		_ix_cell_ctr[ci] = c
+		_ix_cell_rad[ci] = r
+
+
+## Bounding sphere (x, y, z, r) of item i, and the length of the axis its height is
+## measured along in _ix_scl[i]. A column or boulder whose axis is not a unit vector
+## (the witness argument needs one) is NaN, which sends it to the always-tested list.
+func _item_sphere(i: int) -> Vector4:
+	if i < _ix_nb:
+		var b: Dictionary = boxes[i]
+		var xf := box_xf(b)
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		var ctr := xf * ((mn + mx) * 0.5)
+		var r := 0.0
+		for k in 8:
+			var corner := Vector3(mx.x if k & 1 else mn.x, mx.y if k & 2 else mn.y, mx.z if k & 4 else mn.z)
+			r = maxf(r, ctr.distance_to(xf * corner))
+		# A plain box is measured along its own Y, a wreck plate along the unit up.
+		_ix_scl[i] = maxf(1.0, xf.basis.y.length())
+		return Vector4(ctr.x, ctr.y, ctr.z, r)
+	if i < _ix_nb + _ix_nc:
+		var c: Dictionary = columns[i - _ix_nb]
+		var up: Vector3 = c.get("up", Vector3.UP)
+		var base: Vector3 = c.center
+		var top: float = c.get("h", float(c.top) - base.y)
+		_ix_scl[i] = up.length()
+		if absf(up.length() - 1.0) > 0.001:
+			return Vector4(NAN, NAN, NAN, NAN)
+		var ctr2 := base + up * (top * 0.5)
+		return Vector4(ctr2.x, ctr2.y, ctr2.z, sqrt(top * top * 0.25 + float(c.radius) * float(c.radius)))
+	var bd: Dictionary = boulders[i - _ix_nb - _ix_nc]
+	var bu: Vector3 = bd.up
+	_ix_scl[i] = bu.length()
+	if absf(bu.length() - 1.0) > 0.001:
+		return Vector4(NAN, NAN, NAN, NAN)
+	var hh := float(bd.height)
+	var rr := float(bd.radius) * RAMP_SPREAD
+	var ctr3: Vector3 = (bd.center as Vector3) + bu * (hh * 0.5)
+	return Vector4(ctr3.x, ctr3.y, ctr3.z, sqrt(hh * hh * 0.25 + rr * rr))
 
 
 ## The ground point under p along up_at(p).

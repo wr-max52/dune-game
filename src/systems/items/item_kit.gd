@@ -97,6 +97,8 @@ func build(look_id: String) -> Node3D:
 	match str(p.get("frame", FALLBACK_FRAME)):
 		"case":
 			_case(body, p)
+		"saber":
+			_saber(body, p)
 		_:
 			_twin_tank(body, flames, p)
 	root.set_meta("source", "kit")
@@ -207,6 +209,30 @@ func _case(body: Node3D, p: Dictionary) -> void:
 	_mi(body, _box(Vector3(size.x * 0.6, 0.025, 0.01)), _glow(_c(p, "glow", "#59d6ff"), 2.5),
 		Vector3(0, size.y * 0.62, size.z * 0.5 + 0.006), Vector3.ZERO, "Status")
 	_mi(body, _box(Vector3(size.x * 0.4, 0.03, 0.06)), trim, Vector3(0, size.y + 0.015, 0), Vector3.ZERO, "Handle")
+
+
+## "saber" (issue #148): a hilt with its blade lit, lying flat (along +X) so it
+## reads as a sword from across a room.
+func _saber(body: Node3D, p: Dictionary) -> void:
+	var length := float(p.get("length", 0.9))
+	var hilt := StandardMaterial3D.new()
+	hilt.albedo_color = _c(p, "hilt", "#2a2826")
+	hilt.metallic = 0.6
+	var trim := StandardMaterial3D.new()
+	trim.albedo_color = _c(p, "trim", "#b08e50")
+	trim.metallic = 0.7
+	var flat := Vector3(0, 0, -90)
+	var blade := _c(p, "blade", "#ff2a2a")
+	_mi(body, _cyl(0.02, 0.022, 0.26), hilt, Vector3(-0.13, 0.05, 0), flat, "Hilt")
+	_mi(body, _sphere(0.03), trim, Vector3(-0.27, 0.05, 0), Vector3.ZERO, "Pommel")
+	for i in 3:
+		_mi(body, _cyl(0.024, 0.024, 0.015), trim, Vector3(-0.2 + i * 0.05, 0.05, 0), flat, "Grip%d" % i)
+	_mi(body, _cyl(0.026, 0.02, 0.04), trim, Vector3(0.02, 0.05, 0), flat, "Emitter")
+	_mi(body, _box(Vector3(0.03, 0.2, 0.045)), trim, Vector3(0.0, 0.05, 0), Vector3.ZERO, "Guard")
+	_mi(body, _cyl(0.006, 0.01, length), _glow(blade.lerp(Color.WHITE, 0.55), 5.0),
+		Vector3(length * 0.5 + 0.04, 0.05, 0), flat, "Blade")
+	_mi(body, _cyl(0.014, 0.02, length * 1.04), _glow(blade, 2.0),
+		Vector3(length * 0.5 + 0.04, 0.05, 0), flat, "BladeGlow")
 
 
 ## "twin_tank": two upright fuel tanks on a back plate with straps, a trim band,

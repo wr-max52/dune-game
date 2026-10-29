@@ -17,6 +17,85 @@ Plain English, newest on top. One entry per milestone.
   cantina buys contraband; bounty payouts stay at the port's fence. The station
   drops are marked with a beacon because they are far out on the rock.
 
+## Walk, run and sprint (2026-10-29, issue #133)
+
+- **Walk:** tap a move key and you take 4 natural steps, then stop. Tap again to
+  keep walking. The walk has a longer, calmer stride (heel first, loose arms).
+- **Run:** hold a move key past 0.4 s to run at 7 m/s (the old Shift sprint
+  speed), with a light jogging bounce.
+- **Sprint:** Shift + move sprints at 10 m/s with a hard lean and pumping arms.
+  The gun drops, nothing fires or swings, and it spends the same STA stamina as
+  the blade (5 s from full). Run dry and you fall back to the run until the bar
+  is back to 25.
+- Slides still start from the run or the sprint. Guards and NPCs use the same
+  three gait animations at their own speeds.
+## The crash site: speeder jumps, an interior to fight through (2026-10-29, issue #148)
+
+- **Speeder jump.** A bent hull plate stands on a brace beside the boarding plate.
+  Ride up it toward the stern and you fly off the end. A speeder can also ride up
+  the boarding plate into the hold and up the hold's sloping deck.
+- **A level interior.** The hold climbs to a large interior deck high in the
+  stern. Its floor is level with the horizon, not tilted with the hull. To reach
+  it, walk up the starboard side of the hold and step onto the deck at its
+  stern end.
+- **The bridge.** A ramp climbs from the interior deck through torn dorsal
+  plating to a level bridge platform on struts, with the bridge house at its bow
+  end. It stands about 150 m over the dunes. The old solid bridge block and one
+  radiator fin are gone to make room for it.
+- **Ramps and broken railings.** A second ramp joins the interior deck to the
+  stern end of the upper gallery. Railings line the open edges, with some panels
+  missing and some sagging.
+- **All of it is the ship's metal.** Every new plate wears the wreck's metal
+  shader.
+- **The Remnant aboard.** An assassin droid patrols the bridge. An assassin
+  droid and a floating droid patrol the interior, and a floating droid patrols
+  the hold. They shoot on sight. Nothing out there sets off the town's alarm.
+  A destroyed one comes back after 3 minutes.
+- **A red energy saber.** An old cargo droid in the deep hold carries it on its
+  back. Press E beside it to take the saber. Owning it turns your energy sword
+  red.
+- The droids, their routes and the hauler are data: `content/core/droids/droids.json`
+  ("wreck"). The geometry is in `src/systems/world/starcruiser_wreck.gd`.
+- The plates you ride or walk on are ground, not obstacles. A speeder no longer
+  catches the plate it is riding on as it climbs.
+- Tests: `tests/test_crash_site.gut.gd`. `tools/review/wreck_probe.gd` still
+  passes. The full CI suite was not run.
+## Smooth on foot again (2026-10-29)
+
+- **Walking near the dune packs no longer drops the game to a crawl.** Every
+  sand pig and every far-off pack member asked the ground "how high am I?" each
+  physics tick, and each answer checked all 1164 town boxes and 386 boulders.
+  Near a pack a physics tick took longer than its 16 ms budget, so the game ran
+  several ticks a frame and fell to 5 to 28 fps. The ground now only checks
+  what is near (same answers, about 100 times faster), and far-off packs and
+  pigs move every fourth tick (same speed). A tick by a pack went from 14-22 ms
+  to about 4 ms.
+- **Characters move as smoothly as the screen draws.** The game now draws at
+  120 fps on a 120 Hz screen but physics ticks at 60, so you, the camera and the
+  people moved in steps, and turning the mouse swung your body for a frame and
+  snapped it back. The camera, your body and nearby people are now drawn
+  between ticks.
+
+## Staged planet handoffs (2026-10-29, issue #121)
+
+- **Flying from the port to the station (and back) no longer freezes for the
+  whole build.** The other planet's scene now shows up with just what the ship
+  needs on its first frame: the planet, its sky, the town's boxes, the player,
+  the camera and the ship, flying on exactly where it was. Everything else (the
+  people, the bar, the gear, the HUD, the full-detail ground) is built over the
+  next frames, a little each frame.
+- In the headless trace the first frame of a handoff went from 1.6 s (to the
+  station) and 2.3 s (home) to under 0.1 s. With the look on, it went from 6.3 s
+  to 0.34 s (station) and from 12.8 s to 1.0 s (port).
+- The ship keeps its place, heading, speed and throttle, and stays under your
+  control while the rest is built.
+- The planet's far ground starts coarse and sharpens over about a second, with
+  no holes. People built while you are still high up stay hidden until you come
+  down.
+- Works the same for any generated planet: nothing in it is about the port or
+  the station.
+- `staged_handoff = false` on the town scene builds it all at once, as before.
+
 ## Desert packs and sand pigs, first milestone (2026-10-28, issue #96)
 
 - **The dune people** now live on the home planet: one primitive people,

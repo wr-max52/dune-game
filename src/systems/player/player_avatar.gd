@@ -23,6 +23,7 @@ const RETINT := preload("res://src/systems/look/shaders/weapon_retint.gdshader")
 const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 const Ads := preload("res://src/systems/look/ads.gd")
 const GunSights := preload("res://src/systems/look/gun_sights.gd")
+const CharBody := preload("res://src/systems/player/character_body.gd")
 const LOOK_PATH := "res://content/look/hand_weapons.json"
 
 const POLE_R := Vector3(-0.5, -0.7, -0.5)
@@ -34,6 +35,7 @@ var joints: Dictionary = {}
 var anim := BodyAnimator.new()
 var look: Dictionary = {}
 var weapons: Dictionary = {}       ## id -> wrapper Node3D (child of chest)
+var blade_color := Color(0, 0, 0, 0)  ## issue #148: the sword's colour when not the default (alpha 0 = default)
 var current := ""                  ## weapon in hand (or being drawn/holstered)
 var drawn := 0.0                   ## 0 = holstered, 1 = ready
 var sword_pose: Dictionary = {}    ## from SwordCombo.pose() while the sword is out
@@ -47,6 +49,10 @@ var _recoil := 0.0                 ## 1 right after a shot, decays to 0
 ## weapons sets aim_wanted; first person always holds the gun up.
 var carry := WeaponCarry.new(1.0)
 var aim_wanted := false
+## Issue #133: sprinting. The gun drops to rest (first person too), the body faces
+## where it runs, and gun_up() stays false so nothing fires.
+var sprint_lowered := false
+var _sprint_raise := false         ## first person: easing back up after a sprint
 var _flash_left := 0.0
 
 ## Aim down sights (first person): the weapon blends to a pose solved from the
@@ -56,6 +62,14 @@ var ads_camera: Camera3D
 var ads_blend := 0.0               ## 0 = hip, 1 = fully aimed
 var _last_upper := ""
 var _last_pitch := 0.0
+
+## Render smoothing (see _process): the facing of the last two physics ticks, the
+## ground tilt from the last pose, and the avatar's rest position in its parent (the
+## parent's origin; the smoothing offset is added on top of it).
+var _facing_prev := 0.0
+var _facing_curr := 0.0
+var _last_tilt := Basis.IDENTITY
+var _rest_position := Vector3.ZERO
 
 var skin: SkinnedBody              ## the rigged model over the joints (null = primitives)
 
@@ -122,7 +136,7 @@ func build_weapons(ids: Array) -> void:
 		wrap.name = "W_" + str(id)
 		var spec: Dictionary = look.get(id, {})
 		if id == "energy_blade":
-			var sword := kit.make_energy_sword()
+			var sword := kit.make_energy_sword(blade_color)
 			wrap.add_child(sword)
 			wrap.set_meta("grips", sword.get_meta("grips"))
 			wrap.set_meta("sword", sword)
@@ -283,6 +297,15 @@ func blade_points(fractions: Array = [0.3, 0.65, 1.0]) -> Array:
 	return out
 
 
+## Issue #148: the energy sword's colour (the red saber); the sword already built
+## is recoloured, one built later starts in it.
+func set_blade_color(color: Color) -> void:
+	blade_color = color
+	var w := weapon_node("energy_blade")
+	if w != null and color.a > 0.0:
+		CharacterKit.recolor_energy_sword(w.get_meta("sword"), color)
+
+
 ## 0 = retracted, 1 = full length.
 func set_blade_extent(v: float) -> void:
 	var w := weapon_node("energy_blade")
@@ -364,7 +387,27 @@ static func _meshes_under(n: Node) -> Array:
 func align_to_ground(ground_tilt: Basis) -> void:
 	var parent := get_parent() as Node3D
 	var parent_basis := parent.global_basis.orthonormalized() if parent != null else Basis.IDENTITY
-	basis = parent_basis.inverse() * ground_tilt * Basis(Vector3.UP, facing_yaw)
+	_last_tilt = ground_tilt
+	basis = compose_basis(parent_basis, ground_tilt, facing_yaw)
+
+
+## The avatar's local basis: upright in the ground frame, facing `yaw` in the world,
+## whatever yaw the parent is turned to. (parent_basis: the parent's world basis.)
+static func compose_basis(parent_basis: Basis, ground_tilt: Basis, yaw: float) -> Basis:
+	return parent_basis.inverse() * ground_tilt * Basis(Vector3.UP, yaw)
+
+
+## The facing to draw at physics fraction `f` between the last two ticks.
+static func smoothed_yaw(prev: float, curr: float, f: float) -> float:
+	return lerp_angle(prev, curr, clampf(f, 0.0, 1.0))
+
+
+## Drop the render smoothing state (teleport, leaving a vehicle): sit on the parent's
+## origin facing exactly `facing_yaw`.
+func reset_render_smoothing() -> void:
+	position = _rest_position
+	_facing_prev = facing_yaw
+	_facing_curr = facing_yaw
 
 
 ## inp: velocity (world Vector3), grounded, crouch, sprint, cam_yaw, aim_pitch,
@@ -381,16 +424,25 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var upper: String = inp.get("upper", BodyAnimator.UPPER_FREE)
 	var armed := upper != BodyAnimator.UPPER_FREE
 	var gun := upper == BodyAnimator.UPPER_AIM or upper == BodyAnimator.UPPER_RIFLE
-	carry.step(dt, first_person or aim_wanted or not gun)
+	carry.step(dt, first_person or aim_wanted or not gun, sprint_lowered)
+	# First person holds the gun up outright, except coming out of a sprint, when
+	# it rises on the carry's own timing instead of popping back.
+	if sprint_lowered:
+		_sprint_raise = true
+	elif carry.ready >= 1.0:
+		_sprint_raise = false
+	var held_up := first_person and not _sprint_raise
 
 	# Facing: toward the aim when a weapon is up or in first person, else toward
 	# travel (a gun at rest walks where you go, issue #87).
 	var want := facing_yaw
-	if (armed and (not gun or carry.ready > 0.3)) or first_person:
+	if (armed and not sprint_lowered and (not gun or carry.ready > 0.3)) or first_person:
 		want = cam_yaw
 	elif speed > 0.4:
 		want = atan2(flat.x, flat.z)
+	_facing_prev = facing_yaw             # includes anything that set it from outside (leaving a vehicle)
 	facing_yaw = _approach_angle(facing_yaw, want, (turn_rate * 2.0 if first_person else turn_rate) * dt)
+	_facing_curr = facing_yaw
 	# Always replace the full basis. On a ball, the ground frame can be tilted;
 	# after a teleport back to a flat surface, the same calculation removes any
 	# pitch/roll left by the previous frame instead of only rewriting rotation.y.
@@ -408,7 +460,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 		"vy": vel.y, "crouch": inp.get("crouch", false), "sprint": inp.get("sprint", false),
 		"slide": inp.get("slide", false),
 		"upper": upper, "aim_pitch": pitch * (1.6 if first_person else 1.0), "twist": twist,
-		"ready": 1.0 if first_person else carry.eased(),
+		"ready": 1.0 if held_up else carry.eased(),
 	})
 	last_frame = out
 	for jn in out.joints:
@@ -436,6 +488,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 ## is on, re-place the weapon against this frame's camera (animate only runs on
 ## physics ticks, so the sight would otherwise trail the view).
 func _process(delta: float) -> void:
+	_smooth_render()
 	var want := ads_on and first_person and ads_camera != null and drawn >= 0.99 \
 		and Ads.has_ads(look, current) and _last_upper != BodyAnimator.UPPER_FREE
 	var t := maxf(0.01, float(Ads.spec(look, current).blend_s))
@@ -444,6 +497,28 @@ func _process(delta: float) -> void:
 		_place_weapon(_last_upper, _last_pitch)
 		if skin != null:
 			skin.sync(body)
+
+
+## Every render frame (120 Hz on a 120 Hz display; physics is 60): keep the body where
+## and how the player is drawn, not where the last physics tick left it.
+##  - facing: re-apply the full basis with the facing interpolated between the last two
+##    ticks. The camera rig rewrites the parent's yaw every frame, and the body's local
+##    basis compensates for it, so without this the body swings with the mouse until
+##    the next tick.
+##  - position: sit at the parent's render-smoothed origin.
+## A no-op headless, so traces and tests see exactly what physics made.
+func _smooth_render() -> void:
+	if not CharBody.smoothing_active():
+		return
+	var parent := get_parent() as Node3D
+	if parent == null or not parent.has_method("render_origin"):
+		return
+	var yaw := facing_yaw
+	if facing_yaw == _facing_curr:       # else something set it from outside: take it as is
+		yaw = smoothed_yaw(_facing_prev, _facing_curr, Engine.get_physics_interpolation_fraction())
+	var pbasis := parent.global_basis
+	basis = compose_basis(pbasis.orthonormalized(), _last_tilt, yaw)
+	position = _rest_position + CharBody.local_offset(pbasis, parent.call("render_origin"), parent.global_position)
 
 
 func _place_weapon(upper: String, pitch: float) -> void:
@@ -455,7 +530,7 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var grips: Dictionary = w.get_meta("grips", {})
 	var ready := _ready_xf(current, pitch)
 	var holster := _holster_xf(current)
-	var up := 1.0 if first_person or current == "energy_blade" else carry.eased()
+	var up := 1.0 if (first_person and not _sprint_raise) or current == "energy_blade" else carry.eased()
 	if up < 1.0:
 		ready = WeaponCarry.blend(WeaponCarry.rest_xf(carry_kind(current), grips.get("r", Vector3.ZERO)), ready, up)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
@@ -508,7 +583,9 @@ func _fpv_grips(upper: String, dt: float) -> void:
 
 ## True once the gun is up far enough to shoot (weapons holds the trigger until then).
 func gun_up() -> bool:
-	return first_person or current == "energy_blade" or carry.on_target()
+	if sprint_lowered:
+		return false
+	return (first_person and not _sprint_raise) or current == "energy_blade" or carry.on_target()
 
 
 ## "pistol" or "rifle": how the weapon rests (hand_weapons.json "carry", else by name).

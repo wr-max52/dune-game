@@ -136,7 +136,9 @@ func _process(delta: float) -> void:
 	rig.fpv_offset.y = move_toward(rig.fpv_offset.y, eye_to, delta * (6.0 if sliding else 4.0))
 	rig.tpv_height = move_toward(rig.tpv_height, (1.25 if crouched else 1.8), delta * 4.0)
 	_slide_roll = lerpf(_slide_roll, deg_to_rad(3.5) if sliding else 0.0, 1.0 - exp(-10.0 * delta))
-	var p: Vector3 = _player.global_position
+	# Follow the player's render-smoothed origin (between the last two physics ticks),
+	# not the 60 Hz stepped global_position. Plain Node3D players have no such method.
+	var p: Vector3 = _player.call("render_origin") if _player.has_method("render_origin") else _player.global_position
 	var xf: Transform3D = rig.camera_transform(p)
 	# Issue #77: on the home planet the view stands on the ground's up, not world up.
 	var tilt: Basis = _player.get("tilt") if _player.get("tilt") is Basis else Basis.IDENTITY

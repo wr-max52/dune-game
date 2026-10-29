@@ -5,7 +5,7 @@
   "faction": "locals",
   "ambient": true,
   "radio_voice": false,
-  "note": "A non-combatant station performer. She stays on the cantina stage, loops the ten-second dance, and remains damageable.",
+  "note": "A non-combatant station performer. She stays on the cantina stage, loops the twenty-second dance, and remains damageable.",
   "naming": {
     "kind": "person_dune",
     "nameplate_range": 0.0
@@ -15,8 +15,8 @@
   "sprint_speed": 0.0,
   "turn_rate_deg": 220.0,
   "outfit": {
-    "head": "lighter",
-    "torso": "lighter",
+    "head": "guard:desert",
+    "torso": "player:sand",
     "legs": "cantina_owner:slate"
   },
   "dance_loop": true,

@@ -705,8 +705,8 @@ func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_overrid
 	glow.set_shader_parameter("color", color)
 	glow.set_shader_parameter("energy", 2.4)
 	glow.set_shader_parameter("falloff", 1.6)
-	_mi(blade, _cyl(0.004, 0.026, length, 10), core, Vector3(0, length * 0.5, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.32))
-	_mi(blade, _cyl(0.016, 0.065, length * 1.06, 12), glow, Vector3(0, length * 0.52, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.55))
+	_mi(blade, _cyl(0.004, 0.026, length, 10), core, Vector3(0, length * 0.5, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.32)).name = "Core"
+	_mi(blade, _cyl(0.016, 0.065, length * 1.06, 12), glow, Vector3(0, length * 0.52, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.55)).name = "Glow"
 	var light := OmniLight3D.new()
 	light.name = "BladeLight"
 	light.light_color = color
@@ -718,6 +718,23 @@ func make_energy_sword(color_override: Color = Color(0, 0, 0, 0), length_overrid
 	sword.set_meta("length", length)
 	sword.set_meta("color", color)
 	return sword
+
+
+## Issue #148: give a built energy sword a new colour (the red saber from the wreck).
+static func recolor_energy_sword(sword: Node3D, color: Color) -> void:
+	var blade := sword.get_node_or_null("Blade")
+	if blade == null:
+		return
+	var core := blade.get_node_or_null("Core") as MeshInstance3D
+	if core != null:
+		(core.material_override as ShaderMaterial).set_shader_parameter("color", color.lerp(Color.WHITE, 0.55))
+	var glow := blade.get_node_or_null("Glow") as MeshInstance3D
+	if glow != null:
+		(glow.material_override as ShaderMaterial).set_shader_parameter("color", color)
+	var light := blade.get_node_or_null("BladeLight") as OmniLight3D
+	if light != null:
+		light.light_color = color
+	sword.set_meta("color", color)
 
 
 # ------------------------------------------------------------------ cantina owner

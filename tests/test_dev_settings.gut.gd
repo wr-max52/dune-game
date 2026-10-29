@@ -93,3 +93,17 @@ func test_known_flags_cover_content_conditions() -> void:
 	var flags: Array = town.dev_settings.known_flags()
 	assert_true(flags.has("my_custom"), "flags already set are listed")
 	assert_true(flags.has("remnant_patrol_beaten"), "flags rumors ask about are listed")
+
+
+func test_pages_are_built_on_first_open_only() -> void:
+	var town = _town()
+	var p: DevSettingsPanel = town.dev_settings
+	assert_false(p.tabs_built, "issue #121: the pages wait until the panel is opened")
+	assert_eq(p.tabs.get_tab_count(), 0)
+	p.open()
+	assert_true(p.tabs_built)
+	assert_eq(p.tabs.get_tab_count(), 9, "every page is there once it opens")
+	p.close()
+	p.open_tab("LLM")
+	assert_eq(p.tabs.get_tab_title(p.tabs.current_tab), "LLM", "F10 still lands on the LLM page")
+	p.close()

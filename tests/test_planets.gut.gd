@@ -99,6 +99,15 @@ func test_a_pit_town() -> void:
 	assert_false(t.get_box("ship").is_empty())
 
 
+## Issue #143: Grit Station's dancer stands on the stage (a cover box), and V7
+## refused the whole town, so flying to the station built nothing.
+func test_every_authored_planet_town_is_valid() -> void:
+	for id in PlanetGen.ids(cc):
+		var t := TownLayout.new()
+		t.load_from_dict(PlanetGen.build(id, cc).town)
+		assert_eq(t.validate().size(), 0, "%s: %s" % [id, str(t.validate().slice(0, 3))])
+
+
 func test_the_same_seed_is_the_same_town() -> void:
 	assert_eq(JSON.stringify(TownGen.generate("a", 40, 9)), JSON.stringify(TownGen.generate("a", 40, 9)))
 	assert_ne(JSON.stringify(TownGen.generate("a", 40, 9).boxes), JSON.stringify(TownGen.generate("a", 40, 10).boxes))

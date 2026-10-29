@@ -261,7 +261,7 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 	var sz1 := z1 - 0.6
 	var sx := x0 + l * float(st.get("at", 0.68))
 	_box("cantina_stage", "cantina", "cover", [snappedf(sx - sd * 0.5, 0.1), 0, snappedf(sz1 - sd, 0.1)],
-		[snappedf(sx + sd * 0.5, 0.1), float(st.get("height", 0.6)), snappedf(sz1, 0.1)], { "shape": "round", "look": "stage" })
+		[snappedf(sx + sd * 0.5, 0.1), float(st.get("height", 0.6)), snappedf(sz1, 0.1)], { "shape": "round", "look": "stage", "standable": true })
 	if bool(opts.get("stage_dancer", false)):
 		var stage_y := float(st.get("height", 0.6))
 		var dancer_x := snappedf(sx, 0.1)

@@ -16,6 +16,9 @@ extends Node3D
 ##     (RemnantOutposts.droid_specs). Destroyed Remnant droids come back like the
 ##     troopers do (behind the barracks / at their outpost); after the fleet is
 ##     beaten the town's two are gone and the outposts' shoot on sight.
+##   - issue #148: what is left of the Remnant aboard the crashed starcruiser
+##     patrols its bridge and hold and shoots on sight, answering to no garrison,
+##     and an old cargo droid in its deep hold carries a red energy saber.
 ## Up to max_owned droids: a fourth asks which one to sell to make room.
 ## Words, prices and tuning: content/core/droids/droids.json. Looks: DroidKit.
 ##
@@ -697,6 +700,8 @@ func _enemy_near(u: DroidUnit, reach: float) -> Node3D:
 
 var hauler: DroidUnit                 ## the old cargo droid that roams the pit
 var _hauler_pause := 0.0
+var wreck_hauler: DroidUnit           ## issue #148: the one in the wreck's deep hold
+var _wreck_hauler_pause := 0.0
 
 
 func _build_hauler() -> void:
@@ -716,30 +721,37 @@ func _build_hauler() -> void:
 ## It walks its round of the pit, stopping a while at each point, and the
 ## pickup it carries rides on its back (GearController still owns the pickup).
 func _hauler_step(dt: float) -> void:
-	if hauler == null:
-		return
-	var hc: Dictionary = cfg.get("pit_hauler", {})
+	if hauler != null:
+		_hauler_pause = _haul(hauler, cfg.get("pit_hauler", {}), _hauler_pause, dt)
+	if wreck_hauler != null:
+		_wreck_hauler_pause = _haul(wreck_hauler, cfg.get("wreck", {}).get("hauler", {}), _wreck_hauler_pause, dt)
+
+
+## One step of a hauler `u` (config `hc`) on its round. Returns its pause left.
+func _haul(u: DroidUnit, hc: Dictionary, pause: float, dt: float) -> float:
 	var moving := false
-	if _hauler_pause > 0.0:
-		_hauler_pause -= dt
+	if pause > 0.0:
+		pause -= dt
 	else:
-		var goal: Vector3 = hauler.patrol[hauler.patrol_i]
-		var to := _flat(goal - hauler.global_position, _up(hauler.global_position))
+		var goal: Vector3 = u.patrol[u.patrol_i]
+		var to := _flat(goal - u.global_position, _up(u.global_position))
 		if to.length() < 0.4:
-			hauler.patrol_i = (hauler.patrol_i + 1) % hauler.patrol.size()
-			_hauler_pause = float(hc.get("pause_s", 4.0))
+			u.patrol_i = (u.patrol_i + 1) % u.patrol.size()
+			pause = float(hc.get("pause_s", 4.0))
 		else:
 			var spd := float(hc.get("walk_speed", 1.3))
-			var pos: Vector3 = hauler.global_position + to.normalized() * minf(spd * dt, to.length())
-			_put(hauler, pos)
-			_face(hauler, to)
+			var pos: Vector3 = u.global_position + to.normalized() * minf(spd * dt, to.length())
+			_put(u, pos)
+			_face(u, to)
 			moving = true
-	hauler.walk(dt, moving, float(hc.get("walk_speed", 1.3)) if moving else 0.0)
+	u.walk(dt, moving, float(hc.get("walk_speed", 1.3)) if moving else 0.0)
 	var load = gear.pickup_node(str(hc.get("carries", ""))) if gear != null else null
 	if load != null and is_instance_valid(load):
-		var at := hauler.global_position + _up(hauler.global_position) * float(hc.get("load_lift", 1.05))
+		var at := u.global_position + _up(u.global_position) * float(hc.get("load_lift", 1.05))
 		load.base = at
 		load.global_position = at
+		load.visible = true
+	return pause
 
 
 # ------------------------------------------------------------------ the Remnant's droids
@@ -753,6 +765,7 @@ func _build_remnant() -> void:
 			var sp: Dictionary = spec.duplicate()
 			sp["patrol"] = route
 			_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+	_build_wreck_site()
 	var outposts = demo.outposts if demo != null and "outposts" in demo else null
 	if outposts == null:
 		return
@@ -764,6 +777,44 @@ func _build_remnant() -> void:
 		sp["patrol"] = o.patrol
 		sp["outpost"] = o.outpost
 		_spawn_remnant(sp, 0)
+
+
+## Issue #148: the wreck's Remnant droids and its hauler, on routes from the data
+## (droids.json "wreck") turned into world points. Nothing when this ground has
+## no wreck (another planet, a test without one).
+func _build_wreck_site() -> void:
+	var wc: Dictionary = cfg.get("wreck", {})
+	var id := str(wc.get("landmark", "starcruiser_wreck"))
+	if not StarcruiserWreck.has_wreck(ground, id):
+		return
+	for spec in wc.get("units", []):
+		var route := wreck_route(str(spec.get("route", "")))
+		if route.is_empty():
+			continue
+		var sp: Dictionary = spec.duplicate()
+		sp["patrol"] = route
+		sp["site"] = id
+		sp["hostile"] = true
+		_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+	var hc: Dictionary = wc.get("hauler", {})
+	var stops := wreck_route(str(hc.get("route", "")))
+	if stops.is_empty():
+		return
+	wreck_hauler = _make_unit("cargo", str(hc.get("variant", "olive")))
+	wreck_hauler.patrol = stops
+	wreck_hauler.spec = { "hauler": true, "site": id }
+	add_child(wreck_hauler)
+	_put(wreck_hauler, stops[0])
+	wreck_hauler.patrol_i = 1 % stops.size()
+	DroidKit.set_awake(wreck_hauler.look, true)
+
+
+## A named route of the wreck's ("wreck"/"routes" in droids.json), in the world.
+func wreck_route(name: String) -> Array:
+	var wc: Dictionary = cfg.get("wreck", {})
+	var r: Dictionary = wc.get("routes", {}).get(name, {})
+	var id := str(wc.get("landmark", "starcruiser_wreck"))
+	return r.get("points", []).map(func(p): return StarcruiserWreck.site_point(ground, _v3(p), str(r.get("frame", "level")), id))
 
 
 ## One of the Remnant's droids from its spec ({ kind, variant, hp, gun, patrol:
@@ -789,7 +840,7 @@ func _spawn_remnant(spec: Dictionary, start: int, at := Vector3.INF) -> DroidUni
 ## Issue #64: the fleet is beaten; the town's droids leave with the garrison.
 func withdraw_town_remnant() -> void:
 	for u in remnant.duplicate():
-		if not u.spec.has("outpost"):
+		if not u.spec.has("outpost") and not u.spec.has("site"):
 			remnant.erase(u)
 			u.queue_free()
 
@@ -804,7 +855,7 @@ func _tick_remnant_respawns(dt: float) -> void:
 		if u.respawn_left > 0.0:
 			continue
 		var at := Vector3.INF
-		if not u.spec.has("outpost"):
+		if not u.spec.has("outpost") and not u.spec.has("site"):
 			if not Story.town_garrison():
 				u.respawn_left = -1.0
 				continue
@@ -817,6 +868,8 @@ func _tick_remnant_respawns(dt: float) -> void:
 
 
 func _garrison(u: DroidUnit = null):
+	if u != null and u.spec.has("site"):
+		return null                    # issue #148: out at the wreck nobody calls the town
 	if demo == null or not "garrison" in demo:
 		return null
 	# Issue #64: an outpost's droid answers to that outpost's garrison.
@@ -830,7 +883,7 @@ func _garrison(u: DroidUnit = null):
 ## They turn on you exactly when the garrison would: the alarm is up, your Remnant
 ## standing is in the hostile band, or you shot at them.
 func remnant_hostile(u: DroidUnit) -> bool:
-	if u.provoked or Story.remnant_hostile():
+	if u.provoked or bool(u.spec.get("hostile", false)) or Story.remnant_hostile():
 		return true
 	var g = _garrison(u)
 	if g == null:
@@ -895,6 +948,8 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		u.collision_layer = 0
 		var rsc := Story.remnant_cfg()
 		u.respawn_left = float(rsc.get("outpost_respawn_s" if u.spec.has("outpost") else "town_respawn_s", 60.0))
+		if u.spec.has("site"):
+			u.respawn_left = float(cfg.get("wreck", {}).get("respawn_s", 180.0))
 		WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A Remnant patrol droid was destroyed.")
 		WorldState.log_event(_l("event_remnant_droid"))
 
@@ -1013,11 +1068,11 @@ func _on_ball() -> bool:
 ## The ground point under p, along the ground's up: the first physics surface (the town's
 ## floors and roofs, the desert's collider) seen from just over the player's feet, else the
 ## world's ground (WorldGround.surface_below on the ball), else the flat sand height.
-func _ground_point(p: Vector3) -> Vector3:
+func _ground_point(p: Vector3, max_lift := INF) -> Vector3:
 	var up := _up(p)
 	var lift := 1.0
 	if player != null:
-		lift = maxf((player.global_position - p).dot(up) + 2.5, 1.0)
+		lift = minf(maxf((player.global_position - p).dot(up) + 2.5, 1.0), max_lift)
 	var top := p + up * lift
 	if is_inside_tree():
 		var q := PhysicsRayQueryParameters3D.create(top, top - up * 60.0, 1)
@@ -1041,8 +1096,10 @@ func _ground_y(p: Vector3) -> float:
 
 
 ## Stand u on the ground under p, upright to it.
+## Issue #148: a droid aboard the wreck looks for its floor just over its feet,
+## never from the player's height (that would find a deck or the hull above it).
 func _put(u: DroidUnit, p: Vector3) -> void:
-	u.global_position = _ground_point(p)
+	u.global_position = _ground_point(p, 1.5 if u.spec.has("site") else INF)
 	_orient(u)
 
 

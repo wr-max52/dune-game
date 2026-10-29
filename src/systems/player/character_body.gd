@@ -10,6 +10,7 @@ extends CharacterBody3D
 ##     human and bot share one movement implementation.
 
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
+const GaitInput := preload("res://src/systems/player/gait_input.gd")
 
 signal pose_changed(pose: int)
 signal hurt(amount: float)          ## something hit the player (bolts, blades)
@@ -46,12 +47,25 @@ var _since_hit := 999.0
 var _regen_carry := 0.0
 var _was_on_floor := true
 
+## Contained render smoothing. The game renders faster than the 60 Hz physics tick
+## (120 Hz displays) and engine physics interpolation is off, so characters would
+## step at 60 Hz. This node keeps the last two physics origins; render_origin() is
+## the point between them at this frame's physics fraction. The camera rig, the
+## player's avatar and NPC visuals read it. INF = no history yet.
+const TELEPORT_M := 2.0              ## one tick moving farther than this is a teleport, not motion
+const EXTERNAL_MOVE_M := 0.05        ## moved this far outside our own tick: someone set global_position
+var _prev_origin := Vector3.INF
+var _curr_origin := Vector3.INF
+var _tick_frame := -100              ## Engine physics frame of the last recorded tick
+
 @export var move_actions := PackedStringArray(["move_forward", "move_back", "move_left", "move_right"])
 @export var jump_action := "jump"
 @export var sprint_action := "sprint_mod"
 @export var crouch_action := "crouch_act"
 
 var controller := CharacterController.new()
+## Issue #133: tap to walk a few steps, hold to run, Shift to sprint (keyboard only).
+var gait := GaitInput.new()
 var use_external_command := false
 ## Issue #77: on the home planet "up" turns with the ground. `tilt` takes world up
 ## to this body's up (identity on the town's plateau and on flat worlds). The pure
@@ -94,8 +108,8 @@ func _ready() -> void:
 	controller.can_slide = can_slide
 
 
-func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
-	controller.set_command(dir, sprint, crouch, jump, jump_held)
+func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false, dash: bool = false) -> void:
+	controller.set_command(dir, sprint, crouch, jump, jump_held, dash)
 	use_external_command = true
 
 
@@ -108,17 +122,20 @@ func _physics_process(delta: float) -> void:
 	var yaw: float = -rotation.y
 	if locked:
 		controller.set_command(Vector2.ZERO, false, false, false)
+		gait.reset()
 	elif not use_external_command:
 		var dir_in := Vector2(
 			-Input.get_axis(move_actions[2], move_actions[3]),
 			-Input.get_axis(move_actions[0], move_actions[1])
 		)
+		var g: Dictionary = gait.update(delta, dir_in, Input.is_action_pressed(sprint_action))
 		controller.set_command(
-			dir_in,
-			Input.is_action_pressed(sprint_action),
+			g.dir,
+			g.run,
 			Input.is_action_pressed(crouch_action),  # held, not one frame
 			Input.is_action_just_pressed(jump_action),
-			Input.is_action_pressed(jump_action)     # M13: held, for the jetpack
+			Input.is_action_pressed(jump_action),    # M13: held, for the jetpack
+			g.dash
 		)
 
 	# M15: crouching shrinks the capsule, so cover really covers you (and the
@@ -170,6 +187,69 @@ func _physics_process(delta: float) -> void:
 	elif not on_floor and _was_on_floor and controller.velocity.y > 0.5:
 		jumped.emit()
 	_was_on_floor = on_floor
+	record_origin(global_position, Engine.get_physics_frames())
+
+
+# ------------------------------------------------------------------ render smoothing
+
+## Render smoothing only exists with a renderer. Headless (GUT, traces, bots) keeps
+## every position exactly as physics left it. The one place that decides.
+static func smoothing_active() -> bool:
+	return DisplayServer.get_name() != "headless"
+
+
+## The point `f` of the way from the previous physics origin to the current one.
+static func lerp_origin(prev: Vector3, curr: Vector3, f: float) -> Vector3:
+	return prev.lerp(curr, clampf(f, 0.0, 1.0))
+
+
+## True when one tick moved farther than `limit`: a teleport, never to be smeared.
+static func is_teleport(prev: Vector3, curr: Vector3, limit: float = TELEPORT_M) -> bool:
+	return prev.distance_squared_to(curr) > limit * limit
+
+
+## Where a child must sit (in the parent's local space) so its world origin lands on
+## `render_pos` while the parent itself stays at `parent_pos`.
+static func local_offset(parent_basis: Basis, render_pos: Vector3, parent_pos: Vector3) -> Vector3:
+	return parent_basis.inverse() * (render_pos - parent_pos)
+
+
+## Note this tick's resting origin (end of _physics_process). History restarts at
+## `pos` on the first tick, after a gap in ticks (process-disabled, e.g. piloting a
+## ship), and after a teleport.
+func record_origin(pos: Vector3, frame: int) -> void:
+	if _curr_origin == Vector3.INF or frame - _tick_frame > 1 or is_teleport(_curr_origin, pos):
+		_prev_origin = pos
+	else:
+		_prev_origin = _curr_origin
+	_curr_origin = pos
+	_tick_frame = frame
+
+
+## Forget the history: the next render_origin() is exactly where the body is now.
+func reset_render_origin() -> void:
+	_prev_origin = global_position
+	_curr_origin = global_position
+	_tick_frame = Engine.get_physics_frames()
+
+
+## The interpolation fraction `f` (0 = previous tick, 1 = this tick). Pure given the
+## recorded state: tests call it directly; render_origin() feeds it the live fraction.
+func render_origin_at(f: float) -> Vector3:
+	return lerp_origin(_prev_origin, _curr_origin, f)
+
+
+## Where to draw this body this frame (world space). Equals global_position headless,
+## with no history, when ticks stopped (disabled), or when something outside our tick
+## moved the body.
+func render_origin() -> Vector3:
+	var here := global_position
+	if _curr_origin == Vector3.INF or not smoothing_active():
+		return here
+	if Engine.get_physics_frames() - _tick_frame > 1 \
+			or here.distance_squared_to(_curr_origin) > EXTERNAL_MOVE_M * EXTERNAL_MOVE_M:
+		return here
+	return render_origin_at(Engine.get_physics_interpolation_fraction())
 
 
 ## Read "up" from the planet (if any) and stand the capsule along it.
@@ -197,9 +277,12 @@ func align_to_ground(clear_motion: bool = true) -> void:
 	controller.velocity = tilt.inverse() * velocity
 	controller.on_ground = false
 	_was_on_floor = false
+	reset_render_origin()
 	var avatar := get_node_or_null("Avatar")
 	if avatar != null and avatar.has_method("align_to_ground"):
 		avatar.call("align_to_ground", tilt)
+		if avatar.has_method("reset_render_smoothing"):
+			avatar.call("reset_render_smoothing")
 
 
 ## The capsule's local transform: standing along `tilt`, its foot at the origin.

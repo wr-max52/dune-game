@@ -74,7 +74,14 @@
       "glow": "#b98cff",
       "tint": 0.75
     },
-    "tooth_crate": {
+    "red_saber": {
+   "frame": "saber",
+   "hilt": "#2a2826",
+   "trim": "#b08e50",
+   "blade": "#ff2a2a",
+   "length": 0.9
+  },
+  "tooth_crate": {
       "frame": "case",
       "scene": "res://assets/gear/cargo_case.glb",
       "width": 0.7,

@@ -488,6 +488,22 @@ func _physics_process(delta: float) -> void:
 	_update_health_bar()
 
 
+## Render smoothing: draw the look at the body's origin between the last two physics
+## ticks (the body steps at 60 Hz; the screen may not). Position only: the facing is
+## set in physics and the look's basis is the ground tilt. Skipped headless, when
+## hidden, when dead (the ragdoll owns the look) and out beyond ANIM_FAR.
+func _process(_delta: float) -> void:
+	if look_body == null or not is_instance_valid(look_body) or not smoothing_active():
+		return
+	if _look_rest == Vector3.INF:
+		_look_rest = look_body.position
+	if dead or _anim_dist > ANIM_FAR or not is_visible_in_tree():
+		if look_body.position != _look_rest:
+			look_body.position = _look_rest
+		return
+	look_body.position = _look_rest + local_offset(global_basis, render_origin(), global_position)
+
+
 func _walk(dt: float) -> Vector3:
 	var goal: Vector3 = command.go_to
 	if goal == Vector3.INF:
@@ -732,16 +748,20 @@ const ANIM_FAR := 150.0
 var anim_frames := 0           ## how many times the body was actually posed (tests)
 var _anim_acc := 0.0
 var _anim_tick := 0
+var _anim_dist := 0.0          ## distance to the target at the last tick (render smoothing LOD)
+var _look_rest := Vector3.INF  ## look_body's rest position, noted before the first offset
 
 
 func _animate_lod(dt: float, move: Vector3) -> void:
 	if bool(profile.get("dance_loop", false)):
+		_anim_dist = 0.0
 		_animate(dt, move)
 		anim_frames += 1
 		return
 	var d := 0.0
 	if target != null and is_instance_valid(target):
 		d = global_position.distance_to(target.global_position)
+	_anim_dist = d
 	if d > ANIM_FAR:
 		_anim_acc = 0.0
 		return

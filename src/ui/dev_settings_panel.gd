@@ -60,6 +60,25 @@ func _ready() -> void:
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(tabs)
+	var h := HBoxContainer.new()
+	v.add_child(h)
+	for b in [["Save now", _save], ["Close", close]]:
+		var btn := Button.new()
+		btn.text = b[0]
+		btn.pressed.connect(b[1])
+		h.add_child(btn)
+	visible = false
+
+
+## The pages themselves, made the first time the panel opens (issue #121: they cost
+## about a second to build, on every arrival, for a panel most visits never open).
+var tabs_built := false
+
+
+func _build_tabs() -> void:
+	if tabs_built:
+		return
+	tabs_built = true
 	tabs.add_child(_world_tab())
 	tabs.add_child(_standing_tab())
 	tabs.add_child(_player_tab())
@@ -69,14 +88,6 @@ func _ready() -> void:
 	tabs.add_child(_sound_tab())
 	tabs.add_child(_story_tab())
 	tabs.add_child(_llm_tab())
-	var h := HBoxContainer.new()
-	v.add_child(h)
-	for b in [["Save now", _save], ["Close", close]]:
-		var btn := Button.new()
-		btn.text = b[0]
-		btn.pressed.connect(b[1])
-		h.add_child(btn)
-	visible = false
 
 
 ## _input, not _unhandled_input: a focused slider or text field must not swallow F11.
@@ -125,6 +136,7 @@ func open_tab(title: String) -> void:
 func open() -> void:
 	if visible:
 		return
+	_build_tabs()
 	visible = true
 	_was_mouse = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -143,6 +155,8 @@ func close() -> void:
 
 ## Pull every control back from the live game (it changes while the panel is shut).
 func refresh() -> void:
+	if not tabs_built:
+		return                      # nothing to refresh until the pages exist
 	for r in _refreshers:
 		r.call()
 	_rebuild_flags()
