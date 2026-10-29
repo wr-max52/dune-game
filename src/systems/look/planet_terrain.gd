@@ -62,6 +62,12 @@ var perf_far_build_ms := 0.0
 var perf_far_worker_wait_ms := 0.0
 var perf_mesh_submit_ms := 0.0
 var perf_mesh_submit_count := 0
+var perf_mesh_upload_worst_frame_ms := 0.0  ## most near/mid upload time spent in one tick
+## Issue #123: finished near/mid meshes wait here (latest per layer) and go up at
+## least one a tick, more only while under mesh_upload_budget_ms, so a near and a
+## mid landing together never stack into one long frame.
+@export var mesh_upload_budget_ms := 2.0
+var _ready_meshes := {}
 
 
 func _init() -> void:
@@ -367,7 +373,8 @@ func _layer_mesh(n: String) -> MeshInstance3D:
 ## The mid ring follows whatever this returns (the camera); none = the player.
 func follow(node: Node3D) -> void:
 	super.follow(node)
-	if node == null and (_camera_source.is_valid() or not _jobs.is_empty() or not _pending_jobs.is_empty()):
+	if node == null and (_camera_source.is_valid() or not _jobs.is_empty() or not _pending_jobs.is_empty()
+			or not _ready_meshes.is_empty()):
 		set_physics_process(true)
 
 
@@ -501,7 +508,7 @@ func _physics_process(_dt: float) -> void:
 			var cells := _mid_cells_for_quality()
 			var step := _mid_step_for_quality()
 			var center := Vector2(snappedf(me.x, step), snappedf(me.y, step))
-			var current_mid: Dictionary = _pending_jobs.get("mid", _jobs.get("mid", {}))
+			var current_mid: Dictionary = _pending_jobs.get("mid", _jobs.get("mid", _ready_meshes.get("mid", {})))
 			var changed := current_mid.is_empty()
 			if not changed:
 				changed = center.distance_to(current_mid.center) >= mid_recenter
@@ -509,7 +516,8 @@ func _physics_process(_dt: float) -> void:
 					changed = true
 			if changed:
 				_start("mid", center, cells, step)
-	if not following and not _camera_source.is_valid() and _jobs.is_empty() and _pending_jobs.is_empty():
+	if not following and not _camera_source.is_valid() and _jobs.is_empty() and _pending_jobs.is_empty() \
+			and _ready_meshes.is_empty():
 		set_physics_process(false)
 
 
@@ -600,7 +608,24 @@ func _finish_jobs() -> void:
 				_pending_jobs.erase(layer)
 				_start(layer, pending.center, int(pending.cells), float(pending.step))
 			else:
-				_apply_mesh(layer, job.result)
+				_ready_meshes[layer] = job.result   # a newer one replaces an unsent older one
+	upload_ready_meshes(mesh_upload_budget_ms)
+
+
+## Puts finished near/mid meshes in, near first: at least one a call, more while
+## under `budget_ms`. True once none are waiting.
+func upload_ready_meshes(budget_ms: float) -> bool:
+	var t0 := Time.get_ticks_usec()
+	for layer in ["near", "mid"]:
+		if not _ready_meshes.has(layer):
+			continue
+		var p: Dictionary = _ready_meshes[layer]
+		_ready_meshes.erase(layer)
+		_apply_mesh(layer, p)
+		if (Time.get_ticks_usec() - t0) / 1000.0 >= budget_ms:
+			break
+	perf_mesh_upload_worst_frame_ms = maxf(perf_mesh_upload_worst_frame_ms, (Time.get_ticks_usec() - t0) / 1000.0)
+	return _ready_meshes.is_empty()
 
 
 ## Heights (and, with the look on, the mesh arrays) for a layer centred at map c,
@@ -654,6 +679,7 @@ func performance_snapshot() -> Dictionary:
 	return {
 		"active_terrain_jobs": _jobs.size(),
 		"pending_terrain_jobs": _pending_jobs.size(),
+		"ready_terrain_meshes": _ready_meshes.size(),
 		"far_patch_total": _far_instances.size(),
 		"far_patch_visible": visible_far,
 		"far_patch_culled": far_chunks_culled,
@@ -662,7 +688,8 @@ func performance_snapshot() -> Dictionary:
 		"far_build_wall_ms": perf_far_build_ms,
 		"far_worker_wait_ms": perf_far_worker_wait_ms,
 		"main_thread_mesh_submit_ms": perf_mesh_submit_ms,
-		"main_thread_mesh_submit_count": perf_mesh_submit_count
+		"main_thread_mesh_submit_count": perf_mesh_submit_count,
+		"main_thread_mesh_upload_worst_frame_ms": perf_mesh_upload_worst_frame_ms
 	}
 
 

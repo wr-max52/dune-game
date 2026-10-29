@@ -482,3 +482,56 @@ func test_pending_mid_mesh_requests_coalesce_to_the_latest_target() -> void:
 	t._start("mid", Vector2.ZERO)
 	assert_true(t._pending_jobs.is_empty(), "returning to the active target cancels the queued replacement")
 	t.free()
+
+
+func _ready_patch(center: Vector2) -> Dictionary:
+	var verts := PackedVector3Array()
+	for j in 3:
+		for i in 3:
+			verts.append(Vector3(i, 0.0, j))
+	return { "xform": Transform3D(), "arrays": PlanetTerrain._grid_arrays(verts, 3),
+		"center": center, "cells": 2, "step": 1.0 }
+
+
+func test_finished_meshes_upload_one_a_tick_under_a_tight_budget() -> void:
+	var t := PlanetTerrain.new()
+	add_child_autofree(t)
+	t.near_mesh = MeshInstance3D.new()
+	t.mid_mesh = MeshInstance3D.new()
+	t.add_child(t.near_mesh)
+	t.add_child(t.mid_mesh)
+	t._ready_meshes["mid"] = _ready_patch(Vector2(8.0, 0.0))
+	t._ready_meshes["near"] = _ready_patch(Vector2.ZERO)
+	assert_false(t.upload_ready_meshes(0.0), "a zero budget still sends one, but not both")
+	assert_not_null(t.near_mesh.mesh, "the near mesh (under the player) goes first")
+	assert_null(t.mid_mesh.mesh, "the mid mesh waits a tick")
+	assert_true(t.upload_ready_meshes(0.0))
+	assert_not_null(t.mid_mesh.mesh)
+	assert_eq(t._mid_map, Vector2(8.0, 0.0), "mid ring position commits with its mesh")
+	assert_eq(t.performance_snapshot().ready_terrain_meshes, 0)
+
+
+func test_a_waiting_mesh_counts_as_the_current_mid_target() -> void:
+	var t := PlanetTerrain.new()
+	add_child_autofree(t)
+	t.collider_body = StaticBody3D.new()
+	t.add_child(t.collider_body)
+	t.near_mesh = MeshInstance3D.new()
+	t.mid_mesh = MeshInstance3D.new()
+	t.add_child(t.near_mesh)
+	t.add_child(t.mid_mesh)
+	var eye := t.sphere.surface_at(0.0, 0.0)
+	t.follow_camera(func() -> Vector3: return eye)
+	var me := t.sphere.world_to_map(eye)
+	var waiting := _ready_patch(Vector2(snappedf(me.x, t.mid_step), snappedf(me.y, t.mid_step)))
+	waiting.cells = t.mid_cells
+	waiting.step = t.mid_step
+	t._ready_meshes["near"] = _ready_patch(Vector2.ZERO)
+	t._ready_meshes["mid"] = waiting
+	t.mesh_upload_budget_ms = 0.0        # this tick sends the near mesh only
+	t._physics_process(0.0)
+	assert_true(t._ready_meshes.has("mid"), "the mid mesh is still waiting its turn")
+	assert_false(t._jobs.has("mid"), "no duplicate mid job for a mesh already built and waiting")
+	t._physics_process(0.0)
+	assert_false(t._ready_meshes.has("mid"))
+	assert_false(t._jobs.has("mid"), "and none once it is in")
