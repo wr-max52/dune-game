@@ -2,6 +2,73 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the on-foot frame rate fix (2026-10-29)
+
+**Checked:** rendered on an Apple Silicon Mac, standing by the Red Wind pack,
+a physics step went from 14-22 ms (so 3 to 8 catch-up steps a frame, 5 to 28 fps)
+to about 4 ms (one step a frame). A ground query went from 671 to 7 microseconds.
+The isolated tests for the ground index, the natives' far ticks, the render
+smoothing, the camera rig and the natives trace pass headless.
+
+**Not done, honestly:**
+- **The render smoothing has not been watched on screen by us.** It is off
+  headless (so traces and tests are unchanged), and its maths is unit tested.
+  Things to look at: the gun sight while sprinting and turning, the first frame
+  after leaving a ship or speeder, and a downed body.
+- **NPC health bars and speech lines still step at 60 Hz** while the NPC's body
+  is smoothed.
+- **A ground query from a ship 4 km up is still a full scan** (about 0.6 ms):
+  nearly every town box is within reach from that high. One a frame is fine.
+- **Physics still ticks at 60 Hz.** Characters are drawn between ticks; their
+  movement itself is not faster.
+
+## After issue #121, staged planet handoffs (2026-10-29)
+
+**Checked** (run on their own, headless; the full suite was not run):
+- `scenes/planets_trace.gd`: both handoffs (port to station, station to port)
+  are staged. The first frame was 72 ms on each (it was 1.6 s and 2.3 s with
+  everything built at once). All 13 trace tests passed. The ship arrived exactly where, how fast, which
+  way and on which throttle it left. It kept flying through the staged build,
+  never moving further in a physics step than its speed allows. Exactly one
+  town scene was in the tree, and people stayed hidden while high up.
+- `tests/test_staged_build.gut.gd`: the runner keeps order and budget, and a
+  failed step stops it. Late detail groups take the current tier. A staged
+  station arrival (look on) ends with the same nodes, the same people and 96
+  far chunks at 64 cells, like a build done all at once.
+- With the look on (a profiling script, not in CI), the first frame went from
+  6.3 s to 0.34 s (station) and from 12.8 s to 1.0 s (port).
+
+**Not done, honestly:**
+- **Some single steps are still long frames.** A step always runs to the end,
+  and one procedural character costs tens to hundreds of milliseconds. With
+  the look on, these were measured after arriving (container, headless):
+  - the player's body: 1.2 to 2.5 s;
+  - the port's outpost guards: 2.4 s;
+  - the cantina owner: 0.6 s;
+  - the station's stage dancer: 0.7 s.
+  So the ship keeps flying between them, but each one is still a visible stall.
+  They need cheaper or threaded character builds, or guards that build one body
+  per step. (Fixed since: the native packs now build one body per step, about
+  0.1 s each instead of 3.9 s in one go, and the settings panel builds its pages
+  the first time F11 opens it instead of on every arrival.)
+- **The port's shell is still about 1 s with the look on.** Most of it is the
+  decor parking every bay's ship (0.5 s) and the station drawn in the port's
+  sky. Parking only the flown ship first would need a small split in
+  `TownDecor.dress`, which this change did not touch.
+- **A square-desert planet** (not a ball) still builds its terrain whole on a
+  handoff. Only ball planets can be handoff targets today, so this does not
+  happen yet.
+- **WORST_MS in the planets trace depends on how busy the machine is.** The
+  last run passed at 30 ms. On a busy machine, some runs had a 0.22 to 0.26 s
+  frame while flying out of the port, and the untouched code did the same
+  (0.24 and 0.25 s). That port scene is built the normal way, not staged.
+- **In the greybox trace the worst staged frame is now 27 ms (station) and
+  0.27 s (home, Skrugs's speeder post).** The station's town collider still takes
+  about 1.5 s on its worker thread, and the people wait for it, so the whole
+  staged build takes about 90 frames there.
+- **Not looked at on a real screen.** Everything above is headless; the look-on
+  numbers come from a profiling script on a busy machine.
+
 ## After issue #96, desert packs (first milestone) (2026-10-28)
 
 **Proven by the trace** (`scenes/natives_trace.gd`, run on its own; the full
@@ -43,7 +110,8 @@ Review stills were rendered with lavapipe (`docs/planets/issue_99_station.jpg`).
 The unit tests and the trace's GUT test were updated but not run.
 
 **Not done, honestly:**
-- **The switch freezes the frame while the other planet's scene builds.** The
+- **(Mostly fixed by issue #121: the build is staged; see above.)**
+  **The switch freezes the frame while the other planet's scene builds.** The
   picture before and after is the same (same spot, sun and stars), but the town
   scene takes as long to build as a landing does. In this container that was
   8 to 14 s, and it will be much less on a real GPU. Building the town in

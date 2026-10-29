@@ -169,7 +169,11 @@ func build(with_mesh: bool = true) -> void:
 
 ## Issue #99: just the whole ball, coarse, for another planet's sky (a neighbour
 ## seen from space). `center` is where its centre is in that scene.
-func build_far_only(center: Vector3) -> void:
+## `staged` (issue #121, a handoff): coarser still at first, its full detail
+## swapped in by this node's own _process, far_swap_budget_ms a frame.
+func build_far_only(center: Vector3, staged: bool = false) -> void:
+	if staged:
+		refine_in_process = true
 	_with_mesh = true
 	material = ShaderMaterial.new()
 	material.shader = SAND_SHADER if rock_look.is_empty() else ROCK_SHADER
@@ -178,14 +182,162 @@ func build_far_only(center: Vector3) -> void:
 	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(256, 3, 0.01))
 	material.set_shader_parameter("planet_center", center)
 	material.set_shader_parameter("planet_radius", sphere.radius)
-	_build_far()
+	if staged:
+		_build_far_staged()
+	else:
+		_build_far()
+
+
+# ---------------------------------------------------------------- staged build (issue #121)
+
+## build() for a no-fade handoff, where the ship is already flying and the frame
+## must not freeze. Now: the material, an empty near collider, and the whole ball
+## as a coarse far mesh (far_coarse_cells per chunk side, about a sixteenth of the
+## vertex work), so there is never a hole. On worker threads: the town collider
+## (finish_town_collider puts it in) and the full-detail far chunks
+## (refine_far_step swaps them into the same MeshInstances, a few a frame). Near
+## and mid come from the usual jobs: near where the ship asks (prefetch) or under
+## a followed player (snap_to), mid under the camera. Once settled it is the same
+## terrain build() makes: far_cells per chunk, the same town collider.
+@export var far_coarse_cells := 16      ## at most; never more than a quarter of far_cells
+@export var far_swap_budget_ms := 1.0   ## refine_in_process: main-thread ms a frame for swaps
+var refine_in_process := false          ## swap the fine far chunks in from _process (no StagedBuild)
+var far_detail_cells := 0              ## cells per side of the far chunks in place (0 = none yet)
+var far_refined := true                ## false while a staged build's far mesh is still coarse
+var far_swaps := 0                     ## fine chunks swapped in by refine_far_step (tests, traces)
+var _far_group := -1                   ## the fine far chunks' worker group, while it runs
+var _far_fine: Array = []
+var _far_fine_max := 0.0
+var _town_task := -1
+var _town_result: Dictionary = {}
+var _live_tasks := {}                  ## near/mid worker task ids not yet waited on
+
+
+func build_staged(with_mesh: bool = true) -> void:
+	_with_mesh = with_mesh
+	material = ShaderMaterial.new()
+	material.shader = SAND_SHADER if rock_look.is_empty() else ROCK_SHADER
+	for k in rock_look:
+		material.set_shader_parameter(k, Color(str(rock_look[k])) if rock_look[k] is String else rock_look[k])
+	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 3, 0.01))
+	material.set_shader_parameter("planet_center", sphere.center)
+	material.set_shader_parameter("planet_radius", sphere.radius)
+	collider_body = StaticBody3D.new()
+	collider_body.name = "Collider"
+	collider_shape = CollisionShape3D.new()
+	collider_shape.scale = Vector3(near_step, near_step, near_step)
+	collider_body.add_child(collider_shape)
+	add_child(collider_body)
+	_town_task = WorkerThreadPool.add_task(func(): _town_result = _town_patch(), false, "terrain town")
+	if not with_mesh:
+		return
+	near_mesh = _layer_mesh("Near")
+	mid_mesh = _layer_mesh("Mid")
+	mid_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_build_far_staged()
+
+
+## The far ball coarse now, full detail on worker threads (refine_far_step).
+func _build_far_staged() -> void:
+	var coarse := mini(far_coarse_cells, far_cells / 4)
+	if coarse < 2:
+		_build_far()
+		return
+	_build_far(coarse)
+	far_refined = false
+	var count := _far_instances.size()
+	_far_fine = []
+	_far_fine.resize(count)
+	var fine := far_cells
+	_far_group = WorkerThreadPool.add_group_task(func(k: int): _far_fine[k] = _far_chunk(k, fine), count, -1, false, "planet far fine")
+
+
+## Puts the town collider in once its worker is done. True when it is in.
+func finish_town_collider() -> bool:
+	if town_body != null:
+		return true
+	if _town_task < 0:
+		_build_town_collider()
+		return true
+	if not WorkerThreadPool.is_task_completed(_town_task):
+		return false
+	WorkerThreadPool.wait_for_task_completion(_town_task)
+	_town_task = -1
+	_install_town_collider(_town_result)
+	_town_result = {}
+	return true
+
+
+## Swaps finished full-detail far chunks into place, at least one per call and
+## more while under `budget_ms` (each is one mesh upload). True once all are in.
+## The limb test stays conservative meanwhile: the bound covers the coarse and
+## the fine chunks, and each chunk's cone is its own mesh's.
+func refine_far_step(budget_ms: float = 2.0) -> bool:
+	if far_refined:
+		return true
+	if _far_group < 0:
+		return false
+	if not WorkerThreadPool.is_group_task_completed(_far_group):
+		return false
+	var t0 := Time.get_ticks_usec()
+	var count := _far_instances.size()
+	while far_swaps < count:
+		var k := far_swaps
+		var chunk: Dictionary = _far_fine[k]
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, chunk.arrays)
+		_far_instances[k].mesh = mesh
+		_far_chunk_directions[k] = chunk.direction
+		_far_chunk_angles[k] = float(chunk.angle)
+		_far_fine_max = maxf(_far_fine_max, float(chunk.max_radius))
+		_far_surface_bound = maxf(_far_surface_bound, _far_fine_max + maxf(far_limb_relief_padding, 0.0))
+		_far_fine[k] = null
+		far_swaps += 1
+		if (Time.get_ticks_usec() - t0) / 1000.0 >= budget_ms:
+			break
+	if far_swaps < count:
+		return false
+	WorkerThreadPool.wait_for_group_task_completion(_far_group)
+	_far_group = -1
+	_far_fine = []
+	# All fine now: the same bound build() would have set.
+	_far_surface_bound = maxf(_far_fine_max, sphere.radius) + maxf(far_limb_relief_padding, 0.0)
+	far_detail_cells = far_cells
+	far_refined = true
+	return true
+
+
+## Worker jobs hold this node: never let one outlive it (a scene switched while
+## they still ran, as a handoff can within a second of arriving).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if _far_group >= 0:
+			WorkerThreadPool.wait_for_group_task_completion(_far_group)
+			_far_group = -1
+		if _town_task >= 0:
+			WorkerThreadPool.wait_for_task_completion(_town_task)
+			_town_task = -1
+		for task in _live_tasks:
+			WorkerThreadPool.wait_for_task_completion(task)
+		_live_tasks.clear()
 
 
 func _build_town_collider() -> void:
+	_install_town_collider(_town_patch())
+
+
+## The town collider's heights (safe on a worker thread: reads the sphere only).
+func _town_patch() -> Dictionary:
 	var p := sphere.patch(0.0, 0.0, town_cells, town_step, sink_grow + town_step + 1.0)
 	var data: PackedFloat32Array = p.heights
 	for i in data.size():
 		data[i] = (data[i] - TOWN_SINK) / town_step
+	p.heights = data
+	return p
+
+
+func _install_town_collider(p: Dictionary) -> void:
+	var data: PackedFloat32Array = p.heights
 	var shape := HeightMapShape3D.new()
 	shape.map_width = town_cells + 1
 	shape.map_depth = town_cells + 1
@@ -296,6 +448,8 @@ func prefetch(pos: Vector3) -> void:
 func _process(_dt: float) -> void:
 	if far_root == null or _far_instances.is_empty() or not is_inside_tree():
 		return
+	if refine_in_process and not far_refined:
+		refine_far_step(far_swap_budget_ms)       # issue #121
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
 		_set_far_visible(true)
@@ -396,6 +550,7 @@ func _start(layer: String, center: Vector2, cells_override: int = -1, step_overr
 		# cannot reinterpret this worker result.
 		job.stage = "mesh"
 		job.task = WorkerThreadPool.add_task(func(): job.result = _compute(layer, center, cells, step), false, "terrain " + layer)
+		_live_tasks[job.task] = true
 	_jobs[layer] = job
 	set_physics_process(true)
 
@@ -428,11 +583,13 @@ func _finish_jobs() -> void:
 					job.stage = "mesh"
 					job.result = p
 					job.task = WorkerThreadPool.add_task(func(): p.arrays = _grid_arrays(p.verts, n), false, "terrain mesh")
+					_live_tasks[job.task] = true
 				else:
 					_jobs.erase(layer)
 			worst_step_ms = maxf(worst_step_ms, (Time.get_ticks_usec() - ts) / 1000.0)
 		elif int(job.task) >= 0 and WorkerThreadPool.is_task_completed(job.task):
 			WorkerThreadPool.wait_for_task_completion(job.task)
+			_live_tasks.erase(job.task)
 			_jobs.erase(layer)
 			if _pending_jobs.has(layer):
 				var pending: Dictionary = _pending_jobs[layer]
@@ -575,17 +732,20 @@ static func far_patch_visible(camera_offset: Vector3, patch_direction: Vector3,
 	return nearest_patch_angle <= horizon_angle + deg_to_rad(maxf(margin_degrees, 0.0))
 
 
-func _build_far() -> void:
+## `cells` per chunk side (issue #121: a staged build's coarse first pass); -1 = far_cells.
+func _build_far(cells: int = -1) -> void:
+	var fc := cells if cells > 0 else far_cells
 	far_root = Node3D.new()
 	far_root.name = "Far"
 	add_child(far_root)
 	_far_instances.clear()
 	_far_chunk_directions.clear()
 	_far_chunk_angles.clear()
+	far_detail_cells = fc
 	var count := 6 * far_chunks * far_chunks
 	var results := []
 	results.resize(count)
-	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k), count, -1, true, "planet far")
+	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k, fc), count, -1, true, "planet far")
 	WorkerThreadPool.wait_for_group_task_completion(g)
 	var maximum_vertex_radius := sphere.radius
 	for k in count:
@@ -614,14 +774,15 @@ const _FACES := [
 ]
 
 
-func _far_chunk(k: int) -> Dictionary:
+func _far_chunk(k: int, cells: int = -1) -> Dictionary:
+	var fc := cells if cells > 0 else far_cells
 	var per := far_chunks * far_chunks
 	var face: Array = _FACES[k / per]
 	var ci := (k % per) % far_chunks
 	var cj := (k % per) / far_chunks
 	# One extra row of points all round, so the normals on a chunk's edge come out
 	# the same as its neighbour's (no lighting seam); the border is cut off after.
-	var n := far_cells + 3
+	var n := fc + 3
 	var verts := PackedVector3Array()
 	verts.resize(n * n)
 	var norm: Vector3 = face[0]
@@ -630,8 +791,8 @@ func _far_chunk(k: int) -> Dictionary:
 	for j in n:
 		for i in n:
 			# Equal-angle cube mapping keeps the cells near the same size everywhere.
-			var a := (float(ci * far_cells + i - 1) / (far_chunks * far_cells)) * 2.0 - 1.0
-			var b := (float(cj * far_cells + j - 1) / (far_chunks * far_cells)) * 2.0 - 1.0
+			var a := (float(ci * fc + i - 1) / (far_chunks * fc)) * 2.0 - 1.0
+			var b := (float(cj * fc + j - 1) / (far_chunks * fc)) * 2.0 - 1.0
 			var dir := (norm + ax * tan(a * PI * 0.25) + ay * tan(b * PI * 0.25)).normalized()
 			verts[j * n + i] = sphere.center + dir * (sphere.radius + sphere.elevation(dir, sink_grow))
 	var full := _grid_arrays(verts, n)

@@ -194,6 +194,58 @@ change.
 - The town scene (`scenes/town_demo.gd`) asks `GameFlow.planet()` what to build.
   The home planet is `port_desert` (`types.json` `home`).
 
+## Arriving without a freeze (issue #121)
+
+A handoff (flying from one ball's space into another's, no fade) switches the
+whole scene in mid-flight. The new scene no longer builds everything on its
+first frame:
+
+- **The build is a plan.** `TownDemo.build_plan()` lists every build step by
+  name (boxes, terrain, look, decor, the player, the ship, each marker and NPC,
+  the bar, the gear, the natives, the HUD...), in the same order as always, from
+  the same planet config and export flags. Nothing in it names a planet: it is
+  the same plan for any planet `PlanetGen` makes.
+- **A normal arrival** (boot, landing, a fade, lookdev, every trace that starts
+  on the ground) runs every step on its first frame, in that order, exactly as
+  before.
+- **A handoff** (`GameFlow.arrival.mode == "handoff"`) runs only the *shell* on
+  its first frame: the town's boxes, the planet's ball with a coarse far mesh,
+  the station or platform, the sky at the carried hour, the decor and
+  landforms, the player and camera, the pads, the ship (pilot, space travel,
+  HUD) and the altitude detail. The ship is placed once from what the old
+  scene carried (position, heading, speed, throttle) and flies on with live
+  controls.
+- **The rest is staged.** `StagedBuild` (`src/systems/flow/staged_build.gd`)
+  runs the remaining steps in order, a few each frame, while a frame has spent
+  under `stage_budget_ms` (5 ms by default) on them. A step always runs to the
+  end, so the people are one step each. Steps that wait on a worker thread
+  (`terrain_town_ground`, `terrain_far`) are polls: asked once a frame until
+  they are done. `staged.done`, `staged.history` (ms per step) and
+  `staged.worst_frame_ms` are there for traces and tests; `finished` fires at
+  the end. A step that fails stops the build there; a scene freed part way
+  simply stops.
+- **The ball's terrain.** `PlanetTerrain.build_staged()` puts the whole ball up
+  at once as a coarse far mesh (16 cells a chunk instead of 64, so there is
+  never a hole), and works out the full-detail chunks and the town's collider
+  on worker threads. `refine_far_step()` swaps the fine chunks into the same
+  meshes a few a frame. The near ground comes from the ship's own request
+  (`prefetch`), and the mid ring from the camera, through the usual one job per
+  layer. Settled, it is the same terrain a normal build makes.
+- **The other ball in the sky** (`SpaceTravel`) is built coarse first the same
+  way during a handoff, and refines itself.
+- **People built while you are high up stay hidden.** `AltitudeDetail.add_group`
+  hides a node at once if its group is held off at the current height.
+- **Town checks happen once.** `TownCheck` remembers that a town passed the
+  layout checks (most of a second for the port), and `SpaceTravel` checks each
+  neighbour's town on a worker thread while you fly.
+- **Turning it off:** `staged_handoff = false` on the town scene builds a
+  handoff all at once, as before.
+
+What is still slow: a few single steps take a long time on their own, because
+one procedural character costs tens to hundreds of milliseconds to build (the
+player's body, the cantina owner, the port's outpost guards and native packs).
+See `KNOWN_ISSUES.md`.
+
 ## The test planet: Grit Station
 
 `content/core/planets/grit_station.json` is the planet the issue asks for:

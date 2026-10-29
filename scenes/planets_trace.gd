@@ -8,7 +8,11 @@ extends SceneTree
 ## street), walk out through the ring wall's gate shield, along the windowed
 ## hallway and through its round shield into the pit; stand on the asteroid's
 ## rock and on its far side (a real ball), find the dome solid, then fly home
-## again, the home scene taking over the same way. Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
+## again, the home scene taking over the same way. Issue #121: each handoff's
+## scene builds only its flight shell on the first frame and the rest over the
+## frames after (HANDOFF_<STATION|HOME>_*: first-frame ms, staged steps and
+## frames, the worst staged frame, and the ship's continuity meanwhile).
+## Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
 ##
 ## Run: godot --headless --fixed-fps 60 --path . -s res://scenes/planets_trace.gd
 
@@ -23,6 +27,7 @@ var went: Array = []
 var worst_ms := 0.0
 var _last := 0
 var _measure := false
+var arrived_altitude := 0                 ## issue #121: the ship's altitude on the handoff's first frame
 
 
 func _initialize() -> void:
@@ -52,8 +57,11 @@ func frames(n: int) -> void:
 		await physics_frame
 
 
-func make_town() -> void:
+## `handoff` (issue #121): name the arrival's lines and follow its staged build.
+func make_town(handoff: String = "") -> void:
 	_measure = false
+	var carried: Dictionary = (GameFlow.arrival.get("handoff", {}) as Dictionary).duplicate()
+	var old_ref: WeakRef = weakref(demo) if demo != null else null
 	if demo != null:
 		demo.queue_free()
 		await frames(2)
@@ -61,10 +69,73 @@ func make_town() -> void:
 	demo.npc_brains = false
 	demo.use_look = false
 	get_root().add_child(demo)
+	if handoff != "":
+		await follow_handoff(handoff, carried, old_ref)
 	await frames(5)
 	pilot = demo.pilot
 	player = demo._player
 	_measure = true
+
+
+## Issue #121: a handoff's scene shows up with only its flight shell built (the
+## first frame, READY_MS) and builds the rest over the frames after, under a
+## budget. The ship must carry on exactly as carried: same place, basis, speed
+## and throttle on the first frame, then no jump from one physics step to the
+## next, still flying, while the rest is built. Only one world in the tree.
+func follow_handoff(label: String, carried: Dictionary, old_ref: WeakRef) -> void:
+	var k := "HANDOFF_%s_" % label
+	var sb: StagedBuild = demo.staged
+	var p: ShipPilot = demo.pilot
+	out(k + "STAGED", demo.staging)
+	out(k + "READY_MS", snappedf(demo.ready_ms, 0.1))
+	out(k + "SHELL_STEPS", sb.history.size())
+	out(k + "POS_ERR_M", snappedf(p.atmo.position().distance_to(carried.get("position", Vector3.INF)), 0.001))
+	out(k + "SPEED_ERR", snappedf(absf(p.atmo.speed() - float(carried.get("speed", -1.0))), 0.001))
+	var hb: Basis = carried.get("basis", Basis())
+	out(k + "BASIS_ERR", snappedf((p.atmo.flight.basis.x - hb.x).length() + (p.atmo.flight.basis.y - hb.y).length()
+		+ (p.atmo.flight.basis.z - hb.z).length(), 0.0001))
+	out(k + "THROTTLE_ERR", snappedf(absf(p._throttle - float(carried.get("throttle", -1.0))), 0.001))
+	arrived_altitude = int(p.atmo.altitude())
+	out(k + "OLD_SCENE_FREED", old_ref == null or old_ref.get_ref() == null)
+	out(k + "WORLDS_IN_TREE", get_root().get_children().filter(func(c): return c.get_script() == demo.get_script()).size())
+	var dt := 1.0 / float(Engine.physics_ticks_per_second)
+	var last: Vector3 = p.atmo.position()
+	var last_v: float = p.atmo.speed()
+	var jump := 0.0
+	var dv := 0.0
+	var flying := true
+	var n := 0
+	while not sb.done and sb.failed_step == "" and n < 60 * 120:
+		await physics_frame
+		n += 1
+		var now: Vector3 = p.atmo.position()
+		var v: float = p.atmo.speed()
+		jump = maxf(jump, now.distance_to(last) / maxf(maxf(v, last_v) * dt, 0.01))
+		dv = maxf(dv, absf(v - last_v))
+		flying = flying and p.piloting and p.atmo.state == AtmoFlight.State.FLYING
+		last = now
+		last_v = v
+	var heaviest := 0.0
+	var heaviest_name := ""
+	for h in sb.history:
+		if int(h.frame) >= 0 and float(h.ms) > heaviest:
+			heaviest = float(h.ms)
+			heaviest_name = str(h.name)
+	out(k + "DONE", sb.done)
+	out(k + "FAILED_STEP", sb.failed_step)
+	out(k + "STAGED_STEPS", sb.steps.size())
+	out(k + "STAGED_FRAMES", sb.frames_used)
+	out(k + "STAGED_TOTAL_MS", snappedf(sb.total_ms, 0.1))
+	out(k + "WORST_STAGED_FRAME_MS", snappedf(sb.worst_frame_ms, 0.1))
+	out(k + "HEAVIEST_STEP_MS", snappedf(heaviest, 0.1))
+	out(k + "HEAVIEST_STEP", heaviest_name)
+	out(k + "BUDGET_MS", sb.budget_ms)
+	out(k + "STAGED_PHYSICS_STEPS", n)
+	out(k + "MAX_STEP_JUMP", snappedf(jump, 0.01))
+	out(k + "MAX_SPEED_STEP", snappedf(dv, 0.01))
+	out(k + "FLEW_THROUGH", flying)
+	out(k + "PEOPLE_HIDDEN", demo.detail.hidden_groups().has("people")
+		and (demo.get_node_or_null("Npcs") == null or not demo.get_node("Npcs").visible))
 
 
 func place_player(p: Vector3) -> void:
@@ -143,7 +214,7 @@ func _run() -> void:
 	out("ARRIVAL_MODE", str(GameFlow.arrival.get("mode", "")))
 
 	# ---------------------------------------------------------------- the station
-	await make_town()
+	await make_town("STATION")
 	var t = demo.town
 	out("STATION_TOWN", t.data.get("id", ""))
 	out("STATION_TOWN_VALID", t.validate().is_empty())
@@ -175,7 +246,7 @@ func _run() -> void:
 	out("MERCHANT_IN_FRONT", not merchant.is_empty() and merchant[0].post_pos.x > float(t.get_box("cantina_wall_e_s").max[0]))
 	out("ARRIVED_PILOTING", pilot.piloting)
 	out("ARRIVED_STATE", pilot.atmo.state_label())
-	out("ARRIVED_ALTITUDE", int(pilot.atmo.altitude()))
+	out("ARRIVED_ALTITUDE", arrived_altitude)      # on the first frame, before the staged build
 	out("ARRIVED_SHIP", pilot.ship_id)
 	out("STATION_NEIGHBOURS", ",".join(PackedStringArray(pilot.travel.bodies.map(func(b): return str(b.id)))))
 	out("STATION_SPACE_ALTITUDE", int(pilot.atmo.space_altitude))
@@ -265,7 +336,7 @@ func _run() -> void:
 	out("FLEW_HOME_S", snappedf(home_flight, 0.1))
 	await frames(60)
 	out("PLANET_AFTER_RETURN", GameFlow.planet_id)
-	await make_town()
+	await make_town("HOME")
 	out("HOME_AGAIN_TOWN", demo.town.data.get("id", ""))
 	out("HOME_AGAIN_PILOTING", pilot.piloting and pilot.atmo.state == AtmoFlight.State.FLYING)
 	out("HOME_AGAIN_FROM_STATION_SIDE", Vector2(pilot.atmo.position().x, pilot.atmo.position().z).dot(Vector2(9000, -6500)) > 0.0)

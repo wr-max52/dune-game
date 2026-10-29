@@ -33,6 +33,41 @@ Plain English, newest on top. One entry per milestone.
   catches the plate it is riding on as it climbs.
 - Tests: `tests/test_crash_site.gut.gd`. `tools/review/wreck_probe.gd` still
   passes. The full CI suite was not run.
+## Smooth on foot again (2026-10-29)
+
+- **Walking near the dune packs no longer drops the game to a crawl.** Every
+  sand pig and every far-off pack member asked the ground "how high am I?" each
+  physics tick, and each answer checked all 1164 town boxes and 386 boulders.
+  Near a pack a physics tick took longer than its 16 ms budget, so the game ran
+  several ticks a frame and fell to 5 to 28 fps. The ground now only checks
+  what is near (same answers, about 100 times faster), and far-off packs and
+  pigs move every fourth tick (same speed). A tick by a pack went from 14-22 ms
+  to about 4 ms.
+- **Characters move as smoothly as the screen draws.** The game now draws at
+  120 fps on a 120 Hz screen but physics ticks at 60, so you, the camera and the
+  people moved in steps, and turning the mouse swung your body for a frame and
+  snapped it back. The camera, your body and nearby people are now drawn
+  between ticks.
+
+## Staged planet handoffs (2026-10-29, issue #121)
+
+- **Flying from the port to the station (and back) no longer freezes for the
+  whole build.** The other planet's scene now shows up with just what the ship
+  needs on its first frame: the planet, its sky, the town's boxes, the player,
+  the camera and the ship, flying on exactly where it was. Everything else (the
+  people, the bar, the gear, the HUD, the full-detail ground) is built over the
+  next frames, a little each frame.
+- In the headless trace the first frame of a handoff went from 1.6 s (to the
+  station) and 2.3 s (home) to under 0.1 s. With the look on, it went from 6.3 s
+  to 0.34 s (station) and from 12.8 s to 1.0 s (port).
+- The ship keeps its place, heading, speed and throttle, and stays under your
+  control while the rest is built.
+- The planet's far ground starts coarse and sharpens over about a second, with
+  no holes. People built while you are still high up stay hidden until you come
+  down.
+- Works the same for any generated planet: nothing in it is about the port or
+  the station.
+- `staged_handoff = false` on the town scene builds it all at once, as before.
 
 ## Desert packs and sand pigs, first milestone (2026-10-28, issue #96)
 
