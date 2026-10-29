@@ -387,7 +387,10 @@ func teleport(marker_id: String) -> bool:
 	if p == null or p.piloting or demo.town.get_marker(marker_id).is_empty():
 		return false
 	p.global_position = demo.town.marker_pos(marker_id) + Vector3(0, 0.05, 0)
-	p.velocity = Vector3.ZERO
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	else:
+		p.velocity = Vector3.ZERO
 	return true
 
 

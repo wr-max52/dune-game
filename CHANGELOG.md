@@ -21,10 +21,7 @@ Plain English, newest on top. One entry per milestone.
   - The soft-top now folds back behind the seat while you ride, still in
     sight; before, it folded into the body and vanished.
   - The boosters sit out past the tail.
-  - Getting in rebuilds any looks part that has gone missing.
-- **Fix:** the port town failed its own layout check (the four homes beside the
-  cantina were outside their zone, and a route ran through one), so the port did
-  not build.
+     - Getting in rebuilds any looks part that has gone missing.
 
 ## Mesa shapes (issue #93)
 

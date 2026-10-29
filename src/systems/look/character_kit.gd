@@ -90,13 +90,28 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 	_pose(root, pose if pose != "" else default_pose)
 	# A rigged model replaces the primitives (characters.json "model"). The joints
 	# keep the pose; animated users call skin.sync() every frame after moving them.
+	var skins: Array[SkinnedBody] = []
 	var skin := SkinnedBody.dress(root, p.get("model", {}))
 	if skin != null:
 		_wear_outfit(root, skin, p.model, outfit)
 		if p.has("tint"):
 			_tint(skin.model, Color.html(str(p.tint)))
-		skin.sync(root)
 		root.set_meta("skin", skin)
+		skins.append(skin)
+	for layer in p.get("skin_layers", []):
+		if not layer is Dictionary:
+			continue
+		var layer_skin := SkinnedBody.dress(root, layer)
+		if layer_skin == null:
+			continue
+		var layer_outfit := outfit.duplicate(true)
+		var layer_choices: Dictionary = layer.get("outfit", {})
+		layer_outfit.merge(layer_choices, true)
+		_wear_outfit(root, layer_skin, layer, layer_outfit)
+		skins.append(layer_skin)
+	if not skins.is_empty():
+		root.set_meta("skins", skins)
+		skins[0].sync(root)
 	var s := float(p.get("height", REF_HEIGHT)) / REF_HEIGHT
 	var bulk := float(p.get("bulk", 1.0))
 	root.scale = Vector3(s * bulk, s, s * bulk)
@@ -114,7 +129,7 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 ## The choice is stored on the body as meta "outfit".
 func _wear_outfit(root: Node3D, skin: SkinnedBody, cfg: Dictionary, outfit: Dictionary) -> void:
 	var parts: Dictionary = cfg.get("parts", {})
-	if parts.is_empty():
+	if parts.is_empty() and cfg.get("hide_parts", []).is_empty():
 		return
 	var pieces := bool(cfg.get("pieces", false))
 	var worn := {}
@@ -148,7 +163,13 @@ func _wear_outfit(root: Node3D, skin: SkinnedBody, cfg: Dictionary, outfit: Dict
 			if not keep.has(mi):
 				mi.get_parent().remove_child(mi)
 				mi.free()
-	root.set_meta("outfit", worn)
+	for part in cfg.get("hide_parts", []):
+		var hidden := skin.model.find_child(str(part), true, false) as GeometryInstance3D
+		if hidden != null:
+			hidden.visible = false
+	var all_worn: Dictionary = root.get_meta("outfit", {}).duplicate(true)
+	all_worn.merge(worn, true)
+	root.set_meta("outfit", all_worn)
 
 
 ## The part's material with the colour's texture, shared by every body that wears it.
@@ -809,10 +830,11 @@ func _dress_local(body: Node3D, p: Dictionary) -> void:
 	tail.rotation_degrees = Vector3(18, 200, 0)
 	_mi(pelvis, _cyl(0.2, 0.21, 0.07, 14), wrap, Vector3(0, 0.06, 0))
 	# A woven pack on the back: the silhouette says "carries everything they own".
-	_mi(chest, _cyl(0.13, 0.11, 0.42, 12), _m(Color("#8a6a44"), "leather", 0.7), Vector3(0, 0.02, -0.24), Vector3(8, 0, 0))
-	_mi(chest, _sphere(0.12, 0.1, 10), wrap, Vector3(0, 0.25, -0.25))
-	var staff := _mi(_j(body, "r_wrist"), _cyl(0.018, 0.022, 1.8, 6), wood, Vector3(0, -0.06, 0.03))
-	staff.rotation_degrees = Vector3(-75, 0, 0)
+	if not bool(p.get("no_local_props", false)):
+		_mi(chest, _cyl(0.13, 0.11, 0.42, 12), _m(Color("#8a6a44"), "leather", 0.7), Vector3(0, 0.02, -0.24), Vector3(8, 0, 0))
+		_mi(chest, _sphere(0.12, 0.1, 10), wrap, Vector3(0, 0.25, -0.25))
+		var staff := _mi(_j(body, "r_wrist"), _cyl(0.018, 0.022, 1.8, 6), wood, Vector3(0, -0.06, 0.03))
+		staff.rotation_degrees = Vector3(-75, 0, 0)
 
 
 static func _merged(a: Dictionary, b: Dictionary) -> Dictionary:

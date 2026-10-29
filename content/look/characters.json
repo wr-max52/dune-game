@@ -119,6 +119,28 @@
         }
       }
     },
+    "cantina_dancer": {
+      "note": "A pale station-local upper body with the cantina owner's slate legs; the two skins share the same 52-bone rig.",
+      "base": "local",
+      "no_local_props": true,
+      "model": { "hide_parts": ["legs"] },
+      "skin_layers": [
+        {
+          "scene": "res://assets/characters/kit/parts.glb",
+          "pieces": true,
+          "colors": "res://assets/characters/kit/colors/%s.png",
+          "parts": { "legs": ["cantina_owner"] },
+          "bones": {
+            "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
+            "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",
+            "r_shoulder": "RightArm", "r_elbow": "RightForeArm", "r_wrist": "RightHand",
+            "l_hip": "LeftUpLeg", "l_knee": "LeftLeg", "l_ankle": "LeftFoot",
+            "r_hip": "RightUpLeg", "r_knee": "RightLeg", "r_ankle": "RightFoot"
+          },
+          "outfit": { "legs": "cantina_owner:slate" }
+        }
+      ]
+    },
     "cantina_owner_station": {
       "note": "Issue #45: the asteroid station's cantina owner. Oda's body, model and height (base: cantina_owner), cooler: a steel-blue cast over her clothes and cyan goggles instead of amber. Only what differs is listed.",
       "base": "cantina_owner",

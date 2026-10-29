@@ -476,10 +476,14 @@ func _guard_fall() -> void:
 		_last_safe = player.global_position
 		return
 	if fell_out_of_world(player.global_position):
-		player.global_position = _last_safe + Vector3(0, 0.1, 0)
-		player.velocity = Vector3.ZERO
-		player.controller.velocity = Vector3.ZERO
-		player.controller.body_pos = player.global_position
+		var up := PlanetSphere.current.up_at(_last_safe) if PlanetSphere.current != null else Vector3.UP
+		player.global_position = _last_safe + up * 0.1
+		if player.has_method("align_to_ground"):
+			player.call("align_to_ground", true)
+		else:
+			player.velocity = Vector3.ZERO
+			player.controller.velocity = Vector3.ZERO
+			player.controller.body_pos = player.global_position
 		recoveries += 1
 		if hud != null:
 			hud.toast(_l("recovered"), 4.0)

@@ -86,6 +86,8 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 			opts["bay"] = "pit"
 		if bool(tcfg.get("enclosed", false)):
 			opts["ring"] = tcfg.get("station", {})      # issue #99: a sealed, round station
+		if bool(cfg.get("stage_dancer", false)):
+			opts["stage_dancer"] = true
 		town = TownGen.generate(town_id, size, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), opts)
 	var world: Dictionary = {}
 	if cfg.has("world"):
