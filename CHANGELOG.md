@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Mesa shapes (issue #93)
+
+- Kept the mesas' existing size and rock material, but replaced the regular
+  cylinder profile with broad, uneven plateaus, stepped cliff shelves and
+  restrained erosion gullies. The mesh remains inside the existing world-ground
+  collision envelope; hoodoos are unchanged.
+- Added a focused geometry check for the plateau-to-base ratio, collision bounds
+  and silhouette detail. The full CI suite was not run.
+
 ## The asteroid, done properly: a real ball, a sealed station, no cutaway (2026-10-28, issue #99)
 
 - **One map.** Flying from the home planet to the asteroid has no fade and no
