@@ -157,10 +157,13 @@ func _respawn(p: Node3D) -> void:
 	falls += 1
 	var at: Vector3 = demo.town.spawn_pos() + Vector3(0, 0.05, 0)
 	p.global_position = at
-	p.velocity = Vector3.ZERO
-	if "controller" in p and p.controller != null:
-		p.controller.velocity = Vector3.ZERO
-		p.controller.body_pos = at
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	else:
+		p.velocity = Vector3.ZERO
+		if "controller" in p and p.controller != null:
+			p.controller.velocity = Vector3.ZERO
+			p.controller.body_pos = at
 	WorldState.bump("falls")
 	if fall_text != "":
 		WorldState.log_event(fall_text)

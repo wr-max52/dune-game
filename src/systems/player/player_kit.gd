@@ -31,6 +31,9 @@ static func attach(p: CharacterBody3D, rig: Node3D, bolts_into: Node3D, mats: Lo
 	k.rig_node = rig
 	k.avatar = PlayerAvatar.new(mats)
 	p.add_child(k.avatar)
+	var ground_tilt = p.get("tilt")
+	if ground_tilt is Basis:
+		k.avatar.align_to_ground(ground_tilt)
 	p.set("can_slide", true)  # only the player slides; guards share the body but never do
 	k.weapons = PlayerWeapons.new()
 	k.add_child(k.weapons)

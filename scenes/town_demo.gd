@@ -349,6 +349,7 @@ func _spawn_player() -> void:
 		var c: Vector3 = from_pad.center
 		yaw = atan2(c.x - from_pad.arrive.x, c.z - from_pad.arrive.z)
 	add_child(_player)
+	_player.call("align_to_ground", true)
 	_rig = CameraRigNode.new()
 	add_child(_rig)
 	_rig.set_player(_player as Node3D)

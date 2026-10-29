@@ -393,19 +393,25 @@ func exit_ship() -> bool:
 	p.visible = true
 	_set_player_collision(true)
 	p.global_position = spot
-	p.velocity = Vector3.ZERO
-	p.controller.velocity = Vector3.ZERO
-	p.controller.body_pos = spot
-	_ground_follow(p)
 	var rig = demo._rig
 	if rig != null:
 		rig.clear_override()
 		# The ship's heading, read in the ground's own frame (issue #77: on the ball).
 		rig.rig.yaw = (PlanetSphere.tilt_to(atmo.up()).inverse() * atmo.flight.basis).get_euler().y
+		p.rotation.y = rig.rig.yaw
+		if "player_kit" in demo and demo.player_kit != null and demo.player_kit.avatar != null:
+			demo.player_kit.avatar.facing_yaw = rig.rig.yaw
 		rig.set_first_person(_rig_was_fp)
 		var cam: Camera3D = rig.camera()
 		cam.near = _cam_near
 		cam.far = _cam_far
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	else:
+		p.velocity = Vector3.ZERO
+		p.controller.velocity = Vector3.ZERO
+		p.controller.body_pos = spot
+	_ground_follow(p)
 	hud.visible = false
 	if sky != null:
 		sky.update_for(0.0, spot)
