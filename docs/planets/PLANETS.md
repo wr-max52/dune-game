@@ -137,10 +137,14 @@ people) replaces it, and `false` means none. See `docs/natives/NATIVES.md`.
   - She has her own card id (`cantina_owner_<planet id>`). That gives her her own
     brain, her own relationship with you, her own save entry and her own
     transcripts. Nothing is shared with the port's Oda.
-- **Smuggling and contracts, always:** off the home planet, the board's smuggling
-  run and the contract on a Remnant officer are open without waiting on the
-  port's story. The drop and the outposts are still the port's, so the job takes
-  you back there.
+- **Local smuggling:** each planet's board offers only the smuggling run that
+  belongs to its town. The station's Oda lines up drops on the rock outside the
+  sealed station, and the merchant in front of its cantina buys them; the port's
+  run stays in the port. Add a `kind: "smuggle"` job whose `location` is the
+  planet's `town_id`, plus a `pickups/<town_id>.json` file for its drop areas.
+- **Contracts, always:** off the home planet, the contract on a Remnant officer
+  is open without waiting on the port's story. The outposts are still the port's,
+  so that job takes you back there.
 - **Z lands you:** flying near your bay (within `bay_land_radius` in
   `launch_pads.json`, 4 km, below space), on any planet including home, press **Z**.
   The ship flies itself over the bay and lands on its own pad. Press Z again to

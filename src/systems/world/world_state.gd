@@ -28,7 +28,7 @@ static var jobs_taken: Dictionary = {}     ## job id -> "active" | "done"
 static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
-static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, out }
+static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, surface, marked, location, out }
 static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
 static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
@@ -243,16 +243,18 @@ static func job(id: String) -> Dictionary:
 
 ## Jobs the cantina owner can offer at this trust tier, not yet taken.
 ##
-## Issue #75: every other planet's cantina owner always has the smuggling run and
-## the contract (the bounty) to offer, without waiting on the port's story.
+## A smuggling job belongs to its town: the port's drop is offered at the port,
+## the station's on the station. Contracts stay global: off the home planet they
+## are always on the board, without waiting on the port's story.
 static func open_jobs(tier: String) -> Array:
 	var out: Array = []
 	var away := always_jobs_here()
+	var here := current_town_id()
 	for j in board():
 		if jobs_taken.has(str(j.id)):
 			continue
 		var kind := str(j.get("kind", ""))
-		if kind == "smuggle" and not smuggle_ready():
+		if kind == "smuggle" and (not smuggle_ready() or str(j.get("location", "")) != here):
 			continue
 		if kind == "bounty" and not (bounty_ready() and (away or Story.bounties_open())):
 			continue
@@ -265,10 +267,16 @@ static func open_jobs(tier: String) -> Array:
 	return out
 
 
-## True off the home planet: there the smuggling run and the contract are always
-## on the board (issue #75).
+## True off the home planet: there the contract is always on the board (issue
+## #75). Smuggling is local to each town now.
 static func always_jobs_here() -> bool:
 	return GameFlow.current_planet_id() != PlanetGen.home_id()
+
+
+## The town this scene is built for (the port's authored town, or a generated
+## one such as grit_station_town).
+static func current_town_id() -> String:
+	return str(GameFlow.planet().get("town_id", "port_town"))
 
 
 static func accept_job(id: String) -> bool:
@@ -311,6 +319,7 @@ static func smuggle_drop() -> Dictionary:
 	return {
 		"id": id, "item": smuggle.item, "count": int(smuggle.count), "marker": smuggle.marker,
 		"offset": smuggle.offset, "ground": bool(smuggle.get("ground", false)), "hidden": true, "reach": 2.0,
+		"surface": bool(smuggle.get("surface", false)),
 		"marked": bool(smuggle.get("marked", false)),
 		"location": str(smuggle.get("location", "")),
 	}
@@ -371,9 +380,10 @@ static func _roll_smuggle(j: Dictionary) -> void:
 		"run": int(smuggle.get("run", 0)) + 1, "item": str(g.item),
 		"count": rng.randi_range(int(span[0]), int(span[1])),
 		"area": str(a.id), "hint": str(a.get("hint", "")), "marker": str(a.get("marker", "")),
-		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)), "out": false,
+		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)),
+		"surface": bool(a.get("surface", false)), "out": false,
 		"marked": bool(a.get("marked", false)),
-		"location": str(j.get("location", "")),    # issue #75: offered on any planet, dropped in this town
+		"location": str(j.get("location", "")),    # the town this drop belongs to
 	}
 
 
@@ -381,7 +391,9 @@ static func _start_smuggle(j: Dictionary) -> bool:
 	if j.is_empty() or not smuggle_ready() or bool(smuggle.get("out", false)):
 		return false
 	smuggle.out = true
-	story["took_run"] = true            # issue #64: this chapter's run is under way
+	# Issue #64: only the port's chapter run counts. A station job never moves
+	# the port's story on, even if that story is waiting for a smuggling sale.
+	story["took_run"] = str(j.get("location", "")) == "port_town"
 	bump("smuggle_runs")
 	log_event("Oda set up a drop: " + str(j.get("text", "")))
 	return true

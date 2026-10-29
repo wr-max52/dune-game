@@ -141,8 +141,9 @@ planets trace and tests were updated to the new station but not run.
 - **(Fixed in #99: review stills.)** ~~The rock was not looked at on a screen.~~ The headless runs cannot render, so
   the crater sizes, the faceted look, the boulders and the dome's ribs are only
   checked by numbers.
-- **Jobs off the home planet lead home.** The smuggling drop and the Remnant
-  outposts are still the port's, so the station's Oda sends you back there.
+- **Bounty contracts off the home planet lead home.** The Remnant outposts are
+  still the port's, so the station's Oda sends you back there for a contract.
+  Smuggling runs are local now: the station has its own drop and buyer.
 - **The landing pit's other three bays are empty pads** (the port parks flyable
   ships on two of them).
 - **Bigger asteroid towns are untested in play.** Sizes up to 100 pass the

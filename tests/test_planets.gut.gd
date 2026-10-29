@@ -347,14 +347,24 @@ func test_every_planet_has_its_own_oda() -> void:
 
 
 func test_jobs_are_always_offered_off_the_home_planet() -> void:
+	GameFlow.reset()
 	WorldState.reset()
-	var home_kinds := WorldState.open_jobs("stranger").map(func(j): return str(j.get("kind", "")))
+	var home := WorldState.open_jobs("stranger")
+	var home_kinds := home.map(func(j): return str(j.get("kind", "")))
 	assert_false(home_kinds.has("bounty"), "at the port the story opens contracts")
+	assert_false(home.map(func(j): return str(j.get("id", ""))).has("j_station_smuggle_run"),
+		"the station's drop is not offered at the port")
 	GameFlow.planet_id = "grit_station"
-	var kinds := WorldState.open_jobs("stranger").map(func(j): return str(j.get("kind", "")))
+	var jobs := WorldState.open_jobs("stranger")
+	var kinds := jobs.map(func(j): return str(j.get("kind", "")))
 	assert_true(kinds.has("smuggle"), "a smuggling run")
 	assert_true(kinds.has("bounty"), "and a contract")
+	var runs := jobs.filter(func(j): return str(j.get("kind", "")) == "smuggle")
+	assert_eq(runs.size(), 1, "only the station's own run")
+	assert_eq(str(runs[0].get("id", "")), "j_station_smuggle_run")
+	assert_eq(str(runs[0].get("location", "")), "grit_station_town")
 	WorldState.reset()
+	GameFlow.reset()
 
 
 static func _v(a) -> Vector3:
