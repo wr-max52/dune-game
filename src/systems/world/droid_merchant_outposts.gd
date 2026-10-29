@@ -8,7 +8,7 @@ extends Node3D
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const MerchantNPC := preload("res://src/systems/npc/merchant_npc.gd")
 const POST_IDS := ["droid_post_wash", "droid_post_ridge", "droid_post_basin"]
-const OUTFIT := { "head": "sand", "torso": "blue", "legs": "darker" }
+const OUTFIT := { "head": "local", "torso": "local:blue", "legs": "local:darker" }
 
 var demo
 var ground: WorldGround

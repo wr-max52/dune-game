@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://8h3l2otbsxri"
-path="res://.godot/imported/local_lighter.png-61c904bc4511bd44d211218f449e7c03.ctex"
+uid="uid://dltswe2ubefnh"
+path="res://.godot/imported/local_yellow.png-e953bf7740ea8d96bdfa1645668f7a7e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/local/colors/local_lighter.png"
-dest_files=["res://.godot/imported/local_lighter.png-61c904bc4511bd44d211218f449e7c03.ctex"]
+source_file="res://assets/characters/kit/colors/local_yellow.png"
+dest_files=["res://.godot/imported/local_yellow.png-e953bf7740ea8d96bdfa1645668f7a7e.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
