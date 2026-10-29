@@ -50,16 +50,21 @@ The types are defined in `content/core/planets/types.json`, and each one sets th
 following:
 
 - **ground:** `terrain` puts the town on the seamless dunes, recoloured by `sand`
-  and `rock`. `platform` floats it on a deck closed underneath. `sphere` (the
-  asteroid, issue #75) makes the planet one cratered rock ball and sets the town
-  on top of it.
-- **surface (platforms and spheres):** what lies below the deck (sea, lava, cloud
-  decks), or the ball itself: its radius, colours, two sizes of crater, boulders
-  and the debris drifting round it.
-- **landing_bay:** `pit` puts the port's own round landing pit outside the gate,
-  past the apron, instead of bays inside the walls (the asteroid).
-- **dome (spheres):** the glass dome over the town: how far past the walls it
-  reaches, how tall it is, and the door over the gate.
+  and `rock`. `platform` floats it on a deck closed underneath. `ball` (the
+  asteroid, issue #99) makes the planet a real ball like the home planet: rock all
+  the way round, gravity toward its centre, flown and walked all the way round
+  (`src/systems/planets/asteroid_sphere.gd`, drawn by `PlanetTerrain` in
+  `moon_rock.gdshader`).
+- **surface (platforms and balls):** what lies below the deck (sea, lava, cloud
+  decks), or the ball itself: its radius, how far the town's flat ground reaches,
+  rock colours (`look`), three sizes of crater, the swell and roughness, and the
+  boulders round the station.
+- **landing_bay:** `pit` puts the port's own round landing pit outside the gate
+  instead of bays inside the walls (the asteroid).
+- **enclosed** and **station (balls):** a sealed station (see below): its wall
+  height, gate and hallway width, the dome's height, and the pit liner's height.
+- **space.handoff (balls):** how close to its surface (metres) its own scene takes
+  over from its parent's in mid-flight, with no fade (see "One map" below).
 - **sky:** colours laid over every time of day, so the clock and F11 still work.
   The asteroid's sky is grey.
 - **atmosphere:** where space begins. It is 700 m on the asteroid and 4 km on the
@@ -75,20 +80,38 @@ and ships and open above, so ships can lift straight out. The gate stays open, w
 a translucent **energy shield** across it that you walk straight through. Go over
 the edge of the deck and you die, then wake up by the landing bay.
 
-On an asteroid, a **glass dome** covers the town instead. It is solid to people and
-ships, and its door over the gate has the same walk-through shield. The landing pit
-is outside the dome. The whole rock is ground: it is flat under the town and the
-pit, and cratered, rough and strewn with blocky boulders everywhere else. Gravity
-points straight down, as in every town, so you can walk over the top of the ball
-until it is too steep to stand on. Slide off its side and you die, then wake up by
-the landing bay.
+On the asteroid (issue #99) the station is **sealed**: the locals cannot breathe
+outside. A **round wall** goes round the whole town, with a **glass dome** springing
+from its top, solid to people and ships. The **gate** is a gap in the wall on the
+main street, closed by a transparent **energy shield** you walk through. Beyond it
+a **covered hallway** runs out to the landing pit. It has wide windows for walls,
+glowing strips and lamps along its ceiling, and a roof. It goes in through a
+**door in the pit's liner**: the pit's round wall carried up 13 m above the rock.
+Then it runs down over the pit's ramp and opens onto the pit floor through a
+**round energy shield**. An **energy shield over the top of the pit** lets ships
+fly in and out. The rock outside is ground all the way round the ball, strewn with
+blocky boulders near the station. You can only get out onto it by flying.
 
 **Walking the planet:** on every planet except water, lava and gas worlds, you can
 walk out of the town and keep going: the dunes on biome planets, the rock on an
 asteroid.
 
+**One map (issue #99).** Every planet's scene is the same space, shifted so its
+own port is the origin. There is no turn, so the sun and the stars agree in all
+of them. A planet's port sits on top of its ball, so a neighbour's port is at its
+`at` plus its radius straight up.
+- **From the home planet,** the asteroid is drawn as its real ball, in its own
+  rock, with its station on top: the same shapes its scene builds, only coarse.
+- **Flying to it,** come within `space.handoff` metres of its surface and its
+  scene takes over on the spot. The ship carries on exactly where it was, with the
+  same heading, speed and throttle and the same time of day. Nothing fades.
+- **Leaving it,** climb more than that far off it (plus 300 m) and the home
+  planet's scene takes over the same way.
+- **Only the detail changes:** the near rock, the collider and the town come in
+  as you arrive.
+
 A new type is a new entry in `types.json`, with no code change, as long as its
-ground is `terrain`, `platform` or `sphere` and its surface is one of `water`,
+ground is `terrain`, `platform` or `ball` and its surface is one of `water`,
 `lava`, `gas` or `rock`.
 
 ## What every generated planet has (issue #75)
@@ -157,7 +180,8 @@ change.
   function shared by the collider, the look and the ships' ground), the boulders,
   the dome and the fall off its side.
 - `SpaceTravel` (`space_travel.gd`) draws the neighbours in the sky, labels them
-  with their distance, and starts the trip when you fly into one.
+  with their distance, and starts the trip: a seamless handoff for a planet with
+  `space.handoff`, otherwise a fade when you fly into it.
 - `GameFlow.travel()` reloads the same town scene as the other planet. A planet
   is data, not a scene, so you arrive flying the same ship above its bay.
 - The town scene (`scenes/town_demo.gd`) asks `GameFlow.planet()` what to build.
@@ -168,14 +192,21 @@ change.
 `content/core/planets/grit_station.json` is the planet the issue asks for:
 
 - An asteroid with a size-1 town, in `metallic`, 12 km from the port and 5 km up.
-- The rock is a ball 900 m across, with the town under a glass dome on top and
-  the port's landing pit outside the gate.
+- The rock is a real ball 3 km across (radius 1500 m), cratered all the way
+  round. The sealed station is on top, with the port's landing pit at the end of
+  its hallway.
 - Its cantina is run by its own Oda, with a generated last name (issue #75; until
   then it was Ilka Vell, on a card of her own).
 - She wears Oda's model re-tinted steel-blue with cyan goggles (archetype
   `cantina_owner_station` in `content/look/characters.json`).
 
-`scenes/planets_trace.gd` flies the whole trip in CI. It takes off, flies to the
-station, presses Z and is landed in the pit, then walks out through the dome's
-shield. It stands on the rock, slides off the side, finds the dome solid, and
-flies home.
+`scenes/planets_trace.gd` flies the whole trip in CI. It takes off and flies to
+the station, whose scene takes over in mid-flight with no fade. It drops under
+the station's edge of space, presses Z and is landed in the pit, then walks:
+- out of the ring through the gate's shield;
+- down the hallway (its windows hold) and through its round shield into the pit;
+- on the rock, and on the far side of the ball.
+It finds the dome solid, and flies home the same way.
+
+Review stills: `./tools/planets/shoot_planets.sh scenes=grit_station,port_desert`.
+A sheet is in `docs/planets/issue_99_station.jpg`.

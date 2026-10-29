@@ -1,6 +1,6 @@
 {
   "id": "types",
-  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava or gas), and falling off the deck kills you (you wake by the bay); 'sphere' (issue #75, the asteroid) = the planet is one cratered rock ball of surface.radius, the town and its landing bay sit on top of it, the town under a glass dome ('dome': its half-axes are the walls' times spread, its height that times height, a door with an energy shield over the gate), and you walk anywhere on the rock that is not too steep to stand on (src/systems/planets/asteroid_world.gd). landing_bay 'pit': the port's round landing pit outside the gate instead of bays inside the walls. sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
+  "note": "IP-neutral. What each kind of planet is (issue #45). Read by src/systems/planets/planet_gen.gd. ground: 'terrain' = the town sits on the seamless dune terrain (DesertTerrain), recoloured by 'sand' and 'rock'; 'platform' = the town floats on a deck closed underneath, inside a glass enclosure rising from its walls, with an energy shield across the open gate, over 'surface' (water, lava or gas), and falling off the deck kills you (you wake by the bay); 'ball' (issue #99, the asteroid) = the planet is a real ball of surface.radius like the home planet (src/systems/planets/asteroid_sphere.gd): cratered rock all the way round, gravity toward its centre, flown round and walked round; with 'enclosed' the station is sealed under a dome (src/systems/planets/asteroid_world.gd, 'station'). landing_bay 'pit': the port's round landing pit outside the gate instead of bays inside the walls. space.handoff: how close to this ball (metres above its surface) its own scene takes over from its parent's, with no fade. sky: values laid over every time-of-day preset in content/look/time_of_day.json (only the keys given change). atmosphere: where the sky darkens and space begins, in metres. body: how the planet looks from space (a neighbour's sky), radius in metres. arrival: where a ship coming in from space appears (above the landing bay, metres). default_style: the town style when the planet's own config gives none (content/look/town_styles.json).",
   "home": "port_desert",
   "detail": {
     "hysteresis": 40.0,
@@ -91,21 +91,26 @@
     "asteroid": {
       "town_naming": "town_station",
       "label": "asteroid station",
-      "ground": "sphere",
+      "ground": "ball",
       "landing_bay": "pit",
+      "enclosed": true,
       "default_style": "metallic",
-      "surface": { "kind": "rock", "radius": 900.0, "color": "#7a7a7e", "deep": "#3a3a3e", "rim": "#9c9ca0",
-                   "craters": [ { "cell": 150.0, "density": 0.55, "radius": [18.0, 46.0], "depth": 0.24, "seed": 11 },
-                                { "cell": 36.0, "density": 0.5, "radius": [4.0, 10.0], "depth": 0.22, "seed": 23 } ],
-                   "bumps": 1.4, "cell_m": 5.0, "cap": 0.72, "blend": 45.0, "boulders": 700, "debris": 40 },
-      "dome": { "spread": 1.45, "height": 0.8, "door_height": 6.5, "door_half": 6.0 },
-      "sky": { "sun": { "color": "#f4f4f6", "elevation_deg": 42.0, "energy": 2.6 }, "ambient": { "energy": 0.85 },
+      "surface": { "kind": "rock", "radius": 1500.0, "flat_radius": 130.0, "up_blend": 160.0, "bumps": 1.2, "swell": 6.0,
+                   "craters": [ { "count": 160, "radius": [30.0, 80.0], "depth": 0.2, "seed": 11 },
+                                { "count": 900, "radius": [9.0, 26.0], "depth": 0.22, "seed": 23 },
+                                { "count": 5000, "radius": [2.5, 8.0], "depth": 0.24, "seed": 37 } ],
+                   "look": { "rock_light": "#9c9fa8", "rock_mid": "#6d7079", "rock_dark": "#34363d" },
+                   "boulders": 900, "debris": 40 },
+      "station": { "wall_height": 6.0, "gate_half": 6.0, "dome_height": 0.85, "hall_width": 9.0, "hall_height": 5.0,
+                   "liner_height": 13.0, "liner_door_height": 6.0, "note": "Issue #99: the station is sealed (the locals cannot breathe outside): a round wall under a glass dome, a shield door in the gate, a windowed hallway lit along its ceiling from the gate to the landing pit, through a door in the pit's tall round liner, over the pit's ramp to a round shield; and a shield over the pit itself. Metres; dome_height is its height over the wall's radius." },
+      "sky": { "ambient": { "energy": 0.85 },
                "sky": { "zenith": "#26282c", "horizon": "#6a6d72", "ground": "#3a3c40", "sun_glow": "#d8d8d8", "cloud_cover": 0.0, "planet_visibility": 1.0, "energy": 0.8 },
                "fog": { "color": "#5a5d62", "density": 0.00004, "sky_affect": 0.1 }, "volumetric": { "enabled": false } },
       "atmosphere": { "upper_start": 0.0, "cloud_deck": 200.0, "sky_black_at": 900.0, "space_altitude": 700.0 },
-      "body": { "radius": 900.0, "color": "#7a7a7e", "dark": "#2e2e32" },
+      "space": { "handoff": 2600.0, "note": "Issue #99: no fade between planets. Within handoff metres of this ball's surface its own scene flies you (switched in mid-flight, the ship where it was, the same sun and stars); further out you are in its parent's (near) sky." },
+      "body": { "radius": 1500.0, "color": "#7a7a7e", "dark": "#2e2e32" },
       "arrival": { "altitude": 520.0, "distance": 900.0 },
-      "fall_text": "You slid off the side of the asteroid and drifted away."
+      "fall_text": ""
     }
   }
 }

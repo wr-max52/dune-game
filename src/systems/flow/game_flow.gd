@@ -144,7 +144,7 @@ static func take_arrival() -> Dictionary:
 static func arrival_text(a: Dictionary) -> String:
 	if a.is_empty():
 		return ""
-	if str(a.get("mode", "")) == "travel":
+	if str(a.get("mode", "")) in ["travel", "handoff"]:
 		var t := label("arrive_planet")
 		return t % str(a.get("name", "")) if t.contains("%s") else t
 	if str(a.get("mode", "")) == "reentry" and str(a.get("outcome", "")) != "complete":
@@ -182,13 +182,17 @@ static func planet() -> Dictionary:
 ## Fly from this planet to `to`: the town scene reloads as that planet, and the
 ## ship you flew (`ship_id`) arrives in its sky, still flying, above its bay. The
 ## same scene file every time: a planet is data, not a scene.
-static func travel(tree: SceneTree, to: String, ship_id: String = "", name: String = "") -> void:
+## `extra` (issue #99): { handoff: { position, basis, speed, throttle } in the
+## new planet's own coordinates, hour, preset }: no fade, the ship carries on
+## exactly where it was, under the same sun.
+static func travel(tree: SceneTree, to: String, ship_id: String = "", name: String = "", extra: Dictionary = {}) -> void:
 	var from := current_planet_id()
 	planet_id = to
 	flown_ship = ship_id
 	in_flight = false
-	arrival = { "mode": "travel", "from": from, "to": to, "ship": ship_id, "name": name,
+	arrival = { "mode": "handoff" if extra.has("handoff") else "travel", "from": from, "to": to, "ship": ship_id, "name": name,
 		"pad": str(data().get("pads", {}).keys()[0]) if not data().get("pads", {}).is_empty() else "" }
+	arrival.merge(extra)
 	_go(tree, str(data().get("default_port_scene", "res://scenes/town_demo.tscn")))
 
 

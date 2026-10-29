@@ -1,10 +1,10 @@
 extends GutTest
 ## Issue #45: the trip the issue asks for, from the headless trace
 ## (scenes/planets_trace.gd, real physics, the real town scene): port -> space ->
-## the asteroid station (issue #75: a size-1 town under a glass dome on a cratered
-## rock ball, the port's landing pit outside, its own Oda) -> Z lands you in the
-## pit -> out through the dome's shield, across the rock, off the side, into the
-## glass -> home.
+## the asteroid station (issue #99: no fade, a real ball, a sealed round station:
+## ring wall, dome, gate shield, windowed hallway to the pit; its own Oda) -> Z
+## lands you in the pit -> out through the gate, down the hallway into the pit,
+## onto the rock and round the ball, into the glass -> home, no fade either way.
 
 const Reader := preload("res://tests/trace_reader.gd")
 var t: Dictionary
@@ -36,7 +36,7 @@ func test_flying_into_it_travels() -> void:
 	assert_eq(t.get("TRAVEL_STARTED"), "grit_station")
 	assert_eq(t.get("SCENE_AFTER_TRAVEL"), "res://scenes/town_demo.tscn", "the same scene, another planet")
 	assert_eq(t.get("PLANET_AFTER_TRAVEL"), "grit_station")
-	assert_eq(t.get("ARRIVAL_MODE"), "travel")
+	assert_eq(t.get("ARRIVAL_MODE"), "handoff", "no fade: the station's scene took over in mid-flight")
 	assert_eq(t.get("FLOWN_SHIP"), t.get("PORT_SHIP"))
 
 
@@ -44,9 +44,9 @@ func test_a_size_1_asteroid_town() -> void:
 	assert_eq(t.get("STATION_TOWN"), "grit_station_town")
 	_true("STATION_TOWN_VALID")
 	assert_eq(int(t.get("STATION_TOWN_SIZE", 0)), 1)
-	assert_eq(t.get("STATION_GROUND"), "sphere")
+	assert_eq(t.get("STATION_GROUND"), "ball", "a real ball, like the home planet")
 	_true("STATION_ROCK")
-	assert_eq(t.get("STATION_TERRAIN"), "false", "no dunes under a station")
+	_true("STATION_TERRAIN", "its rock is a PlanetTerrain all the way round")
 	assert_eq(t.get("STATION_STYLE"), "metallic")
 	_true("STATION_CANTINA")
 	assert_eq(int(t.get("STATION_GUARDS", 0)), 1, "a single Remnant guard")
@@ -76,7 +76,7 @@ func test_you_arrive_flying_the_same_ship() -> void:
 	_true("ARRIVED_PILOTING")
 	assert_eq(t.get("ARRIVED_STATE"), "FLYING")
 	assert_eq(t.get("ARRIVED_SHIP"), t.get("PORT_SHIP"))
-	assert_between(int(t.get("ARRIVED_ALTITUDE", 0)), 300, 700, "in its sky, below its edge of space")
+	assert_between(int(t.get("ARRIVED_ALTITUDE", 0)), 2300, 2800, "where the handoff happened, in its space")
 	assert_eq(int(t.get("STATION_SPACE_ALTITUDE", 0)), 700, "a small rock: space starts low")
 	assert_eq(t.get("STATION_NEIGHBOURS"), "port_desert", "and home is in its sky")
 
@@ -91,20 +91,21 @@ func test_z_lands_you_in_the_pit() -> void:
 	_true("IN_PIT")
 
 
-func test_the_shield_is_walkable_the_rock_too_and_the_side_kills() -> void:
-	_true("THROUGH_THE_SHIELD", "the dome's door is open")
-	_true("WALK_ON_ROCK", "the asteroid is ground")
-	assert_gt(float(t.get("ROCK_DROP_M", 0)), 5.0, "a ball: it falls away from the town")
-	_true("FELL_OFF")
-	assert_eq(int(t.get("FALLS", 0)), 1)
-	_true("WOKE_BY_BAY")
-	assert_eq(int(t.get("FALL_LOGGED", 0)), 1)
-
-
-func test_the_glass_is_solid() -> void:
-	_true("GLASS_HOLDS", "to people")
-	_true("SHIP_HITS_GLASS", "and to ships")
+func test_the_station_is_sealed() -> void:
+	assert_gt(float(t.get("STATION_RING_M", 0)), 20.0, "a round wall round the town")
+	_true("THROUGH_THE_SHIELD", "the gate's shield is walked through")
+	_true("HALL_HOLDS", "the hallway's windows are solid")
+	_true("INTO_PIT_THROUGH_SHIELD", "down the hallway, out through its round shield")
+	_true("GLASS_HOLDS", "the dome holds people")
+	_true("SHIP_HITS_GLASS", "and ships")
 	assert_gt(int(t.get("DOME_TRIS", 0)), 100, "a dome")
+
+
+func test_a_real_ball() -> void:
+	assert_eq(int(t.get("ROCK_BALL_RADIUS", 0)), 1500)
+	_true("WALK_ON_ROCK", "the asteroid is ground")
+	_true("WALK_ROUND_THE_BALL", "all the way round")
+	assert_lt(float(t.get("FAR_SIDE_UP_Y", 1)), -0.5, "up turns with it")
 
 
 func test_and_home_again() -> void:

@@ -2,17 +2,23 @@ class_name SpaceTravel
 extends Node3D
 ## Flying to another planet (issue #45). Every neighbour the planet generator
 ## lists hangs in this planet's sky where its config says ("at", metres from the
-## port): the asteroid station as a lumpy grey rock, the home planet as a great
-## curved world. A marker on screen names each one and how far it is. Fly into
-## one (within its radius plus `capture`) and the screen fades: GameFlow.travel
-## rebuilds the town scene as that planet, and you arrive in its sky, still flying
-## the same ship, above its landing bay.
+## port). A marker on screen names each one and how far it is.
+##
+## Issue #99: one map, no cutaway. Every planet's scene is the same space shifted
+## to its own port (PlanetGen.neighbours), so the sun and the stars agree. A
+## planet whose type has a space.handoff (the asteroid) is drawn here as its real
+## ball (the same rock, coarse) with its station on top; fly within handoff metres
+## of its surface and its own scene takes over on the spot, the ship exactly where
+## it was, same heading and speed, nothing faded. Climb more than that far off it
+## and its parent's scene takes over the same way. A planet with no handoff is
+## still flown into and faded to, as before (GameFlow.travel).
 ##
 ## No input of its own: ShipPilot owns the ship. This only watches where it is.
 
 signal travel_started(to: String)
 
 const CAPTURE := 400.0               ## metres outside a body's radius that count as "arrived"
+const HYSTERESIS := 300.0            ## issue #99: leaving needs this much more than arriving
 
 var pilot                            ## ShipPilot
 var bodies: Array = []               ## { id, name, at, radius, node }
@@ -21,14 +27,24 @@ var change := true                   ## false: decide but do not change scene (t
 var _layer: CanvasLayer
 var _labels: Dictionary = {}         ## id -> Label
 var _sand_bodies: Array = []         ## sand ShaderMaterials of ball neighbours (the sun is tracked)
+var self_radius := 0.0               ## issue #99: this planet's ball, and how far up its scene still holds
+var self_handoff := 0.0
+var handoffs := 0                    ## seamless switches started (traces, tests)
 
 
 func setup(ship_pilot, neighbours: Array, with_looks: bool) -> void:
 	pilot = ship_pilot
 	name = "SpaceTravel"
+	var me: Dictionary = pilot.demo.planet if pilot != null and "planet" in pilot.demo else {}
+	if not me.is_empty():
+		self_radius = PlanetGen.ball_radius(me.get("cfg", {}), null) if not me.get("world", {}).get("terrain", {}).has("sphere_radius") \
+			else float(me.world.terrain.sphere_radius)
+		self_handoff = PlanetGen.handoff_altitude(str(me.get("type", "")))
 	for n in neighbours:
 		var b := { "id": str(n.id), "at": n.at, "radius": float(n.radius), "type": str(n.type), "node": null,
-			"name": PlanetGen.display_name(PlanetGen.build(str(n.id))) }
+			"name": PlanetGen.display_name(PlanetGen.build(str(n.id))),
+			"offset": n.get("offset", n.at), "child": bool(n.get("child", true)),
+			"handoff": PlanetGen.handoff_altitude(str(n.type)) }
 		if with_looks:
 			b.node = _body(n)
 		bodies.append(b)
@@ -72,10 +88,51 @@ func _physics_process(_dt: float) -> void:
 	_update_labels(flying)
 	if not flying:
 		return
+	var pos: Vector3 = pilot.atmo.position()
 	for b in bodies:
-		if distance_to(b.id) <= 0.0:
+		if b.child and float(b.handoff) > 0.0:
+			# Issue #99: close enough to its ball: its scene, seamlessly.
+			if pos.distance_to(b.at) <= float(b.radius) + float(b.handoff):
+				handoff(b.id)
+				return
+		elif not b.child and self_handoff > 0.0:
+			# Issue #99: far enough off this ball: the parent's scene, seamlessly.
+			if pos.distance_to(Vector3(0, -self_radius, 0)) >= self_radius + self_handoff + HYSTERESIS:
+				handoff(b.id)
+				return
+		elif distance_to(b.id) <= 0.0:
 			go(b.id)
 			return
+
+
+## Issue #99: switch to planet `id`'s scene now, with no fade: the ship carries on
+## from the same point (in that planet's coordinates), heading, speed and throttle.
+func handoff(id: String) -> void:
+	var b: Dictionary = {}
+	for x in bodies:
+		if x.id == id:
+			b = x
+	if b.is_empty() or traveling != "":
+		return
+	traveling = id
+	handoffs += 1
+	if pilot.fight != null:
+		pilot.end_fight("left")
+	travel_started.emit(id)
+	var look = pilot.demo.get("look")
+	var extra := {
+		"handoff": { "position": pilot.atmo.position() - (b.offset as Vector3), "basis": pilot.atmo.flight.basis,
+			"speed": pilot.atmo.speed(), "throttle": pilot._throttle },
+		"hour": float(look.hour) if look != null else -1.0,
+		"preset": str(look.current) if look != null else "",
+	}
+	if not change:
+		last_handoff = extra
+		return
+	GameFlow.travel(get_tree() if is_inside_tree() else null, id, pilot.ship_id, str(b.name), extra)
+
+
+var last_handoff: Dictionary = {}     ## what the last handoff carried (tests, with change = false)
 
 
 ## Leave for planet `id` now (a running space fight is broken off first).
@@ -118,7 +175,13 @@ func _update_labels(flying: bool) -> void:
 
 
 ## A neighbour as seen from here: a rock for a small body, a planet for a big one.
+## Issue #99: a ball type with a handoff (the asteroid) is its real ball and
+## station, coarse, so arriving changes only the detail.
 func _body(n: Dictionary) -> Node3D:
+	if bool(n.get("ball", false)) and bool(n.get("child", false)) and PlanetGen.handoff_altitude(str(n.type)) > 0.0:
+		var real := _ball_body(n)
+		if real != null:
+			return real
 	var r := float(n.radius)
 	var mi := MeshInstance3D.new()
 	mi.name = "Planet_" + str(n.id)
@@ -156,3 +219,54 @@ func _body(n: Dictionary) -> Node3D:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.extra_cull_margin = r
 	return mi
+
+
+## Issue #99: the neighbour's own ball (its AsteroidSphere, seated on its own
+## station's footprint) at far detail, in its rock, and its station on top: the
+## very shapes its own scene builds, placed at its port's offset here.
+func _ball_body(n: Dictionary) -> Node3D:
+	var p := PlanetGen.build(str(n.id))
+	var tcfg: Dictionary = p.get("type_cfg", {})
+	var surf: Dictionary = tcfg.get("surface", {})
+	if p.is_empty() or str(tcfg.get("ground", "")) != "ball":
+		return null
+	var root := Node3D.new()
+	root.name = "Planet_" + str(n.id)
+	root.position = n.get("offset", n.at)
+	var sp := AsteroidSphere.new(float(n.radius), surf)
+	var site := site_of(p.town)
+	sp.configure_site(site.floor, site.walls, site.sunken, 0.0)
+	var pt := PlanetTerrain.new()
+	pt.use_sphere(sp)
+	pt.rock_look = surf.get("look", {})
+	pt.far_chunks = 3
+	pt.far_cells = 40
+	root.add_child(pt)
+	pt.build_far_only(n.at)
+	_sand_bodies.append(pt.material)
+	if pilot != null and pilot.demo != null and bool(tcfg.get("enclosed", false)):
+		var ext := AsteroidWorld.new()
+		root.add_child(ext)
+		ext.build_exterior(p.town.get("station", {}), pilot.demo._flat_mats())
+	return root
+
+
+## A town's footprint for seating a ball (town_demo.desert_site, from data).
+static func site_of(town: Dictionary) -> Dictionary:
+	var floor_rect := Rect2()
+	var sunken := []
+	var first := true
+	for b in town.get("boxes", []):
+		if str(b.kind) != "floor":
+			continue
+		var r := Rect2(float(b.min[0]), float(b.min[2]), float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2]))
+		if float(b.max[1]) < -0.1:
+			sunken.append({ "rect": r, "y": float(b.min[1]) })
+			continue
+		floor_rect = r if first else floor_rect.merge(r)
+		first = false
+	var bd: Dictionary = town.get("bounds", {})
+	var walls := floor_rect
+	if not bd.is_empty():
+		walls = Rect2(float(bd.min[0]), float(bd.min[1]), float(bd.max[0]) - float(bd.min[0]), float(bd.max[1]) - float(bd.min[1]))
+	return { "floor": floor_rect, "walls": walls, "sunken": sunken }
