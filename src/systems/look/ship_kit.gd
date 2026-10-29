@@ -64,6 +64,8 @@ func build(look_id: String) -> Node3D:
 	var model := _load_model(scene_path)
 	if model != null:
 		model.name = "Model"
+		if p.get("darken") is Dictionary:
+			darken(model, p.darken, _c(p, "trim", "#6b1e1e"))     # issue #76: the Remnant's dark ships
 		root.add_child(model)
 		root.add_child(engines)
 		root.set_meta("source", "scene")
@@ -81,6 +83,36 @@ func build(look_id: String) -> Node3D:
 			_dart(body, engines, p)
 	root.set_meta("source", "kit")
 	return root
+
+
+## Issue #76: a ship model painted dark. Textured parts go through the dark-gun
+## shader (PlayerAvatar._darken: grey texels down, painted panels kept); flat-colour
+## parts (the interceptor's model) go dark the same way by hand, their bright
+## accent colours turned to `accent` (the look's trim: the Remnant's oxblood).
+static func darken(model: Node3D, d: Dictionary, accent: Color) -> void:
+	var body_mul := float(d.get("body_mul", 0.3))
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		var textured := false
+		for i in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(i) as BaseMaterial3D
+			if src == null:
+				continue
+			if src.albedo_texture != null:
+				textured = true
+				continue
+			var c := src.albedo_color
+			var m := src.duplicate() as BaseMaterial3D
+			if c.s > 0.5 and c.v > 0.3:
+				m.albedo_color = Color(accent.r, accent.g, accent.b, c.a).lerp(Color(0, 0, 0, c.a), 0.15)
+			else:
+				m.albedo_color = Color(c.r * body_mul, c.g * body_mul, c.b * body_mul, c.a)
+			m.metallic = maxf(m.metallic, 0.45)
+			m.roughness = minf(m.roughness, 0.55)
+			mi.set_surface_override_material(i, m)
+		if textured:
+			PlayerAvatar._darken(mi, d)
 
 
 func _load_model(path: String) -> Node3D:
