@@ -2,6 +2,24 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-27 — Finer far-planet sand (issue #93)
+
+- **64 samples per far chunk, with the chunk layout and terrain unchanged.** The
+  whole-ball mesh previously used 4 chunks per cube-face side and 48 cells per
+  chunk side. Raising only the latter to 64 reduces far-cell spacing by 25% while
+  retaining 96 chunks, their matching borders, the same `PlanetSphere.elevation`
+  source and radial `radius + elevation` placement. Near and mid meshes, their
+  colliders, and map scale are untouched. Alternative: more chunks, which would
+  also raise draw calls; or a larger mid ring, which does not improve the far
+  silhouette. Rejected for this coarse-horizon item.
+- **Bounded cost:** far vertex and index counts rise about 1.8x (roughly 221k to
+  393k vertices and 1.27M to 2.29M indices across the ball); the packed vertex,
+  normal and index arrays total about 10.4 MB to 18.6 MB before engine/GPU copies.
+  The same 96 chunks are still generated in parallel at load, so far-mesh CPU work
+  also rises about 1.8x; no recurring rebuild or collision work is added. The
+  focused sphere test checks the chunk vertex budget, finer spacing and radial
+  height agreement.
+
 ## 2026-10-27 — New player, guard and cantina owner art, built like the locals (issue #79)
 
 - **Do not run the full test suite.** We are not going to run this because it takes way too long, and the human builders can test if it matters for gameplay faster than the tests can run. Instead, run a small baseline tests and smoke tests (e.g. app loads, new feature seems to work), if it seems to pass, open the PR and tell them **how** to test it.
