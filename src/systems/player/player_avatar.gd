@@ -360,6 +360,13 @@ static func _meshes_under(n: Node) -> Array:
 
 # ------------------------------------------------------------------ per frame
 
+## Set the full local basis so the avatar is upright in the parent's ground frame.
+func align_to_ground(ground_tilt: Basis) -> void:
+	var parent := get_parent() as Node3D
+	var parent_basis := parent.global_basis.orthonormalized() if parent != null else Basis.IDENTITY
+	basis = parent_basis.inverse() * ground_tilt * Basis(Vector3.UP, facing_yaw)
+
+
 ## inp: velocity (world Vector3), grounded, crouch, sprint, cam_yaw, aim_pitch,
 ## upper (BodyAnimator.UPPER_*), dt is seconds.
 func animate(dt: float, inp: Dictionary) -> void:
@@ -384,12 +391,11 @@ func animate(dt: float, inp: Dictionary) -> void:
 	elif speed > 0.4:
 		want = atan2(flat.x, flat.z)
 	facing_yaw = _approach_angle(facing_yaw, want, (turn_rate * 2.0 if first_person else turn_rate) * dt)
-	var parent_yaw := (get_parent() as Node3D).global_rotation.y if get_parent() is Node3D else 0.0
-	# Issue #77: stand along the ground's up on the home planet (the body's tilt).
-	if tilt is Basis and tilt != Basis.IDENTITY:
-		basis = (get_parent() as Node3D).global_basis.orthonormalized().inverse() * tilt * Basis(Vector3.UP, facing_yaw)
-	else:
-		rotation.y = facing_yaw - parent_yaw
+	# Always replace the full basis. On a ball, the ground frame can be tilted;
+	# after a teleport back to a flat surface, the same calculation removes any
+	# pitch/roll left by the previous frame instead of only rewriting rotation.y.
+	var ground_tilt: Basis = tilt if tilt is Basis else Basis.IDENTITY
+	align_to_ground(ground_tilt)
 
 	var local := Basis(Vector3.UP, facing_yaw).inverse() * flat
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)

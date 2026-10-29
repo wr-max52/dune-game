@@ -173,17 +173,33 @@ func _physics_process(delta: float) -> void:
 
 
 ## Read "up" from the planet (if any) and stand the capsule along it.
-func _update_tilt() -> void:
+func _update_tilt(force: bool = false) -> void:
 	var t := Basis.IDENTITY
 	if PlanetSphere.current != null:
 		t = PlanetSphere.current.tilt_at(global_position)
-	if t == Basis.IDENTITY and tilt == Basis.IDENTITY:
+	if not force and t == Basis.IDENTITY and tilt == Basis.IDENTITY:
 		return                   # flat here: nothing to turn (the body's yaw spins the capsule otherwise)
 	tilt = t
 	up_direction = t.y
 	var col := _capsule()
 	if col != null:
 		_place_capsule(col, (col.shape as CapsuleShape3D).height)
+
+
+## Rebuild the ground frame immediately after a hard position change. Physics has
+## not moved the body yet, so relying on its next tick leaves the capsule, avatar,
+## and controller temporarily using the old planet's up direction.
+func align_to_ground(clear_motion: bool = true) -> void:
+	if clear_motion:
+		velocity = Vector3.ZERO
+	_update_tilt(true)
+	controller.body_pos = global_position
+	controller.velocity = tilt.inverse() * velocity
+	controller.on_ground = false
+	_was_on_floor = false
+	var avatar := get_node_or_null("Avatar")
+	if avatar != null and avatar.has_method("align_to_ground"):
+		avatar.call("align_to_ground", tilt)
 
 
 ## The capsule's local transform: standing along `tilt`, its foot at the origin.

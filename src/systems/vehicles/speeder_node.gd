@@ -153,15 +153,21 @@ func dismount() -> bool:
 	p.visible = true
 	_player_collision(true)
 	p.global_position = spot
-	p.velocity = Vector3.ZERO
-	p.controller.velocity = Vector3.ZERO
-	p.controller.body_pos = spot
-	if demo.terrain != null:
-		demo.terrain.follow(p)
 	var rig = demo._rig
 	if rig != null:
 		rig.clear_override()
 		rig.rig.yaw = model.yaw
+		p.rotation.y = rig.rig.yaw
+		if "player_kit" in demo and demo.player_kit != null and demo.player_kit.avatar != null:
+			demo.player_kit.avatar.facing_yaw = rig.rig.yaw
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	else:
+		p.velocity = Vector3.ZERO
+		p.controller.velocity = Vector3.ZERO
+		p.controller.body_pos = spot
+	if demo.terrain != null:
+		demo.terrain.follow(p)
 	if _hud != null:
 		_hud.visible = false
 	dismounted.emit()
