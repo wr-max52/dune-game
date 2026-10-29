@@ -7,6 +7,7 @@ const TownDemo := preload("res://scenes/town_demo.gd")
 const Body := preload("res://src/systems/player/character_body.gd")
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
+const BoltScene := preload("res://scenes/entities/bolt.tscn")
 
 var _site: Dictionary
 
@@ -291,3 +292,118 @@ func test_the_town_always_has_ground_wherever_the_player_is() -> void:
 		await wait_physics_frames(1)
 	assert_true(body.is_on_floor(), "standing on the town's own collider")
 	assert_almost_eq(body.global_position.y, t.height_at(-161, -60), 0.1, "on the sand there, not below it")
+
+
+# ---- issue #93: droids, the fall guard and bolts, all round the ball ---------
+
+class FakePlayer extends CharacterBody3D:
+	var piloting := false
+	var locked := false
+
+
+## Spots on the ball from the port's side, over the equator and past it (the flat (x, z)
+## line stops being the ground there).
+const ROUND_THE_BALL := [[0.0, 3000.0], [4000.0, 0.0], [8000.0, 0.0], [11000.0, 3000.0], [14000.0, -2000.0]]
+
+
+func test_droids_stand_upright_on_the_ground_past_the_equator() -> void:
+	var g := _flight().ground
+	var sp := PlanetSphere.current
+	for m in [[8000.0, 0.0], [11000.0, 3000.0]]:
+		var at := sp.surface_at(m[0], m[1])
+		var up := sp.up_at(at)
+		var root := Node3D.new()
+		add_child_autofree(root)
+		var p := FakePlayer.new()
+		root.add_child(p)
+		p.global_position = at + up
+		WorldState.reset()
+		WorldState.credits = 200
+		var ctl := DroidController.new()
+		ctl.setup(null, p, null)
+		ctl.ground = g
+		root.add_child(ctl)
+		assert_eq(ctl.buy("assassin"), "bought")
+		await wait_physics_frames(2)
+		var u: Node3D = ctl.companions.values()[0]
+		assert_almost_eq(g.height_above(u.global_position), 0.0, 0.1, "on the sand, not in it or over it at %s" % [m])
+		assert_gt(u.global_basis.y.dot(sp.up_at(u.global_position)), 0.999, "head away from the planet at %s" % [m])
+		# Walk the player off along the ground; the droid follows and stays on it, upright.
+		p.global_position = sp.surface_at(m[0] + 25.0, m[1]) + sp.up_at(sp.surface_at(m[0] + 25.0, m[1]))
+		for i in 240:
+			await wait_physics_frames(1)
+		assert_lt(u.global_position.distance_to(p.global_position), 8.0, "it followed round the curve")
+		assert_almost_eq(g.height_above(u.global_position), 0.0, 0.1, "still on the sand")
+		assert_gt(u.global_basis.y.dot(sp.up_at(u.global_position)), 0.999, "still upright")
+
+
+func test_the_remnants_outpost_droids_stand_upright_on_the_ball() -> void:
+	var g := _flight().ground
+	var sp := PlanetSphere.current
+	var at := sp.surface_at(11000.0, 3000.0)
+	var up := sp.up_at(at)
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var p := FakePlayer.new()
+	root.add_child(p)
+	p.global_position = at + up
+	var ctl := DroidController.new()
+	ctl.setup(null, p, null)
+	ctl.ground = g
+	root.add_child(ctl)
+	var patrol: Array = [at, sp.surface_at(11040.0, 3000.0), sp.surface_at(11040.0, 3040.0)]
+	var u := ctl._spawn_remnant({ "kind": "assassin", "variant": "remnant", "patrol": patrol }, 0)
+	for i in 300:
+		await wait_physics_frames(1)
+	assert_almost_eq(g.height_above(u.global_position), 0.0, 0.1, "its patrol keeps to the sand")
+	assert_gt(u.global_basis.y.dot(sp.up_at(u.global_position)), 0.999, "upright on the far side")
+
+
+func test_the_fall_guard_measures_along_the_grounds_up() -> void:
+	var g := _flight().ground
+	var sp := PlanetSphere.current
+	var gear := GearController.new()
+	gear.ground = g
+	for m in ROUND_THE_BALL:
+		var at := sp.surface_at(m[0], m[1])
+		var up := sp.up_at(at)
+		assert_false(gear.fell_out_of_world(at + up * 2.0), "standing on the ground at %s is not a fall" % [m])
+		assert_false(gear.fell_out_of_world(at + up * 800.0), "nor is flying over it at %s" % [m])
+		assert_true(gear.fell_out_of_world(at - up * (GearController.FALL_MARGIN + 20.0)), "well under it at %s is" % [m])
+	gear.free()
+
+
+func test_a_ships_bolt_stops_at_the_ground_past_the_equator() -> void:
+	var g := _flight().ground
+	var sp := PlanetSphere.current
+	for m in ROUND_THE_BALL:
+		var at := sp.surface_at(m[0], m[1])
+		var up := sp.up_at(at)
+		var b = BoltScene.instantiate()
+		b.over_ground = func(p: Vector3) -> float: return g.height_above(p)
+		b.ground_up = func(p: Vector3) -> Vector3: return g.up_at(p)
+		add_child_autofree(b)
+		b.global_position = at + up * 5.0
+		assert_false(b._in_ground(), "5 m over the ground at %s" % [m])
+		b.global_position = at - up * 0.3
+		assert_true(b._in_ground(), "in the ground at %s" % [m])
+		assert_almost_eq(g.height_above(b.global_position), 0.0, 0.05, "put back on the surface at %s" % [m])
+
+
+func test_a_bolt_dropped_on_the_far_side_bursts_there() -> void:
+	var g := _flight().ground
+	var sp := PlanetSphere.current
+	var at := sp.surface_at(11000.0, 3000.0)
+	var up := sp.up_at(at)
+	var b = BoltScene.instantiate()
+	b.direction = -up
+	b.speed = 100.0
+	b.range_m = 500.0
+	b.splash_radius = 3.0
+	b.over_ground = func(p: Vector3) -> float: return g.height_above(p)
+	b.ground_up = func(p: Vector3) -> Vector3: return g.up_at(p)
+	add_child_autofree(b)
+	b.global_position = at + up * 30.0
+	for i in 20:
+		await wait_physics_frames(1)
+	assert_false(is_instance_valid(b) and b._alive, "it burst on the ground instead of flying on under the planet")

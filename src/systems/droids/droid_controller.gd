@@ -28,7 +28,10 @@ const DROID_LAYER := 2              ## bolts' sweep rays find them; bodies walk 
 var demo                            ## the town scene (town, terrain, garrison, npcs, training_range)
 var player: CharacterBody3D
 var gear: GearController            ## for its HUD (prompt, toast) and its focus (E is shared)
-var ground_at := Callable()         ## (x, z) -> sand height
+var ground_at := Callable()         ## (x, z) -> sand height (flat worlds, and the wrecks' placing)
+## Issue #93: the world's ground (the ship's). On the home planet's ball the droids stand on
+## its height_above / surface_below along the ground's up, never the flat (x, z) line.
+var ground: WorldGround
 var cfg: Dictionary = {}
 var labels: Dictionary = {}
 var menu: DroidMenu
@@ -64,6 +67,8 @@ func _ready() -> void:
 	add_child(menu)
 	if gear != null and gear.ground_at.is_valid():
 		ground_at = gear.ground_at
+	if ground == null and demo != null and "pilot" in demo and demo.pilot != null:
+		ground = demo.pilot.ground
 	if demo != null and "town" in demo and demo.town != null:
 		var v: Dictionary = cfg.get("vendor", {})
 		if not demo.town.get_marker(str(v.get("marker", ""))).is_empty():
@@ -370,7 +375,8 @@ func _build_wreck(w: Dictionary) -> void:
 	u.uid = int(w.uid)
 	add_child(u)
 	u.global_position = Vector3(float(w.pos[0]), float(w.pos[1]), float(w.pos[2]))
-	u.rotation.y = rng.randf() * TAU
+	u.yaw = rng.randf() * TAU
+	_orient(u)
 	_lay_down(u)
 	wreck_nodes[int(w.uid)] = u
 
@@ -434,7 +440,8 @@ func _take_remote() -> void:
 	# Issue #80: the same droid, where it was: no swap to another look, no jump.
 	var u := _spawn_companion(d, at if at != Vector3.INF else player.global_position, at.y if at != Vector3.INF else INF)
 	if at != Vector3.INF:
-		u.rotation.y = xf.basis.get_euler().y
+		u.yaw = xf.basis.get_euler().y
+		_orient(u)
 	_beep(u)
 	_toast(_l("tamed"))
 
@@ -455,7 +462,7 @@ func _spawn_companion(d: Dictionary, at: Vector3, from_y := INF) -> DroidUnit:
 	var u := _make_unit(str(d.kind), str(d.variant))
 	u.uid = int(d.uid)
 	add_child(u)
-	u.global_position = Vector3(at.x, _ground_y(at), at.z)
+	_put(u, at)
 	if u.kind == "floating":
 		u.look_lift += u.quirk().z * 0.5 - 0.15      # issue #64: not all at one height
 		# Issue #80: start at the height it was at (a tamed remote) and ease to its own.
@@ -484,10 +491,15 @@ func _despawn_companions() -> void:
 ## there (within `settle` m). It catches up faster when far behind, and jumps to
 ## the slot if it was left a long way back (a jetpack hop, a speeder ride).
 func _follow(dt: float) -> void:
-	var v := Vector3(player.velocity.x, 0, player.velocity.z)
+	var pup := _up(player.global_position)
+	var v := _flat(player.velocity, pup)
 	if v.length() > 0.6:
 		_heading = v.normalized()
-	var right := _heading.cross(Vector3.UP).normalized()
+	else:
+		# Standing still: keep the last heading, laid back onto the ground's plane here.
+		var h := _flat(_heading, pup)
+		_heading = h.normalized() if h.length() > 0.01 else _flat(-player.global_basis.z, pup).normalized()
+	var right := _heading.cross(pup).normalized()
 	_follow_t += dt
 	var of_kind := {}                  # kind -> how many placed so far
 	for uid in companions:
@@ -510,7 +522,7 @@ func _follow(dt: float) -> void:
 				u.via.pop_front()
 			else:
 				slot = wp                         # issue #80: round the stall first
-		var to := Vector3(slot.x - u.global_position.x, 0, slot.z - u.global_position.z)
+		var to := _flat(slot - u.global_position, _up(u.global_position))
 		var dist := to.length()
 		var leash := float(f.get("leash", 5.0)) + me.z * 2.0 + 0.8 * k
 		if not u.following and _flat_dist(u.global_position, player.global_position) > leash:
@@ -532,8 +544,7 @@ func _follow(dt: float) -> void:
 		elif u.kind != "assassin" or u.target == null:
 			_face(u, player.global_position - u.global_position)
 		pos += _separation(u, pos) * dt
-		pos.y = _ground_y(pos)
-		u.global_position = pos
+		_put(u, pos)
 		u.walk(dt, u.following, speed, u.kind == "assassin" and u.target != null)
 
 
@@ -543,10 +554,11 @@ func _separation(u: DroidUnit, at: Vector3) -> Vector3:
 	for other in companions.values():
 		if other == u:
 			continue
-		var d := Vector3(at.x - other.global_position.x, 0, at.z - other.global_position.z)
+		var up := _up(at)
+		var d := _flat(at - other.global_position, up)
 		var l := d.length()
 		if l < 1.3:
-			push += (d / l if l > 0.01 else Vector3(u.quirk().x - 0.5, 0, 0.5 - u.quirk().y).normalized()) * (1.3 - l) * 4.0
+			push += (d / l if l > 0.01 else PlanetSphere.tilt_to(up) * Vector3(u.quirk().x - 0.5, 0, 0.5 - u.quirk().y).normalized()) * (1.3 - l) * 4.0
 	return push
 
 
@@ -606,8 +618,7 @@ func _build_hauler() -> void:
 	hauler.patrol = route.map(func(p): return _v3(p))
 	hauler.spec = { "hauler": true }
 	add_child(hauler)
-	var p: Vector3 = hauler.patrol[0]
-	hauler.global_position = Vector3(p.x, _ground_y(p), p.z)
+	_put(hauler, hauler.patrol[0])
 	hauler.patrol_i = 1 % hauler.patrol.size()      # already at the first stop: off to the next
 	DroidKit.set_awake(hauler.look, true)
 
@@ -623,21 +634,20 @@ func _hauler_step(dt: float) -> void:
 		_hauler_pause -= dt
 	else:
 		var goal: Vector3 = hauler.patrol[hauler.patrol_i]
-		var to := Vector3(goal.x - hauler.global_position.x, 0, goal.z - hauler.global_position.z)
+		var to := _flat(goal - hauler.global_position, _up(hauler.global_position))
 		if to.length() < 0.4:
 			hauler.patrol_i = (hauler.patrol_i + 1) % hauler.patrol.size()
 			_hauler_pause = float(hc.get("pause_s", 4.0))
 		else:
 			var spd := float(hc.get("walk_speed", 1.3))
 			var pos: Vector3 = hauler.global_position + to.normalized() * minf(spd * dt, to.length())
-			pos.y = _ground_y(pos)
-			hauler.global_position = pos
+			_put(hauler, pos)
 			_face(hauler, to)
 			moving = true
 	hauler.walk(dt, moving, float(hc.get("walk_speed", 1.3)) if moving else 0.0)
 	var load = gear.pickup_node(str(hc.get("carries", ""))) if gear != null else null
 	if load != null and is_instance_valid(load):
-		var at := hauler.global_position + Vector3(0, float(hc.get("load_lift", 1.05)), 0)
+		var at := hauler.global_position + _up(hauler.global_position) * float(hc.get("load_lift", 1.05))
 		load.base = at
 		load.global_position = at
 
@@ -680,7 +690,7 @@ func _spawn_remnant(spec: Dictionary, start: int, at := Vector3.INF) -> DroidUni
 	u.patrol_i = start % maxi(1, u.patrol.size())
 	add_child(u)
 	var p: Vector3 = at if at != Vector3.INF else (u.patrol[u.patrol_i] if not u.patrol.is_empty() else Vector3.ZERO)
-	u.global_position = Vector3(p.x, _ground_y(p), p.z)
+	_put(u, p)
 	DroidKit.set_awake(u.look, true)
 	remnant.append(u)
 	return u
@@ -764,13 +774,12 @@ func _remnant_step(dt: float) -> void:
 		if pts.is_empty():
 			continue
 		var goal: Vector3 = pts[u.patrol_i]
-		var to := Vector3(goal.x - u.global_position.x, 0, goal.z - u.global_position.z)
+		var to := _flat(goal - u.global_position, _up(u.global_position))
 		if to.length() < 0.6:
 			u.patrol_i = (u.patrol_i + 1) % pts.size()
 			continue
 		var pos: Vector3 = u.global_position + to.normalized() * minf(float(rc.get("walk_speed", 2.2)) * dt, to.length())
-		pos.y = _ground_y(pos)
-		u.global_position = pos
+		_put(u, pos)
 		_face(u, to)
 		u.walk(dt, true, float(rc.get("walk_speed", 2.2)))
 
@@ -894,28 +903,80 @@ func _make_unit(kind: String, variant: String) -> DroidUnit:
 	return u
 
 
-func _ground_y(p: Vector3) -> float:
-	var top := (player.global_position.y if player != null else p.y) + 2.5
-	top = maxf(top, p.y + 1.0)
+## Issue #93: "up" at p -- the ground's on the home planet's ball, straight up elsewhere.
+func _up(p: Vector3) -> Vector3:
+	if ground != null:
+		return ground.up_at(p)
+	return PlanetSphere.current.up_at(p) if PlanetSphere.current != null else Vector3.UP
+
+
+## v with its part along `up` taken out: a move or a heading on the ground's tangent plane.
+static func _flat(v: Vector3, up := Vector3.UP) -> Vector3:
+	return v - up * v.dot(up)
+
+
+## Whether the ground here is the home planet's ball (so flat (x, z) queries are wrong).
+func _on_ball() -> bool:
+	return ground != null and ground.sphere() != null
+
+
+## The ground point under p, along the ground's up: the first physics surface (the town's
+## floors and roofs, the desert's collider) seen from just over the player's feet, else the
+## world's ground (WorldGround.surface_below on the ball), else the flat sand height.
+func _ground_point(p: Vector3) -> Vector3:
+	var up := _up(p)
+	var lift := 1.0
+	if player != null:
+		lift = maxf((player.global_position - p).dot(up) + 2.5, 1.0)
+	var top := p + up * lift
 	if is_inside_tree():
-		var q := PhysicsRayQueryParameters3D.create(Vector3(p.x, top, p.z), Vector3(p.x, top - 60.0, p.z), 1)
+		var q := PhysicsRayQueryParameters3D.create(top, top - up * 60.0, 1)
 		if player != null:
 			q.exclude = [player.get_rid()]
 		var hit := get_world_3d().direct_space_state.intersect_ray(q)
 		if not hit.is_empty():
-			return hit.position.y
+			return hit.position
+	if _on_ball():
+		return ground.surface_below(top)
 	if ground_at.is_valid():
-		return float(ground_at.call(p.x, p.z))
-	return player.global_position.y if player != null else p.y
+		return Vector3(p.x, float(ground_at.call(p.x, p.z)), p.z)
+	if player != null:
+		return p + up * (player.global_position - p).dot(up)
+	return p
+
+
+## The sand height under p on a flat world (kept for callers that want a number).
+func _ground_y(p: Vector3) -> float:
+	return _ground_point(p).y
+
+
+## Stand u on the ground under p, upright to it.
+func _put(u: DroidUnit, p: Vector3) -> void:
+	u.global_position = _ground_point(p)
+	_orient(u)
+
+
+## u's basis: its heading (yaw) about the ground's up here. On the ball the up turns with
+## where it stands, so a droid on the far side stands the right way up, as the player does.
+func _orient(u: DroidUnit) -> void:
+	var yaw := Basis(Vector3.UP, u.yaw)
+	if _on_ball():
+		u.global_basis = PlanetSphere.tilt_to(_up(u.global_position)) * yaw
+	else:
+		u.rotation = Vector3(0.0, u.yaw, 0.0)
 
 
 func _face(u: DroidUnit, dir: Vector3) -> void:
-	var flat := Vector3(dir.x, 0, dir.z)
+	var up := _up(u.global_position)
+	var flat := _flat(dir, up)
 	if flat.length() > 0.05:
-		u.rotation.y = atan2(-flat.x, -flat.z)
+		# The heading in the ground's own frame (where "up" is world up again).
+		var local := PlanetSphere.tilt_to(up).inverse() * flat
+		u.yaw = atan2(-local.x, -local.z)
+		_orient(u)
 	if u.kind == "floating":
 		var m := u.look.get_node("Model") as Node3D
-		m.rotation.x = clampf(atan2(dir.y, flat.length()), -0.8, 0.8)
+		m.rotation.x = clampf(atan2(dir.dot(up), flat.length()), -0.8, 0.8)
 
 
 ## Idle chatter: each droid near the player beeps in its own voice now and then.
@@ -942,7 +1003,8 @@ func _toast(text: String) -> void:
 
 
 static func _flat_dist(a: Vector3, b: Vector3) -> float:
-	return Vector2(a.x - b.x, a.z - b.z).length()
+	var up := PlanetSphere.current.up_at(a) if PlanetSphere.current != null else Vector3.UP
+	return _flat(a - b, up).length()
 
 
 static func _v3(a) -> Vector3:
@@ -977,6 +1039,7 @@ class DroidUnit extends StaticBody3D:
 	var via: Array = []             ## issue #80: points to pass first (round the merchant's stall)
 	var lift_now := 0.0             ## issue #80: its hover height now, easing to look_lift
 	var falling := false            ## issue #80: dropping after it died (the bob stops)
+	var yaw := 0.0                  ## issue #93: its heading about the ground's up (see _orient)
 
 	## This droid's own small differences, 0..1 each, steady for its uid.
 	func quirk() -> Vector3:
