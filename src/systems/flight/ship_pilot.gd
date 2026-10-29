@@ -393,6 +393,7 @@ func exit_ship() -> bool:
 	_motion_basis_valid = false
 	if demo.detail != null:
 		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
+	_set_flight_terrain_quality(false)
 	p.piloting = false
 	p.vehicle = null
 	p.locked = false
@@ -644,8 +645,16 @@ func _physics_process(dt: float) -> void:
 func _exit_tree() -> void:
 	if demo != null and is_instance_valid(demo) and demo.detail != null and atmo != null:
 		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
+	_set_flight_terrain_quality(false)
 	_motion_basis_valid = false
 	Sound.set_space(false)
+
+
+func _set_flight_terrain_quality(active: bool) -> void:
+	if demo == null or not is_instance_valid(demo) or demo.terrain == null:
+		return
+	if demo.terrain is PlanetTerrain:
+		(demo.terrain as PlanetTerrain).set_fast_flight_quality(active)
 
 
 ## Issue #16: the engine drones while the ship is in the air; pitch follows the throttle.
@@ -732,6 +741,7 @@ func _seated(dt: float) -> void:
 		_motion_basis_valid = true
 		var in_flight := atmo.state in [AtmoFlight.State.LIFTOFF, AtmoFlight.State.FLYING, AtmoFlight.State.LANDING]
 		demo.detail.update_motion(dt, atmo.altitude(), atmo.speed(), turn_rate, in_flight)
+		_set_flight_terrain_quality(demo.detail.motion_active)
 	if demo._rig != null:
 		demo._rig.set_override(chase.update(dt, atmo.transform()), 72.0)
 	_update_hud(agl_now)
