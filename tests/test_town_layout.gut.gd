@@ -39,7 +39,7 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 181)
+	assert_eq(t.boxes().size(), 182)   # issue #76: + the barracks landing pad
 	assert_eq(t.markers().size(), 26)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89
 	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)

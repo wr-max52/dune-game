@@ -1368,6 +1368,25 @@
    "look": "stall_back"
   },
   {
+   "id": "barracks_pad",
+   "zone": "barracks",
+   "kind": "pad",
+   "min": [
+    64,
+    0,
+    17.8
+   ],
+   "max": [
+    76,
+    0.03,
+    29.8
+   ],
+   "shape": "round",
+   "parked_yaw_deg": 0,
+   "remnant_ship": "remnant_interceptor",
+   "note": "Issue #76: the Remnant's landing pad in the barracks yard. Its dark interceptor (remnant_ship) stands here and hunts you in the air when you are wanted (src/systems/flight/atmo_fighter.gd); shot down, a new one is here a while later. No collision: the ship carries its own hull."
+  },
+  {
    "id": "barracks_hall",
    "zone": "barracks",
    "kind": "solid",
@@ -3737,11 +3756,11 @@
     ],
     [
      84,
-     24
+     22
     ],
     [
-     76,
-     24
+     80,
+     22
     ]
    ],
    "note": "East barracks trooper's loop between the hall and the yard wall."

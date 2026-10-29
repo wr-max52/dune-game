@@ -10,6 +10,10 @@ extends RefCounted
 ##   "Eye*"   glowing meshes (brightness shows whether it is awake)
 ##   "Muzzle" where bolts leave (assassin only)
 
+## Issue #76: how dark an enemy droid's carried gun goes (hand_weapons.json "dark").
+const DARK_GUN := { "body_mul": 0.28, "accent_mul": 0.8, "glow": 0.6 }
+
+
 static func build(kind: String, variant: Dictionary, mats: LookMaterials, look: Dictionary = {}) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Droid_" + kind
@@ -21,6 +25,10 @@ static func build(kind: String, variant: Dictionary, mats: LookMaterials, look: 
 	var eye := Color(str(variant.get("eye", "#4ad0ff")))
 	if _from_model(model, look, body, eye, mats):
 		root.set_meta("source", "model")
+		# Issue #76: an enemy droid's gun is the dark variant (the variant's "dark_gun").
+		var gun := model.find_child("Carry", true, false) as Node3D
+		if gun != null and bool(variant.get("dark_gun", false)):
+			PlayerAvatar._darken(gun, DARK_GUN)
 		return root
 	root.set_meta("source", "kit")
 	match kind:
