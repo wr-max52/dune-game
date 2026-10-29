@@ -2,6 +2,37 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The crash site: speeder jumps, an interior to fight through (2026-10-29, issue #148)
+
+- **Speeder jump.** A bent hull plate stands on a brace beside the boarding plate.
+  Ride up it toward the stern and you fly off the end. A speeder can also ride up
+  the boarding plate into the hold and up the hold's sloping deck.
+- **A level interior.** The hold climbs to a large interior deck high in the
+  stern. Its floor is level with the horizon, not tilted with the hull. To reach
+  it, walk up the starboard side of the hold and step onto the deck at its
+  stern end.
+- **The bridge.** A ramp climbs from the interior deck through torn dorsal
+  plating to a level bridge platform on struts, with the bridge house at its bow
+  end. It stands about 150 m over the dunes. The old solid bridge block and one
+  radiator fin are gone to make room for it.
+- **Ramps and broken railings.** A second ramp joins the interior deck to the
+  stern end of the upper gallery. Railings line the open edges, with some panels
+  missing and some sagging.
+- **All of it is the ship's metal.** Every new plate wears the wreck's metal
+  shader.
+- **The Remnant aboard.** An assassin droid patrols the bridge. An assassin
+  droid and a floating droid patrol the interior, and a floating droid patrols
+  the hold. They shoot on sight. Nothing out there sets off the town's alarm.
+  A destroyed one comes back after 3 minutes.
+- **A red energy saber.** An old cargo droid in the deep hold carries it on its
+  back. Press E beside it to take the saber. Owning it turns your energy sword
+  red.
+- The droids, their routes and the hauler are data: `content/core/droids/droids.json`
+  ("wreck"). The geometry is in `src/systems/world/starcruiser_wreck.gd`.
+- The plates you ride or walk on are ground, not obstacles. A speeder no longer
+  catches the plate it is riding on as it climbs.
+- Tests: `tests/test_crash_site.gut.gd`. `tools/review/wreck_probe.gd` still
+  passes. The full CI suite was not run.
 ## Smooth on foot again (2026-10-29)
 
 - **Walking near the dune packs no longer drops the game to a crawl.** Every

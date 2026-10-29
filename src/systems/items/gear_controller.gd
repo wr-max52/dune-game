@@ -10,6 +10,8 @@ extends Node
 ##   - attaches and detaches gear on `gear_toggle` (G),
 ##   - gives the player node a Jetpack while one is on its back, puts the pack's
 ##     look on the body's chest joint, and lights its flames while thrusting,
+##   - issue #148: owning an item with a "blade_color" (the red saber from the
+##     wreck) turns the player's energy sword that colour,
 ##   - draws the fuel meter, and
 ##   - catches a player who flew out over the walls (the town has no ground there)
 ##     and puts them back where they last stood.
@@ -147,6 +149,9 @@ func _build_pickups() -> void:
 			continue
 		var node = PickupNode.new()
 		node.setup(items, entry, item, _place(entry))
+		# Issue #148: one a droid carries stays hidden (and out of reach) until
+		# its carrier puts it on its back (DroidController._haul).
+		node.visible = not bool(entry.get("carried", false))
 		add_child(node)
 		pickups.append(node)
 
@@ -424,6 +429,20 @@ func sync_gear() -> void:
 	else:
 		player.jetpack = null
 	_mount_worn(back, item)
+	var avatar := player.get_node_or_null("Avatar")
+	var color := blade_color()
+	if avatar != null and avatar.has_method("set_blade_color") and color.a > 0.0:
+		avatar.set_blade_color(color)
+
+
+## Issue #148: the energy sword's colour from what the player owns (an item with
+## "blade_color"), or alpha 0 for the default.
+func blade_color() -> Color:
+	for id in inv().owned:
+		var item: Dictionary = content.get_item(str(id))
+		if inv().has(str(id)) and item.has("blade_color"):
+			return Color(str(item.blade_color))
+	return Color(0, 0, 0, 0)
 
 
 func _mount_worn(id: String, item: Dictionary) -> void:
