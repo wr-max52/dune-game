@@ -394,15 +394,20 @@ func _radial_basis(angle: float) -> Basis:
 		Vector3(cos(angle), 0, sin(angle)))
 
 
+## The station's lights are its own, not the sun's: they stay on round the
+## clock (the day presets switch the town's street lamps off, and the sunk pit
+## and the roofed hallway get almost no sky light), so none is handed to the
+## time-of-day lamp switch.
 func _station_lighting(env: LookEnvironment, status: StandardMaterial3D) -> void:
 	if env == null:
 		return
-	env.track_glow(status)
-	_add_wall_lamps(env, rc, rw, wall_h, 8, 1, status, 1.45, 15.0)
-	_add_wall_lamps(env, pit_c, pit_r, liner_h, 8, -1, status, 1.1, 13.0)
+	status.emission_energy_multiplier = 2.4
+	_add_wall_lamps(rc, rw, wall_h, 8, 1, status, 1.45, 15.0)
+	_add_wall_lamps(pit_c, pit_r, liner_h, 8, -1, status, 1.6, 22.0)
+	_pit_floor_lights(status)
 
 
-func _add_wall_lamps(env: LookEnvironment, center: Vector3, radius: float, height: float,
+func _add_wall_lamps(center: Vector3, radius: float, height: float,
 		count: int, gate_direction: int, status: StandardMaterial3D, energy: float,
 		range_m: float) -> void:
 	var root := Node3D.new()
@@ -423,7 +428,43 @@ func _add_wall_lamps(env: LookEnvironment, center: Vector3, radius: float, heigh
 		lamp.shadow_enabled = false
 		lamp.position = at - Vector3(cos(angle) * 1.2, 0.2, sin(angle) * 1.2)
 		root.add_child(lamp)
-		env.track_lamp(lamp)
+
+
+## The pit floor sits 6 m under the rock with the liner's lamps far above it:
+## a ring of flood lamps low on the bowl wall (clear of the two ramps) and one
+## big fill over the middle light the floor, the pads and the ships on them.
+func _pit_floor_lights(status: StandardMaterial3D) -> void:
+	var root := Node3D.new()
+	root.name = "PitFloorLights"
+	add_child(root)
+	var floor_y := pit_c.y - 6.0
+	var count := 12
+	for i in count:
+		var angle := TAU * (float(i) + 0.5) / float(count)
+		if absf(sin(angle) * pit_r) < 5.0:
+			continue
+		var basis := _radial_basis(angle)
+		basis = Basis(-basis.x, basis.y, -basis.z)
+		var at := pit_c + Vector3(cos(angle) * (pit_r - 0.1), floor_y - pit_c.y + 3.2,
+			sin(angle) * (pit_r - 0.1))
+		_box(root, at, Vector3(0.9, 0.3, 0.12), status, basis)
+		var lamp := OmniLight3D.new()
+		lamp.light_color = Color("#ffe6bd")
+		lamp.light_energy = 1.8
+		lamp.omni_range = 20.0
+		lamp.omni_attenuation = 0.7
+		lamp.shadow_enabled = false
+		lamp.position = at - Vector3(cos(angle) * 1.5, 0.0, sin(angle) * 1.5)
+		root.add_child(lamp)
+	var fill := OmniLight3D.new()
+	fill.name = "PitFill"
+	fill.light_color = Color("#fff0d8")
+	fill.light_energy = 1.4
+	fill.omni_range = pit_r + 8.0
+	fill.omni_attenuation = 0.5
+	fill.shadow_enabled = false
+	fill.position = Vector3(pit_c.x, floor_y + 11.0, pit_c.z)
+	root.add_child(fill)
 
 
 func _pit_shield() -> void:
@@ -558,7 +599,7 @@ func _strip(stl: SurfaceTool, a: Vector3, b: Vector3, w: float) -> void:
 ## The hallway: metal sills and headers with wide windows between, posts, a roof,
 ## strip lights down both sides of the ceiling and lamps along it, and the round
 ## shield it opens through onto the pit floor.
-func _dress_hall(metal: Material, glass: Material, env: LookEnvironment, mats: LookMaterials) -> void:
+func _dress_hall(metal: Material, glass: Material, _env: LookEnvironment, mats: LookMaterials) -> void:
 	if hall.is_empty():
 		return
 	var root := Node3D.new()
@@ -599,23 +640,30 @@ func _dress_hall(metal: Material, glass: Material, env: LookEnvironment, mats: L
 	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(disc)
 	shields.append(disc)
-	# Lights: two glowing strips under the roof, and a lamp every 10 m.
+	# Lights: two glowing strips under the roof, and a lamp every 7 m, always on
+	# (see _station_lighting); past the rim the floor drops beside the ramp, so a
+	# second lamp hangs lower there.
 	var lamp_glow := mats.glow(Color("#bfefff"))
-	lamp_glow.emission_energy_multiplier = 2.2
+	lamp_glow.emission_energy_multiplier = 3.2
 	for sg in [-1.0, 1.0]:
 		_box(root, Vector3((x0 + x1) * 0.5, h - 0.05, sg * (hw - 0.6)), Vector3(x1 - x0, 0.08, 0.25), lamp_glow)
-	var x := x0 + 5.0
+	var x := x0 + 3.5
 	while x < x1:
-		var l := OmniLight3D.new()
-		l.light_color = Color("#d8f4ff")
-		l.light_energy = 1.2
-		l.omni_range = 9.0
-		l.shadow_enabled = false
-		l.position = Vector3(x, h - 0.6, 0.0)
-		root.add_child(l)
-		if env != null:
-			env.track_lamp(l)
-		x += 10.0
+		_hall_lamp(root, Vector3(x, h - 0.6, 0.0))
+		if x > rim:
+			_hall_lamp(root, Vector3(x, lerpf(0.0, bottom, clampf((x - rim) / maxf(x1 - rim, 0.1), 0.0, 1.0)) + 2.6, 0.0))
+		x += 7.0
+
+
+func _hall_lamp(root: Node3D, at: Vector3) -> void:
+	var l := OmniLight3D.new()
+	l.light_color = Color("#d8f4ff")
+	l.light_energy = 1.8
+	l.omni_range = 12.0
+	l.omni_attenuation = 0.8
+	l.shadow_enabled = false
+	l.position = at
+	root.add_child(l)
 
 
 func _box(root: Node3D, at: Vector3, size: Vector3, mat: Material,
