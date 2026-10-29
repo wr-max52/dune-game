@@ -107,6 +107,21 @@ func test_flat_sand_then_real_dunes() -> void:
 		"past the blend it is the open dunes")
 
 
+func test_remote_merchant_pads_are_flat_and_ease_into_the_dunes() -> void:
+	var t := DesertTerrain.new()
+	t.configure_site(_site.floor, _site.walls, _site.sunken, 0.0)
+	var center := Vector2(730, -520)
+	var level := t.height_at(center.x, center.y)
+	t.configure_flat_sites([{ "rect": Rect2(center - Vector2(10, 10), Vector2(20, 20)),
+		"y": level, "blend": 8.0 }])
+	for x in range(-9, 10, 3):
+		for z in range(-9, 10, 3):
+			assert_almost_eq(t.height_at(center.x + x, center.y + z), level, 0.001,
+				"the relay footprint stays level")
+	var outside := center + Vector2(24, 0)
+	assert_ne(t.height_at(outside.x, outside.y), level, "the pad blends back into the natural dune")
+
+
 func test_collider_follows_and_rebuilds_within_budget() -> void:
 	var t := DesertTerrain.new()
 	t.configure_site(_site.floor, _site.walls, _site.sunken, 0.0)
@@ -158,6 +173,15 @@ func test_town_demo_builds_the_desert() -> void:
 	assert_not_null(d.terrain, "desert on by default")
 	assert_not_null(d.terrain.collider_body, "greybox gets the collider")
 	assert_eq(d.terrain.get_node_or_null("Mesh"), null, "but no mesh (nothing draws in CI)")
+	assert_eq(d.terrain.flat_sites.size(), 3, "the home planet levels all three droid relay yards")
+	for site in d.terrain.flat_sites:
+		var r: Rect2 = site.rect
+		var y := float(site.y)
+		var sp: PlanetSphere = (d.terrain as PlanetTerrain).sphere
+		for x in [-9.0, 0.0, 9.0]:
+			for z in [-9.0, 0.0, 9.0]:
+				assert_almost_eq(sp.elevation(sp.map_dir(r.get_center().x + x, r.get_center().y + z)), y,
+					0.001, "merchant and customer positions share flat ground")
 	assert_eq(d.view_far(), 20000.0, "the home planet: the whole ball")
 	var off = TownDemo.new()
 	off.use_look = false
@@ -216,6 +240,11 @@ func test_mesas_have_broad_caps_and_eroded_shelves() -> void:
 	assert_gt(base_radius, cap_radius * 1.35, "the cliff narrows to a distinct broad plateau")
 	assert_lte(base_radius, 90.0, "the visible cliff stays inside its existing world-ground column")
 	assert_gt(verts.size(), 64 * 10 * 6, "the stepped silhouette has enough geometry to read")
+	var landforms := Landforms.new()
+	var placed := landforms._add(mesh, StandardMaterial3D.new(),
+		Transform3D(Basis.IDENTITY, Vector3(0, 20, 0)), 200.0 * 0.46 - Landforms.MESA_BURY)
+	assert_almost_eq(placed.position.y, 110.0, 0.001, "the mesa mesh is sunk by 2 m at its feet")
+	landforms.free()
 
 
 func test_fall_guard_uses_the_ground() -> void:

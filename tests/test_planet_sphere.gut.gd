@@ -8,6 +8,7 @@ const Body := preload("res://src/systems/player/character_body.gd")
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
+const Landforms := preload("res://src/systems/look/desert_landforms.gd")
 
 var _site: Dictionary
 
@@ -79,6 +80,36 @@ func test_sand_goes_all_the_way_round() -> void:
 	assert_true(is_finite(far_side), "even straight through the planet from the port")
 	assert_lt(absf(far_side), 60.0, "and it is dunes there, not the town's plateau")
 	assert_almost_eq(s.dir_map(Vector3.DOWN).length(), PI * 5000.0, 0.01, "the far pole is half way round")
+
+
+func test_remote_pads_are_flat_on_the_curved_home_world() -> void:
+	var s := _sphere()
+	var center := Vector2(1050, -880)
+	var level := s.elevation(s.map_dir(center.x, center.y))
+	var pad := { "rect": Rect2(center - Vector2(10, 10), Vector2(20, 20)),
+		"y": level, "blend": 8.0 }
+	s.configure_flat_sites([pad])
+	for x in [-9.0, 0.0, 9.0]:
+		for z in [-9.0, 0.0, 9.0]:
+			assert_almost_eq(s.elevation(s.map_dir(center.x + x, center.y + z)), level, 0.001,
+				"the outpost's flat ground follows the sphere")
+
+
+func test_home_planet_mesas_are_small_and_globally_distributed() -> void:
+	var mesas: Array = Landforms.load_data().get("planet_mesas", [])
+	assert_eq(mesas.size(), 16)
+	var min_lat := 90.0
+	var max_lat := -90.0
+	var longitudes := {}
+	for mesa in mesas:
+		min_lat = minf(min_lat, float(mesa[0]))
+		max_lat = maxf(max_lat, float(mesa[0]))
+		longitudes[int(round(float(mesa[1])))] = true
+		assert_lte(float(mesa[2]), 180.0, "mesa radius stays small for a 5 km-radius planet")
+		assert_lte(float(mesa[3]), 90.0, "mesa height is no more than 90 m")
+	assert_lt(min_lat, -65.0, "mesas reach the southern hemisphere")
+	assert_gt(max_lat, 65.0, "mesas reach the northern hemisphere")
+	assert_gt(longitudes.size(), 12, "mesas are spread around the full longitude range")
 
 
 func test_up_turns_with_the_ball() -> void:

@@ -21,7 +21,9 @@ func test_three_compact_relay_landmarks_have_tall_arrays() -> void:
 		coords.append(Vector2(float(lm.at[0]), float(lm.at[2])))
 		var loc: Dictionary = cc.get_location(id)
 		assert_eq(loc.get("kind"), "droid_merchant_outpost", "%s is a merchant relay" % id)
-		assert_eq(loc.get("buildings").size(), 2, "%s keeps a small footprint" % id)
+		assert_eq(loc.get("buildings").size(), 3, "%s keeps a small footprint with a separate table" % id)
+		assert_true(loc.buildings.any(func(b): return str(b.get("id", "")) == "merchant_table"),
+			"%s has a small display table" % id)
 		assert_gt(float(loc.get("look", {}).get("antenna_height", 0.0)), 8.0,
 			"%s has a tall roof array" % id)
 		assert_true(loc.get("points", {}).has("merchant"), "%s has a merchant position" % id)

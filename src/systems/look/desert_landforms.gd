@@ -11,6 +11,7 @@ extends Node3D
 ## ramps for a speeder and the tall ones stop it.
 
 const DATA_PATH := "res://content/look/desert_landforms.json"
+const MESA_BURY := 2.0             ## sink the broad feet into the sand, not on top of it
 
 var data: Dictionary = {}
 var solid_count := 0          ## bodies added (read by tests)
@@ -49,20 +50,14 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	noise.seed = 31
 	noise.fractal_octaves = 3
 
-	# Mesas: big, weathered shelves with broad caps, layered by fog. [x, z, radius, height]
-	for m in data.get("mesas", []):
-		var r: float = m[2]
-		var h: float = m[3]
-		if _hits(clear, m[0], m[1], r) or _in_circles(m[0], m[1], r):
-			continue
-		var mesh := _mesa_mesh(r, h, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
-		var g := _ground(terrain, m[0], m[1])
-		var gy := _ground_h(terrain, g, m[0], m[1])
-		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.46, Vector3(0, rng.randf_range(0, 360), 0))
-		if solid:
-			_solid(mi)
+	# On the home ball use small mesas distributed by latitude/longitude; flat
+	# worlds keep the original nearby beauty-corner arrangement.
+	if terrain is PlanetTerrain and data.has("planet_mesas"):
+		_build_planet_mesas(terrain as PlanetTerrain, mats, clear, noise, rng, solid)
+	else:
+		_build_local_mesas(terrain, mats, clear, noise, rng, solid)
 
-	# Hoodoos in the middle distance: the layer between the town and the horizon.
+	# Hoodoos remain a close-to-town ring: [x, z, radius, height].
 	for hd in data.get("hoodoos", []):
 		var r: float = hd[2]
 		var h: float = hd[3]
@@ -129,6 +124,42 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 	add_child(mmi)
 	if terrain is PlanetTerrain:
 		_on_ball((terrain as PlanetTerrain).sphere)
+
+
+func _build_local_mesas(terrain: DesertTerrain, mats: LookMaterials, clear: Rect2,
+		noise: FastNoiseLite, rng: RandomNumberGenerator, solid: bool) -> void:
+	# [x, z, radius, height] entries remain for flat-world beauty corners.
+	for m in data.get("mesas", []):
+		var r: float = m[2]
+		var h: float = m[3]
+		if _hits(clear, m[0], m[1], r) or _in_circles(m[0], m[1], r):
+			continue
+		var mesh := _mesa_mesh(r, h, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
+		var g := _ground(terrain, m[0], m[1])
+		var gy := _ground_h(terrain, g, m[0], m[1])
+		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.46 - MESA_BURY,
+			Vector3(0, rng.randf_range(0, 360), 0))
+		if solid:
+			_solid(mi)
+
+
+func _build_planet_mesas(terrain: PlanetTerrain, mats: LookMaterials, clear: Rect2,
+		noise: FastNoiseLite, rng: RandomNumberGenerator, solid: bool) -> void:
+	var sp := terrain.sphere
+	for m in data.get("planet_mesas", []):
+		var map := sp.map_from_lat_lon(float(m[0]), float(m[1]))
+		var radius := float(m[2])
+		var height := float(m[3])
+		if _hits(clear, map.x, map.y, radius) or _in_circles(map.x, map.y, radius):
+			continue
+		noise.frequency = 1.0 / radius
+		var mesh := _mesa_mesh(radius, height, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
+		var g := _ground(terrain, map.x, map.y)
+		var gy := _ground_h(terrain, g, map.x, map.y)
+		var placed := _add(mesh, mats.rock(gy, 0.11), g, height * 0.46 - MESA_BURY,
+			Vector3(0, rng.randf_range(0, 360), 0))
+		if solid:
+			_solid(placed)
 
 
 ## The rock shader's ground height on the ball is metres above the bare ball.

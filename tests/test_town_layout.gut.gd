@@ -39,7 +39,7 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 181)   # locals: stall back panels; art pass 2: neighbourhoods (tools/town/gen_neighborhoods.py), cantina, round pit + 3 ships + an empty pad (issue #58) + crates
+	assert_eq(t.boxes().size(), 185)   # plus four short gray homes facing the cantina street (#114)
 	assert_eq(t.markers().size(), 26)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89
 	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)
@@ -56,6 +56,25 @@ func test_required_markers_exist() -> void:
 	var t := _town()
 	for id in ["player_spawn", "gate", "back_gap", "cantina_door", "bar_front", "cantina_owner", "fixer"]:
 		assert_false(t.get_marker(id).is_empty(), "marker %s exists" % id)
+
+
+func test_four_short_gray_homes_face_the_cantina_street() -> void:
+	var homes: Array = _town().boxes().filter(func(b):
+		return str(b.get("id", "")).begins_with("cantina_home_"))
+	assert_eq(homes.size(), 4)
+	var north := 0
+	var south := 0
+	for b in homes:
+		assert_eq(b.get("style"), "gray")
+		assert_lte(float(b.max[1]), 4.0, "short houses, not towers")
+		if str(b.id).contains("_n_"):
+			north += 1
+			assert_eq(b.get("face"), "-z", "north doors face toward the street")
+		else:
+			south += 1
+			assert_eq(b.get("face"), "+z", "south doors face toward the street")
+	assert_eq(north, 2)
+	assert_eq(south, 2)
 
 
 func test_npc_markers_match_data_layer() -> void:

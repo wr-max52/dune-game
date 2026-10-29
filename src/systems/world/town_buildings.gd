@@ -320,6 +320,8 @@ func build(b: Dictionary) -> bool:
 func _plaster(b: Dictionary, band_y: float) -> Material:
 	if str(b.get("style", "")) == "garrison":
 		return mats.plaster(0.0, band_y, LookMaterials.REMNANT_OXBLOOD, Color("#cbb594"))
+	if str(b.get("style", "")) == "gray":
+		return mats.plaster(0.0, band_y, Color("#84898b"), Color("#55595b"))
 	var i := absi(hash(str(b.id)))
 	return mats.plaster(0.0, snappedf(band_y, 0.5), BANDS[i % BANDS.size()], TINTS[(i / 7) % TINTS.size()])
 
