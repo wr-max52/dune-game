@@ -28,6 +28,7 @@ var blade_cfg: Dictionary = {}
 var floor_y := 8.0
 var rng := RandomNumberGenerator.new()   ## picks the colours of a split model's parts
 var _cache := {}
+static var _outfits := {}   ## issue #162: texture path -> outfit material, shared by every kit
 
 
 func _init(materials: LookMaterials, floor_height: float = 8.0) -> void:
@@ -180,12 +181,34 @@ func _outfit_material(base: Material, pattern: String, color: String) -> Materia
 	var path := pattern % color if pattern.contains("%s") and color != "" else ""
 	if not base is BaseMaterial3D or path == "" or not ResourceLoader.exists(path):
 		return null
-	var key := "outfit_" + path
-	if not _cache.has(key):
+	# Issue #162: every NPC has its own kit, so a per-kit cache shared nothing.
+	if not _outfits.has(path):
 		var m := (base as BaseMaterial3D).duplicate() as BaseMaterial3D
-		m.albedo_texture = load(path)
-		_cache[key] = m
-	return _cache[key]
+		m.albedo_texture = ModelCache.scene(path)
+		_outfits[path] = m
+	return _outfits[path]
+
+
+## Issue #162: every outfit colour texture the characters can wear (characters.json
+## "colors" patterns), for ModelCache.prefetch().
+static func outfit_textures() -> Array:
+	var out: Array = []
+	var cfgs: Array = []
+	for p in _read_json(PALETTES_PATH).get("archetypes", {}).values():
+		cfgs.append((p as Dictionary).get("model", {}))
+		cfgs.append_array((p as Dictionary).get("skin_layers", []))
+	for cfg in cfgs:
+		var pattern := str((cfg as Dictionary).get("colors", "")) if cfg is Dictionary else ""
+		if not pattern.contains("%s"):
+			continue
+		var dir := pattern.get_base_dir()
+		var head := pattern.get_file().get_slice("%s", 0)
+		var tail := pattern.get_file().get_slice("%s", 1)
+		for f in ResourceLoader.list_directory(dir):
+			var path := dir.path_join(f)
+			if f.begins_with(head) and f.ends_with(tail) and not out.has(path):
+				out.append(path)
+	return out
 
 
 ## Issue #64: a palette's "tint" multiplies every piece's colour (the red Remnant
@@ -534,8 +557,11 @@ func _rifle(body: Node3D, p: Dictionary) -> void:
 	r.set_meta("grips", grips)
 	var spec: Dictionary = _read_json(HAND_WEAPONS_PATH).get("rifle_blaster", {})
 	var path := str(spec.get("model", ""))
-	if path != "" and ResourceLoader.exists(path) and load(path) is PackedScene:
-		var model: Node3D = (load(path) as PackedScene).instantiate()
+	# Issue #162: ModelCache keeps the rifle loaded. load() twice with nothing
+	# holding it read rifle.glb from disk twice per trooper (~78 ms each).
+	var packed = ModelCache.scene(path) if path != "" and ResourceLoader.exists(path) else null
+	if packed is PackedScene:
+		var model: Node3D = (packed as PackedScene).instantiate()
 		var k := float(spec.get("scale", 1.0))
 		var g: Dictionary = spec.get("grips", {})
 		var gr := Vector3(float(g.r[0]), float(g.r[1]), float(g.r[2])) * k if g.has("r") else Vector3.ZERO
@@ -568,12 +594,13 @@ func _rifle(body: Node3D, p: Dictionary) -> void:
 func _pistol(body: Node3D) -> void:
 	var spec: Dictionary = _read_json(HAND_WEAPONS_PATH).get("pistol_blaster", {})
 	var path := str(spec.get("model", ""))
-	if path == "" or not ResourceLoader.exists(path) or not (load(path) is PackedScene):
+	var packed = ModelCache.scene(path) if path != "" and ResourceLoader.exists(path) else null
+	if not (packed is PackedScene):
 		return
 	var r := Node3D.new()
 	r.name = "Pistol"
 	_j(body, "chest").add_child(r)
-	var model: Node3D = (load(path) as PackedScene).instantiate()
+	var model: Node3D = (packed as PackedScene).instantiate()
 	var k := float(spec.get("scale", 1.0))
 	model.scale = Vector3.ONE * k
 	if spec.get("dark") is Dictionary:
