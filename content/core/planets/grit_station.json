@@ -1,6 +1,6 @@
 {
   "id": "grit_station",
-  "note": "Issue #45's test planet: an asteroid station a short hop from the port, with a size-1 town (a cantina with a stage, a guard at its door, a merchant in front, locals in the street) in metal, under a glass dome on top of a cratered rock ball, and the port's landing pit outside the gate (issue #75). Its cantina owner is a new Oda, generated for this planet (no card: see src/systems/planets/planet_owner.gd). Everything else comes from the planet generator. See docs/planets/PLANETS.md.",
+  "note": "Issue #45's test planet: an asteroid station a short hop from the port, with a size-1 town (a cantina with a stage, a guard at its door, a merchant in front, locals in the street) in metal (issue #75). Issue #99: a real ball (the asteroid type), the station sealed under a dome with a hallway to the port's landing pit, and flown to with no fade: 'at' is the centre of its ball in metres from the port, and its own port is on top of it. Its cantina owner is a new Oda, generated for this planet (no card: see src/systems/planets/planet_owner.gd). Everything else comes from the planet generator. See docs/planets/PLANETS.md.",
   "name": "",
   "type": "asteroid",
   "town_size": 1,

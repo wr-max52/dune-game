@@ -63,9 +63,22 @@ func set_radius(r: float) -> void:
 	extent = PI * r
 
 
+## Issue #99: another kind of ball (the asteroid's AsteroidSphere), before build().
+func use_sphere(s: PlanetSphere) -> void:
+	sphere = s
+	extent = PI * s.radius
+
+
+## Issue #99: rock instead of sand (moon_rock.gdshader), with these colours.
+var rock_look := {}
+const ROCK_SHADER := preload("res://src/systems/look/shaders/moon_rock.gdshader")
+
+
 func configure_site(floor_rect: Rect2, walls_rect: Rect2, sunken: Array, floor_y: float = 0.0) -> void:
 	super.configure_site(floor_rect, walls_rect, sunken, floor_y)
 	sphere.configure_site(floor_rect, walls_rect, sunken, floor_y)
+	if sphere is AsteroidSphere:
+		return                     # its own (short) blend from the station to the rock
 	sphere.pad_margin = pad_margin
 	sphere.blend = blend
 	sphere.dune_offset = dune_offset
@@ -113,7 +126,9 @@ func _map_covers(m: Vector2, margin: float) -> bool:
 func build(with_mesh: bool = true) -> void:
 	_with_mesh = with_mesh
 	material = ShaderMaterial.new()
-	material.shader = SAND_SHADER
+	material.shader = SAND_SHADER if rock_look.is_empty() else ROCK_SHADER
+	for k in rock_look:
+		material.set_shader_parameter(k, Color(str(rock_look[k])) if rock_look[k] is String else rock_look[k])
 	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 3, 0.01))
 	material.set_shader_parameter("planet_center", sphere.center)
 	material.set_shader_parameter("planet_radius", sphere.radius)
@@ -134,6 +149,20 @@ func build(with_mesh: bool = true) -> void:
 	_apply("near", _compute("near", Vector2(collider_center.x, collider_center.z)))
 	if with_mesh:
 		_apply("mid", _compute("mid", Vector2.ZERO))
+
+
+## Issue #99: just the whole ball, coarse, for another planet's sky (a neighbour
+## seen from space). `center` is where its centre is in that scene.
+func build_far_only(center: Vector3) -> void:
+	_with_mesh = true
+	material = ShaderMaterial.new()
+	material.shader = SAND_SHADER if rock_look.is_empty() else ROCK_SHADER
+	for k in rock_look:
+		material.set_shader_parameter(k, Color(str(rock_look[k])) if rock_look[k] is String else rock_look[k])
+	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(256, 3, 0.01))
+	material.set_shader_parameter("planet_center", center)
+	material.set_shader_parameter("planet_radius", sphere.radius)
+	_build_far()
 
 
 func _build_town_collider() -> void:

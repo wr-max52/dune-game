@@ -170,6 +170,8 @@ func _ready() -> void:
 		reenter()
 	elif str(demo._arrival.get("mode", "")) == "travel":
 		arrive_from_space(demo._arrival)
+	elif str(demo._arrival.get("mode", "")) == "handoff":
+		arrive_handoff(demo._arrival)
 
 
 ## Every parked ship the decor built becomes a berth: the pit pad's own ship first
@@ -514,6 +516,28 @@ func arrive_from_space(a: Dictionary) -> void:
 	hud.visible = true
 	hud.toast(GameFlow.arrival_text(a), 5.0)
 	_sync_visual()
+
+
+## Issue #99: in from another planet with no fade. The ship carries on exactly
+## where it was (the travel worked out where that is in this planet's own
+## coordinates), same heading, speed and throttle, still flying.
+func arrive_handoff(a: Dictionary) -> void:
+	var h: Dictionary = a.get("handoff", {})
+	_seat_arriving()
+	var at: Vector3 = h.get("position", Vector3(0, 3000, 0))
+	var b: Basis = h.get("basis", Basis.IDENTITY)
+	var thr := float(h.get("throttle", 0.6))
+	atmo.place_flying(at, -b.z, float(h.get("speed", 0.0)), thr)
+	atmo.flight.basis = b
+	_throttle = thr
+	_set_hull(true)
+	chase._primed = false
+	hud.visible = true
+	_sync_visual()
+	if demo.terrain != null:
+		demo.terrain.prefetch(at)
+	if sky != null:
+		sky.update_for(atmo.altitude(), at)
 
 
 ## Put the player in the cockpit without the walk up to the ship.

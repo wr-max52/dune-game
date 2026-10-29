@@ -1,13 +1,14 @@
 extends SceneTree
 ## Issue #45 trace (headless, real physics, the real town scene): the test the
 ## issue asks for. Take off from the port, climb to space, fly to the asteroid
-## station hanging in the port's sky, arrive in its sky still flying the same
-## ship, press Z and be landed in its landing pit (issue #75: the port's pit, out
-## past the gate), get out in its size-1 town (a cantina with its own Oda and a
-## stage, a guard at the door, a merchant in front, locals in the street, all
-## under a glass dome on a cratered rock ball), walk out through the dome's
-## shield and across the rock, slide off the side and wake by the bay, find the
-## dome solid, then fly home again. Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
+## station hanging in the port's sky; issue #99: its scene takes over in mid-
+## flight with no fade, the ship exactly where it was. Drop under its edge of
+## space and press Z to be landed in its landing pit, get out in its size-1 town
+## (its own Oda, a stage, a guard at the door, a merchant in front, locals in the
+## street), walk out through the ring wall's gate shield, along the windowed
+## hallway and through its round shield into the pit; stand on the asteroid's
+## rock and on its far side (a real ball), find the dome solid, then fly home
+## again, the home scene taking over the same way. Writes test_results/planets_trace.txt for tests/test_planets_trace.gut.gd.
 ##
 ## Run: godot --headless --fixed-fps 60 --path . -s res://scenes/planets_trace.gd
 
@@ -135,7 +136,7 @@ func _run() -> void:
 	var to_station := await fly_to_planet("grit_station", 1200.0, 150.0)
 	out("FLEW_TO_STATION_S", snappedf(to_station, 0.1))
 	out("TRAVEL_STARTED", pilot.travel.traveling)
-	await frames(60)                          # the fade, then GameFlow.travel
+	await frames(5)                           # issue #99: no fade, the switch is immediate
 	out("SCENE_AFTER_TRAVEL", went.back() if not went.is_empty() else "")
 	out("PLANET_AFTER_TRAVEL", GameFlow.planet_id)
 	out("FLOWN_SHIP", GameFlow.flown_ship)
@@ -178,11 +179,13 @@ func _run() -> void:
 	out("ARRIVED_SHIP", pilot.ship_id)
 	out("STATION_NEIGHBOURS", ",".join(PackedStringArray(pilot.travel.bodies.map(func(b): return str(b.id)))))
 	out("STATION_SPACE_ALTITUDE", int(pilot.atmo.space_altitude))
-	# Z: she flies herself in and lands in the pit.
+	# Down under the edge of space toward the bay, then Z: she flies herself in.
 	var h: Vector3 = pilot.home
+	await fly_to(Vector3(h.x, 450.0, h.z), 0.5, 120.0,
+		func(): return pilot.atmo.altitude() < 600.0 and Vector2(pilot.atmo.position().x - h.x, pilot.atmo.position().z - h.z).length() < 2500.0)
 	out("NEAR_BAY", pilot.near_bay())
 	out("BAY_LAND", pilot.bay_land())
-	for i in 60 * 60:
+	for i in 60 * 90:
 		await physics_frame
 		if pilot.atmo.state == AtmoFlight.State.PARKED:
 			break
@@ -192,57 +195,67 @@ func _run() -> void:
 	out("EXIT_AT_STATION", pilot.exit_ship())
 	await frames(20)
 	out("IN_PIT", player.is_on_floor() and absf(player.global_position.y + 6.0) < 0.3)
-	# Out through the dome's door: the shield is no wall.
-	var rock: AsteroidWorld = demo.platform
-	var dome: Dictionary = rock.dome
-	var door := Vector3(float(dome.door_x), 0.0, float(dome.door_z))
-	place_player(door + Vector3(-5, 0, 0))
+	# Issue #99: sealed. Out of the ring through the gate's shield, into the hallway.
+	var stn: AsteroidWorld = demo.platform
+	var hall: Dictionary = stn.hall
+	out("STATION_RING_M", stn.rw)
+	place_player(stn.rc + Vector3(stn.rw - 5.0, 0, 0))
 	await frames(10)
 	demo._rig.rig.yaw = 0.0
-	for i in 240:
+	for i in 200:
 		player.set_command(Vector2(1, 0), false, false, false)
 		await physics_frame
 	player.set_command(Vector2.ZERO, false, false, false)
 	await frames(10)
-	out("SHIELD_WALK_X", snappedf(player.global_position.x - door.x, 0.1))
-	out("THROUGH_THE_SHIELD", player.global_position.x > door.x + 3.0 and player.is_on_floor())
-	# The rock is ground: stand on it well away from the town.
-	var c: Vector3 = rock.center
-	var far := Vector3(c.x + 150.0, rock.height_at(c.x + 150.0, c.z - 60.0), c.z - 60.0)
-	place_player(far + Vector3(0, 1.0, 0))
-	await frames(60)
-	out("WALK_ON_ROCK", player.is_on_floor() and absf(player.global_position.y - rock.height_at(player.global_position.x, player.global_position.z)) < 0.6)
-	out("ROCK_DROP_M", snappedf(-far.y, 0.1))
-	# Off the side of the ball: down, dead, back by the bay.
-	var falls0: int = demo.platform.falls
-	var edge := c.x + rock.extent + 15.0
-	place_player(Vector3(edge, rock.height_at(edge - 20.0, c.z), c.z))
-	await frames(5)
-	var fell_y := 0.0
-	for i in 60 * 8:
+	out("SHIELD_WALK_X", snappedf(player.global_position.x - (stn.rc.x + stn.rw), 0.1))
+	out("THROUGH_THE_SHIELD", player.global_position.x > stn.rc.x + stn.rw + 3.0 and player.is_on_floor())
+	# The hallway's windows hold.
+	for i in 120:
+		player.set_command(Vector2(0, 1), false, false, false)
+		await physics_frame
+	player.set_command(Vector2.ZERO, false, false, false)
+	out("HALL_HOLDS", absf(player.global_position.z) < float(hall.half))
+	# On down the hallway, over the ramp, out through its round shield onto the pit floor.
+	place_player(Vector3(float(hall.rim) - 3.0, 0, 0))
+	await frames(10)
+	for i in 420:
 		player.set_command(Vector2(1, 0), false, false, false)
 		await physics_frame
-		fell_y = minf(fell_y, player.global_position.y)
-		if demo.platform.falls > falls0:
-			break
 	player.set_command(Vector2.ZERO, false, false, false)
-	await frames(30)
-	out("FELL_OFF", fell_y < -20.0)
-	out("FALLS", demo.platform.falls - falls0)
-	out("WOKE_BY_BAY", player.global_position.distance_to(t.spawn_pos()) < 3.0 and player.is_on_floor())
-	out("FALL_LOGGED", WorldState.count("falls"))
+	await frames(10)
+	out("INTO_PIT_THROUGH_SHIELD", player.global_position.x > float(hall.end) + 1.0 and player.global_position.y < -5.0)
+	# The asteroid is a real ball: stand on its rock, and on its far side.
+	var sp: PlanetSphere = PlanetSphere.current
+	out("ROCK_BALL_RADIUS", int(sp.radius) if sp != null else 0)
+	for m in [["WALK_ON_ROCK", Vector2(500.0, -200.0)], ["WALK_ROUND_THE_BALL", Vector2(PI * sp.radius * 0.8, 0.0)]]:
+		var g := sp.surface_at(m[1].x, m[1].y)
+		var up := sp.up_at(g)
+		player.global_position = g + up * 1.2
+		player.velocity = Vector3.ZERO
+		player.controller.velocity = Vector3.ZERO
+		player.controller.body_pos = player.global_position
+		demo.terrain.snap_to(player.global_position)
+		await frames(60)
+		out(m[0], player.is_on_floor() and sp.height_above_ground(player.global_position) < 0.6)
+	out("FAR_SIDE_UP_Y", snappedf(sp.up_at(player.global_position).y, 0.01))
+	place_player(t.spawn_pos())
+	demo.terrain.snap_to(player.global_position)
+	await frames(10)
 	# The dome is solid: a jetpack-high push at it from inside stays inside.
-	var dc: Vector3 = dome.c
-	var shell_z := dc.z + float(dome.b) * sqrt(1.0 - pow((9.0 - dc.y) / float(dome.h), 2.0))
-	place_player(Vector3(dc.x, 9.0, shell_z - 3.0))
+	var y := stn.wall_h + 3.0
+	var el := asin((y - stn.wall_h) / stn.dome_h)
+	var shell_z := stn.rc.z + stn.rw * cos(el)
+	place_player(Vector3(stn.rc.x, y, shell_z - 3.0))
 	for i in 90:
 		player.set_command(Vector2(0, 1), false, false, false)
 		player.velocity.y = maxf(player.velocity.y, 0.0)
 		await physics_frame
 	player.set_command(Vector2.ZERO, false, false, false)
 	out("GLASS_HOLDS", player.global_position.z < shell_z)
-	out("DOME_TRIS", rock.dome_tris)
-	out("SHIP_HITS_GLASS", pilot.ground.hit(Vector3(dc.x, 10.0, dc.z + float(dome.b) * 0.9), 2.0).begins_with("glass_"))
+	out("DOME_TRIS", stn.dome_tris)
+	out("SHIP_HITS_GLASS", pilot.ground.hit(Vector3(stn.rc.x, 10.0, stn.rc.z + stn.rw * 0.9), 2.0).begins_with("glass_"))
+	place_player(t.spawn_pos())
+	await frames(10)
 
 	# ---------------------------------------------------------------- home again
 	went.clear()

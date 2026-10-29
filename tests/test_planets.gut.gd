@@ -112,11 +112,14 @@ func test_every_planet_type_builds() -> void:
 		var t := TownLayout.new()
 		t.load_from_dict(p.town)
 		assert_eq(t.validate().size(), 0, type)
-		assert_true(p.ground in ["terrain", "platform", "sphere"], type)
+		assert_true(p.ground in ["terrain", "platform", "ball"], type)
 		assert_gt(float(p.world.atmosphere.space_altitude), 0.0, type)
 		if p.ground != "terrain":
 			assert_true((types[type] as Dictionary).has("surface"), type)
+		if p.ground == "platform":
 			assert_ne(str(types[type].fall_text), "", type + " says how you died")
+		if p.ground == "ball":
+			assert_gt(float(p.world.terrain.sphere_radius), 0.0, type + " is a real ball")
 
 
 func test_the_port_is_unchanged() -> void:
@@ -133,7 +136,13 @@ func test_the_asteroid_station() -> void:
 	var p := PlanetGen.build("grit_station", cc)
 	assert_eq(p.type, "asteroid")
 	assert_eq(p.size, 1)
-	assert_eq(p.ground, "sphere", "a rock ball you stand on")
+	assert_eq(p.ground, "ball", "a real ball, like the home planet (issue #99)")
+	assert_eq(float(p.world.terrain.sphere_radius), 1500.0)
+	var stn: Dictionary = p.town.station
+	assert_false(stn.is_empty(), "a sealed round station")
+	assert_true(p.town.boxes.filter(func(b): return str(b.id).begins_with("wall_")).is_empty(), "no square walls")
+	assert_false(p.town.boxes.filter(func(b): return b.id == "hall_floor").is_empty(), "a hallway to the pit")
+	assert_true(p.town.boxes.filter(func(b): return b.id == "ramp_ne").is_empty(), "one way into the pit")
 	assert_eq(p.style, "metallic")
 	assert_eq(p.encounter, "", "quiet sky over the station")
 	var om: Dictionary = p.town.markers.filter(func(m): return m.id == "cantina_owner")[0]
@@ -147,6 +156,12 @@ func test_the_asteroid_station() -> void:
 	var home := PlanetGen.build("port_desert", cc)
 	assert_eq(home.neighbours.map(func(x): return x.id), ["grit_station"], "and the port sees the station")
 	assert_eq(home.neighbours[0].at, Vector3(9000, 5200, -6500))
+	# Issue #99: one map. The station's port is on top of its ball; from the station
+	# the port's ball is exactly where the shift between the two scenes puts it.
+	var off: Vector3 = home.neighbours[0].offset
+	assert_eq(off, Vector3(9000, 6700, -6500))
+	assert_eq(n[0].offset, -off, "the same shift, back the other way")
+	assert_eq(n[0].at, Vector3(0, -5000, 0) - off, "the home ball's centre, seen from the station")
 
 
 func test_a_new_planet_is_only_a_config() -> void:
