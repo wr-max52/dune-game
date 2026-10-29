@@ -18,9 +18,12 @@ extends RefCounted
 ## Numbers: content/core/vehicles/speeder.json.
 ##
 ## Issue #95: the Grav Lifter (a "hover" block in the config, from the mechanic's
-## upgrades). lift() hops it off the ground, and once it stops rising it hangs,
-## gravity off and sinking slowly, for float_s seconds. Then it falls as usual,
-## and the lifter needs recharge_s before it works again.
+## upgrades). Issue #100: it keeps the momentum you have. lift() hops it off the
+## ground (or, already climbing, keeps that climb), and for float_s seconds gravity
+## and any downward speed are off: what goes up keeps going up, nothing comes
+## down. Meet a rising slope while it is on and the slope's climb is added: grav
+## lift into a ramp or a dune face and you are launched up it and off the top.
+## Then it falls as usual, and the lifter needs recharge_s before it works again.
 ##
 ## Issue #77: on the home planet's ball "up" turns with the ground. The heading is
 ## a direction slid along the ground as it drives (so straight stays straight round
@@ -46,7 +49,7 @@ var max_hp := 0
 var events: Array = []               ## this step's: { type, ... }
 var air_time := 0.0                  ## of the current (or last) jump
 var top_height := 0.0                ## highest clearance over the ground on the last jump
-var float_left := 0.0                ## issue #95: seconds of hang the Grav Lifter has left this lift
+var float_left := 0.0                ## issue #95: seconds the Grav Lifter has left this lift (gravity off)
 var lift_cooldown := 0.0             ## issue #95: until the Grav Lifter can fire again
 
 var _pending: Array = []             ## events from between steps (lift), for the next step()
@@ -166,9 +169,12 @@ func lift() -> bool:
 	var h := lifter()
 	if not airborne:
 		airborne = true
-		vy = float(h.get("hop_vy", 6.5))
+		# Issue #100: climbing a slope already? Keep that climb if it beats the hop.
+		vy = maxf(maxf(vy, _ground_rate), float(h.get("hop_vy", 6.5)))
 		air_time = 0.0
 		top_height = 0.0
+	else:
+		vy = maxf(vy, 0.0)
 	float_left = float(h.get("float_s", 1.2))
 	lift_cooldown = float(h.get("recharge_s", 4.0))
 	_pending.append({ "type": "lift", "vy": vy })     # reported by the next step()
@@ -250,15 +256,21 @@ func _hover(dt: float) -> void:
 	var rate := 0.0 if is_nan(_last_ride) else (ride - _last_ride) / maxf(dt, 0.0001)
 	_last_ride = ride
 	if airborne:
-		if float_left > 0.0 and vy <= 0.0:
-			# The Grav Lifter's hang: gravity off, a slow sink.
+		if float_left > 0.0:
+			# Issue #100: the Grav Lifter: no gravity, no downward speed. Up stays up.
 			float_left = maxf(0.0, float_left - dt)
-			vy = -float(lifter().get("float_sink", 0.4))
+			vy = maxf(vy, 0.0)
 		else:
 			vy -= p("gravity", 9.0) * dt
 		_lift(vy * dt)
 		air_time += dt
 		top_height = maxf(top_height, _level(position) - ride)
+		if float_left > 0.0 and _level(position) <= ride:
+			# A rising slope under it while the lifter is on: ride up it, carrying
+			# its climb, and off the top (a ramp launches you).
+			_lift(ride - _level(position))
+			vy = maxf(vy, rate)
+			return
 		if _level(position) <= ride:
 			events.append({ "type": "landed", "fall_speed": -vy, "air_time": air_time, "top": top_height })
 			_lift(ride - _level(position))
