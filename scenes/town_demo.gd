@@ -91,6 +91,7 @@ var platform: PlatformWorld           ## the deck, glass, shield and what lies b
 @export var with_speeders := true     ## issue #42: Skrugs's post (needs with_ship: it shares the ship's ground)
 @export var with_droids := true       ## issue #51: companion droids, the droid merchant, desert wrecks, the Remnant's patrol droids (needs use_look + with_gear)
 var droids: DroidController
+var droid_merchant_outposts: DroidMerchantOutposts
 @export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
 var salesman: ShipSalesman
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
@@ -588,6 +589,10 @@ func _park_gate_speeders() -> void:
 ## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)
 ## and the NPCs (the Remnant's droids answer to the garrison's alarm).
 func _build_droids() -> void:
+	if pilot != null and str(planet.get("id", "")) == PlanetGen.home_id():
+		droid_merchant_outposts = DroidMerchantOutposts.new()
+		droid_merchant_outposts.setup(self, pilot.ground)
+		add_child(droid_merchant_outposts)
 	droids = DroidController.new()
 	droids.setup(self, _player, gear)
 	add_child(droids)
@@ -616,7 +621,8 @@ func _build_detail() -> void:
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
 	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk,
-		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null])
+		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null,
+		droid_merchant_outposts])
 	if decor != null:
 		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
 	if landforms != null:
