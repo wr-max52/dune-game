@@ -1,43 +1,23 @@
 {
+  "note": "Who speaks with which voice. Every value is a key in voice_library.json (issue #164). An NPC's own 'voice_profile' field wins, then npc_profiles by id, then role_profiles by 'voice_role' or 'role' (a pool; each NPC gets a stable pick from it by id), then 'default'.",
   "model_id": "eleven_v4",
-  "voice_profiles": {
-    "guard": {
-      "voice_id": "JBFqnCBsd6RMkjVDRZzb",
-      "stability": 0.64
-    },
-    "guard_rough": {
-      "voice_id": "TxGEqnHWrfWFTfGW9XjX",
-      "stability": 0.68
-    },
-    "merchant": {
-      "voice_id": "EXAVITQu4vr4xnSDxMaL",
-      "stability": 0.52
-    },
-    "relaxed": {
-      "voice_id": "ErXwobaYiN019PkySvjV",
-      "stability": 0.54
-    },
-    "woman_relaxed": {
-      "voice_id": "21m00Tcm4TlvDq8ikWAM",
-      "stability": 0.56
-    },
-    "t89": {
-      "voice_id": "VR6AewLTigWG4xSOukaG",
-      "stability": 0.82,
-      "style_tag": "[low, metallic, robotic voice]"
-    }
-  },
+  "default": "man_casual",
   "role_profiles": {
-    "gate": ["guard", "guard_rough"],
-    "guard": ["guard", "guard_rough"],
-    "trooper": ["guard", "guard_rough"],
-    "merchant": ["merchant"],
-    "local": ["relaxed", "woman_relaxed", "merchant"]
+    "gate": ["man_serious", "man_gruff"],
+    "guard": ["man_serious", "man_gruff"],
+    "trooper": ["man_serious", "man_gruff"],
+    "sentry": ["man_serious", "man_gruff"],
+    "yard": ["man_serious", "man_gruff"],
+    "merchant": ["man_laid_back"],
+    "local": ["man_casual", "man_old", "man_southern", "woman_quirky", "woman_confident"],
+    "native": ["man_fierce"],
+    "planet_owner": ["woman_sultry", "woman_warm", "woman_crisp", "woman_bright"]
   },
   "npc_profiles": {
     "cantina_owner": "woman_relaxed",
-    "skrugs": "merchant",
-    "t89": "t89"
+    "skrugs": "man_goofy",
+    "t89": "robot_male",
+    "mechanic": "man_southern"
   },
   "mood_tags": {
     "amused": "[amused, playful delivery]",

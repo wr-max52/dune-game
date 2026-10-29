@@ -1,0 +1,152 @@
+{
+  "note": "Issue #164. Every ElevenLabs voice the game can use, keyed by what it sounds like, so an NPC picks a voice by description ('Man (goofy)', 'Robot (male)') rather than by ID or actor name. voice_profiles.json maps roles and named NPCs onto these keys; src/systems/voice/npc_voice.gd resolves them. 'name' is the voice's ElevenLabs name, for finding it again in the voice library. 'stability' goes to the TTS request (lower is more expressive). 'style_tag' is an optional delivery tag spoken before every line. 'used_by' is documentation only. Entries with an empty 'used_by' are spares for future NPCs.",
+  "voices": {
+    "man_serious": {
+      "label": "Man (serious)",
+      "name": "George - Warm, Captivating Storyteller",
+      "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+      "stability": 0.64,
+      "used_by": "gate guards, troopers"
+    },
+    "man_gruff": {
+      "label": "Man (gruff)",
+      "name": "Craig",
+      "voice_id": "TxGEqnHWrfWFTfGW9XjX",
+      "stability": 0.68,
+      "used_by": "gate guards, troopers"
+    },
+    "woman_relaxed": {
+      "label": "Woman (relaxed)",
+      "name": "Janet",
+      "voice_id": "21m00Tcm4TlvDq8ikWAM",
+      "stability": 0.56,
+      "used_by": "Oda (port cantina owner)"
+    },
+    "man_goofy": {
+      "label": "Man (goofy)",
+      "name": "Dr. Quibble - Nerdy Cartoon Scientist",
+      "voice_id": "RDSy0QN68yhrjuOgqzQ4",
+      "stability": 0.48,
+      "used_by": "Skrugs"
+    },
+    "robot_male": {
+      "label": "Robot (male)",
+      "name": "Sigma Centauri - AI Robot",
+      "voice_id": "bAq8AI9QURijOtmeFFqT",
+      "stability": 0.82,
+      "used_by": "T-89"
+    },
+    "man_southern": {
+      "label": "Man (southern, warm)",
+      "name": "Wade - Southern Backwoods Neighbor",
+      "voice_id": "9XNfIsDIvdnSURk8DW4z",
+      "stability": 0.55,
+      "used_by": "mechanic, villagers"
+    },
+    "man_casual": {
+      "label": "Man (casual)",
+      "name": "Chris - Charming, Down-to-Earth",
+      "voice_id": "iP95p4xoKVk53GoZ742B",
+      "stability": 0.55,
+      "used_by": "villagers"
+    },
+    "man_old": {
+      "label": "Man (old)",
+      "name": "Bill - Wise, Mature, Balanced",
+      "voice_id": "pqHfZKP75CvOlQylNhV4",
+      "stability": 0.58,
+      "used_by": "villagers"
+    },
+    "woman_quirky": {
+      "label": "Woman (quirky)",
+      "name": "Laura - Enthusiast, Quirky Attitude",
+      "voice_id": "FGY2WhTYpPnrIDTdsKH5",
+      "stability": 0.5,
+      "used_by": "villagers"
+    },
+    "woman_confident": {
+      "label": "Woman (confident)",
+      "name": "Sarah - Mature, Reassuring, Confident",
+      "voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "stability": 0.52,
+      "used_by": "villagers"
+    },
+    "man_laid_back": {
+      "label": "Man (laid-back)",
+      "name": "Roger - Laid-Back, Casual, Resonant",
+      "voice_id": "CwhRBWXzGAHq8TQ4Fs17",
+      "stability": 0.54,
+      "used_by": "stall merchants"
+    },
+    "man_fierce": {
+      "label": "Man (fierce)",
+      "name": "Harry - Fierce Warrior",
+      "voice_id": "SOYHLrjzK2X1ezoPC6cr",
+      "stability": 0.55,
+      "used_by": "desert natives"
+    },
+    "man_shady": {
+      "label": "Man (shady)",
+      "name": "Callum - Husky Trickster",
+      "voice_id": "N2lVS1w4EtoT3dr4eOWO",
+      "stability": 0.55,
+      "used_by": "fence, bounty target"
+    },
+    "woman_sultry": {
+      "label": "Woman (sultry)",
+      "name": "Lily - Velvety Actress",
+      "voice_id": "pFZP5JQG7iQjIQuC4Bku",
+      "stability": 0.56,
+      "used_by": "Odas on other planets"
+    },
+    "woman_warm": {
+      "label": "Woman (warm)",
+      "name": "Matilda - Knowledgable, Professional",
+      "voice_id": "XrExE9yKIg1WjnnlVkGX",
+      "stability": 0.56,
+      "used_by": "Odas on other planets"
+    },
+    "woman_crisp": {
+      "label": "Woman (crisp, British)",
+      "name": "Alice - Clear, Engaging Educator",
+      "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+      "stability": 0.56,
+      "used_by": "Odas on other planets"
+    },
+    "woman_bright": {
+      "label": "Woman (bright)",
+      "name": "Bella - Professional, Bright, Warm",
+      "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+      "stability": 0.56,
+      "used_by": "Odas on other planets"
+    },
+    "man_firm": {
+      "label": "Man (firm)",
+      "name": "Adam - Dominant, Firm",
+      "voice_id": "pNInz6obpgDQGcFmaJgB",
+      "stability": 0.54,
+      "used_by": ""
+    },
+    "man_deep": {
+      "label": "Man (deep)",
+      "name": "Brian - Deep, Resonant and Comforting",
+      "voice_id": "nPczCjzI2devNBz1zQrb",
+      "stability": 0.56,
+      "used_by": ""
+    },
+    "woman_playful": {
+      "label": "Woman (playful)",
+      "name": "Jessica - Playful, Bright, Warm",
+      "voice_id": "cgSgspJ2msm6clMCkdW9",
+      "stability": 0.5,
+      "used_by": ""
+    },
+    "robot_retro": {
+      "label": "Robot (retro)",
+      "name": "Retro Robot",
+      "voice_id": "ZEcx3Wdpj4EvM8PltzHY",
+      "stability": 0.8,
+      "used_by": ""
+    }
+  }
+}

@@ -2,6 +2,7 @@
   "id": "bounty_target",
   "base": "outpost_trooper",
   "label": "Remnant officer",
+  "voice_profile": "man_shady",
   "archetype": "remnant_marked",
   "naming": {
     "kind": "person_remnant",
