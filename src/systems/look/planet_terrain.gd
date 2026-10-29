@@ -58,6 +58,10 @@ var _pending_jobs := {}                ## latest requested center/resolution per
 var _near_map := Vector2.INF            ## map centre of the near layer in place
 var _mid_map := Vector2.INF
 var _fast_flight_quality := false
+var perf_far_build_ms := 0.0
+var perf_far_worker_wait_ms := 0.0
+var perf_mesh_submit_ms := 0.0
+var perf_mesh_submit_count := 0
 
 
 func _init() -> void:
@@ -642,6 +646,26 @@ func _apply_collider(p: Dictionary) -> void:
 		_pending = false
 
 
+func performance_snapshot() -> Dictionary:
+	var visible_far := 0
+	for chunk in _far_instances:
+		if is_instance_valid(chunk) and chunk.visible:
+			visible_far += 1
+	return {
+		"active_terrain_jobs": _jobs.size(),
+		"pending_terrain_jobs": _pending_jobs.size(),
+		"far_patch_total": _far_instances.size(),
+		"far_patch_visible": visible_far,
+		"far_patch_culled": far_chunks_culled,
+		"near_patch_visible": near_mesh != null and near_mesh.visible,
+		"mid_patch_visible": mid_mesh != null and mid_mesh.visible,
+		"far_build_wall_ms": perf_far_build_ms,
+		"far_worker_wait_ms": perf_far_worker_wait_ms,
+		"main_thread_mesh_submit_ms": perf_mesh_submit_ms,
+		"main_thread_mesh_submit_count": perf_mesh_submit_count
+	}
+
+
 func _apply_mesh(layer: String, p: Dictionary) -> void:
 	var xf: Transform3D = p.xform
 	if layer == "near":
@@ -657,11 +681,18 @@ func _apply_mesh(layer: String, p: Dictionary) -> void:
 
 
 func _set_mesh(mi: MeshInstance3D, arrays: Array, xf: Transform3D, size: float) -> void:
+	var mesh_started := Time.get_ticks_usec()
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	mesh.custom_aabb = AABB(Vector3(-size * 0.5, -200, -size * 0.5), Vector3(size, 400, size))
 	mi.mesh = mesh
 	mi.global_transform = xf
+	_record_mesh_submit(mesh_started)
+
+
+func _record_mesh_submit(started_usec: int) -> void:
+	perf_mesh_submit_ms += (Time.get_ticks_usec() - started_usec) / 1000.0
+	perf_mesh_submit_count += 1
 
 
 ## Tell an outer layer where the inner one lies, so it sinks out of the way there.
@@ -735,6 +766,7 @@ static func far_patch_visible(camera_offset: Vector3, patch_direction: Vector3,
 ## `cells` per chunk side (issue #121: a staged build's coarse first pass); -1 = far_cells.
 func _build_far(cells: int = -1) -> void:
 	var fc := cells if cells > 0 else far_cells
+	var build_started := Time.get_ticks_usec()
 	far_root = Node3D.new()
 	far_root.name = "Far"
 	add_child(far_root)
@@ -746,7 +778,9 @@ func _build_far(cells: int = -1) -> void:
 	var results := []
 	results.resize(count)
 	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k, fc), count, -1, true, "planet far")
+	var wait_started := Time.get_ticks_usec()
 	WorkerThreadPool.wait_for_group_task_completion(g)
+	perf_far_worker_wait_ms += (Time.get_ticks_usec() - wait_started) / 1000.0
 	var maximum_vertex_radius := sphere.radius
 	for k in count:
 		var chunk: Dictionary = results[k]
@@ -755,16 +789,19 @@ func _build_far(cells: int = -1) -> void:
 		_far_chunk_angles.append(float(chunk.angle))
 		var mi := MeshInstance3D.new()
 		mi.name = "Chunk%d" % k
+		var mesh_started := Time.get_ticks_usec()
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, chunk.arrays)
 		mi.mesh = mesh
 		mi.material_override = material
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		far_root.add_child(mi)
+		_record_mesh_submit(mesh_started)
 		_far_instances.append(mi)
 	# The sampled far-mesh vertices already include the sphere's dune/crater relief.
 	# The additional radial pad is deliberately generous for relief between samples.
 	_far_surface_bound = maximum_vertex_radius + maxf(far_limb_relief_padding, 0.0)
+	perf_far_build_ms += (Time.get_ticks_usec() - build_started) / 1000.0
 
 
 const _FACES := [

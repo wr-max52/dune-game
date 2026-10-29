@@ -18,6 +18,7 @@ extends SceneTree
 
 const OUT := "res://test_results/planets_trace.txt"
 const FighterBrain := preload("res://src/systems/ai/fighter_brain.gd")
+const PerfTrace := preload("res://src/systems/diagnostics/performance_trace.gd")
 
 var demo
 var pilot: ShipPilot
@@ -27,6 +28,10 @@ var went: Array = []
 var worst_ms := 0.0
 var _last := 0
 var _measure := false
+var _phase := "setup"
+var _perf := PerfTrace.new()
+var scene_ready_ms: Array[float] = []
+var terrain_scene_metrics: Array[Dictionary] = []
 var arrived_altitude := 0                 ## issue #121: the ship's altitude on the handoff's first frame
 
 
@@ -41,6 +46,8 @@ func _initialize() -> void:
 
 func _process(_d: float) -> bool:
 	var now := Time.get_ticks_usec()
+	if _measure:
+		_perf.sample(_d, _phase)
 	if _measure and _last > 0:
 		worst_ms = maxf(worst_ms, (now - _last) / 1000.0)
 	_last = now
@@ -63,18 +70,49 @@ func make_town(handoff: String = "") -> void:
 	var carried: Dictionary = (GameFlow.arrival.get("handoff", {}) as Dictionary).duplicate()
 	var old_ref: WeakRef = weakref(demo) if demo != null else null
 	if demo != null:
+		_capture_terrain_scene()
 		demo.queue_free()
 		await frames(2)
 	demo = load("res://scenes/town_demo.gd").new()
 	demo.npc_brains = false
-	demo.use_look = false
+	demo.use_look = OS.get_environment("DUNE_PERF_VISUALS") == "1"
+	var ready_started := Time.get_ticks_usec()
 	get_root().add_child(demo)
+	scene_ready_ms.append((Time.get_ticks_usec() - ready_started) / 1000.0)
 	if handoff != "":
 		await follow_handoff(handoff, carried, old_ref)
 	await frames(5)
 	pilot = demo.pilot
 	player = demo._player
 	_measure = true
+
+
+func _capture_terrain_scene() -> void:
+	if demo == null or not is_instance_valid(demo) or demo.terrain == null:
+		return
+	var metrics: Dictionary = {}
+	if demo.terrain.has_method("performance_snapshot"):
+		metrics = demo.terrain.performance_snapshot()
+	terrain_scene_metrics.append({ "planet_id": str(demo.planet.get("id", GameFlow.planet_id)), "terrain": metrics })
+
+
+func _capture_hero_frame() -> void:
+	var path := OS.get_environment("DUNE_PERF_SCREENSHOT")
+	if path.is_empty():
+		return
+	if DisplayServer.get_name() == "headless":
+		out("HERO_FRAME", "skipped_headless")
+		return
+	var was_measuring := _measure
+	_measure = false # screenshot readback can stall; do not fold it into route timing
+	await RenderingServer.frame_post_draw
+	var image: Image = get_root().get_texture().get_image()
+	var absolute_path := ProjectSettings.globalize_path(path)
+	DirAccess.make_dir_recursive_absolute(absolute_path.get_base_dir())
+	var image_error: Error = image.save_png(absolute_path)
+	_last = Time.get_ticks_usec()
+	_measure = was_measuring
+	out("HERO_FRAME", path if image_error == OK else "error_%d" % image_error)
 
 
 ## Issue #121: a handoff's scene shows up with only its flight shell built (the
@@ -196,6 +234,8 @@ func fly_to_planet(id: String, climb_to: float, max_s: float) -> float:
 func _run() -> void:
 	# ---------------------------------------------------------------- the port
 	await make_town()
+	_phase = "port_to_station"
+	await _capture_hero_frame()
 	out("HOME_PLANET", GameFlow.current_planet_id())
 	out("HOME_TOWN", demo.town.data.get("id", ""))
 	out("HOME_NEIGHBOURS", ",".join(PackedStringArray(pilot.travel.bodies.map(func(b): return str(b.id)))))
@@ -215,6 +255,7 @@ func _run() -> void:
 
 	# ---------------------------------------------------------------- the station
 	await make_town("STATION")
+	_phase = "station"
 	var t = demo.town
 	out("STATION_TOWN", t.data.get("id", ""))
 	out("STATION_TOWN_VALID", t.validate().is_empty())
@@ -330,6 +371,7 @@ func _run() -> void:
 
 	# ---------------------------------------------------------------- home again
 	went.clear()
+	_phase = "station_to_home"
 	await take_off()
 	out("HOME_TAKEOFF", "%s %s" % [pilot.piloting, pilot.atmo.state_label()])
 	var home_flight := await fly_to_planet("port_desert", 600.0, 150.0)
@@ -337,11 +379,32 @@ func _run() -> void:
 	await frames(60)
 	out("PLANET_AFTER_RETURN", GameFlow.planet_id)
 	await make_town("HOME")
+	_phase = "home"
 	out("HOME_AGAIN_TOWN", demo.town.data.get("id", ""))
 	out("HOME_AGAIN_PILOTING", pilot.piloting and pilot.atmo.state == AtmoFlight.State.FLYING)
 	out("HOME_AGAIN_FROM_STATION_SIDE", Vector2(pilot.atmo.position().x, pilot.atmo.position().z).dot(Vector2(9000, -6500)) > 0.0)
 	out("STATION_NAME_SAME", pilot.travel.bodies.filter(func(b): return b.id == "grit_station")[0].name == lines_get("STATION_NAME"))
 	out("WORST_MS", snappedf(worst_ms, 0.01))
+	_capture_terrain_scene()
+	var perf_report := _perf.report("planet_handoffs", {
+		"scene_ready_ms": scene_ready_ms,
+		"terrain_scenes": terrain_scene_metrics,
+		"visuals_enabled": OS.get_environment("DUNE_PERF_VISUALS") == "1"
+	})
+	var frame_stats: Dictionary = perf_report.frame_time_ms
+	var process_stats: Dictionary = perf_report.main_thread_process_ms
+	var physics_stats: Dictionary = perf_report.physics_process_ms
+	out("FRAME_P50_MS", frame_stats.get("p50", -1.0))
+	out("FRAME_P95_MS", frame_stats.get("p95", -1.0))
+	out("FRAME_P99_MS", frame_stats.get("p99", -1.0))
+	out("CPU_PROCESS_P95_MS", process_stats.get("p95", -1.0))
+	out("CPU_PHYSICS_P95_MS", physics_stats.get("p95", -1.0))
+	out("GPU_FRAME_MS", "unavailable" if perf_report.gpu_frame_ms == null else perf_report.gpu_frame_ms)
+	var perf_path := OS.get_environment("DUNE_PERF_OUT")
+	if not perf_path.is_empty():
+		var perf_error: Error = _perf.write_json(perf_path, perf_report)
+		out("PERF_JSON_PATH", perf_path)
+		out("PERF_JSON_ERROR", perf_error)
 
 	var f := FileAccess.open(OUT, FileAccess.WRITE)
 	if f == null:
