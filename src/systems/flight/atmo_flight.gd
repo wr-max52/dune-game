@@ -123,8 +123,9 @@ func air_scale() -> float:
 	return 1.0 + (p("edge_speed_mult", 4.0) - 1.0) * pow(k, p("speed_curve", 1.0))
 
 
-func can_land() -> bool:
-	if state != State.FLYING or agl() > p("land_max_agl", 150.0):
+func can_land(known_agl: float = -INF) -> bool:
+	var current_agl := agl() if not is_finite(known_agl) else known_agl
+	if state != State.FLYING or current_agl > p("land_max_agl", 150.0):
 		return false
 	var at := position()
 	return ground == null or ground.landable(at.x, at.z)

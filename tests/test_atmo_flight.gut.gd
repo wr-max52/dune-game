@@ -9,6 +9,13 @@ const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const FlightModel := preload("res://src/systems/flight/flight_model.gd")
 const DT := 1.0 / 60.0
 
+class CountingGround extends WorldGround:
+	var height_queries := 0
+
+	func height_above(p: Vector3) -> float:
+		height_queries += 1
+		return super.height_above(p)
+
 var content
 var ground: WorldGround
 var a: AtmoFlight
@@ -112,6 +119,23 @@ func test_land_only_when_low_and_settles_on_what_is_below() -> void:
 	var ev := _run(15.0)
 	assert_true(_types(ev).has("landed"))
 	assert_almost_eq(a.position().y - a.clearance, float((roof.max as Vector3).y), 0.05, "on the watchtower's top")
+
+
+func test_can_land_reuses_the_current_clearance_when_supplied() -> void:
+	var counted := CountingGround.new()
+	var town := TownLayout.new()
+	town.load_town("port_town")
+	counted.setup(content.get_world("port_desert"), town, content)
+	a.setup(content.get_ship("interceptor"), counted)
+	a.place_flying(Vector3(40.0, 20.0, 0.0), Vector3.FORWARD, 0.0, 0.0)
+	var before_clearance := counted.height_queries
+	var clearance := a.agl()
+	assert_eq(counted.height_queries - before_clearance, 5,
+		"AGL samples the belly and four points around the ship")
+	var after_clearance := counted.height_queries
+	a.can_land(clearance)
+	assert_eq(counted.height_queries, after_clearance,
+		"the HUD landing prompt reuses its five-point clearance sample")
 
 
 func test_rests_on_the_high_side_of_a_slope() -> void:
