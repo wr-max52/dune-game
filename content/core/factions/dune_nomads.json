@@ -1,0 +1,5 @@
+{
+  "id": "dune_nomads",
+  "label": "Dune Nomads",
+  "note": "Issue #96: the home planet's native packs. Their own faction: their weapons do not hurt each other, and how each pack treats you is per pack (WorldState.native_packs), never your standing with the Remnant."
+}

@@ -2,6 +2,44 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Desert packs and sand pigs, first milestone (2026-10-28, issue #96)
+
+- **The dune people** now live on the home planet: one primitive people,
+  travelling on foot in packs.
+  - **The two packs:** the friendly Red Wind (12) and the hostile Bone Teeth
+    (10), each with two children (the same bodies at 60%, who fight too).
+  - **Their look:** they wear the existing kit pieces (Goggles head, Cantina
+    Owner upper body, Player legs) in each pack's own sun-faded colours. The
+    leader wears the helmet and carries a tall pole with a rag on it, so you can
+    see a pack coming.
+  - **Weapons:** clubs, spears and knives up close; throwing sticks and light
+    spears from 5 to 18 m. No rifles.
+  - They yell; they do not speak the port's language.
+- **Food for quartz:**
+  - Buy food at the new food stall in the market. It never runs out.
+  - A friendly pack's leader comes over and gestures. Press E to gesture back:
+    one food for one quartz, or two from an adults-only pack.
+  - The stall buys quartz back for 22 cr.
+  - Reputation is per pack, and the Remnant has nothing to do with it.
+- **Hostile packs:**
+  - They blow a battle horn and come at you on sight, and fight to the last.
+    They will chase your speeder on foot.
+  - Survive 5 minutes without killing any of them (and without being downed)
+    and they stop, offer trade, and stay friendly.
+  - Kill one and that pack is hostile for good.
+- **Sand pigs:** eight roam the desert alone and bolt when shot or run at. Kill
+  one, then press E at the carcass for 2 food.
+- **Every planet can have its own:** the planet generator gives each planet its
+  native people and animals, like everything else.
+  - Sand, red-desert and snow types each make a people of their own, with its
+    own name and pack colours, plus the type's animals.
+  - Water, lava, gas and the asteroid have none.
+  - Data lives in `content/core/species/`, `content/core/fauna/`, and the
+    `natives` blocks in the planet and type files. See
+    `docs/natives/NATIVES.md`.
+- **Not yet:** camps, tents, resting, stealing, packs fighting each other or the
+  Remnant, sandstorms, and stealing vehicles.
+
 ## Mesa shapes (issue #93)
 
 - Kept the mesas' existing size and rock material, but replaced the regular

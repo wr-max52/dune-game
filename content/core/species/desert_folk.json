@@ -1,0 +1,8 @@
+{
+  "id": "desert_folk",
+  "kind": "people",
+  "template": true,
+  "base": "dune_nomads",
+  "note": "IP-neutral. Issue #96: a people template for generated sand and red-desert planets. Each planet that uses it gets its own people (their name from the name engine, keyed to the planet, and their own pack styles picked by the planet's seed), so the home planet's dune people never turn up anywhere else. Everything not listed here comes from 'base'.",
+  "naming": "people"
+}

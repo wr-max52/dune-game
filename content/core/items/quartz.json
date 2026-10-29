@@ -1,0 +1,8 @@
+{
+  "id": "quartz",
+  "label": "Quartz",
+  "kind": "trade",
+  "value": 22,
+  "look": "crystal_case",
+  "note": "IP-neutral. Issue #96: raw quartz the desert packs dig out of the dunes. They trade it for food; the food stall in town buys it."
+}

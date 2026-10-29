@@ -139,8 +139,9 @@ func buy(id: String, item_cfg: Dictionary, vendor_cfg: Dictionary, credits: int)
 	var cost := buy_price(item_cfg, vendor_cfg)
 	if not s.has(id) or cost > credits:
 		return -1
-	s.erase(id)
-	stock[str(vendor_cfg.get("id", ""))] = s
+	if not bool(vendor_cfg.get("endless", false)):     # issue #96: the food stall never runs out
+		s.erase(id)
+		stock[str(vendor_cfg.get("id", ""))] = s
 	add(id)
 	return cost
 

@@ -14,6 +14,7 @@ extends RefCounted
 ##   sky       -- values laid over every time-of-day preset
 ##   neighbours-- other planets in its sky you can fly to: { id, at, radius, color... }
 ##   cantina   -- who runs the cantina { card, look }
+##   natives   -- issue #96: its native packs and wild animals (NativesData.resolve)
 ##
 ## Pure and cheap: no nodes. Town scenes ask for the current planet
 ## (GameFlow.planet()); tests can build any planet without a scene.
@@ -95,6 +96,12 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 	world["ground"] = str(tcfg.get("ground", "terrain"))
 	world["planet"] = id
 	var style := str(cfg.get("style", tcfg.get("default_style", "desert")))
+	# Issue #96: its native people and wild animals, from its own config or its type.
+	var bd: Dictionary = town.get("bounds", {})
+	var trect := Rect2()
+	if not bd.is_empty():
+		trect = Rect2(float(bd.min[0]), float(bd.min[1]), float(bd.max[0]) - float(bd.min[0]), float(bd.max[1]) - float(bd.min[1]))
+	var natives := NativesData.resolve(id, cfg, tcfg, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), trect)
 	return {
 		"id": id,
 		"cfg": cfg,
@@ -113,6 +120,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 		"name": str(cfg.get("name", "")),
 		"town_name": str(cfg.get("town_name", "")),
 		"neighbours": neighbours(id, cc),
+		"natives": natives,
 	}
 
 

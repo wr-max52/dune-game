@@ -9,8 +9,10 @@ line on screen says what was said.
   radio_calm_N.wav   level, mid pitch ("Papers.", "Move along.")
   radio_shout_N.wav  higher, louder, harder clipped ("Halt!", "Contact!")
   klaxon_loop.wav    the town alarm: saw-wave beep beep beep, pause (issue #80)
+  battle_horn.wav    a desert pack's battle horn: one long, rough, falling blast (issue #96)
 
-Run: python3 tools/audio/make_npc_sfx.py   (needs numpy and scipy)
+Run: python3 tools/audio/make_npc_sfx.py [name.wav ...]   (needs numpy and scipy;
+names given = only those)
 Writes 16-bit mono WAVs to assets/audio/npc/.
 """
 import os
@@ -134,13 +136,36 @@ def klaxon():
     return x
 
 
+def horn():
+    # Issue #96: an animal horn blown hard: a low fundamental with strong odd
+    # harmonics, a breathy attack, a little wobble, and a fall in pitch at the end.
+    dur = 2.4
+    t = np.arange(int(SR * dur)) / SR
+    f = 98.0 * (1.0 + 0.012 * np.sin(2 * np.pi * 5.2 * t)) * np.where(t > 1.8, 1.0 - 0.18 * (t - 1.8) / 0.6, 1.0)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    x = sum(np.sin(k * ph) / k ** 0.8 for k in (1, 2, 3, 5, 7))
+    x = np.tanh(x * 1.6)
+    breath = bandpass(rng.standard_normal(len(t)), 300, 2400, 2) * 0.25
+    env = np.minimum(t / 0.18, 1.0) * np.where(t > 2.0, np.maximum(0.0, 1.0 - (t - 2.0) / 0.4), 1.0)
+    return bandpass(x + breath, 70, 3000, 2) * env
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    import sys
+    only = set(sys.argv[1:])
+    def want(n):
+        return not only or n in only
     for i, (d, f0) in enumerate([(0.9, 118), (1.3, 124), (1.7, 112), (1.1, 130)]):
-        save("radio_calm_%d.wav" % (i + 1), chatter(d, f0), 0.7)
+        if want("radio_calm_%d.wav" % (i + 1)):
+            save("radio_calm_%d.wav" % (i + 1), chatter(d, f0), 0.7)
     for i, (d, f0) in enumerate([(0.6, 150), (0.8, 160), (1.0, 145), (0.7, 170)]):
-        save("radio_shout_%d.wav" % (i + 1), chatter(d, f0, True), 0.85)
-    save("klaxon_loop.wav", klaxon(), 0.7)
+        if want("radio_shout_%d.wav" % (i + 1)):
+            save("radio_shout_%d.wav" % (i + 1), chatter(d, f0, True), 0.85)
+    if want("klaxon_loop.wav"):
+        save("klaxon_loop.wav", klaxon(), 0.7)
+    if want("battle_horn.wav"):
+        save("battle_horn.wav", horn(), 0.8)
 
 
 if __name__ == "__main__":

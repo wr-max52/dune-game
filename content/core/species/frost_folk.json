@@ -1,0 +1,12 @@
+{
+  "id": "frost_folk",
+  "kind": "people",
+  "template": true,
+  "base": "dune_nomads",
+  "note": "IP-neutral. Issue #96: a people template for generated snow planets: the same body and ways as the desert peoples, in colder colours. Each planet gets its own people from it.",
+  "naming": "people",
+  "styles": [
+    { "id": "ice", "head": "goggles:violet", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate" },
+    { "id": "pelt", "head": "goggles:sand", "torso": "cantina_owner:sand", "legs": "player:olive", "leader_head": "cantina_owner:sand" }
+  ]
+}
