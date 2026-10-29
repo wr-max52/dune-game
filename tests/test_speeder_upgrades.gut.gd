@@ -144,6 +144,24 @@ func test_the_lifter_hops_hangs_then_falls() -> void:
 	assert_true(m.lift_ready(), "recharged by now")
 
 
+func test_the_lifter_keeps_the_climb_issue_100() -> void:
+	var m := _lifter_model()
+	m.airborne = true
+	m.vy = 5.0
+	m.position.y = 20.0
+	assert_true(m.lift())
+	for i in 30:
+		m.step(1.0 / 60.0)
+	assert_almost_eq(m.vy, 5.0, 0.01, "gravity off: going up keeps going up")
+	var m2 := _lifter_model()
+	m2.airborne = true
+	m2.vy = -6.0
+	m2.position.y = 20.0
+	m2.lift()
+	m2.step(1.0 / 60.0)
+	assert_gte(m2.vy, 0.0, "and no downward momentum")
+
+
 func test_off_a_cliff_the_lifter_keeps_it_up_longer() -> void:
 	var a := _lifter_model()
 	var b := _lifter_model()

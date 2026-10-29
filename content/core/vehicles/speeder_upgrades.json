@@ -50,7 +50,7 @@
       "mods": { "laser.damage": 1.3 } },
     { "id": "cannons_2", "slot": "cannons", "group": "performance", "label": "Overcharged cannons (+70% damage)", "price": 300, "requires": "cannons_1",
       "mods": { "laser.damage": 1.7 } },
-    { "id": "grav_lifter", "slot": "lifter", "group": "lifter", "label": "Grav Lifter (Space: hop, then hang in the air)", "price": 900,
-      "hover": { "hop_vy": 6.5, "float_s": 1.2, "float_sink": 0.4, "recharge_s": 4.0 } }
+    { "id": "grav_lifter", "slot": "lifter", "group": "lifter", "label": "Grav Lifter (Space: 2 s of no gravity; ramps launch you)", "price": 900,
+      "hover": { "hop_vy": 6.5, "float_s": 2.0, "recharge_s": 4.0 } }
   ]
 }
