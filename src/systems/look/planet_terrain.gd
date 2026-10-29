@@ -27,6 +27,8 @@ extends DesertTerrain
 @export var far_chunks := 4             ## per cube face side
 @export var far_cells := 64             ## per chunk side; 4 chunks span each face (issue #93)
 @export var hole_sink := 6.0            ## metres an outer layer drops under an inner one
+@export var far_limb_margin_degrees := 5.0 ## keep a generous angular buffer at the visible limb
+@export var far_limb_relief_padding := 100.0 ## extra radial bound for relief not sampled by far vertices
 ## The town's own collider: a fixed square round the port, built once, so people,
 ## droids and dropped things anywhere in and around town always have ground under
 ## them (the near collider only follows the player). Coarser, and a hair lower, so
@@ -41,6 +43,11 @@ var sphere: PlanetSphere
 var near_mesh: MeshInstance3D
 var mid_mesh: MeshInstance3D
 var far_root: Node3D
+var far_chunks_culled := 0          ## current-frame count of safely culled far patches
+var _far_instances: Array[MeshInstance3D] = []
+var _far_chunk_directions: Array[Vector3] = []
+var _far_chunk_angles := PackedFloat32Array()
+var _far_surface_bound := 0.0
 var _with_mesh := true
 var _camera_source: Callable = Callable()   ## () -> Vector3, for the mid ring
 ## In-flight builds: layer -> { task, center: Vector2 (map), result }.
@@ -241,6 +248,33 @@ func prefetch(pos: Vector3) -> void:
 		return
 	_start("near", m)
 	set_physics_process(true)
+
+
+func _process(_dt: float) -> void:
+	if far_root == null or _far_instances.is_empty() or not is_inside_tree():
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		_set_far_visible(true)
+		return
+	# Mesh vertices and their cached cones are in this terrain's local frame.
+	var camera_offset := to_local(camera.global_position) - sphere.center
+	far_chunks_culled = 0
+	for i in _far_instances.size():
+		var visible := far_patch_visible(camera_offset, _far_chunk_directions[i],
+			_far_chunk_angles[i], _far_surface_bound, far_limb_margin_degrees)
+		if not visible:
+			far_chunks_culled += 1
+		var mi := _far_instances[i]
+		if is_instance_valid(mi) and mi.visible != visible:
+			mi.visible = visible
+
+
+func _set_far_visible(visible: bool) -> void:
+	far_chunks_culled = 0
+	for mi in _far_instances:
+		if is_instance_valid(mi) and mi.visible != visible:
+			mi.visible = visible
 
 
 func _physics_process(_dt: float) -> void:
@@ -454,24 +488,55 @@ static func _grid_arrays(verts: PackedVector3Array, n: int) -> Array:
 ## parallel at load. All chunks share one spacing, so their edges meet exactly.
 ## 64 cells per chunk cuts the previous far-surface spacing by 25% without adding
 ## chunks/draw calls or changing the height source or radial curvature.
+## Conservative sphere-limb test for a cached far patch. The caller supplies a
+## surface radius already inflated by the sampled terrain envelope and relief pad.
+## A patch stays visible unless its entire angular cone is beyond that limb plus
+## the safety margin; cameras inside the envelope never cull any patch.
+static func far_patch_visible(camera_offset: Vector3, patch_direction: Vector3,
+		patch_angle: float, surface_bound: float, margin_degrees: float = 5.0) -> bool:
+	var distance_squared := camera_offset.length_squared()
+	if surface_bound <= 0.0 or distance_squared <= surface_bound * surface_bound:
+		return true
+	if patch_direction.length_squared() < 0.000001:
+		return true
+	var distance := sqrt(distance_squared)
+	var camera_direction := camera_offset / distance
+	var horizon_angle := acos(clampf(surface_bound / distance, 0.0, 1.0))
+	var separation := camera_direction.angle_to(patch_direction.normalized())
+	var nearest_patch_angle := separation - maxf(patch_angle, 0.0)
+	return nearest_patch_angle <= horizon_angle + deg_to_rad(maxf(margin_degrees, 0.0))
+
+
 func _build_far() -> void:
 	far_root = Node3D.new()
 	far_root.name = "Far"
 	add_child(far_root)
+	_far_instances.clear()
+	_far_chunk_directions.clear()
+	_far_chunk_angles.clear()
 	var count := 6 * far_chunks * far_chunks
 	var results := []
 	results.resize(count)
 	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k), count, -1, true, "planet far")
 	WorkerThreadPool.wait_for_group_task_completion(g)
+	var maximum_vertex_radius := sphere.radius
 	for k in count:
+		var chunk: Dictionary = results[k]
+		maximum_vertex_radius = maxf(maximum_vertex_radius, float(chunk.max_radius))
+		_far_chunk_directions.append(chunk.direction)
+		_far_chunk_angles.append(float(chunk.angle))
 		var mi := MeshInstance3D.new()
 		mi.name = "Chunk%d" % k
 		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, results[k])
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, chunk.arrays)
 		mi.mesh = mesh
 		mi.material_override = material
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		far_root.add_child(mi)
+		_far_instances.append(mi)
+	# The sampled far-mesh vertices already include the sphere's dune/crater relief.
+	# The additional radial pad is deliberately generous for relief between samples.
+	_far_surface_bound = maximum_vertex_radius + maxf(far_limb_relief_padding, 0.0)
 
 
 const _FACES := [
@@ -530,4 +595,15 @@ func _far_chunk(k: int) -> Array:
 		for q in ns.size():
 			ns[q] = -ns[q]
 		arrays[Mesh.ARRAY_NORMAL] = ns
-	return arrays
+	var direction_sum := Vector3.ZERO
+	var max_vertex_radius := sphere.radius
+	for vertex in verts:
+		var radial := vertex - sphere.center
+		max_vertex_radius = maxf(max_vertex_radius, radial.length())
+		direction_sum += radial.normalized()
+	var chunk_direction := direction_sum.normalized()
+	var chunk_angle := 0.0
+	for vertex in verts:
+		var radial := vertex - sphere.center
+		chunk_angle = maxf(chunk_angle, chunk_direction.angle_to(radial.normalized()))
+	return { "arrays": arrays, "direction": chunk_direction, "angle": chunk_angle, "max_radius": max_vertex_radius }
