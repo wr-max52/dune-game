@@ -73,24 +73,18 @@ func test_random_locals_mix_parts() -> void:
 	assert_gt(mixed, 10, "parts are picked on their own")
 
 
-func test_cantina_dancer_layers_local_white_top_and_owner_legs() -> void:
+func test_cantina_dancer_renders_player_body_owner_legs_and_guard_head() -> void:
 	var c := kit.build("cantina_dancer", "", {
-		"head": "lighter", "torso": "lighter", "legs": "cantina_owner:slate",
+		"head": "guard:desert", "torso": "player:sand", "legs": "cantina_owner:slate",
 	})
-	assert_true(c.has_meta("skins"), "the composite appearance keeps both rigged layers")
-	if c.has_meta("skins"):
-		var skins: Array = c.get_meta("skins")
-		assert_eq(skins.size(), 2)
-		var local_skin: SkinnedBody = skins[0]
-		var legs_skin: SkinnedBody = skins[1]
-		var local_legs := local_skin.model.find_child("legs", true, false) as MeshInstance3D
-		var owner_legs := legs_skin.model.find_child("cantina_owner_legs", true, false) as MeshInstance3D
-		assert_not_null(local_skin.model.find_child("head", true, false))
-		assert_not_null(local_skin.model.find_child("torso", true, false))
-		assert_false(local_legs.visible, "the original local legs are hidden")
-		assert_true(owner_legs.visible, "cantina-owner legs replace them")
-		var head_mat := (local_skin.model.find_child("head", true, false) as MeshInstance3D).get_surface_override_material(0) as BaseMaterial3D
-		assert_string_contains(head_mat.albedo_texture.resource_path, "local_lighter")
-		var legs_mat := owner_legs.get_surface_override_material(0) as BaseMaterial3D
-		assert_string_contains(legs_mat.albedo_texture.resource_path, "cantina_owner_legs_slate")
+	assert_true(c.has_meta("skin"), "the dancer wears the rigged kit model")
+	var skin: SkinnedBody = c.get_meta("skin")
+	var meshes := skin.model.find_children("*", "MeshInstance3D", true, false)
+	assert_eq(meshes.size(), 3, "exactly head, torso and legs are left")
+	for want in ["guard_head", "player_torso", "cantina_owner_legs"]:
+		var mi := skin.model.find_child(want, true, false) as MeshInstance3D
+		assert_not_null(mi, want)
+		if mi != null:
+			assert_true(mi.visible and mi.mesh != null and mi.mesh.get_surface_count() > 0, want + " renders")
+			assert_not_null(mi.skin, want + " is skinned")
 	c.free()
