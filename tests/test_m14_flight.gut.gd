@@ -118,7 +118,9 @@ func test_same_part_of_the_planet() -> void:
 func test_detail_drops_with_altitude() -> void:
 	assert_eq(int(t.get("DETAIL_TIER_ON_PAD", 9)), -1, "full detail on the ground")
 	assert_eq(int(t.get("DETAIL_TIER_AT_SPACE", -1)), 2, "the top tier at the edge of space")
-	assert_eq(t.get("DETAIL_HIDDEN_AT_SPACE"), "people,props")
+	var hidden_at_space := str(t.get("DETAIL_HIDDEN_AT_SPACE", "")).split(",")
+	assert_true("people" in hidden_at_space and "props" in hidden_at_space, "altitude tiers still hide people and props")
+	assert_true("small_props" in hidden_at_space, "fast flight also hides small props")
 	_true("PEOPLE_HIDDEN_AT_SPACE")
 
 

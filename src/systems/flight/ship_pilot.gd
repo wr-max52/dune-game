@@ -80,6 +80,8 @@ var _cam_near := 0.05
 var _cam_far := 4000.0
 var _rig_was_fp := false
 var _boost := false
+var _motion_basis := Basis.IDENTITY
+var _motion_basis_valid := false
 var _foot_prompt: Label          ## "[E] Board" while standing at the ship
 var jolt := BoardJolt.new(1.6, 1.4)   ## issue #87: the ship settles and lifts on its gear as you board
 var _jolt_xf := Transform3D.IDENTITY
@@ -353,6 +355,8 @@ func board() -> bool:
 		_use_berth(i)
 	var p := player()
 	piloting = true
+	_motion_basis = atmo.flight.basis
+	_motion_basis_valid = true
 	_foot_prompt.visible = false
 	p.piloting = true
 	p.vehicle = self
@@ -386,6 +390,9 @@ func exit_ship() -> bool:
 	var p := player()
 	var spot := _exit_spot()
 	piloting = false
+	_motion_basis_valid = false
+	if demo.detail != null:
+		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
 	p.piloting = false
 	p.vehicle = null
 	p.locked = false
@@ -635,6 +642,9 @@ func _physics_process(dt: float) -> void:
 
 
 func _exit_tree() -> void:
+	if demo != null and is_instance_valid(demo) and demo.detail != null and atmo != null:
+		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
+	_motion_basis_valid = false
 	Sound.set_space(false)
 
 
@@ -713,7 +723,15 @@ func _seated(dt: float) -> void:
 	if sky != null:
 		sky.update_for(atmo.altitude(), s)
 	if demo.detail != null:
-		demo.detail.update_for(atmo.altitude())
+		var turn_rate := 0.0
+		var basis_now: Basis = atmo.flight.basis
+		if _motion_basis_valid and dt > 0.0:
+			var turn_radians := _motion_basis.get_rotation_quaternion().angle_to(basis_now.get_rotation_quaternion())
+			turn_rate = rad_to_deg(turn_radians / dt)
+		_motion_basis = basis_now
+		_motion_basis_valid = true
+		var in_flight := atmo.state in [AtmoFlight.State.LIFTOFF, AtmoFlight.State.FLYING, AtmoFlight.State.LANDING]
+		demo.detail.update_motion(dt, atmo.altitude(), atmo.speed(), turn_rate, in_flight)
 	if demo._rig != null:
 		demo._rig.set_override(chase.update(dt, atmo.transform()), 72.0)
 	_update_hud(agl_now)
