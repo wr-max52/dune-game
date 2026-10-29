@@ -146,7 +146,8 @@
         "remnant": {
           "body": "#141416",
           "trim": "#2e2e32",
-          "eye": "#ff2020"
+          "eye": "#ff2020",
+          "dark_gun": true
         }
       },
       "look": {

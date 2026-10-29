@@ -3,15 +3,20 @@
   "base": "gate_guard",
   "label": "Outpost trooper",
   "role": "sentry",
-  "note": "Issue #64: a trooper at one of the Remnant's desert outposts. Holds close to the outpost building on its local terrain nav tile, watches the sand, shouts the alarm and shoots. After the fleet is beaten they shoot on sight (Story.remnant_hostile). Only the blocks below differ from gate_guard.json.",
-  "hp": 70,
+  "note": "Issue #64: a trooper at one of the Remnant's desert outposts. Holds close to the outpost building on its local terrain nav tile, watches the sand, shouts the alarm and shoots. After the fleet is beaten they shoot on sight (Story.remnant_hostile). Issue #76: three to an outpost, tougher, quicker and better shots than the town's troopers, and one seeing you alerts the whole outpost (alert_radius). Only the blocks below differ from gate_guard.json.",
+  "hp": 90,
   "perception": {
     "sight_range": 55.0,
     "fov_deg": 160.0,
-    "reaction_s": 1.0
+    "reaction_s": 0.7
   },
   "combat": {
     "hold_ground": true,
+    "aim_error_deg": 1.7,
+    "burst_min": 4,
+    "burst_max": 6,
+    "windup_s": 0.25,
+    "alert_radius": 60.0,
     "cover_search_radius": 0.0,
     "hold_radius": 3.0,
     "chase_leash": 30.0

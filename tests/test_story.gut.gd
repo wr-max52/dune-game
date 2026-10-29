@@ -200,7 +200,7 @@ func test_three_outposts_further_and_further_out_the_front_gate() -> void:
 		assert_eq((loc.buildings as Array).size(), 1, "one building")
 		assert_false(str(loc.get("ship", "")) == "", "a cargo ship parked")
 		assert_true(content.ships.has(str(loc.ship)))
-		for p in ["guard_a", "guard_b", "target", "ship", "patrol"]:
+		for p in ["guard_a", "guard_b", "guard_c", "target", "ship", "patrol"]:
 			assert_true(loc.points.has(p), "%s has %s" % [id, p])
 		looks[JSON.stringify([loc.buildings, loc.ship, loc.look])] = true
 	assert_lt(dists[0], dists[1])
@@ -215,6 +215,29 @@ func test_target_and_trooper_profiles() -> void:
 	assert_eq(str(t.archetype), "remnant_marked", "the target is red")
 	assert_gt(int(t.hp), int(content.get_soldier("outpost_trooper").hp))
 	assert_ne(NameHooks.person(Story.target_naming(), "npc:bounty/test"), "", "targets get names")
+
+
+## Issue #76: the officer carries a dark pistol; the outposts' troopers are tougher
+## than the town's and every Remnant soldier is worth a kill reward.
+func test_officer_pistol_and_tougher_outposts() -> void:
+	var t: Dictionary = content.get_soldier("bounty_target")
+	assert_eq(str(t.weapon.base), "pistol_blaster", "the officer shoots a pistol")
+	var body: Node3D = CharacterKit.new(LookMaterials.new()).build("remnant_marked")
+	add_child_autofree(body)
+	assert_true(body.has_meta("weapon"), "and holds one")
+	var w: Node3D = body.get_meta("weapon")
+	assert_eq(str(w.get_meta("carry", "")), "pistol", "rested like a pistol")
+	var dark := w.find_children("*", "MeshInstance3D", true, false).filter(
+		func(m): return m.material_override is ShaderMaterial)
+	assert_gt(dark.size(), 0, "the dark variant")
+	var trooper: Dictionary = content.get_soldier("outpost_trooper")
+	var town: Dictionary = content.get_soldier("gate_guard")
+	assert_gt(int(trooper.hp), int(town.hp))
+	assert_lt(float(trooper.combat.aim_error_deg), float(town.combat.aim_error_deg), "better shots")
+	assert_lt(float(trooper.perception.reaction_s), float(town.perception.reaction_s), "quicker")
+	for id in ["gate_guard", "tower_sentry", "yard_trooper", "outpost_trooper", "bounty_target"]:
+		assert_eq(int(content.get_soldier(id).get("kill_reward", 0)), 20, "%s is worth 20 cr" % id)
+	assert_eq(int(content.get_soldier("local_resident").get("kill_reward", 0)), 0, "locals are not")
 
 
 # ---- the town ------------------------------------------------------------------
@@ -233,7 +256,7 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 	var o: RemnantOutposts = t.outposts
 	assert_not_null(o, "the town builds the outposts")
 	assert_eq(o.outposts.size(), 3)
-	assert_eq(o.guards.size(), 6, "two troopers each")
+	assert_eq(o.guards.size(), 9, "three troopers each (issue #76)")
 	for g in o.guards:
 		var og: Garrison = o.garrisons.get(str(g.get_meta("outpost")))
 		assert_not_null(og, "each outpost has its own garrison")
@@ -263,6 +286,24 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 	assert_eq(o.bounty_kills, 1)
 	assert_true(tg.respawns.filter(func(r): return r.has("outpost") and str(r.post).ends_with("target")).is_empty(),
 		"the target never comes back")
+
+
+func test_killing_a_trooper_pays_twenty_credits() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var mine = t.npc("trooper_yard_a")
+	var other = t.npc("trooper_yard_b")
+	assert_not_null(mine)
+	assert_not_null(other)
+	var c0 := WorldState.credits
+	mine.last_hit_by = t._player
+	mine.apply_damage(9999.0)
+	await wait_physics_frames(2)
+	assert_eq(WorldState.credits, c0 + 20, "the player's kill pays 20 cr")
+	assert_eq(t.garrison.rewards_paid, 20)
+	other.apply_damage(9999.0)          # nobody we know shot it
+	await wait_physics_frames(2)
+	assert_eq(WorldState.credits, c0 + 20, "a kill that was not the player's pays nothing")
 
 
 func test_town_troopers_come_back_behind_the_barracks() -> void:

@@ -148,6 +148,15 @@ static func on_guard_killed(delta: int, all_down: bool) -> void:
 		log_event("The front gate checkpoint is down. Nobody is on it.")
 
 
+## Issue #76: the player killed a Remnant soldier worth `amount` (its profile's
+## kill_reward). Droids pay nothing.
+static func on_guard_reward(amount: int) -> void:
+	if amount <= 0:
+		return
+	credits += amount
+	bump("guard_rewards", amount)
+
+
 ## Knocked out at the gate and dragged to the pit: they help themselves to a
 ## share of your credits. Returns what was taken.
 static func on_player_downed(share: float = 0.2, minimum: int = 5) -> int:

@@ -10,7 +10,7 @@ extends Node3D
 ##     player) is far away,
 ##   - the look: one dark grey, black and red building (the far ones add a comms
 ##     mast and a lookout), and a cargo ship parked beside it,
-##   - two troopers (soldiers/outpost_trooper.json) for the town's Garrison, and
+##   - three troopers (soldiers/outpost_trooper.json) for the town's Garrison, and
 ##     the patrol of one assassin droid (DroidController reads droid_specs()),
 ##   - the bounty target: whoever Oda's contract names (WorldState.bounty_target)
 ##     stands at the outpost it names, in red. Killing them is
@@ -86,7 +86,7 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 		if demo.use_look:
 			_dress(o)
 			_park_ship(o)
-		for p in ["guard_a", "guard_b"]:
+		for p in ["guard_a", "guard_b", "guard_c"]:
 			_add_guard(o, p)
 
 

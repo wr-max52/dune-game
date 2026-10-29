@@ -72,6 +72,8 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 		"remnant_commander", "remnant_marked":
 			_dress_trooper(root, p, true)
 			default_pose = "parade_rest"
+			if base == "remnant_marked":
+				_pistol(root)
 		"smuggler":
 			_dress_smuggler(root, p)
 			default_pose = "gunslinger"
@@ -557,6 +559,35 @@ func _rifle(body: Node3D, p: Dictionary) -> void:
 	_mi(r, _box(Vector3(0.03, 0.05, 0.17)), metal, Vector3(0, 0.125, 0.1))
 	_mi(r, _box(Vector3(0.07, 0.06, 0.12)), cell, Vector3(0.05, 0.03, 0.18))
 	_mi(r, _box(Vector3(0.035, 0.06, 0.05)), metal, Vector3(0, -0.02, 0.3))
+
+
+## Issue #76: the marked officer's sidearm: the player's pistol model
+## (hand_weapons.json "pistol_blaster"), darkened the same way. Held one-handed:
+## aimed where the player's third-person pistol sits ("aim"), rested by the right
+## thigh by WeaponCarry (the prop's "carry" meta). No model, no pistol.
+func _pistol(body: Node3D) -> void:
+	var spec: Dictionary = _read_json(HAND_WEAPONS_PATH).get("pistol_blaster", {})
+	var path := str(spec.get("model", ""))
+	if path == "" or not ResourceLoader.exists(path) or not (load(path) is PackedScene):
+		return
+	var r := Node3D.new()
+	r.name = "Pistol"
+	_j(body, "chest").add_child(r)
+	var model: Node3D = (load(path) as PackedScene).instantiate()
+	var k := float(spec.get("scale", 1.0))
+	model.scale = Vector3.ONE * k
+	if spec.get("dark") is Dictionary:
+		PlayerAvatar._darken(model, spec.dark)
+	r.add_child(model)
+	var g: Array = spec.get("grips", {}).get("r", [0, 0, 0])
+	r.set_meta("grips", { "r": Vector3(float(g[0]), float(g[1]), float(g[2])) * k })
+	r.set_meta("carry", "pistol")
+	var aim: Dictionary = spec.get("aim", {})
+	var ap: Array = aim.get("pos", [-0.08, 0.1, 0.45])
+	var ar: Array = aim.get("rot", [0, 0, 0])
+	r.transform = Transform3D(Basis.from_euler(Vector3(float(ar[0]), float(ar[1]), float(ar[2])) * PI / 180.0),
+		Vector3(float(ap[0]), float(ap[1]), float(ap[2])))
+	body.set_meta("weapon", r)
 
 
 # ------------------------------------------------------------------ smuggler

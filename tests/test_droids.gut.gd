@@ -340,3 +340,21 @@ func test_assassin_holds_still_in_a_fight() -> void:
 	assert_eq(ap.speed_scale, 0.0, "in a fight: one still ready stance")
 	DroidKit.play_anim(look, "idle")
 	assert_eq(ap.speed_scale, 1.0, "and back to the idle when it is over")
+
+
+## Issue #76: the Remnant's assassin droids carry the dark pistol; yours do not.
+func test_remnant_droid_gun_is_dark() -> void:
+	var look: Dictionary = DroidRoster.kind_cfg("assassin").get("look", {})
+	for v in ["remnant", "bone"]:
+		var d := DroidKit.build("assassin", DroidRoster.variant_cfg("assassin", v), LookMaterials.new(), look)
+		add_child_autofree(d)
+		var gun := d.find_child("Carry", true, false)
+		if gun == null:
+			pass_test("no carried gun model in this build")
+			return
+		var dark: Array = gun.find_children("*", "MeshInstance3D", true, false).filter(
+			func(m): return m.material_override is ShaderMaterial)
+		if v == "remnant":
+			assert_gt(dark.size(), 0, "the Remnant's is dark")
+		else:
+			assert_eq(dark.size(), 0, "a bought one keeps its own")

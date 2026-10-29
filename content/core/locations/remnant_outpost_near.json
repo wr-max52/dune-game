@@ -2,7 +2,7 @@
   "id": "remnant_outpost_near",
   "kind": "remnant_outpost",
   "label": "the dry wash outpost",
-  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point, and puts two troopers (outpost_trooper) at guard_a / guard_b, an assassin droid walking 'patrol', and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different.",
+  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point, and puts three troopers (outpost_trooper) at guard_a / guard_b / guard_c, an assassin droid walking 'patrol', and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different.",
   "buildings": [
     { "id": "block", "shape": "box", "size": [8,4.5,6], "position": [0, 0, 0], "visual": false }
   ],
@@ -11,6 +11,7 @@
   "points": {
     "guard_a": [6, 0, 4],
     "guard_b": [6, 0, -5],
+    "guard_c": [-7, 0, -6],
     "target": [-2, 0, 7],
     "ship": [-14,0,2],
     "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]]
