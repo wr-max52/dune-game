@@ -18,7 +18,7 @@ extends Node3D
 const LOCATION := "skrugs_post"
 const CARD_PATH := "res://content/core/npcs/skrugs_card.json"
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
-const RED := { "head": "red", "torso": "red", "legs": "red" }
+const RED := { "head": "local:red", "torso": "local:red", "legs": "local:red" }
 
 var demo                              ## town_demo.gd
 var ground: WorldGround

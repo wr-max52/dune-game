@@ -22,6 +22,22 @@ Plain English, newest on top. One entry per milestone.
   down, you both start again in town: you in the pit, it on its pad.
 - **Your flight HUD boxes it** like a space target: a box, its hull, the range,
   the lead dot to aim at, and an arrow when it is off screen.
+## Villagers join the character kit; collar and hoses on the right pieces (2026-10-29)
+
+- **Villagers are kit pieces now.** The villager outfit (scarf head, linen shirt,
+  trousers) is fitted onto the shared base body and cut at the same seams as the
+  player, guard and cantina owner, from its existing rigged model, with no new
+  Hyper3D generation. Its head, upper and lower body show in the character builder
+  (F11, Character) and mix with any other piece. Villagers still get a random
+  colour per part from the same six colourways.
+- **The player's jacket keeps its collar.** The stand-up collar ring had been cut
+  onto the head piece; it now belongs to the upper body. The bandana's chin stays
+  on the head.
+- **The cantina owner's breathing hoses are on her helmet**, not her upper body,
+  so her tunic goes cleanly under any head and the hoses come with her mask.
+- `fit_parts.gd` dress `move` can now pick triangles by region (`below`, `box`) or
+  by a saturation/value ceiling (`max_sv`), and can `copy` instead of move; `hue`
+  is optional.
 
 ## Fewer hitches after a planet handoff (2026-10-29, issue #162)
 

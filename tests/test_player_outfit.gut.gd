@@ -34,12 +34,12 @@ func _texture(body: Node3D, mesh: String) -> String:
 
 func test_catalog_lists_every_kit_piece_and_colour() -> void:
 	var cat := PlayerOutfit.catalog()
-	assert_eq(cat.head.keys(), ["player", "goggles", "guard"], "the player's own piece first, then the kit's")
-	assert_eq(cat.torso.keys(), ["player", "guard"])
-	assert_eq(cat.legs.keys(), ["player", "guard"])
-	assert_eq(cat.head.player, ["dusk", "rust", "sand"], "the player's head has its own textures")
-	assert_eq(cat.torso.player, ["dusk", "rust", "sand"])
-	assert_eq(cat.legs.guard, ["desert", "gunmetal", "oxblood"])
+	assert_eq(cat.head.keys(), ["player", "goggles", "guard", "cantina_owner", "local"], "the player's own piece first, then the kit's")
+	assert_eq(cat.torso.keys(), ["player", "guard", "cantina_owner", "local"])
+	assert_eq(cat.legs.keys(), ["player", "cantina_owner", "guard", "local"])
+	assert_eq(cat.head.player, ["dusk", "olive", "rust", "sand"], "the player's head has its own textures")
+	assert_eq(cat.torso.player, ["dusk", "olive", "rust", "sand"])
+	assert_eq(cat.legs.guard, ["black", "desert", "gunmetal", "navy", "oxblood"])
 	assert_eq(cat.head.goggles, ["oxblood", "sand", "violet"])
 
 
@@ -93,7 +93,7 @@ func test_builder_saves_each_pick_and_sends_it_out() -> void:
 			piece.select(i)
 			piece.item_selected.emit(i)
 	var colour: OptionButton = b._colours.torso
-	assert_eq(colour.item_count, 4, "Original and the guard's three colours")
+	assert_eq(colour.item_count, 6, "Original and the guard's five colours")
 	for i in colour.item_count:
 		if colour.get_item_metadata(i) == "oxblood":
 			colour.select(i)

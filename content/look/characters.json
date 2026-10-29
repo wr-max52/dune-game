@@ -104,12 +104,12 @@
       "height": 1.72, "bulk": 1.0,
       "robe": "#9c8262", "hood": "#86694a", "gloves": "#5a4636", "wrap": "#a8322a", "boots": "#4a3628",
       "model": {
-        "scene": "res://assets/characters/local/local.glb",
-        "colors": "res://assets/characters/local/colors/local_%s.png",
+        "scene": "res://assets/characters/kit/parts.glb", "pieces": true,
+        "colors": "res://assets/characters/kit/colors/%s.png",
         "parts": {
-          "head": ["sand", "darker", "lighter", "blue", "red", "yellow"],
-          "torso": ["sand", "darker", "lighter", "blue", "red", "yellow"],
-          "legs": ["sand", "darker", "lighter", "blue", "red", "yellow"]
+          "head": ["local", "local:darker", "local:lighter", "local:blue", "local:red", "local:yellow"],
+          "torso": ["local", "local:darker", "local:lighter", "local:blue", "local:red", "local:yellow"],
+          "legs": ["local", "local:darker", "local:lighter", "local:blue", "local:red", "local:yellow"]
         },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
