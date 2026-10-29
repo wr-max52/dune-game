@@ -59,7 +59,8 @@ static func dress(body: Node3D, cfg: Dictionary) -> SkinnedBody:
 	body.add_child(inst)
 	sb._fit(cfg)
 	sb._bind(body, cfg.get("bones", {}))
-	sb._hide_primitives(body)
+	if not body.has_meta("skin"):
+		sb._hide_primitives(body)
 	if cfg.has("tint"):
 		sb.tint(cfg.tint)
 	return sb
@@ -233,6 +234,16 @@ func skin_meshes() -> Array:
 
 ## Copy the kit joints onto the bones. Call after the animator and IK have run.
 func sync(body: Node3D) -> void:
+	var skins = body.get_meta("skins", [])
+	if skins is Array and not skins.is_empty():
+		for layer in skins:
+			if layer is SkinnedBody:
+				(layer as SkinnedBody)._sync_one(body)
+		return
+	_sync_one(body)
+
+
+func _sync_one(body: Node3D) -> void:
 	var inv := _skel_in_body.affine_inverse()
 	var want := {}                 ## bone -> skeleton-space basis this frame
 	for bi in _order:

@@ -30,6 +30,7 @@ const SPRINT_SPEED := 7.0
 var state := State.LOCOMOTION
 var phase := 0.0               ## gait phase, radians
 var time := 0.0
+var dance_time := 0.0          ## continuous 10-second cantina loop
 var land_left := 0.0
 var land_time := 0.18
 var smoothing := 14.0          ## per second; higher = snappier joints
@@ -57,6 +58,9 @@ var states_seen := {}          ## for tests/traces: every state name entered
 ## Returns { joints: {name: Vector3 deg}, pelvis_y: float, pelvis_x: float, state: String }
 func step(dt: float, inp: Dictionary) -> Dictionary:
 	time += dt
+	var dancing := bool(inp.get("dance", false))
+	if dancing:
+		dance_time = fposmod(dance_time + dt, DANCE_LOOP_S)
 	var grounded: bool = inp.get("grounded", true)
 	var vy: float = inp.get("vy", 0.0)
 	var speed: float = inp.get("speed", 0.0)
@@ -96,7 +100,11 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 		_cur[j] = (_cur.get(j, v) as Vector3).lerp(v, k)
 	pelvis_y = lerpf(pelvis_y, target.pelvis_y, k)
 	pelvis_x = lerpf(pelvis_x, target.pelvis_x, k)
-	return { "joints": _cur.duplicate(), "pelvis_y": pelvis_y, "pelvis_x": pelvis_x, "state": state_name() }
+	return {
+		"joints": _cur.duplicate(), "pelvis_y": pelvis_y, "pelvis_x": pelvis_x,
+		"state": "DANCE" if dancing else state_name(),
+		"dance_yaw": float(target.get("yaw", 0.0)),
+	}
 
 
 func state_name() -> String:
@@ -108,8 +116,67 @@ const JOINTS := ["pelvis", "spine", "chest", "neck", "head",
 	"l_shoulder", "r_shoulder", "l_elbow", "r_elbow", "l_wrist", "r_wrist",
 	"l_hip", "r_hip", "l_knee", "r_knee", "l_ankle", "r_ankle"]
 
+const DANCE_LOOP_S := 10.0
+
+
+## A slow, repeatable stage loop: hip-led sway, a deliberate turn toward the wall,
+## a controlled forward bend, then an unhurried return to the audience. The first
+## and last poses match so the loop has no visible reset.
+static func dance_pose(seconds: float) -> Dictionary:
+	var t := fposmod(seconds, DANCE_LOOP_S)
+	var joints := {}
+	for n in JOINTS:
+		joints[n] = Vector3.ZERO
+	var fold := 0.0
+	if t < 4.0:
+		fold = 0.0
+	elif t < 5.25:
+		fold = _smooth01((t - 4.0) / 1.25)
+	elif t < 5.9:
+		fold = 1.0
+	elif t < 7.25:
+		fold = 1.0 - _smooth01((t - 5.9) / 1.35)
+	var sway := sin(TAU * t / 2.5) * (1.0 - 0.35 * fold)
+	joints.pelvis = Vector3(0.0, sway * 8.0, sway * 5.0)
+	joints.spine = Vector3(fold * 12.0, -sway * 4.0, -sway * 2.0)
+	joints.chest = Vector3(fold * 25.0, -sway * 7.0, -sway * 3.0)
+	joints.neck = Vector3(-fold * 5.0, sway * 2.0, 0.0)
+	joints.head = Vector3(-fold * 17.0, sin(TAU * t / 5.0) * 5.0, -sway * 2.0)
+	joints.l_shoulder = Vector3(-8.0 + fold * 25.0 + sway * 4.0, 0.0, 9.0 + sway * 5.0)
+	joints.r_shoulder = Vector3(-8.0 + fold * 25.0 - sway * 4.0, 0.0, -9.0 - sway * 5.0)
+	joints.l_elbow = Vector3(-18.0 - fold * 22.0, 0.0, 0.0)
+	joints.r_elbow = Vector3(-18.0 - fold * 22.0, 0.0, 0.0)
+	joints.l_wrist = Vector3(-fold * 6.0, 0.0, 0.0)
+	joints.r_wrist = Vector3(-fold * 6.0, 0.0, 0.0)
+	joints.l_hip = Vector3(-2.0 - sway * 2.0, 0.0, 2.0 + sway * 2.0)
+	joints.r_hip = Vector3(-2.0 + sway * 2.0, 0.0, -2.0 + sway * 2.0)
+	joints.l_knee = Vector3(7.0 + fold * 17.0, 0.0, 0.0)
+	joints.r_knee = Vector3(7.0 + fold * 17.0, 0.0, 0.0)
+	joints.l_ankle = Vector3(-2.0 - fold * 4.0, 0.0, 0.0)
+	joints.r_ankle = Vector3(-2.0 - fold * 4.0, 0.0, 0.0)
+	var turn := 0.0
+	if t >= 2.5 and t < 4.0:
+		turn = PI * _smooth01((t - 2.5) / 1.5)
+	elif t >= 4.0 and t < 7.25:
+		turn = PI
+	elif t >= 7.25 and t < 8.75:
+		turn = PI * (1.0 - _smooth01((t - 7.25) / 1.5))
+	return {
+		"joints": joints,
+		"pelvis_y": PELVIS_Y - fold * 0.12 + 0.008 * cos(TAU * t / 2.5),
+		"pelvis_x": sway * 0.025,
+		"yaw": turn,
+	}
+
+
+static func _smooth01(x: float) -> float:
+	var u := clampf(x, 0.0, 1.0)
+	return u * u * (3.0 - 2.0 * u)
+
 
 func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictionary:
+	if bool(inp.get("dance", false)):
+		return dance_pose(dance_time)
 	var j := {}
 	for n in JOINTS:
 		j[n] = Vector3.ZERO

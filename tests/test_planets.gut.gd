@@ -128,6 +128,24 @@ func test_the_port_is_unchanged() -> void:
 	assert_eq(p.town_id, "port_town", "the hand-built town")
 	assert_eq(p.town.boxes.size(), cc.get_location("port_town").boxes.size())
 	assert_eq(p.world.id, "port_desert", "the hand-built world")
+
+
+func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
+	var station := PlanetGen.build("grit_station", cc)
+	var station_town := TownLayout.new()
+	station_town.load_from_dict(station.town)
+	var dancers: Array = station_town.markers().filter(func(m): return str(m.get("soldier", "")) == "cantina_dancer")
+	assert_eq(dancers.size(), 1, "the station has exactly one performer")
+	var dancer_pos: Vector3 = station_town.marker_pos("cantina_dancer")
+	var stage: Dictionary = station_town.get_box("cantina_stage")
+	assert_almost_eq(dancer_pos.y, float(stage.max[1]), 0.001, "feet are on the stage surface")
+	assert_true(dancer_pos.x >= float(stage.min[0]) and dancer_pos.x <= float(stage.max[0]), "stage X bounds")
+	assert_true(dancer_pos.z >= float(stage.min[2]) and dancer_pos.z <= float(stage.max[2]), "stage Z bounds")
+	var other := PlanetGen.make({ "id": "dance_test", "type": "sand", "town_size": 1, "seed": 45 }, cc)
+	var other_town := TownLayout.new()
+	other_town.load_from_dict(other.town)
+	assert_eq(other_town.markers().filter(func(m): return str(m.get("soldier", "")) == "cantina_dancer").size(), 0,
+		"generated towns without the station flag stay unchanged")
 	assert_eq(p.ground, "terrain")
 	assert_true(TownStyle.parse(p.style).is_identity(), "the port's own look")
 	assert_eq(PlanetGen.home_id(), "port_desert")
