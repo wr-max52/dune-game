@@ -4,6 +4,7 @@ extends GutTest
 ## with real physics, is tests/test_desert_walk.gut.gd.
 
 const TownDemo := preload("res://scenes/town_demo.gd")
+const Landforms := preload("res://src/systems/look/desert_landforms.gd")
 
 var _site_terrain: DesertTerrain
 var _site: Dictionary
@@ -196,6 +197,25 @@ func test_look_hides_the_aprons_and_raises_landforms() -> void:
 		if keep.has_point(Vector2(o.x, o.z)):
 			inside += 1
 	assert_eq(inside, 0, "no boulders in or near the town")
+
+
+func test_mesas_have_broad_caps_and_eroded_shelves() -> void:
+	var noise := FastNoiseLite.new()
+	noise.seed = 31
+	noise.fractal_octaves = 3
+	var mesh := Landforms._mesa_mesh(100.0, 200.0, noise, 4.0)
+	var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var base_radius := 0.0
+	var cap_radius := 0.0
+	for v in verts:
+		var radial := Vector2(v.x, v.z).length()
+		if v.y < -60.0:
+			base_radius = maxf(base_radius, radial)
+		if v.y > 60.0:
+			cap_radius = maxf(cap_radius, radial)
+	assert_gt(base_radius, cap_radius * 1.35, "the cliff narrows to a distinct broad plateau")
+	assert_lte(base_radius, 90.0, "the visible cliff stays inside its existing world-ground column")
+	assert_gt(verts.size(), 64 * 10 * 6, "the stepped silhouette has enough geometry to read")
 
 
 func test_fall_guard_uses_the_ground() -> void:
