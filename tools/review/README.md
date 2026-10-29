@@ -26,5 +26,7 @@ godot --path . -s res://tools/review/wreck_probe.gd -- shots=/tmp/wreck
 
 It checks the buried bow, raised stern and front-gate street sightline, the open breach,
 a player-sized capsule route from the boarding plate onto the aft deck, matching
-flight/physics surfaces, and an actual flight-model landing. Screenshots omit
+flight/physics surfaces, an actual flight-model landing, pointed fracture plates
+and four segmented engine rims. Optional photos include the powered-off engines.
+Screenshots omit
 the town buildings/NPCs and are not a full gameplay or performance review.

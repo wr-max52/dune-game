@@ -15,6 +15,10 @@ Plain English, newest on top. One entry per milestone.
   hole on a solid box.
 - `tools/review/wreck_probe.gd` is a standalone, wreck-only collision/landing
   check with optional screenshots. The CI suite was not run for this change.
+- Visual refinement: wreck-only scorched/chipped metal, irregular pointed
+  fracture plates around the breach, and layered engine collars, vents, braces
+  and recessed dark throats. Engines remain unpowered (no emission or exhaust).
+  Hull dimensions, placement, boarding plate and lower deck are unchanged.
 
 ## Speeder upgrades at the mechanic's yard (2026-10-28, issue #95)
 

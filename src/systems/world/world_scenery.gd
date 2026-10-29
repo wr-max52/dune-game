@@ -12,11 +12,13 @@ extends Node3D
 ## from content/look/world.json.
 
 const LOOK_PATH := "res://content/look/world.json"
+const WRECK_SHADER := preload("res://src/systems/look/shaders/wreck_metal.gdshader")
 
 var ground: WorldGround
 var terrain: WorldTerrain
 var look: Dictionary = {}
 var _mats: LookMaterials
+var _wreck_mats := {}
 
 
 func setup(world_ground: WorldGround) -> void:
@@ -53,11 +55,16 @@ func _build_landmark_colliders() -> void:
 		if str(b.get("rise", "")) != "":
 			continue                 # a ramp: its dresser builds the sloped collider
 		var cs := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
-		shape.size = mx - mn
-		cs.shape = shape
+		if bool(b.get("wreck_shard", false)):
+			var shape := ConvexPolygonShape3D.new()
+			shape.points = StarcruiserWreck.shard_vertices(mx - mn)
+			cs.shape = shape
+		else:
+			var shape := BoxShape3D.new()
+			shape.size = mx - mn
+			cs.shape = shape
 		# Issue #77: on the ball a box stands in its own (leaning) frame.
 		cs.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY, (mn + mx) * 0.5)
 		root.add_child(cs)
@@ -133,24 +140,30 @@ func _build_landmark_visuals() -> void:
 		root.add_child(mi)
 
 
-## Exact same oriented plates as the physics/flight boxes: no wall skirt across
-## the opening and no distant impostor that disappears when approached.
+## Structural plates use the physics/flight boxes. Fracture lips use a pointed
+## convex mesh for foot collision and small conservative bounds for flight.
+## No wall skirt across the opening, nor an impostor that vanishes up close.
 func _build_wreck_plate(root: Node3D, b: Dictionary) -> void:
-	var mesh := BoxMesh.new()
-	mesh.size = (b.max as Vector3) - (b.min as Vector3)
+	var size := (b.max as Vector3) - (b.min as Vector3)
 	var mi := MeshInstance3D.new()
 	mi.name = str(b.id).replace("/", "_")
-	mi.mesh = mesh
+	if bool(b.get("wreck_shard", false)):
+		mi.mesh = StarcruiserWreck.shard_mesh(size)
+	else:
+		var mesh := BoxMesh.new()
+		mesh.size = size
+		mi.mesh = mesh
 	var finish := str(b.wreck_finish)
-	match finish:
-		"rib":
-			mi.material_override = _mats.flat(Color("#626166"), 0.85, 0.35)
-		"scorch":
-			mi.material_override = _mats.flat(Color("#29282c"), 1.0, 0.15)
-		"marking":
-			mi.material_override = _mats.flat(Color("#6b1e1e"), 0.9, 0.25)
-		_:
-			mi.material_override = _mats.hull(float(b.sand_y), 8.0)
+	var frame: Transform3D = b.wreck_frame
+	var key := str(b.id).get_slice("/", 0) + "/" + finish
+	if not _wreck_mats.has(key):
+		var material := ShaderMaterial.new()
+		material.shader = WRECK_SHADER
+		material.set_shader_parameter("noise_tex", _mats.noise)
+		material.set_shader_parameter("wreck_from_world", frame.affine_inverse())
+		material.set_shader_parameter("finish", { "hull": 0, "rib": 1, "scorch": 2, "marking": 3, "nozzle": 4 }.get(finish, 0))
+		_wreck_mats[key] = material
+	mi.material_override = _wreck_mats[key]
 	mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY,
 		((b.min as Vector3) + (b.max as Vector3)) * 0.5)
 	root.add_child(mi)

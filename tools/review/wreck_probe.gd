@@ -96,6 +96,10 @@ func _review() -> void:
 	var gap_from := deck_xf * Vector3(80, -12, -35)
 	var gap_to := deck_xf * Vector3(0, -12, -35)
 	_check(space.intersect_ray(PhysicsRayQueryParameters3D.create(gap_from, gap_to)).is_empty(), "side_breach_is_open")
+	_check(ground.boxes.filter(func(b): return bool(b.get("wreck_shard", false))).size() == 22,
+		"jagged_fracture_plates_present")
+	_check(ground.boxes.filter(func(b): return str(b.id).contains("_rim_")).size() == 64,
+		"four_segmented_engine_rims_present")
 
 	var capsule := CharacterBody3D.new()
 	var cs := CollisionShape3D.new()
@@ -179,6 +183,8 @@ func _review() -> void:
 		await _photo(camera, deck_xf * Vector3(500, 180, 80),
 			deck_xf * Vector3(0, 0, 30), shots + "/wreck_overview.png")
 		await _photo(camera, ramp_xf * Vector3(0, 3, -ramp_half.z + 8), deck_xf * Vector3(0, -10, 10), shots + "/wreck_entry.png")
+		await _photo(camera, deck_xf * Vector3(75, 55, 410),
+			deck_xf * Vector3(0, 0, 315), shots + "/wreck_engines.png")
 		await _photo(camera, town_view, town_view + Vector3(1600, 0, 0), shots + "/wreck_town_vista.png")
 	PlanetSphere.current = null
 	quit(1 if failed else 0)
