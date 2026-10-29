@@ -699,9 +699,10 @@ func _seated(dt: float) -> void:
 		defense.step(dt)
 	_sync_visual()
 	var s := atmo.position()
+	var agl_now := atmo.agl()
 	player().global_position = s
 	if demo.terrain != null and atmo.state != AtmoFlight.State.CRASHED \
-			and (atmo.state == AtmoFlight.State.LANDING or atmo.agl() < 60.0):
+			and (atmo.state == AtmoFlight.State.LANDING or agl_now < 60.0):
 		demo.terrain.prefetch(s)           # ground to step out onto, built in the background
 	if sky != null:
 		sky.update_for(atmo.altitude(), s)
@@ -709,7 +710,7 @@ func _seated(dt: float) -> void:
 		demo.detail.update_for(atmo.altitude())
 	if demo._rig != null:
 		demo._rig.set_override(chase.update(dt, atmo.transform()), 72.0)
-	_update_hud()
+	_update_hud(agl_now)
 
 
 func _read_keys(dt: float) -> void:
@@ -886,13 +887,13 @@ func _sync_visual() -> void:
 		visual.global_transform = atmo.transform() * _jolt_xf
 
 
-func _update_hud() -> void:
+func _update_hud(agl_now: float) -> void:
 	var f = atmo.flight
 	var v: Vector3 = f.velocity()
 	hud.show_values({
 		"speed": f.speed, "throttle": _throttle,
 		"boost": f.boost_left / maxf(f.boost_time(), 0.001),
-		"agl": atmo.agl(), "altitude": atmo.altitude(), "climb": v.y,
+		"agl": agl_now, "altitude": atmo.altitude(), "climb": v.y,
 		"space_fraction": atmo.space_fraction(), "state": atmo.state_label(),
 		"hull": defense.hull_hp(), "hull_max": defense.hull_max(), "shield": int(defense.shield),
 	})
@@ -901,7 +902,7 @@ func _update_hud() -> void:
 		AtmoFlight.State.PARKED:
 			tip = GameFlow.label("seated")
 		AtmoFlight.State.FLYING:
-			tip = GameFlow.label("can_land") if atmo.can_land() else ""
+			tip = GameFlow.label("can_land") if atmo.can_land(agl_now) else ""
 			if bay_landing:
 				tip = GameFlow.label("bay_landing")
 			elif near_bay():
