@@ -12,7 +12,7 @@
       "sound": "droid_beep",
       "hover": 1.7,
       "hit_radius": 0.55,
-      "chirp_s": [2.0, 5.0],
+      "chirp_s": [9.0, 20.0],
       "follow": {
         "side": 1.1,
         "back": 1.4,
@@ -61,6 +61,7 @@
       "price": 50,
       "resale": 40,
       "sound": "cargo_beep",
+      "chirp_s": [7.0, 16.0],
       "carries": true,
       "follow": {
         "side": -1.2,
@@ -109,6 +110,7 @@
       "price": 100,
       "resale": 90,
       "sound": "assassin_beep",
+      "chirp_s": [11.0, 22.0],
       "height": 2.3,
       "follow": {
         "side": 0.0,

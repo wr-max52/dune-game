@@ -4,6 +4,7 @@
   "name": "",
   "type": "asteroid",
   "town_size": 1,
+  "stage_dancer": true,
   "seed": 45,
   "style": "metallic",
   "near": "port_desert",

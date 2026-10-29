@@ -306,7 +306,9 @@ func _dress(loc: Dictionary) -> void:
 			"house":
 				_mesh(_box(s + Vector3(0, 1.0, 0)), plaster, c + Vector3(0, s.y * 0.5 - 0.5, 0))
 				# A domed roof, a door toward the stall and a red awning over it.
-				_mesh(_dome(minf(s.x, s.z) * 0.42), plaster, c + Vector3(0, s.y, 0))
+				var dr := minf(s.x, s.z) * 0.42
+				_mesh(_dome(dr), plaster, c + Vector3(0, s.y, 0))
+				_dome_collider(c + Vector3(0, s.y, 0), dr)
 				_mesh(_box(Vector3(0.12, 2.1, 1.3)), wood, c + Vector3(s.x * 0.5 + 0.02, 1.05, 2.2))
 				_mesh(_box(Vector3(1.6, 0.08, 2.4)), red, c + Vector3(s.x * 0.5 + 0.8, 2.5, 2.2), Vector3(0, 0, -14))
 			"stall":
@@ -347,6 +349,23 @@ func _cyl(r: float, h: float) -> CylinderMesh:
 	c.height = h
 	c.radial_segments = 8
 	return c
+
+
+## A cylinder collider under the dome cap, at the house's roof height. `cap` is
+## the dome's base, in the post's own frame (turned into the world like `_mesh`).
+func _dome_collider(cap: Vector3, r: float) -> void:
+	var body := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = r
+	shape.height = r
+	cs.shape = shape
+	cs.transform = Transform3D(Basis.IDENTITY, Vector3(0, r * 0.5, 0))
+	body.add_child(cs)
+	add_child(body)
+	# The cylinder is symmetric about its axis, so only its position matters; place
+	# it where the dome cap sits in the world.
+	body.global_position = origin + cap.rotated(Vector3.UP, yaw)
 
 
 func _dome(r: float) -> SphereMesh:

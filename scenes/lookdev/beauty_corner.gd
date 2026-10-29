@@ -135,6 +135,19 @@ func _solid(mi: MeshInstance3D) -> void:
 	mi.create_trimesh_collision()
 
 
+## A cylinder collider standing on `pos`, for a dome cap over a round house.
+func _cyl_solid(parent: Node3D, pos: Vector3, r: float, h: float) -> void:
+	var body := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = r
+	shape.height = h
+	cs.shape = shape
+	cs.transform = Transform3D(Basis.IDENTITY, pos)
+	body.add_child(cs)
+	parent.add_child(body)
+
+
 # ---------------------------------------------------------------- the port
 
 const FLOOR_Y := 8.0
@@ -299,6 +312,7 @@ func _dome_house(parent: Node3D, pos: Vector3, r: float, h: float, yaw: float, b
 	dome.radial_segments = 28
 	dome.rings = 10
 	_add(dome, mat, Vector3(0, h, 0), house)
+	_cyl_solid(house, Vector3(0, h + r * 0.31, 0), r * 0.92, r * 0.62)
 	# Door and windows face +X locally (the lane).
 	_add(_box(Vector3(1.6, 3.4, 2.6)), mat, Vector3(r - 0.3, 1.7, 0), house)
 	_add(_box(Vector3(0.2, 2.6, 1.5)), mats.flat(Color("#241a15")), Vector3(r + 0.45, 1.3, 0), house)

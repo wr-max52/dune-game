@@ -72,6 +72,7 @@ var built_boxes := 0          # read by the trace and tests
 var built_markers := 0
 var nav: TownNav                      ## the walkable surface NPCs path on
 var npcs: Array = []                  ## NpcBody, one per Remnant soldier marker (the garrison)
+var stage_performers: Array = []      ## ambient NPCs (dance, do not join a combat group)
 var garrison: Garrison                ## M15: runs every trooper in town (null with npc_brains off)
 var locals: Array = []                ## NpcBody, one per marker whose profile is in the "locals" faction
 var townsfolk: Townsfolk              ## runs every local (null with npc_brains off)
@@ -353,6 +354,7 @@ func _spawn_player() -> void:
 		var c: Vector3 = from_pad.center
 		yaw = atan2(c.x - from_pad.arrive.x, c.z - from_pad.arrive.z)
 	add_child(_player)
+	_player.call("align_to_ground", true)
 	_rig = CameraRigNode.new()
 	add_child(_rig)
 	_rig.set_player(_player as Node3D)
@@ -407,7 +409,8 @@ func _build_nav() -> void:
 ## One NpcBody per marker that names a soldier profile. Placed facing the marker's
 ## "face" point if it has one (a merchant faces the aisle), else the way the statue
 ## used to (the gate for a trooper post); senses watch the player. Profiles in the
-## "locals" faction go to Townsfolk, the rest to the Garrison.
+## Local combatants go to Townsfolk, ambient performers stay out of combat groups,
+## and the remaining combatants go to the Garrison.
 func _build_npcs() -> void:
 	var root := Node3D.new()
 	root.name = "Npcs"
@@ -500,7 +503,12 @@ func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String
 	npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
 	var root := get_node_or_null("Npcs")
 	(root if root != null else self).add_child(npc)
-	(locals if npc.faction == "locals" else npcs).append(npc)
+	if bool(soldier.get("ambient", false)):
+		stage_performers.append(npc)
+	elif npc.faction == "locals":
+		locals.append(npc)
+	else:
+		npcs.append(npc)
 	return npc
 
 
@@ -647,7 +655,9 @@ func _build_detail() -> void:
 		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null, natives,
 		droid_merchant_outposts])
 	if decor != null:
-		detail.add_group("props", [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")])
+		var small_props := [decor.get_node_or_null("Lamps"), decor.get_node_or_null("Banners")]
+		detail.add_group("props", small_props)
+		detail.add_group("small_props", small_props)
 	if landforms != null:
 		detail.add_group("props", [landforms.get_node_or_null("Boulders")])
 	if dust != null:

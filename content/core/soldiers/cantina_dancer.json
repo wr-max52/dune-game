@@ -1,0 +1,29 @@
+{
+  "id": "cantina_dancer",
+  "label": "Cantina Dancer",
+  "archetype": "cantina_dancer",
+  "faction": "locals",
+  "ambient": true,
+  "radio_voice": false,
+  "note": "A non-combatant station performer. She stays on the cantina stage, loops the ten-second dance, and remains damageable.",
+  "naming": {
+    "kind": "person_dune",
+    "nameplate_range": 0.0
+  },
+  "hp": 50,
+  "walk_speed": 0.0,
+  "sprint_speed": 0.0,
+  "turn_rate_deg": 220.0,
+  "outfit": {
+    "head": "lighter",
+    "torso": "lighter",
+    "legs": "cantina_owner:slate"
+  },
+  "dance_loop": true,
+  "perception": {
+    "sight_range": 0.0,
+    "hearing_range": 0.0,
+    "ray_hz": 0.0
+  },
+  "weapon": {}
+}

@@ -586,8 +586,11 @@ func _tick_locks(dt: float) -> void:
 func _wake_in_pit() -> void:
 	var taken := WorldState.on_player_downed()
 	player.global_position = town.spawn_pos() + Vector3(0, 0.05, 0)
-	player.velocity = Vector3.ZERO
-	player.controller.velocity = Vector3.ZERO
+	if player.has_method("align_to_ground"):
+		player.call("align_to_ground", true)
+	else:
+		player.velocity = Vector3.ZERO
+		player.controller.velocity = Vector3.ZERO
 	player.revive()
 	player.locked = false
 	alarm.stand_down()

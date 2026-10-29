@@ -112,6 +112,16 @@
   "detail": {
     "note": "Issue #46: less to draw (and run) the higher you fly. Read by src/systems/world/altitude_detail.gd. Each tier holds once the viewer is 'above' that many metres over sea level and lets go 'hysteresis' metres lower. off: render features (sdfgi, ssil, ssao, volumetric, shadows). hide: node groups the town registers (people = bodies, the cantina owner and their brains; props = lamps, banners, boulders). SDFGI goes first: it rebuilds whenever a fast camera moves, which is what made flying laggy.",
     "hysteresis": 40.0,
+    "motion": {
+      "above": 550.0,
+      "altitude_hysteresis": 60.0,
+      "enter_speed": 80.0,
+      "exit_speed": 35.0,
+      "enter_turn_deg_s": 90.0,
+      "exit_turn_deg_s": 30.0,
+      "enter_s": 0.1,
+      "restore_s": 0.75
+    },
     "tiers": [
       { "above": 60.0, "off": ["sdfgi", "ssil"], "hide": [] },
       { "above": 500.0, "off": ["ssao", "volumetric"], "hide": ["people", "weather"] },

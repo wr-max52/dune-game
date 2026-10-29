@@ -222,17 +222,43 @@ func _place_boulders() -> void:
 	boulders = []
 	if sphere == null:
 		return
-	var count := int(surface.get("boulders", 900))
+	var count := maxi(0, int(surface.get("boulders", 20)))
+	if count == 0:
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9945
 	var site := sphere.site_rect.grow(14.0)
-	var reach := minf(sphere.radius * 0.6, 900.0)
-	var tries := 0
-	while boulders.size() < count and tries < count * 4:
-		tries += 1
-		var a := rng.randf() * TAU
-		var d := lerpf(60.0, reach, sqrt(rng.randf()))
-		var m := Vector2(cos(a) * d, sin(a) * d)
+	var phase := rng.randf() * TAU
+	var golden_angle := PI * (3.0 - sqrt(5.0))
+	for i in count:
+		# Fibonacci directions cover the whole sphere with near-uniform spacing.
+		# PlanetSphere's inverse projection maps each direction onto its cratered
+		# surface while keeping the station's authored site rectangle meaningful.
+		var y := 1.0 - 2.0 * (float(i) + 0.5) / float(count)
+		var ring := sqrt(maxf(0.0, 1.0 - y * y))
+		var a := phase + golden_angle * float(i)
+		var direction := Vector3(cos(a) * ring, y, sin(a) * ring)
+		var m := sphere.dir_map(direction)
+		# A small deterministic azimuth adjustment avoids the station footprint
+		# without clustering rocks or changing their latitude band.
+		var attempts := 0
+		while site.has_point(m) and attempts < 24:
+			attempts += 1
+			a += golden_angle
+			direction = Vector3(cos(a) * ring, y, sin(a) * ring)
+			m = sphere.dir_map(direction)
+		if site.has_point(m):
+			# This can only happen if the keep-out covers the entire latitude band.
+			# Keep the requested count by moving this one sample one band farther
+			# from the pole, then retain the same deterministic azimuth search.
+			y = clampf(y - signf(y) * 0.08, -0.99, 0.99)
+			ring = sqrt(maxf(0.0, 1.0 - y * y))
+			for attempt in 24:
+				a += golden_angle
+				direction = Vector3(cos(a) * ring, y, sin(a) * ring)
+				m = sphere.dir_map(direction)
+				if not site.has_point(m):
+					break
 		if site.has_point(m):
 			continue
 		var s := rng.randf_range(0.5, 1.0)

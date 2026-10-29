@@ -39,6 +39,26 @@ Plain English, newest on top. One entry per milestone.
     `docs/natives/NATIVES.md`.
 - **Not yet:** camps, tents, resting, stealing, packs fighting each other or the
   Remnant, sandstorms, and stealing vehicles.
+## Speeder merchant improvements (2026-10-28, issue #100)
+
+- **Dorrin's yard is dressed up:**
+  - a striped awning with a string of bulbs over his counter, with parts and a
+    lamp on it;
+  - a tool bench with a vise and a pegboard of tools;
+  - crates by the garage door, and fuel and coolant canisters lying about, some
+    knocked over.
+- **Droids at the yard:** three cargo droids drive loops round it, and an
+  assassin droid with no weapon stands by the garage door.
+- **The Grav Lifter keeps your momentum.** For 2 s after Space, gravity and
+  any downward speed are off, so whatever is going up keeps going up. Lift into
+  a ramp or a dune face and the slope's climb is added: you ride up it and
+  launch off the top. Lift while already climbing and you keep that climb.
+  Horizontal speed carries through the air as before.
+- **Boosters and the soft-top stay on.**
+  - The soft-top now folds back behind the seat while you ride, still in
+    sight; before, it folded into the body and vanished.
+  - The boosters sit out past the tail.
+     - Getting in rebuilds any looks part that has gone missing.
 
 ## Mesa shapes (issue #93)
 

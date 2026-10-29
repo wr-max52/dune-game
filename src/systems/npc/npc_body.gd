@@ -735,6 +735,10 @@ var _anim_tick := 0
 
 
 func _animate_lod(dt: float, move: Vector3) -> void:
+	if bool(profile.get("dance_loop", false)):
+		_animate(dt, move)
+		anim_frames += 1
+		return
 	var d := 0.0
 	if target != null and is_instance_valid(target):
 		d = global_position.distance_to(target.global_position)
@@ -763,7 +767,10 @@ func _animate(dt: float, move: Vector3) -> void:
 		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": v.y,
 		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": BodyAnimatorT.UPPER_RIFLE,
 		"aim_pitch": _aim_pitch(), "ready": carry.eased(),
+		"dance": bool(profile.get("dance_loop", false)),
 	})
+	if bool(profile.get("dance_loop", false)):
+		rotation.y = post_facing + float(out.get("dance_yaw", 0.0))
 	for jn in out.joints:
 		if joints.has(jn):
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]
@@ -782,17 +789,18 @@ func _animate(dt: float, move: Vector3) -> void:
 		if grips.has("l"):
 			kit.reach(look_body, "l", w.transform * (grips.l as Vector3), Vector3(0.6, -0.7, -0.4))
 	# Head follows what the senses have: the target while seen, else straight ahead.
-	var look_at := Vector3.INF
-	if perception.visible:
-		look_at = target.global_position + Vector3(0, 1.5, 0)
-	elif perception.heard and perception.heard_pos != Vector3.INF:
-		look_at = perception.heard_pos
-	var yaw := 0.0
-	if look_at != Vector3.INF:
-		var l := global_basis.inverse() * (look_at - eye_position())
-		yaw = clampf(rad_to_deg(atan2(l.x, l.z)), -70.0, 70.0)
-	(joints.neck as Node3D).rotation_degrees.y = yaw * 0.4
-	(joints.head as Node3D).rotation_degrees.y = yaw * 0.6
+	if not bool(profile.get("dance_loop", false)):
+		var look_at := Vector3.INF
+		if perception.visible:
+			look_at = target.global_position + Vector3(0, 1.5, 0)
+		elif perception.heard and perception.heard_pos != Vector3.INF:
+			look_at = perception.heard_pos
+		var yaw := 0.0
+		if look_at != Vector3.INF:
+			var l := global_basis.inverse() * (look_at - eye_position())
+			yaw = clampf(rad_to_deg(atan2(l.x, l.z)), -70.0, 70.0)
+		(joints.neck as Node3D).rotation_degrees.y = yaw * 0.4
+		(joints.head as Node3D).rotation_degrees.y = yaw * 0.6
 	# A rigged model (SkinnedBody, characters.json "model") follows the joints only
 	# when told to, after they have moved this frame.
 	if look_body.has_meta("skin"):

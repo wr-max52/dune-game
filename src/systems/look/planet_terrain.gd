@@ -24,9 +24,13 @@ extends DesertTerrain
 @export var mid_cells := 256
 @export var mid_step := 4.0
 @export var mid_recenter := 160.0
+@export var fast_mid_cells := 128          ## flight-only mid mesh: one quarter the vertex work
+@export var fast_mid_step := 8.0           ## same ~1 km footprint as 256 cells at 4 m
 @export var far_chunks := 4             ## per cube face side
 @export var far_cells := 64             ## per chunk side; 4 chunks span each face (issue #93)
 @export var hole_sink := 6.0            ## metres an outer layer drops under an inner one
+@export var far_limb_margin_degrees := 5.0 ## keep a generous angular buffer at the visible limb
+@export var far_limb_relief_padding := 100.0 ## extra radial bound for relief not sampled by far vertices
 ## The town's own collider: a fixed square round the port, built once, so people,
 ## droids and dropped things anywhere in and around town always have ground under
 ## them (the near collider only follows the player). Coarser, and a hair lower, so
@@ -41,12 +45,19 @@ var sphere: PlanetSphere
 var near_mesh: MeshInstance3D
 var mid_mesh: MeshInstance3D
 var far_root: Node3D
+var far_chunks_culled := 0          ## current-frame count of safely culled far patches
+var _far_instances: Array[MeshInstance3D] = []
+var _far_chunk_directions: Array[Vector3] = []
+var _far_chunk_angles := PackedFloat32Array()
+var _far_surface_bound := 0.0
 var _with_mesh := true
 var _camera_source: Callable = Callable()   ## () -> Vector3, for the mid ring
 ## In-flight builds: layer -> { task, center: Vector2 (map), result }.
 var _jobs := {}
+var _pending_jobs := {}                ## latest requested center/resolution per layer
 var _near_map := Vector2.INF            ## map centre of the near layer in place
 var _mid_map := Vector2.INF
+var _fast_flight_quality := false
 
 
 func _init() -> void:
@@ -198,8 +209,50 @@ func _layer_mesh(n: String) -> MeshInstance3D:
 
 
 ## The mid ring follows whatever this returns (the camera); none = the player.
+func follow(node: Node3D) -> void:
+	super.follow(node)
+	if node == null and (_camera_source.is_valid() or not _jobs.is_empty() or not _pending_jobs.is_empty()):
+		set_physics_process(true)
+
+
 func follow_camera(source: Callable) -> void:
 	_camera_source = source
+	if source.is_valid():
+		set_physics_process(true)
+
+
+func _visual_eye() -> Vector3:
+	if _camera_source.is_valid():
+		var eye: Vector3 = _camera_source.call()
+		return eye
+	if _target != null and is_instance_valid(_target):
+		return _target.global_position
+	return Vector3.ZERO
+
+
+func _mid_cells_for_quality() -> int:
+	return fast_mid_cells if _fast_flight_quality else mid_cells
+
+
+func _mid_step_for_quality() -> float:
+	return fast_mid_step if _fast_flight_quality else mid_step
+
+
+## Lower only visual mid-terrain resolution during sustained flight; the old mesh
+## stays installed until its replacement is complete, so coverage never blanks.
+func set_fast_flight_quality(active: bool) -> void:
+	if _fast_flight_quality == active:
+		return
+	_fast_flight_quality = active
+	if not _with_mesh or mid_mesh == null:
+		return
+	var map_pos := sphere.world_to_map(_visual_eye())
+	var cells := _mid_cells_for_quality()
+	var step := _mid_step_for_quality()
+	var center := Vector2(snappedf(map_pos.x, step), snappedf(map_pos.y, step))
+	_start("mid", center, cells, step)
+
+
 
 
 func snap_to(pos: Vector3) -> void:
@@ -207,9 +260,6 @@ func snap_to(pos: Vector3) -> void:
 		return
 	var c := snapped_center(pos)
 	var m := Vector2(c.x, c.z)
-	if _jobs.has("near"):
-		_stale.append(_jobs.near)          # overtaken by this rebuild: reaped once done
-		_jobs.erase("near")
 	if not threaded:
 		_apply("near", _compute("near", m))
 	else:
@@ -243,6 +293,33 @@ func prefetch(pos: Vector3) -> void:
 	set_physics_process(true)
 
 
+func _process(_dt: float) -> void:
+	if far_root == null or _far_instances.is_empty() or not is_inside_tree():
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		_set_far_visible(true)
+		return
+	# Mesh vertices and their cached cones are in this terrain's local frame.
+	var camera_offset := to_local(camera.global_position) - sphere.center
+	far_chunks_culled = 0
+	for i in _far_instances.size():
+		var visible := far_patch_visible(camera_offset, _far_chunk_directions[i],
+			_far_chunk_angles[i], _far_surface_bound, far_limb_margin_degrees)
+		if not visible:
+			far_chunks_culled += 1
+		var mi := _far_instances[i]
+		if is_instance_valid(mi) and mi.visible != visible:
+			mi.visible = visible
+
+
+func _set_far_visible(visible: bool) -> void:
+	far_chunks_culled = 0
+	for mi in _far_instances:
+		if is_instance_valid(mi) and mi.visible != visible:
+			mi.visible = visible
+
+
 func _physics_process(_dt: float) -> void:
 	if collider_body == null:
 		return
@@ -255,15 +332,27 @@ func _physics_process(_dt: float) -> void:
 			# Teleported past the edge: rebuild now. A one-off hitch beats a fall.
 			snap_to(p)
 		elif m.distance_to(_near_map) >= recenter_distance:
-			if not _jobs.has("near") or m.distance_to(_jobs.near.center) >= recenter_distance:
+			var current_near: Dictionary = _pending_jobs.get("near", _jobs.get("near", {}))
+			if current_near.is_empty() or m.distance_to(current_near.center) >= recenter_distance:
 				var c := snapped_center(p)
 				_start("near", Vector2(c.x, c.z))
 	if _with_mesh:
-		var eye: Vector3 = _camera_source.call() if _camera_source.is_valid() \
-			else (_target.global_position if following else Vector3.ZERO)
+		var eye := _visual_eye()
 		var me := sphere.world_to_map(eye)
-		if me.distance_to(_mid_map) >= mid_recenter and not _jobs.has("mid"):
-			_start("mid", Vector2(snappedf(me.x, mid_step), snappedf(me.y, mid_step)))
+		if me.distance_to(_mid_map) >= mid_recenter:
+			var cells := _mid_cells_for_quality()
+			var step := _mid_step_for_quality()
+			var center := Vector2(snappedf(me.x, step), snappedf(me.y, step))
+			var current_mid: Dictionary = _pending_jobs.get("mid", _jobs.get("mid", {}))
+			var changed := current_mid.is_empty()
+			if not changed:
+				changed = center.distance_to(current_mid.center) >= mid_recenter
+				if int(current_mid.cells) != cells or not is_equal_approx(float(current_mid.step), step):
+					changed = true
+			if changed:
+				_start("mid", center, cells, step)
+	if not following and not _camera_source.is_valid() and _jobs.is_empty() and _pending_jobs.is_empty():
+		set_physics_process(false)
 
 
 ## The collider (near) is built on the main thread, `rows_per_frame` rows each
@@ -277,36 +366,44 @@ func _physics_process(_dt: float) -> void:
 @export var rows_per_frame := 2
 
 
-func _start(layer: String, center: Vector2) -> void:
+func _start(layer: String, center: Vector2, cells_override: int = -1, step_override: float = -1.0) -> void:
+	var near := layer == "near"
+	var cells := cells_override if cells_override > 0 else (near_cells if near else _mid_cells_for_quality())
+	var step := step_override if step_override > 0.0 else (near_step if near else _mid_step_for_quality())
+	var request := { "center": center, "cells": cells, "step": step }
+	if _jobs.has(layer):
+		var active: Dictionary = _jobs[layer]
+		var same_request := active.center == center and int(active.cells) == cells and is_equal_approx(float(active.step), step)
+		if same_request:
+			_pending_jobs.erase(layer)
+			return
+		if int(active.task) >= 0:
+			# WorkerThreadPool cannot cancel a task: keep one latest request, never a stale queue.
+			_pending_jobs[layer] = request
+			set_physics_process(true)
+			return
+		# Near rows run on the main thread and can be safely replaced before completion.
+		_jobs.erase(layer)
 	if not threaded:
-		_apply(layer, _compute(layer, center))
-		if layer == "near":
+		_apply(layer, _compute(layer, center, cells, step))
+		if near:
 			recenters += 1
 		return
-	var near := layer == "near"
-	var cells := near_cells if near else mid_cells
-	var step := near_step if near else mid_step
 	var job := { "center": center, "cells": cells, "step": step, "row": 0,
 		"heights": PackedFloat32Array(), "verts": PackedVector3Array(), "stage": "rows", "task": -1 }
 	if not near:
-		# Visual only: the whole patch and its mesh on the worker.
+		# Capture the quality and spacing at request time; a later flight-mode switch
+		# cannot reinterpret this worker result.
 		job.stage = "mesh"
-		job.task = WorkerThreadPool.add_task(func(): job.result = _compute(layer, center), false, "terrain " + layer)
-	if _jobs.has(layer):
-		_stale.append(_jobs[layer])        # superseded: reaped once done, result dropped
+		job.task = WorkerThreadPool.add_task(func(): job.result = _compute(layer, center, cells, step), false, "terrain " + layer)
 	_jobs[layer] = job
-
-
-var _stale: Array = []
+	set_physics_process(true)
 
 
 func _finish_jobs() -> void:
-	for job in _stale.duplicate():
-		if int(job.task) < 0 or WorkerThreadPool.is_task_completed(job.task):
-			if int(job.task) >= 0:
-				WorkerThreadPool.wait_for_task_completion(job.task)
-			_stale.erase(job)
-	for layer in _jobs.keys():
+	for layer in _jobs.keys().duplicate():
+		if not _jobs.has(layer):
+			continue
 		var job: Dictionary = _jobs[layer]
 		var ts := Time.get_ticks_usec()
 		if job.stage == "rows":
@@ -314,8 +411,8 @@ func _finish_jobs() -> void:
 			var j1 := mini(int(job.row) + rows_per_frame, n)
 			var part := sphere.patch_rows(job.center.x, job.center.y, job.cells, job.step,
 				_collider_grow(), job.row, j1)
-			var hh: PackedFloat32Array = job.heights     # packed arrays copy on write:
-			hh.append_array(part.heights)                # append, then store back
+			var hh: PackedFloat32Array = job.heights
+			hh.append_array(part.heights)
 			job.heights = hh
 			var vv: PackedVector3Array = job.verts
 			vv.append_array(part.verts)
@@ -324,7 +421,7 @@ func _finish_jobs() -> void:
 			if j1 >= n:
 				var p := { "xform": sphere.patch_frame(job.center.x, job.center.y), "heights": job.heights,
 					"verts": job.verts, "center": job.center, "cells": job.cells, "step": job.step }
-				_apply_collider(p)
+			_apply_collider(p)
 				recenters += 1
 				worst_swap_ms = maxf(worst_swap_ms, (Time.get_ticks_usec() - ts) / 1000.0)
 				if _with_mesh:
@@ -334,18 +431,23 @@ func _finish_jobs() -> void:
 				else:
 					_jobs.erase(layer)
 			worst_step_ms = maxf(worst_step_ms, (Time.get_ticks_usec() - ts) / 1000.0)
-		elif WorkerThreadPool.is_task_completed(job.task):
+		elif int(job.task) >= 0 and WorkerThreadPool.is_task_completed(job.task):
 			WorkerThreadPool.wait_for_task_completion(job.task)
 			_jobs.erase(layer)
-			_apply_mesh(layer, job.result)
+			if _pending_jobs.has(layer):
+				var pending: Dictionary = _pending_jobs[layer]
+				_pending_jobs.erase(layer)
+				_start(layer, pending.center, int(pending.cells), float(pending.step))
+			else:
+				_apply_mesh(layer, job.result)
 
 
 ## Heights (and, with the look on, the mesh arrays) for a layer centred at map c,
 ## all at once (the synchronous path: tests, snap_to, the first build).
-func _compute(layer: String, c: Vector2) -> Dictionary:
+func _compute(layer: String, c: Vector2, cells_override: int = -1, step_override: float = -1.0) -> Dictionary:
 	var near := layer == "near"
-	var cells := near_cells if near else mid_cells
-	var step := near_step if near else mid_step
+	var cells := cells_override if cells_override > 0 else (near_cells if near else _mid_cells_for_quality())
+	var step := step_override if step_override > 0.0 else (near_step if near else _mid_step_for_quality())
 	var grow := _collider_grow() if near else sink_grow
 	var p := sphere.patch(c.x, c.y, cells, step, grow)
 	p.center = c
@@ -454,24 +556,55 @@ static func _grid_arrays(verts: PackedVector3Array, n: int) -> Array:
 ## parallel at load. All chunks share one spacing, so their edges meet exactly.
 ## 64 cells per chunk cuts the previous far-surface spacing by 25% without adding
 ## chunks/draw calls or changing the height source or radial curvature.
+## Conservative sphere-limb test for a cached far patch. The caller supplies a
+## surface radius already inflated by the sampled terrain envelope and relief pad.
+## A patch stays visible unless its entire angular cone is beyond that limb plus
+## the safety margin; cameras inside the envelope never cull any patch.
+static func far_patch_visible(camera_offset: Vector3, patch_direction: Vector3,
+		patch_angle: float, surface_bound: float, margin_degrees: float = 5.0) -> bool:
+	var distance_squared := camera_offset.length_squared()
+	if surface_bound <= 0.0 or distance_squared <= surface_bound * surface_bound:
+		return true
+	if patch_direction.length_squared() < 0.000001:
+		return true
+	var distance := sqrt(distance_squared)
+	var camera_direction := camera_offset / distance
+	var horizon_angle := acos(clampf(surface_bound / distance, 0.0, 1.0))
+	var separation := camera_direction.angle_to(patch_direction.normalized())
+	var nearest_patch_angle := separation - maxf(patch_angle, 0.0)
+	return nearest_patch_angle <= horizon_angle + deg_to_rad(maxf(margin_degrees, 0.0))
+
+
 func _build_far() -> void:
 	far_root = Node3D.new()
 	far_root.name = "Far"
 	add_child(far_root)
+	_far_instances.clear()
+	_far_chunk_directions.clear()
+	_far_chunk_angles.clear()
 	var count := 6 * far_chunks * far_chunks
 	var results := []
 	results.resize(count)
 	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k), count, -1, true, "planet far")
 	WorkerThreadPool.wait_for_group_task_completion(g)
+	var maximum_vertex_radius := sphere.radius
 	for k in count:
+		var chunk: Dictionary = results[k]
+		maximum_vertex_radius = maxf(maximum_vertex_radius, float(chunk.max_radius))
+		_far_chunk_directions.append(chunk.direction)
+		_far_chunk_angles.append(float(chunk.angle))
 		var mi := MeshInstance3D.new()
 		mi.name = "Chunk%d" % k
 		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, results[k])
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, chunk.arrays)
 		mi.mesh = mesh
 		mi.material_override = material
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		far_root.add_child(mi)
+		_far_instances.append(mi)
+	# The sampled far-mesh vertices already include the sphere's dune/crater relief.
+	# The additional radial pad is deliberately generous for relief between samples.
+	_far_surface_bound = maximum_vertex_radius + maxf(far_limb_relief_padding, 0.0)
 
 
 const _FACES := [
@@ -530,4 +663,15 @@ func _far_chunk(k: int) -> Array:
 		for q in ns.size():
 			ns[q] = -ns[q]
 		arrays[Mesh.ARRAY_NORMAL] = ns
-	return arrays
+	var direction_sum := Vector3.ZERO
+	var max_vertex_radius := sphere.radius
+	for vertex in verts:
+		var radial := vertex - sphere.center
+		max_vertex_radius = maxf(max_vertex_radius, radial.length())
+		direction_sum += radial.normalized()
+	var chunk_direction := direction_sum.normalized()
+	var chunk_angle := 0.0
+	for vertex in verts:
+		var radial := vertex - sphere.center
+		chunk_angle = maxf(chunk_angle, chunk_direction.angle_to(radial.normalized()))
+	return { "arrays": arrays, "direction": chunk_direction, "angle": chunk_angle, "max_radius": max_vertex_radius }

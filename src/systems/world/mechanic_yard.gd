@@ -3,7 +3,10 @@ extends Node3D
 ## Issue #95: Dorrin Vask's speeder yard, out in the desert about a 30 second
 ## drive from the back gate (the "mechanic_yard" landmark in
 ## content/core/worlds/port_desert.json). This node dresses it (garage, bench,
-## lift, scrap heap), stands Dorrin at his bench and runs his shop:
+## lift, scrap heap; issue #100: an awning and string lights over his counter, a
+## tool bench and pegboard, canisters lying about, cargo droids driving round the
+## yard and an unarmed assassin droid minding the garage), stands Dorrin at his
+## bench and runs his shop:
 ##
 ##   [E] beside him  -- the menu: paint, looks, performance, the Grav Lifter, and
 ##                      selling the speeder for scrap.
@@ -32,6 +35,8 @@ var found := false                    ## the world has the landmark
 var in_reach := false
 var said := ""                        ## his last line, for tests
 var fitted := 0                       ## parts sold this session (tests, traces)
+var droids: Array = []                ## issue #100: { look: Node3D, center, rx, rz, speed, a } (cargo droids on their loops)
+var guard_droid: Node3D               ## issue #100: the assassin droid with no weapon
 var _was_locked := false
 
 
@@ -69,6 +74,7 @@ func _ready() -> void:
 		points[k] = WorldGround._v3(loc.points[k])
 	if demo.use_look:
 		_dress(loc)
+		_build_droids()
 	_build_mechanic()
 
 
@@ -123,6 +129,7 @@ func _fit(s: SpeederNode) -> Dictionary:
 # ------------------------------------------------------------------ frame
 
 func _physics_process(dt: float) -> void:
+	_drive_droids(dt)
 	if not found or player == null or mechanic == null:
 		return
 	var to := player.global_position - mechanic.global_position
@@ -336,11 +343,144 @@ func _dress(loc: Dictionary) -> void:
 					var m := _mesh(_box(sz), rust if i % 3 else steel,
 						c + Vector3(rng.randf_range(-1.6, 1.6), sz.y * 0.4 + (i / 3) * 0.5, rng.randf_range(-1.6, 1.6)))
 					m.rotation += Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(0, TAU), rng.randf_range(-0.3, 0.3))
+	_dress_shop(mats, rust, steel, dark, hazard)
 	# The lift in the bay: a steel pad with yellow and black edges.
 	var bay: Vector3 = points.get("bay", Vector3.ZERO)
 	_mesh(_box(Vector3(7.0, 0.12, 4.0)), steel, bay + Vector3(0, 0.06, 0))
 	for dz in [-2.05, 2.05]:
 		_mesh(_box(Vector3(7.0, 0.14, 0.12)), hazard, bay + Vector3(0, 0.07, dz))
+
+
+## Issue #100: the shop dressed up. An awning over Dorrin's counter with a string
+## of bulbs, a tool bench with a vise and a pegboard of tools, crates, and fuel and
+## coolant canisters lying about (some knocked over), all seeded so the yard looks
+## the same every visit.
+func _dress_shop(mats: LookMaterials, rust: Material, steel: Material, dark: Material, hazard: Material) -> void:
+	var cloth := mats.cloth(Color("#a8503a"))
+	var stripe := mats.cloth(Color("#e0c890"))
+	var bench: Vector3 = Vector3(-1.5, 0, 7)
+	# The awning: two poles and a striped canvas over the counter.
+	for dz in [-2.2, 2.2]:
+		_mesh(_cyl(0.06, 3.1), steel, bench + Vector3(1.6, 1.55, dz))
+		_mesh(_cyl(0.06, 3.1), steel, bench + Vector3(-1.4, 1.55, dz))
+	for k in 6:
+		var m := _mesh(_box(Vector3(3.4, 0.05, 0.8)), cloth if k % 2 == 0 else stripe, bench + Vector3(0.1, 3.05, -2.0 + k * 0.8))
+		m.rotation.z = -0.12
+	# String lights along the awning's front edge.
+	var bulb := mats.glow(Color("#ffd27a"))
+	bulb.emission_energy_multiplier = 2.5
+	for k in 9:
+		var z := -2.2 + k * 0.55
+		_mesh(_ball(0.07), bulb, bench + Vector3(1.75, 2.75 - 0.12 * sin(float(k) / 8.0 * PI), z))
+	# Parts and a lamp on his counter.
+	_mesh(_box(Vector3(0.5, 0.35, 0.4)), hazard, bench + Vector3(0.0, 1.2, -1.0))
+	_mesh(_cyl(0.12, 0.3), steel, bench + Vector3(-0.2, 1.15, 0.6))
+	_mesh(_box(Vector3(0.6, 0.08, 0.3)), dark, bench + Vector3(0.1, 1.05, 1.1))
+	# The tool bench, a vise and a pegboard of tools behind it.
+	var tb := Vector3(-4.6, 0, 9.4)
+	_mesh(_box(Vector3(3.2, 0.9, 1.0)), rust, tb + Vector3(0, 0.45, 0))
+	_mesh(_box(Vector3(3.3, 0.08, 1.1)), steel, tb + Vector3(0, 0.94, 0))
+	_mesh(_box(Vector3(0.3, 0.25, 0.25)), dark, tb + Vector3(1.2, 1.1, 0.2))
+	_mesh(_box(Vector3(3.2, 1.6, 0.08)), mats.flat(Color("#5a4632"), 0.9), tb + Vector3(0, 1.9, 0.55))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 100
+	for k in 9:
+		var t := _mesh(_box(Vector3(0.06, rng.randf_range(0.3, 0.6), 0.04)), steel if k % 3 else hazard,
+			tb + Vector3(-1.3 + k * 0.32, 1.95 + rng.randf_range(-0.3, 0.3), 0.5))
+		t.rotation.z = rng.randf_range(-0.4, 0.4)
+	# Crates by the garage door.
+	for c in [Vector3(-2.4, 0.45, -4.2), Vector3(-2.2, 1.3, -4.0), Vector3(-1.2, 0.45, -4.4)]:
+		_mesh(_box(Vector3(0.9, 0.9, 0.9)), mats.flat(Color("#7a5a36"), 0.9), c)
+	# Canisters lying about: fuel red, coolant teal, some on their sides.
+	var paints := [mats.flat(Color("#b03a26"), 0.6, 0.2), mats.flat(Color("#3a8a8a"), 0.6, 0.2), hazard, steel]
+	for k in 16:
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(4.0, 15.0)
+		var at := Vector3(2.0 + cos(a) * r, 0.0, sin(a) * r)
+		if Vector2(at.x - 6.0, at.z).length() < 5.0 or (at.x < -2.5 and absf(at.z) < 5.5) or Vector2(at.x + 1.5, at.z - 7.0).length() < 2.5:
+			continue                 # not on the lift, in the garage or at the counter
+		var tall := rng.randf_range(0.6, 1.0)
+		var m := _mesh(_cyl(0.28, tall), paints[k % paints.size()], at + Vector3(0, tall * 0.5, 0))
+		if k % 3 == 0:
+			m.rotation = Vector3(PI * 0.5, rng.randf() * TAU, 0)
+			m.position = (xf * Transform3D(Basis.IDENTITY, at + Vector3(0, 0.28, 0))).origin
+		else:
+			m.rotation.y = rng.randf() * TAU
+
+
+func _cyl(r: float, h: float) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = r
+	c.bottom_radius = r
+	c.height = h
+	c.radial_segments = 12
+	return c
+
+
+func _ball(r: float) -> SphereMesh:
+	var b := SphereMesh.new()
+	b.radius = r
+	b.height = r * 2.0
+	b.radial_segments = 8
+	b.rings = 4
+	return b
+
+
+# ------------------------------------------------------------------ droids (issue #100)
+
+## Cargo droids driving loops round the yard, and an assassin droid with no
+## weapon standing by the garage door. Looks only: nobody owns them.
+func _build_droids() -> void:
+	var mats: LookMaterials = demo._flat_mats()
+	var variants := ["tan", "olive", "blue"]
+	var loops := [[Vector3(9, 0, 0), 9.0, 11.0, 2.4], [Vector3(10, 0, -1), 7.0, 13.0, -2.0], [Vector3(8, 0, 1), 10.5, 8.0, 2.9]]
+	for i in loops.size():
+		var L: Array = loops[i]
+		var look := DroidKit.build("cargo", DroidRoster.variant_cfg("cargo", variants[i % variants.size()]), mats,
+			DroidRoster.kind_cfg("cargo").get("look", {}))
+		look.name = "YardCargo%d" % (i + 1)
+		add_child(look)
+		DroidKit.set_awake(look, true)
+		droids.append({ "look": look, "center": L[0], "rx": float(L[1]), "rz": float(L[2]), "speed": float(L[3]), "a": TAU * i / 3.0 })
+	var lc := { "kind": "assassin" }
+	guard_droid = DroidKit.build("assassin", DroidRoster.variant_cfg("assassin", "gunmetal"), mats, ShipSalesman.model_look(lc))
+	ShipSalesman._disarm(guard_droid)
+	guard_droid.name = "YardAssassin"
+	add_child(guard_droid)
+	DroidKit.set_awake(guard_droid, true)
+	DroidKit.play_anim(guard_droid, "idle")
+	guard_droid.global_transform = Transform3D(xf.basis * Basis(Vector3.UP, -PI * 0.5), _ground(Vector3(-2.2, 0, 3.6)))
+	_drive_droids(0.0)
+
+
+## A point in the yard's frame, on the ground.
+func _ground(local: Vector3) -> Vector3:
+	var p: Vector3 = xf * Vector3(local.x, 0.0, local.z)
+	var sp := ground.sphere()
+	if sp != null:
+		var dir := (p - sp.center).normalized()
+		return sp.center + dir * (sp.radius + sp.elevation(dir))
+	p.y = ground.terrain.height_at(p.x, p.z)
+	return p
+
+
+func _drive_droids(dt: float) -> void:
+	for d in droids:
+		var look: Node3D = d.look
+		if not is_instance_valid(look):
+			continue
+		var rx: float = d.rx
+		var rz: float = d.rz
+		# Even speed round an ellipse: step the angle by speed over the local radius.
+		var a: float = d.a
+		var rl := Vector2(rx * sin(a), rz * cos(a)).length()
+		a += float(d.speed) * dt / maxf(rl, 0.5)
+		d.a = a
+		var c: Vector3 = d.center
+		var local := c + Vector3(cos(a) * rx, 0, sin(a) * rz)
+		var tangent := Vector3(-sin(a) * rx, 0, cos(a) * rz).normalized() * signf(float(d.speed))
+		var yaw := atan2(-tangent.x, -tangent.z)
+		look.global_transform = Transform3D(xf.basis * Basis(Vector3.UP, yaw), _ground(local))
 
 
 ## A mesh at a point in the yard's own frame.

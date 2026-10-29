@@ -132,6 +132,7 @@ func mount() -> bool:
 	if _hud != null:
 		_hud.visible = true
 	jolt.start()
+	_ensure_parts()             # issue #100: the looks parts are on every time you get in
 	mounted.emit()
 	return true
 
@@ -153,15 +154,21 @@ func dismount() -> bool:
 	p.visible = true
 	_player_collision(true)
 	p.global_position = spot
-	p.velocity = Vector3.ZERO
-	p.controller.velocity = Vector3.ZERO
-	p.controller.body_pos = spot
-	if demo.terrain != null:
-		demo.terrain.follow(p)
 	var rig = demo._rig
 	if rig != null:
 		rig.clear_override()
 		rig.rig.yaw = model.yaw
+		p.rotation.y = rig.rig.yaw
+		if "player_kit" in demo and demo.player_kit != null and demo.player_kit.avatar != null:
+			demo.player_kit.avatar.facing_yaw = rig.rig.yaw
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	else:
+		p.velocity = Vector3.ZERO
+		p.controller.velocity = Vector3.ZERO
+		p.controller.body_pos = spot
+	if demo.terrain != null:
+		demo.terrain.follow(p)
 	if _hud != null:
 		_hud.visible = false
 	dismounted.emit()
@@ -493,6 +500,25 @@ func has_part(id: String) -> bool:
 	return (cfg.get("parts", []) as Array).has(id)
 
 
+## Issue #100: the boosters and the soft-top went missing when you got back in.
+## Rebuild the looks parts if any of them is gone (freed, or never built because the
+## body was not ready), so whatever the mechanic fitted is always on.
+func _ensure_parts() -> void:
+	if visual == null:
+		return
+	var want_boosters := has_part("turbo_boosters")
+	var want_roof := has_part("soft_top")
+	var have_boosters := not _flames.is_empty() and _flames.all(func(f): return is_instance_valid(f) and (f as Node).is_inside_tree())
+	var have_roof := _roof != null and is_instance_valid(_roof) and _roof.is_inside_tree()
+	if (want_boosters and not have_boosters) or (want_roof and not have_roof):
+		for n in visual.get_children():
+			if str(n.name).begins_with("Booster") or n.name == "SoftTop":
+				n.queue_free()
+		_flames = []
+		_roof = null
+		_build_parts()
+
+
 ## The mechanic's looks parts, on whatever body this is (sized from _size).
 func _build_parts() -> void:
 	var mats: LookMaterials = demo._flat_mats() if demo != null and demo.has_method("_flat_mats") else LookMaterials.new()
@@ -510,10 +536,11 @@ func _build_parts() -> void:
 		flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		flame_mat.albedo_color.a = 0.85
 		for side in [-1.0, 1.0]:
-			var at := Vector3(side * (hx * 0.62), base_y + 0.55, back - 0.5)
+			# Issue #100: out past the tail, so the body never swallows them.
+			var at := Vector3(side * (hx * 0.62), base_y + 0.55, back + 0.1)
 			_part(_cyl(0.2, 0.24, 1.3), metal, at, Vector3(90, 0, 0)).name = "Booster"
 			_part(_cyl(0.26, 0.26, 0.12), metal, at + Vector3(0, 0, 0.66), Vector3(90, 0, 0)).name = "BoosterRing"
-			_part(_cyl(0.15, 0.15, 0.04), _glow_mat, at + Vector3(0, 0, 0.7), Vector3(90, 0, 0))
+			_part(_cyl(0.15, 0.15, 0.04), _glow_mat, at + Vector3(0, 0, 0.7), Vector3(90, 0, 0)).name = "BoosterGlow"
 			var flame := _part(_cyl(0.16, 0.0, 1.0), flame_mat, at + Vector3(0, 0, 1.2), Vector3(-90, 0, 0))
 			flame.name = "BoosterFlame"
 			flame.visible = false
@@ -554,8 +581,10 @@ func _sync_parts() -> void:
 	if _roof != null:
 		_roof_fold = move_toward(_roof_fold, 1.0 if riding else 0.0, 0.03)
 		var e := _roof_fold * _roof_fold * (3.0 - 2.0 * _roof_fold)
-		_roof.rotation.x = deg_to_rad(-150.0 * e)
-		_roof.scale = Vector3(1, 1, lerpf(1.0, 0.35, e))
+		# Issue #100: folded back behind the seat, still in sight (it used to fold
+		# down into the body and vanish while you rode).
+		_roof.rotation.x = deg_to_rad(-95.0 * e)
+		_roof.scale = Vector3(1, 1, lerpf(1.0, 0.55, e))
 
 
 func _part(mesh: Mesh, mat: Material, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:

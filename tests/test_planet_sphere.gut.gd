@@ -456,3 +456,29 @@ func test_a_bolt_dropped_on_the_far_side_bursts_there() -> void:
 	for i in 20:
 		await wait_physics_frames(1)
 	assert_false(is_instance_valid(b) and b._alive, "it burst on the ground instead of flying on under the planet")
+
+
+func test_fast_flight_mid_mesh_preserves_footprint_and_restores_settled_quality() -> void:
+	var t := PlanetTerrain.new()
+	assert_eq(t.mid_cells, 256, "settled mid detail remains unchanged")
+	assert_eq(t.mid_step, 4.0)
+	assert_eq(t.fast_mid_cells, 128)
+	assert_eq(t.fast_mid_step, 8.0)
+	assert_eq(t.mid_cells * t.mid_step, t.fast_mid_cells * t.fast_mid_step, "both modes cover the same area")
+	t.set_fast_flight_quality(true)
+	assert_eq(t._mid_cells_for_quality(), 128)
+	t.set_fast_flight_quality(false)
+	assert_eq(t._mid_cells_for_quality(), 256)
+	t.free()
+
+
+func test_pending_mid_mesh_requests_coalesce_to_the_latest_target() -> void:
+	var t := PlanetTerrain.new()
+	t._jobs["mid"] = { "center": Vector2.ZERO, "cells": 256, "step": 4.0, "task": 7 }
+	t._start("mid", Vector2(200.0, 0.0))
+	t._start("mid", Vector2(400.0, 0.0))
+	assert_eq(t._pending_jobs.size(), 1, "only one replacement request is retained")
+	assert_eq(t._pending_jobs.mid.center, Vector2(400.0, 0.0), "latest request replaces obsolete centers")
+	t._start("mid", Vector2.ZERO)
+	assert_true(t._pending_jobs.is_empty(), "returning to the active target cancels the queued replacement")
+	t.free()
