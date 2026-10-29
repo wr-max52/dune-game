@@ -179,18 +179,49 @@ static func terrain_source(terrain: DesertTerrain, center: Vector3, half_extent:
 				world = Vector3(sample.x, terrain.ground_at(sample.x, sample.z), sample.z)
 			verts[j * (cells + 1) + i] = frame.affine_inverse() * world
 	var faces := PackedVector3Array()
-	faces.resize(cells * cells * 6)
-	var w := 0
+	var bottom := PackedVector3Array()
+	bottom.resize(verts.size())
+	for j in cells + 1:
+		for i in cells + 1:
+			var p: Vector3 = verts[j * (cells + 1) + i]
+			bottom[j * (cells + 1) + i] = Vector3(p.x, -79.0, p.z)
 	for j in cells:
 		for i in cells:
 			var a := j * (cells + 1) + i
 			var b := a + 1
 			var c := a + cells + 1
 			var d := c + 1
+			# Recast treats the walkable top as a solid when it is closed. The
+			# buried underside and edge skirts are never walkable, but keep this
+			# small terrain patch bakeable as a bounded volume.
 			# Positive local Y winding (the terrain frame's ground-up axis).
-			faces[w] = verts[a]; faces[w + 1] = verts[c]; faces[w + 2] = verts[b]
-			faces[w + 3] = verts[b]; faces[w + 4] = verts[c]; faces[w + 5] = verts[d]
-			w += 6
+			faces.append_array(PackedVector3Array([verts[a], verts[c], verts[b],
+				verts[b], verts[c], verts[d]]))
+			# The underside faces down.
+			faces.append_array(PackedVector3Array([bottom[a], bottom[b], bottom[c],
+				bottom[b], bottom[d], bottom[c]]))
+	# Close the volume around its boundary with vertical, non-walkable skirts.
+	for i in cells:
+		var a := i
+		var b := i + 1
+		var c := cells * (cells + 1) + i
+		var d := c + 1
+		# z = -half_extent (outward -Z)
+		faces.append_array(PackedVector3Array([verts[a], verts[b], bottom[a],
+			verts[b], bottom[b], bottom[a]]))
+		# z = +half_extent (outward +Z)
+		faces.append_array(PackedVector3Array([verts[c], bottom[c], verts[d],
+			verts[d], bottom[c], bottom[d]]))
+		var left_a := i * (cells + 1)
+		var left_c := left_a + cells + 1
+		var right_a := left_a + cells
+		var right_c := left_c + cells
+		# x = -half_extent (outward -X)
+		faces.append_array(PackedVector3Array([verts[left_a], bottom[left_a], verts[left_c],
+			verts[left_c], bottom[left_a], bottom[left_c]]))
+		# x = +half_extent (outward +X)
+		faces.append_array(PackedVector3Array([verts[right_a], verts[right_c], bottom[right_a],
+			verts[right_c], bottom[right_c], bottom[right_a]]))
 	src.add_faces(faces, Transform3D.IDENTITY)
 	for obstruction in obstructions:
 		src.add_projected_obstruction(obstruction.outline, float(obstruction.bottom),
