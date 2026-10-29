@@ -10,6 +10,7 @@ extends CharacterBody3D
 ##     human and bot share one movement implementation.
 
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
+const GaitInput := preload("res://src/systems/player/gait_input.gd")
 
 signal pose_changed(pose: int)
 signal hurt(amount: float)          ## something hit the player (bolts, blades)
@@ -63,6 +64,8 @@ var _tick_frame := -100              ## Engine physics frame of the last recorde
 @export var crouch_action := "crouch_act"
 
 var controller := CharacterController.new()
+## Issue #133: tap to walk a few steps, hold to run, Shift to sprint (keyboard only).
+var gait := GaitInput.new()
 var use_external_command := false
 ## Issue #77: on the home planet "up" turns with the ground. `tilt` takes world up
 ## to this body's up (identity on the town's plateau and on flat worlds). The pure
@@ -105,8 +108,8 @@ func _ready() -> void:
 	controller.can_slide = can_slide
 
 
-func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false) -> void:
-	controller.set_command(dir, sprint, crouch, jump, jump_held)
+func set_command(dir: Vector2, sprint: bool, crouch: bool, jump: bool, jump_held: bool = false, dash: bool = false) -> void:
+	controller.set_command(dir, sprint, crouch, jump, jump_held, dash)
 	use_external_command = true
 
 
@@ -119,17 +122,20 @@ func _physics_process(delta: float) -> void:
 	var yaw: float = -rotation.y
 	if locked:
 		controller.set_command(Vector2.ZERO, false, false, false)
+		gait.reset()
 	elif not use_external_command:
 		var dir_in := Vector2(
 			-Input.get_axis(move_actions[2], move_actions[3]),
 			-Input.get_axis(move_actions[0], move_actions[1])
 		)
+		var g: Dictionary = gait.update(delta, dir_in, Input.is_action_pressed(sprint_action))
 		controller.set_command(
-			dir_in,
-			Input.is_action_pressed(sprint_action),
+			g.dir,
+			g.run,
 			Input.is_action_pressed(crouch_action),  # held, not one frame
 			Input.is_action_just_pressed(jump_action),
-			Input.is_action_pressed(jump_action)     # M13: held, for the jetpack
+			Input.is_action_pressed(jump_action),    # M13: held, for the jetpack
+			g.dash
 		)
 
 	# M15: crouching shrinks the capsule, so cover really covers you (and the

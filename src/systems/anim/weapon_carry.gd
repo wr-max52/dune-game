@@ -30,9 +30,12 @@ func _init(start_ready := 0.0) -> void:
 
 
 ## want_aim: there is something to aim at this frame (a target, the trigger, ADS).
+## lowered: issue #133, sprinting; the gun drops now, whatever wants it up.
 ## Returns the eased ready.
-func step(dt: float, want_aim: bool) -> float:
-	if want_aim:
+func step(dt: float, want_aim: bool, lowered: bool = false) -> float:
+	if lowered:
+		_hold = 0.0
+	elif want_aim:
 		_hold = HOLD_S
 	else:
 		_hold = maxf(0.0, _hold - dt)

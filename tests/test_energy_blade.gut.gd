@@ -102,3 +102,18 @@ func test_stamina_recovered_when_idle() -> void:
 	b.update(2.0)  # idle regen
 	assert_gte(b.stamina, 10.0, "stamina recovers while idle")
 	assert_lt(b.stamina, 100.0 + 0.001, "recovery is capped at max")
+
+func test_sprint_exertion_spends_stamina_and_holds_regen() -> void:
+	# Issue #133: the sprint spends the blade's stamina; regen waits for it to stop.
+	var b = _blade()
+	for i in 60:
+		b.update(1.0 / 60.0)
+	b.exert(30.0)
+	assert_almost_eq(b.stamina, 70.0, 0.001)
+	for i in 20:
+		b.exert(0.0)
+		b.update(1.0 / 60.0)
+	assert_almost_eq(b.stamina, 70.0, 0.001, "no regen while still exerting")
+	for i in 60:
+		b.update(1.0 / 60.0)
+	assert_gt(b.stamina, 70.0, "regen resumes after a rest")

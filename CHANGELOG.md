@@ -2,6 +2,18 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Walk, run and sprint (2026-10-29, issue #133)
+
+- **Walk:** tap a move key and you take 4 natural steps, then stop. Tap again to
+  keep walking. The walk has a longer, calmer stride (heel first, loose arms).
+- **Run:** hold a move key past 0.4 s to run at 7 m/s (the old Shift sprint
+  speed), with a light jogging bounce.
+- **Sprint:** Shift + move sprints at 10 m/s with a hard lean and pumping arms.
+  The gun drops, nothing fires or swings, and it spends the same STA stamina as
+  the blade (5 s from full). Run dry and you fall back to the run until the bar
+  is back to 25.
+- Slides still start from the run or the sprint. Guards and NPCs use the same
+  three gait animations at their own speeds.
 ## The crash site: speeder jumps, an interior to fight through (2026-10-29, issue #148)
 
 - **Speeder jump.** A bent hull plate stands on a brace beside the boarding plate.

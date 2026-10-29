@@ -30,6 +30,7 @@ var _state_time := 0.0        ## time in the current action state
 var _block_elapsed := 0.0     ## time since the block was pressed
 var _recovering := false            ## cooldown before the next attack is allowed
 var _recover_time := 0.0
+var _since_exert := 999.0           ## issue #133: seconds since the sprint last spent stamina
 
 # Tunable timing windows.
 var light_duration := 0.25
@@ -124,10 +125,18 @@ func incoming_damage_this_frame() -> int:
 	return 0
 
 
+## Issue #133: the player's sprint spends this same stamina. Regen waits until
+## half a second after the last spend.
+func exert(cost: float) -> void:
+	stamina = maxf(0.0, stamina - cost)
+	_since_exert = 0.0
+
+
 ## Advance the blade one frame. Regens stamina when standing down; drains it while
 ## blocking. Returns the blade's current State so tests can observe the result.
 func update(dt: float) -> int:
 	_state_time += dt
+	_since_exert += dt
 
 	# (1) Advance any in-progress recovery FIRST, so a BLOCKED_OUT entered by this
 	# frame's drain is not advanced through its own cooldown in the same frame.
@@ -158,7 +167,7 @@ func update(dt: float) -> int:
 
 	# Recover stamina when standing down -- but not on the frame an action just
 	# ended (the cost must stay visible for a moment), and not while recovering.
-	if state == State.IDLE and not _recovering and _state_time > 0.5:
+	if state == State.IDLE and not _recovering and _state_time > 0.5 and _since_exert > 0.5:
 		stamina = minf(max_stamina, stamina + 18.0 * dt)
 
 	return state

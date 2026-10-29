@@ -61,6 +61,14 @@ var _name: Label
 var _name_left := 0.0
 var feedback: HitFeedback           ## hit markers + thud (issue #65)
 
+## Issue #133: the Shift sprint. While it is on the gun is down, nothing fires or
+## swings, and it spends the blade's stamina (one STA bar for both). Run dry and
+## you drop to the run until stamina is back up to sprint_resume.
+var sprint_drain := 20.0            ## stamina per second (100 lasts 5 s)
+var sprint_resume := 25.0
+var sprinting := false
+var winded := false
+
 
 func setup(p: CharacterBody3D, a: PlayerAvatar, rig: Node3D, bolts_into: Node3D) -> void:
 	player = p
@@ -104,7 +112,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		(guns[holder.current] as Weapon).start_reloading()
 	if event.is_action_pressed("fire"):
 		_fire_held = true
-		if holder.current == "energy_blade" and holder.is_ready():
+		if holder.current == "energy_blade" and holder.is_ready() and not sprinting:
 			if combo.attack():
 				_on_swing_started()
 	elif event.is_action_released("fire"):
@@ -116,7 +124,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Bot / test seam: drive the same paths without input events.
 func press_fire() -> void:
 	_fire_held = true
-	if holder.current == "energy_blade" and holder.is_ready() and combo.attack():
+	if holder.current == "energy_blade" and holder.is_ready() and not sprinting and combo.attack():
 		_on_swing_started()
 
 
@@ -166,16 +174,19 @@ func _physics_process(dt: float) -> void:
 		elif not on and _hum.playing:
 			_hum.stop()
 
+	_tick_sprint(dt)
+
 	# Guns tick every frame (cooldowns, reloads) whether or not the trigger is down.
 	# Issue #87: in third person a resting gun comes up first, then fires.
-	avatar.aim_wanted = enabled and (_fire_held or _alt_on)
+	avatar.aim_wanted = enabled and not sprinting and (_fire_held or _alt_on)
 	for id in guns:
 		var g: Weapon = guns[id]
-		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held and avatar.gun_up()
+		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held and avatar.gun_up() \
+			and not sprinting
 		var r: int = g.start_firing(dt, trigger)
 		if r == Weapon.Result.SHOT:
 			_shoot(id)
-	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_on
+	aiming = enabled and guns.has(cur) and holder.is_ready() and _alt_on and not sprinting
 	if rig_node != null:
 		# Each gun has its own magnification (issue #65): fov = base / mag.
 		rig_node.set_zoom(Ads.zoom(look, cur) if aiming else 1.0)
@@ -185,7 +196,7 @@ func _physics_process(dt: float) -> void:
 	# Sword.
 	var sdt := dt * (0.08 if _hitstop > 0.0 else 1.0)
 	_hitstop = maxf(0.0, _hitstop - dt)
-	combo.set_block(enabled and cur == "energy_blade" and holder.is_ready() and _alt_on)
+	combo.set_block(enabled and cur == "energy_blade" and holder.is_ready() and _alt_on and not sprinting)
 	for ev in combo.update(sdt):
 		if str(ev).begins_with("swing:"):
 			_on_swing_started()
@@ -208,6 +219,25 @@ func upper_mode() -> String:
 		"energy_blade":
 			return BodyAnimator.UPPER_SWORD
 	return BodyAnimator.UPPER_FREE
+
+
+## Issue #133: read the sprint off the movement controller, spend stamina on it and
+## tell the controller whether it may keep sprinting.
+func _tick_sprint(dt: float) -> void:
+	var ctl = player.get("controller")
+	if ctl == null or not ctl.has_method("is_dashing"):
+		sprinting = false
+		return
+	sprinting = ctl.is_dashing()
+	var b = combo.blade
+	if sprinting:
+		b.exert(sprint_drain * dt)
+	if b.stamina <= 0.0:
+		winded = true
+	elif winded and b.stamina >= sprint_resume:
+		winded = false
+	ctl.dash_allowed = not winded
+	avatar.sprint_lowered = sprinting
 
 
 func _on_holder_event(ev: String) -> void:
@@ -508,7 +538,8 @@ func _update_hud(dt: float) -> void:
 		_ammo.visible = true
 	else:
 		_ammo.visible = false
-	_stam.visible = cur == "energy_blade"
+	# The sprint spends this bar too, so it shows whenever it is not full.
+	_stam.visible = cur == "energy_blade" or combo.blade.stamina < combo.blade.max_stamina
 	if _stam.visible:
 		_stam.value = combo.blade.stamina
 	_name_left = maxf(0.0, _name_left - dt)

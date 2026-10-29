@@ -163,3 +163,26 @@ func test_cantina_dance_state_advances_without_walking() -> void:
 	assert_eq(out.state, "DANCE")
 	assert_almost_eq(a.dance_time, 0.0, 0.001, "1200 frames at 60 Hz complete one loop")
 	assert_eq(a.phase, 0.0, "dancing never advances the walk cycle")
+
+
+# ---- issue #133: walk, run, sprint
+
+func test_three_gaits_lengthen_the_stride() -> void:
+	assert_almost_eq(BodyAnimator.stride_for(4.0), BodyAnimator.WALK_STRIDE, 0.001)
+	assert_almost_eq(BodyAnimator.stride_for(7.0), BodyAnimator.RUN_STRIDE, 0.001)
+	assert_almost_eq(BodyAnimator.stride_for(10.0), BodyAnimator.SPRINT_STRIDE, 0.001)
+	# Steps a second: walk 4 / 2.1 * 2 = 3.8, run 4.7, sprint 5.0 (a quicker beat each time).
+	var walk_cad := 4.0 / BodyAnimator.stride_for(4.0)
+	var run_cad := 7.0 / BodyAnimator.stride_for(7.0)
+	var sprint_cad := 10.0 / BodyAnimator.stride_for(10.0)
+	assert_lt(walk_cad, run_cad)
+	assert_lt(run_cad, sprint_cad)
+
+
+func test_sprint_leans_harder_than_the_run() -> void:
+	var r := BodyAnimator.new()
+	var run := _step(r, 60, { "speed": 7.0 })
+	var s := BodyAnimator.new()
+	var sprint := _step(s, 60, { "speed": 10.0 })
+	assert_gt(sprint.joints.spine.x, run.joints.spine.x + 8.0, "sprint leans in")
+	assert_lt(sprint.pelvis_y, run.pelvis_y + 0.03, "and rides a little lower")

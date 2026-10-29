@@ -49,6 +49,10 @@ var _recoil := 0.0                 ## 1 right after a shot, decays to 0
 ## weapons sets aim_wanted; first person always holds the gun up.
 var carry := WeaponCarry.new(1.0)
 var aim_wanted := false
+## Issue #133: sprinting. The gun drops to rest (first person too), the body faces
+## where it runs, and gun_up() stays false so nothing fires.
+var sprint_lowered := false
+var _sprint_raise := false         ## first person: easing back up after a sprint
 var _flash_left := 0.0
 
 ## Aim down sights (first person): the weapon blends to a pose solved from the
@@ -420,12 +424,19 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var upper: String = inp.get("upper", BodyAnimator.UPPER_FREE)
 	var armed := upper != BodyAnimator.UPPER_FREE
 	var gun := upper == BodyAnimator.UPPER_AIM or upper == BodyAnimator.UPPER_RIFLE
-	carry.step(dt, first_person or aim_wanted or not gun)
+	carry.step(dt, first_person or aim_wanted or not gun, sprint_lowered)
+	# First person holds the gun up outright, except coming out of a sprint, when
+	# it rises on the carry's own timing instead of popping back.
+	if sprint_lowered:
+		_sprint_raise = true
+	elif carry.ready >= 1.0:
+		_sprint_raise = false
+	var held_up := first_person and not _sprint_raise
 
 	# Facing: toward the aim when a weapon is up or in first person, else toward
 	# travel (a gun at rest walks where you go, issue #87).
 	var want := facing_yaw
-	if (armed and (not gun or carry.ready > 0.3)) or first_person:
+	if (armed and not sprint_lowered and (not gun or carry.ready > 0.3)) or first_person:
 		want = cam_yaw
 	elif speed > 0.4:
 		want = atan2(flat.x, flat.z)
@@ -449,7 +460,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 		"vy": vel.y, "crouch": inp.get("crouch", false), "sprint": inp.get("sprint", false),
 		"slide": inp.get("slide", false),
 		"upper": upper, "aim_pitch": pitch * (1.6 if first_person else 1.0), "twist": twist,
-		"ready": 1.0 if first_person else carry.eased(),
+		"ready": 1.0 if held_up else carry.eased(),
 	})
 	last_frame = out
 	for jn in out.joints:
@@ -519,7 +530,7 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var grips: Dictionary = w.get_meta("grips", {})
 	var ready := _ready_xf(current, pitch)
 	var holster := _holster_xf(current)
-	var up := 1.0 if first_person or current == "energy_blade" else carry.eased()
+	var up := 1.0 if (first_person and not _sprint_raise) or current == "energy_blade" else carry.eased()
 	if up < 1.0:
 		ready = WeaponCarry.blend(WeaponCarry.rest_xf(carry_kind(current), grips.get("r", Vector3.ZERO)), ready, up)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
@@ -572,7 +583,9 @@ func _fpv_grips(upper: String, dt: float) -> void:
 
 ## True once the gun is up far enough to shoot (weapons holds the trigger until then).
 func gun_up() -> bool:
-	return first_person or current == "energy_blade" or carry.on_target()
+	if sprint_lowered:
+		return false
+	return (first_person and not _sprint_raise) or current == "energy_blade" or carry.on_target()
 
 
 ## "pistol" or "rifle": how the weapon rests (hand_weapons.json "carry", else by name).

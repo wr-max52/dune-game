@@ -29,10 +29,11 @@ the headless playthrough, which `scripts/record.sh` captures alongside the windo
 
 | Action        | Key                     |
 |---|---|
-| Move           | W / A / S / D (or arrows) |
+| Walk           | Tap W / A / S / D (or arrows): 4 steps per tap |
+| Run            | Hold a move key (past 0.4 s) |
 | Jump           | Space                 |
 | Toggle FPV/TPV | V (or mouse middle button) |
-| Sprint         | Right Shift           |
+| Sprint         | Right Shift + move: faster, gun down, no firing, spends stamina |
 | Crouch         | C                     |
 
 Combat inputs (fire / block / reload) are part of the M2/M3 weapon + blade state
