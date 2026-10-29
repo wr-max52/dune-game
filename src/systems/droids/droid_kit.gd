@@ -71,7 +71,7 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 	# the droid's.
 	var carry: Dictionary = look.get("carry", {})
 	if not carry.is_empty() and ResourceLoader.exists(str(carry.get("scene", ""))):
-		var w: Node3D = (load(str(carry.scene)) as PackedScene).instantiate()
+		var w: Node3D = (ModelCache.scene(str(carry.scene)) as PackedScene).instantiate()
 		w.name = "Carry"
 		var cp: Array = carry.get("pos", [0, 0, 0])
 		var cr: Array = carry.get("rot_deg", [0, 0, 0])

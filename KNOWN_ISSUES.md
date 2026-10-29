@@ -2,6 +2,31 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #162, handoff stalls (2026-10-29)
+
+**Checked** (headless, with the look on, `DUNE_PERF_VISUALS=1` planets trace):
+- Worst staged frame: to the station 129.5 → 14.7 ms, home 100.1 → 26.5 ms.
+  The cantina dancer (129 ms), the vendors and roamers (60-120 ms) and the
+  outposts (55 ms each) were the long steps. Now no staged step is over 27 ms.
+- The ship's position, speed, basis and throttle still carry over with 0 error.
+
+**Not done, honestly:**
+- **The first frame of a handoff is still long with the look on:** about 160 ms
+  to the station and 360 ms home. That is the flight shell: the ball terrain
+  (76-94 ms), the desert landforms (`dress_desert`, ~100 ms home), the town
+  decor (~80 ms home) and the neighbour ball drawn in the sky (`SpaceTravel`,
+  ~50 ms home). Splitting them means letting the ship's ground take the
+  landforms later and building `TownDecor` in pieces. That is a bigger change.
+- **Single staged steps still go over the 5 ms budget:** a trooper or droid is
+  about 20-27 ms, the bar 15-22 ms, the player's body 12-17 ms. A step always
+  runs to the end. Going lower needs threaded or cheaper character builds.
+- **All 25 outfit textures stay loaded for the run** (2048², so up to about
+  0.5 GB of video memory if every colour is used). A town already uses most of
+  them.
+- **Not looked at on a real screen.** The rendered checks from #162 (horizon
+  popping for #122, p95/p99 frame times for #123, flying the handoffs for #121)
+  still need someone at the Mac.
+
 ## After the on-foot frame rate fix (2026-10-29)
 
 **Checked:** rendered on an Apple Silicon Mac, standing by the Red Wind pack,
