@@ -44,12 +44,18 @@ func setup(cfg: Dictionary, look_env: LookEnvironment = null) -> void:
 	tiers.sort_custom(func(a, b): return a.above < b.above)
 
 
-## Nodes that `hide` can switch off as one (nulls are skipped).
+## Nodes that `hide` can switch off as one (nulls and nodes already in the group
+## are skipped). Issue #121: a node added while its group is held off (built
+## after the ship had already climbed) is switched off at once, like the rest of
+## its group; one added while the group is shown is left as it is.
 func add_group(group: String, nodes: Array) -> void:
 	var list: Array = groups.get(group, [])
+	var held_off := hidden_groups().has(group)
 	for n in nodes:
-		if n != null:
+		if n != null and not list.has(n):
 			list.append(n)
+			if held_off and is_instance_valid(n):
+				_show(n, false)
 	groups[group] = list
 
 
@@ -139,11 +145,14 @@ func _apply() -> void:
 	for g in groups:
 		var show := not hidden.has(g)
 		for n in groups[g]:
-			if not is_instance_valid(n):
-				continue
-			if n is Node3D or n is CanvasItem:
-				n.visible = show
-			n.process_mode = Node.PROCESS_MODE_INHERIT if show else Node.PROCESS_MODE_DISABLED
+			if is_instance_valid(n):
+				_show(n, show)
+
+
+func _show(n: Node, show: bool) -> void:
+	if n is Node3D or n is CanvasItem:
+		n.visible = show
+	n.process_mode = Node.PROCESS_MODE_INHERIT if show else Node.PROCESS_MODE_DISABLED
 
 
 ## What is held off right now (for the HUD, tests and traces).

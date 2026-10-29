@@ -30,6 +30,8 @@ var _sand_bodies: Array = []         ## sand ShaderMaterials of ball neighbours 
 var self_radius := 0.0               ## issue #99: this planet's ball, and how far up its scene still holds
 var self_handoff := 0.0
 var handoffs := 0                    ## seamless switches started (traces, tests)
+var staged := false                  ## issue #121: built during a staged handoff (balls refine over frames)
+var _prechecks: Array = []           ## issue #121: worker tasks checking the neighbours' towns
 
 
 func setup(ship_pilot, neighbours: Array, with_looks: bool) -> void:
@@ -54,6 +56,13 @@ func _ready() -> void:
 	for b in bodies:
 		if b.node != null:
 			add_child(b.node)
+	# Issue #121: check every neighbour's town now, off the main thread, so the
+	# scene that takes over on arrival does not spend its first frame on it.
+	for b in bodies:
+		var town: Dictionary = PlanetGen.build(str(b.id)).get("town", {})
+		var task := TownCheck.precheck(str(b.id), town)
+		if task >= 0:
+			_prechecks.append(task)
 	var look = pilot.demo.get("look") if pilot != null and pilot.get("demo") != null else null
 	if look != null:
 		for m in _sand_bodies:
@@ -71,6 +80,12 @@ func _ready() -> void:
 		l.visible = false
 		_layer.add_child(l)
 		_labels[b.id] = l
+
+
+func _exit_tree() -> void:
+	for task in _prechecks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	_prechecks.clear()
 
 
 ## How far the ship is from a body's surface (metres; < 0 inside its capture).
@@ -242,7 +257,7 @@ func _ball_body(n: Dictionary) -> Node3D:
 	pt.far_chunks = 3
 	pt.far_cells = 40
 	root.add_child(pt)
-	pt.build_far_only(n.at)
+	pt.build_far_only(n.at, staged)      # issue #121: coarse first on a handoff
 	_sand_bodies.append(pt.material)
 	if pilot != null and pilot.demo != null and bool(tcfg.get("enclosed", false)):
 		var ext := AsteroidWorld.new()

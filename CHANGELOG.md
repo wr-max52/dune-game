@@ -2,6 +2,26 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Staged planet handoffs (2026-10-29, issue #121)
+
+- **Flying from the port to the station (and back) no longer freezes for the
+  whole build.** The other planet's scene now shows up with just what the ship
+  needs on its first frame: the planet, its sky, the town's boxes, the player,
+  the camera and the ship, flying on exactly where it was. Everything else (the
+  people, the bar, the gear, the HUD, the full-detail ground) is built over the
+  next frames, a little each frame.
+- In the headless trace the first frame of a handoff went from 1.6 s (to the
+  station) and 2.3 s (home) to under 0.1 s. With the look on, it went from 6.3 s
+  to 0.34 s (station) and from 12.8 s to 1.0 s (port).
+- The ship keeps its place, heading, speed and throttle, and stays under your
+  control while the rest is built.
+- The planet's far ground starts coarse and sharpens over about a second, with
+  no holes. People built while you are still high up stay hidden until you come
+  down.
+- Works the same for any generated planet: nothing in it is about the port or
+  the station.
+- `staged_handoff = false` on the town scene builds it all at once, as before.
+
 ## Desert packs and sand pigs, first milestone (2026-10-28, issue #96)
 
 - **The dune people** now live on the home planet: one primitive people,

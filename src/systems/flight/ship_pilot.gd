@@ -166,6 +166,7 @@ func _ready() -> void:
 	_use_berth(0)
 	if "planet" in demo and not demo.planet.is_empty():
 		travel = SpaceTravel.new()
+		travel.staged = "staging" in demo and bool(demo.staging)    # issue #121: a handoff's first frame
 		travel.setup(self, demo.planet.get("neighbours", []), demo.use_look)
 		demo.add_child(travel)
 	if str(demo._arrival.get("mode", "")) == "reentry":
