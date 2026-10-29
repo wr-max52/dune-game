@@ -44,7 +44,8 @@ var seam: Material
 var solid := false            ## issue #55: while on, `put` parts also collide (see flush)
 var solids := 0               ## colliders the last flush made (tests, review)
 var _groups := {}             ## "mesh:mat" -> [mesh, mat, Array[Transform3D]]
-var _solids: Array = []       ## [Transform3D, Vector3 size] per solid part
+var _solids: Array = []        ## [Transform3D, Vector3 size] per solid box part
+var _cyls: Array = []          ## [Transform3D, CylinderShape3D] per solid dome cap
 var _meshes := {}
 var _xf := Transform3D.IDENTITY   ## the building being drawn: local +X is its door side
 var _rng := RandomNumberGenerator.new()
@@ -93,6 +94,13 @@ func _add_solid(mesh: Mesh, world: Transform3D) -> void:
 	_solids.append([Transform3D(world.basis.orthonormalized(), world * a.get_center()), size])
 
 
+## A cylinder collider at the dome's footprint, so the dome cap collides. The dome
+## sits on top of the box (whose top is the wall height); the cap spans its height
+## from `pos`. `pos` is in the current building's local frame.
+func solid_dome(r: float, h: float, pos: Vector3) -> void:
+	_cyls.append([_xf * Transform3D(Basis.IDENTITY, pos + Vector3(0, h * 0.5, 0)), r, h])
+
+
 ## Put with `solid` on for just this part.
 func solid_part(mesh: Mesh, mat: Material, pos: Vector3, basis: Basis = Basis.IDENTITY) -> void:
 	var was := solid
@@ -119,8 +127,9 @@ func flush(parent: Node3D) -> int:
 		parent.add_child(mmi)
 		n += xfs.size()
 	_groups.clear()
-	solids = _solids.size()
-	if not _solids.is_empty():
+	solids = _solids.size() + _cyls.size()
+	var has := not _solids.is_empty() or not _cyls.is_empty()
+	if has:
 		var body := StaticBody3D.new()
 		body.name = "Props"
 		for sp in _solids:
@@ -130,8 +139,17 @@ func flush(parent: Node3D) -> int:
 			cs.shape = shape
 			cs.transform = sp[0]
 			body.add_child(cs)
+		for d in _cyls:
+			var cs := CollisionShape3D.new()
+			var shape := CylinderShape3D.new()
+			shape.radius = d[1]
+			shape.height = d[2]
+			cs.shape = shape
+			cs.transform = d[0]
+			body.add_child(cs)
 		parent.add_child(body)
 		_solids.clear()
+		_cyls.clear()
 	return n
 
 
@@ -345,7 +363,10 @@ func _look_hut_round(b: Dictionary, lx: float, lz: float, h: float) -> void:
 	var mat := _plaster(b, h - 0.5)
 	part(cyl(r * 0.97, r, h, 28), mat, Vector3(0, h * 0.5, 0))
 	part(ring(r - 0.1, r + 0.22, h - 0.05, h + 0.28), mat, Vector3.ZERO)
-	part(ball(r * 0.86, r * 0.5, true, 24), mat, Vector3(0, h, 0))
+	var dr := r * 0.86
+	var dh := r * 0.5
+	part(ball(dr, dh, true, 24), mat, Vector3(0, h, 0))
+	solid_dome(dr, dh, Vector3(0, h, 0))
 	part(cyl(0.22, 0.32, 0.35, 10), trim, Vector3(0, h + r * 0.5 + 0.1, 0))
 	door(on_round(r - 0.04, 0, 0.0))
 	window(on_round(r - 0.02, minf(h * 0.6, h - 0.9), 0.85), 0.0, 0.0, true)
@@ -632,6 +653,7 @@ func _look_lookout(b: Dictionary, _lx: float, _lz: float, _h: float) -> void:
 	var roof_y := fy + StairTower.ROOM_H + 0.3
 	part(ring(rr + 0.2, rr + 0.4, fy + StairTower.ROOM_H - 0.05, fy + StairTower.ROOM_H + 0.05, 40), door_glow, cc)
 	part(ball(rr * 0.72, rr * 0.4, true, 28), shell, cc + Vector3(0, roof_y, 0))
+	solid_dome(rr * 0.72, rr * 0.4, cc + Vector3(0, roof_y, 0))
 	part(cyl(0.3, 0.45, 0.4, 12), trim, cc + Vector3(0, roof_y + rr * 0.4 + 0.15, 0))
 	part(ring(rr * 0.72 - 0.05, rr + 0.1, roof_y, roof_y + 0.15, 40), trim, cc)
 	antennas(cc + Vector3(-rr * 0.82, roof_y, 0), 5.5)
