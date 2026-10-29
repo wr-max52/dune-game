@@ -99,7 +99,11 @@ func height_above(p: Vector3) -> float:
 	if sp == null:
 		return p.y - ground_at(p.x, p.z, p.y)
 	var h := sp.height_above_ground(p)
+	var wreck_up := up_at(p)
 	for b in boxes:
+		if b.has("wreck_finish"):
+			h = minf(h, box_height_below(b, p, wreck_up))
+			continue
 		var lp: Vector3 = box_xf(b).affine_inverse() * p
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
@@ -135,6 +139,9 @@ func surface_below(p: Vector3) -> Vector3:
 
 
 func _add_landmark(lm: Dictionary, content) -> void:
+	if str(lm.get("kind", "")) == "wreck":
+		StarcruiserWreck.add_to_ground(self, lm)
+		return
 	var at := _v3(lm.get("at", [0, 0, 0]))
 	if sphere() != null:
 		_add_landmark_on_ball(lm, content, at)
@@ -270,6 +277,31 @@ func altitude(p: Vector3) -> float:
 	return terrain.altitude(p) if terrain != null else p.y
 
 
+## Distance down a gravity ray to a wreck plate. A steeply leaning deck must be
+## measured along the planet's up, not the plate's local Y. The slab intersection
+## also handles the slanted shell facets, without inventing a lid over the breach.
+static func box_height_below(b: Dictionary, p: Vector3, up: Vector3) -> float:
+	var inv := box_xf(b).affine_inverse()
+	var local := inv * p
+	var dir := inv.basis * up
+	var enter := -INF
+	var leave := INF
+	var mn: Vector3 = b.min
+	var mx: Vector3 = b.max
+	for axis in 3:
+		if absf(dir[axis]) < 0.000001:
+			if local[axis] < mn[axis] or local[axis] > mx[axis]:
+				return INF
+			continue
+		var a := (local[axis] - mx[axis]) / dir[axis]
+		var z := (local[axis] - mn[axis]) / dir[axis]
+		enter = maxf(enter, minf(a, z))
+		leave = minf(leave, maxf(a, z))
+		if leave < enter:
+			return INF
+	return enter if enter >= -0.5 else INF
+
+
 ## Top of a box at (x, z) (ramps slope along their rise axis).
 static func box_top(b: Dictionary, x: float, z: float) -> float:
 	var mn: Vector3 = b.min
@@ -292,6 +324,15 @@ func ground_at(x: float, z: float, below: float = INF) -> float:
 	var g := terrain.height_at(x, z) if terrain != null else 0.0
 	var limit := below + 0.5
 	for b in boxes:
+		if b.has("wreck_finish"):
+			var ray_y := below
+			if not is_finite(ray_y):
+				var xf := box_xf(b)
+				var half: Vector3 = ((b.max as Vector3) - (b.min as Vector3)) * 0.5
+				ray_y = (xf * ((b.min as Vector3) + half)).y + absf(xf.basis.x.y) * half.x \
+					+ absf(xf.basis.y.y) * half.y + absf(xf.basis.z.y) * half.z + 1.0
+			g = maxf(g, ray_y - box_height_below(b, Vector3(x, ray_y, z), Vector3.UP))
+			continue
 		if b.has("xf"):
 			continue            # leans with the ball: height_above() asks it
 		var mn: Vector3 = b.min
