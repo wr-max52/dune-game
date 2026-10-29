@@ -321,10 +321,10 @@ func dress(env: LookEnvironment, mats: LookMaterials) -> void:
 	_panelled_wall("LinerExteriorPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, 1)
 	_pit_shield()
 	_dress_hall(metal, glass, env, mats)
-	_station_lighting(env, status)
+	_station_lighting(env, status, trim)
 	_dress_boulders()
 	if env != null:
-		env.set_ambient_energy_scale(1.25)
+		env.set_ambient_energy_scale(1.6)
 
 
 ## Repeated hull plates, seams, and service lights give the station walls the
@@ -398,11 +398,12 @@ func _radial_basis(angle: float) -> Basis:
 ## clock (the day presets switch the town's street lamps off, and the sunk pit
 ## and the roofed hallway get almost no sky light), so none is handed to the
 ## time-of-day lamp switch.
-func _station_lighting(env: LookEnvironment, status: StandardMaterial3D) -> void:
+func _station_lighting(env: LookEnvironment, status: StandardMaterial3D, cable: Material) -> void:
 	if env == null:
 		return
 	status.emission_energy_multiplier = 2.4
 	_add_wall_lamps(rc, rw, wall_h, 8, 1, status, 1.45, 15.0)
+	_town_floods(status, cable)
 	_add_wall_lamps(pit_c, pit_r, liner_h, 8, -1, status, 1.6, 22.0)
 	_pit_floor_lights(status)
 
@@ -428,6 +429,48 @@ func _add_wall_lamps(center: Vector3, radius: float, height: float,
 		lamp.shadow_enabled = false
 		lamp.position = at - Vector3(cos(angle) * 1.2, 0.2, sin(angle) * 1.2)
 		root.add_child(lamp)
+
+
+## The town under the dome: the grey sky gives little light through the glass and
+## the sun is low or gone half the day, and the wall lamps only reach the edge.
+## Flood lamps hang from the dome on cables over a grid across the whole floor
+## (none over a roof), so the streets, the square and the homes stay lit.
+func _town_floods(status: StandardMaterial3D, cable: Material) -> void:
+	var root := Node3D.new()
+	root.name = "TownFloods"
+	add_child(root)
+	var roofs: Array = []
+	for b in demo.town.boxes():
+		if str(b.get("kind", "")) in ["wall", "solid"] and float(b.max[1]) > 2.5:
+			roofs.append(Rect2(float(b.min[0]), float(b.min[2]), float(b.max[0]) - float(b.min[0]),
+				float(b.max[2]) - float(b.min[2])).grow(1.5))
+	var step := 15.0
+	var lamp_y := wall_h + 3.0
+	var n := int(ceil(rw / step))
+	for i in range(-n, n + 1):
+		for k in range(-n, n + 1):
+			var off := Vector2(i * step, k * step)
+			if off.length() > rw - 6.0:
+				continue
+			var at := Vector3(rc.x + off.x, lamp_y, rc.z + off.y)
+			var over_roof := false
+			for r in roofs:
+				if (r as Rect2).has_point(Vector2(at.x, at.z)):
+					over_roof = true
+					break
+			if over_roof:
+				continue
+			var top := wall_h + sqrt(maxf(0.0, 1.0 - pow(off.length() / rw, 2.0))) * dome_h
+			_box(root, Vector3(at.x, (lamp_y + top) * 0.5, at.z), Vector3(0.06, top - lamp_y, 0.06), cable)
+			_box(root, at, Vector3(1.4, 0.18, 1.4), status)
+			var lamp := OmniLight3D.new()
+			lamp.light_color = Color("#f2f4f7")
+			lamp.light_energy = 2.2
+			lamp.omni_range = 21.0
+			lamp.omni_attenuation = 0.7
+			lamp.shadow_enabled = false
+			lamp.position = at - Vector3(0, 0.6, 0)
+			root.add_child(lamp)
 
 
 ## The pit floor sits 6 m under the rock with the liner's lamps far above it:
