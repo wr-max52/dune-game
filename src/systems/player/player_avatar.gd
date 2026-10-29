@@ -23,6 +23,7 @@ const RETINT := preload("res://src/systems/look/shaders/weapon_retint.gdshader")
 const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 const Ads := preload("res://src/systems/look/ads.gd")
 const GunSights := preload("res://src/systems/look/gun_sights.gd")
+const CharBody := preload("res://src/systems/player/character_body.gd")
 const LOOK_PATH := "res://content/look/hand_weapons.json"
 
 const POLE_R := Vector3(-0.5, -0.7, -0.5)
@@ -56,6 +57,14 @@ var ads_camera: Camera3D
 var ads_blend := 0.0               ## 0 = hip, 1 = fully aimed
 var _last_upper := ""
 var _last_pitch := 0.0
+
+## Render smoothing (see _process): the facing of the last two physics ticks, the
+## ground tilt from the last pose, and the avatar's rest position in its parent (the
+## parent's origin; the smoothing offset is added on top of it).
+var _facing_prev := 0.0
+var _facing_curr := 0.0
+var _last_tilt := Basis.IDENTITY
+var _rest_position := Vector3.ZERO
 
 var skin: SkinnedBody              ## the rigged model over the joints (null = primitives)
 
@@ -364,7 +373,27 @@ static func _meshes_under(n: Node) -> Array:
 func align_to_ground(ground_tilt: Basis) -> void:
 	var parent := get_parent() as Node3D
 	var parent_basis := parent.global_basis.orthonormalized() if parent != null else Basis.IDENTITY
-	basis = parent_basis.inverse() * ground_tilt * Basis(Vector3.UP, facing_yaw)
+	_last_tilt = ground_tilt
+	basis = compose_basis(parent_basis, ground_tilt, facing_yaw)
+
+
+## The avatar's local basis: upright in the ground frame, facing `yaw` in the world,
+## whatever yaw the parent is turned to. (parent_basis: the parent's world basis.)
+static func compose_basis(parent_basis: Basis, ground_tilt: Basis, yaw: float) -> Basis:
+	return parent_basis.inverse() * ground_tilt * Basis(Vector3.UP, yaw)
+
+
+## The facing to draw at physics fraction `f` between the last two ticks.
+static func smoothed_yaw(prev: float, curr: float, f: float) -> float:
+	return lerp_angle(prev, curr, clampf(f, 0.0, 1.0))
+
+
+## Drop the render smoothing state (teleport, leaving a vehicle): sit on the parent's
+## origin facing exactly `facing_yaw`.
+func reset_render_smoothing() -> void:
+	position = _rest_position
+	_facing_prev = facing_yaw
+	_facing_curr = facing_yaw
 
 
 ## inp: velocity (world Vector3), grounded, crouch, sprint, cam_yaw, aim_pitch,
@@ -390,7 +419,9 @@ func animate(dt: float, inp: Dictionary) -> void:
 		want = cam_yaw
 	elif speed > 0.4:
 		want = atan2(flat.x, flat.z)
+	_facing_prev = facing_yaw             # includes anything that set it from outside (leaving a vehicle)
 	facing_yaw = _approach_angle(facing_yaw, want, (turn_rate * 2.0 if first_person else turn_rate) * dt)
+	_facing_curr = facing_yaw
 	# Always replace the full basis. On a ball, the ground frame can be tilted;
 	# after a teleport back to a flat surface, the same calculation removes any
 	# pitch/roll left by the previous frame instead of only rewriting rotation.y.
@@ -436,6 +467,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 ## is on, re-place the weapon against this frame's camera (animate only runs on
 ## physics ticks, so the sight would otherwise trail the view).
 func _process(delta: float) -> void:
+	_smooth_render()
 	var want := ads_on and first_person and ads_camera != null and drawn >= 0.99 \
 		and Ads.has_ads(look, current) and _last_upper != BodyAnimator.UPPER_FREE
 	var t := maxf(0.01, float(Ads.spec(look, current).blend_s))
@@ -444,6 +476,28 @@ func _process(delta: float) -> void:
 		_place_weapon(_last_upper, _last_pitch)
 		if skin != null:
 			skin.sync(body)
+
+
+## Every render frame (120 Hz on a 120 Hz display; physics is 60): keep the body where
+## and how the player is drawn, not where the last physics tick left it.
+##  - facing: re-apply the full basis with the facing interpolated between the last two
+##    ticks. The camera rig rewrites the parent's yaw every frame, and the body's local
+##    basis compensates for it, so without this the body swings with the mouse until
+##    the next tick.
+##  - position: sit at the parent's render-smoothed origin.
+## A no-op headless, so traces and tests see exactly what physics made.
+func _smooth_render() -> void:
+	if not CharBody.smoothing_active():
+		return
+	var parent := get_parent() as Node3D
+	if parent == null or not parent.has_method("render_origin"):
+		return
+	var yaw := facing_yaw
+	if facing_yaw == _facing_curr:       # else something set it from outside: take it as is
+		yaw = smoothed_yaw(_facing_prev, _facing_curr, Engine.get_physics_interpolation_fraction())
+	var pbasis := parent.global_basis
+	basis = compose_basis(pbasis.orthonormalized(), _last_tilt, yaw)
+	position = _rest_position + CharBody.local_offset(pbasis, parent.call("render_origin"), parent.global_position)
 
 
 func _place_weapon(upper: String, pitch: float) -> void:
