@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The asteroid, done properly: a real ball, a sealed station, no cutaway (2026-10-28, issue #99)
+
+- **One map.** Flying from the home planet to the asteroid has no fade and no
+  cut. The asteroid hangs in the port's sky as its real ball, in its own rock,
+  with its station on top. Come within 2.6 km of its surface and its scene takes
+  over in mid-flight: same spot, heading, speed, sun and stars, with more detail
+  coming in. Fly straight down to the town, or press Z. Leaving works the same
+  way back. Every planet's scene is now the same space shifted to its own port,
+  so the planets sit exactly where each other's skies show them.
+- **The asteroid is a real ball** (3 km across), built like the home planet. Its
+  grey, blocky moon rock is cratered all the way round (three sizes of crater),
+  gravity points to its centre, and you can fly and walk all the way round it.
+  Blocky boulders lie on the rock near the station.
+- **The station is sealed** (the locals cannot breathe outside):
+  - a round wall round the town, with the glass dome rising from its top;
+  - a transparent energy shield in the gate;
+  - a covered hallway with wide windows, a roof, and lights along its ceiling. It
+    runs from the gate through a door in the landing pit's tall round liner, then
+    down over the pit's ramp to a round energy shield onto the pit floor;
+  - an energy shield over the top of the pit, which ships fly through.
+- The pit has one way in now: the far ramp is gone.
+- `./tools/planets/shoot_planets.sh` has new stills: the station, the hallway,
+  the pit, the rock, the ball, and each planet seen from the other.
+
 ## Speeder upgrades at the mechanic's yard (2026-10-28, issue #95)
 
 - **Dorrin Vask's yard** is out in the desert, about a 30 second drive from the

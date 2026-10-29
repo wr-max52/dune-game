@@ -84,7 +84,8 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 			opts["cantina_planet"] = id          # issue #75: her own Oda (PlanetOwner)
 		if str(tcfg.get("landing_bay", "")) == "pit":
 			opts["bay"] = "pit"
-			opts["pit_clear"] = float(tcfg.get("dome", {}).get("spread", 1.0))
+		if bool(tcfg.get("enclosed", false)):
+			opts["ring"] = tcfg.get("station", {})      # issue #99: a sealed, round station
 		town = TownGen.generate(town_id, size, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), opts)
 	var world: Dictionary = {}
 	if cfg.has("world"):
@@ -119,6 +120,18 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 static func _world_for(id: String, town_id: String, tcfg: Dictionary) -> Dictionary:
 	var platform := str(tcfg.get("ground", "terrain")) in ["platform", "sphere"]
 	var surface: Dictionary = tcfg.get("surface", {})
+	if str(tcfg.get("ground", "")) == "ball":
+		# Issue #99: a real ball like the home planet (WorldTerrain asks the sphere).
+		return {
+			"id": id,
+			"label": str(tcfg.get("label", id)),
+			"town": town_id,
+			"naming": { "town": str(tcfg.get("town_naming", "town")), "planet": "planet" },
+			"terrain": { "sphere_radius": float(surface.get("radius", 1500.0)) },
+			"landmarks": [],
+			"atmosphere": tcfg.get("atmosphere", {}),
+			"detail": types().get("detail", {}),
+		}
 	return {
 		"id": id,
 		"label": str(tcfg.get("label", id)),
@@ -138,8 +151,15 @@ static func _world_for(id: String, town_id: String, tcfg: Dictionary) -> Diction
 
 
 ## The planets you can fly to from `id`: the ones that name it as "near" (where
-## they hang in its sky is their "at"), and the one it is near itself (seen from
-## here, back the other way: "home_at", or the mirror of its own "at").
+## they hang in its sky is their "at": the centre of their ball, in metres from
+## this planet's port), and the one it is near itself.
+##
+## Issue #99: one map. Every planet's scene is the same space, only shifted so its
+## own port is the origin (no turn, so the sun and the stars are the same in all
+## of them). A planet's port sits on top of its ball, so a neighbour's port is at
+## `offset` = its centre + (0, its radius, 0) here; a point p here is p - offset
+## in its scene. Seen from a child, its parent's centre is (0, -parent radius, 0)
+## minus the child's own offset, exactly: nothing is mirrored or scaled any more.
 static func neighbours(id: String, cc = null) -> Array:
 	if cc == null:
 		cc = _content()
@@ -151,29 +171,56 @@ static func neighbours(id: String, cc = null) -> Array:
 			continue
 		var o: Dictionary = all[other]
 		if str(o.get("near", "")) == id and o.has("at"):
-			out.append(_neighbour(o, GameFlow.vec(o.at), cc))
+			var at := GameFlow.vec(o.at)
+			var n := _neighbour(o, at, cc)
+			n["offset"] = at + Vector3(0, float(n.radius), 0)
+			n["child"] = true
+			out.append(n)
 	if str(mine.get("near", "")) != "" and all.has(str(mine.near)):
 		var home: Dictionary = all[str(mine.near)]
-		var at := GameFlow.vec(mine.get("at", [0, 0, -20000]))
-		var back := GameFlow.vec(mine.get("home_at", [-at.x * 1.6, at.y * 0.3, -at.z * 1.6]))
-		out.append(_neighbour(home, back, cc))
+		var my_offset := GameFlow.vec(mine.get("at", [0, 0, -20000])) + Vector3(0, ball_radius(mine, cc), 0)
+		var n := _neighbour(home, Vector3.ZERO, cc)
+		n["at"] = Vector3(0, -float(n.radius), 0) - my_offset
+		n["offset"] = -my_offset
+		n["child"] = false
+		out.append(n)
 	return out
+
+
+## A planet's radius: its ball's (the world's sphere_radius, or a ball type's
+## surface radius), else how big it looks from a neighbour's sky (body.radius).
+static func ball_radius(o: Dictionary, cc = null) -> float:
+	var t: Dictionary = types().get("types", {}).get(str(o.get("type", "sand")), {})
+	if o.has("world") and cc != null:
+		var r := float(cc.get_world(str(o.world)).get("terrain", {}).get("sphere_radius", 0.0))
+		if r > 0.0:
+			return r
+	if str(t.get("ground", "")) == "ball":
+		return float(t.get("surface", {}).get("radius", 1500.0))
+	return float(o.get("body_radius", t.get("body", {}).get("radius", 1000.0)))
+
+
+## How close to a planet's surface its own scene takes over (issue #99), or 0 when
+## it never hands over seamlessly (its parent's scene fades to it, as before).
+static func handoff_altitude(type: String) -> float:
+	return float(types().get("types", {}).get(type, {}).get("space", {}).get("handoff", 0.0))
 
 
 static func _neighbour(o: Dictionary, at: Vector3, cc) -> Dictionary:
 	var t: Dictionary = types().get("types", {}).get(str(o.get("type", "sand")), {})
 	var body: Dictionary = t.get("body", {})
 	# Issue #77: a planet that is a real ball (its world's terrain.sphere_radius)
-	# looks its true size from a neighbour's sky.
-	var ball := 0.0
+	# looks its true size from a neighbour's sky. Issue #99: so does a ball type.
+	var r := ball_radius(o, cc)
+	var ball := str(t.get("ground", "")) == "ball"
 	if o.has("world") and cc != null:
-		ball = float(cc.get_world(str(o.world)).get("terrain", {}).get("sphere_radius", 0.0))
+		ball = ball or float(cc.get_world(str(o.world)).get("terrain", {}).get("sphere_radius", 0.0)) > 0.0
 	return {
 		"id": str(o.get("id", "")),
 		"type": str(o.get("type", "sand")),
 		"at": at,
-		"ball": ball > 0.0,
-		"radius": ball if ball > 0.0 else float(o.get("body_radius", body.get("radius", 1000.0))),
+		"ball": ball,
+		"radius": r,
 		"color": Color(str(body.get("color", "#a08060"))),
 		"dark": Color(str(body.get("dark", "#504030"))),
 	}
