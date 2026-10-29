@@ -13,10 +13,50 @@ func _voice():
 
 func test_voice_profiles_cover_guards_merchants_locals_and_t89() -> void:
 	var voice = _voice()
-	assert_true(voice.profile_for_npc("gate-01", { "role": "gate" }) in ["guard", "guard_rough"])
-	assert_eq(voice.profile_for_npc("stall-01", { "role": "merchant" }), "merchant")
-	assert_true(voice.profile_for_npc("resident-01", { "role": "local" }) in ["relaxed", "woman_relaxed", "merchant"])
-	assert_eq(voice.profile_for_npc("t89", {}), "t89")
+	assert_true(voice.profile_for_npc("gate-01", { "role": "gate" }) in ["man_serious", "man_gruff"])
+	assert_true(voice.profile_for_npc("tower-01", { "role": "sentry" }) in ["man_serious", "man_gruff"])
+	assert_eq(voice.profile_for_npc("stall-01", { "role": "merchant" }), "man_laid_back")
+	assert_true(voice.profile_for_npc("resident-01", { "role": "local" }) in
+		["man_casual", "man_old", "man_southern", "woman_quirky", "woman_confident"])
+	assert_eq(voice.profile_for_npc("t89", {}), "robot_male")
+	assert_eq(voice.profile_for_npc("cantina_owner", {}), "woman_relaxed")
+	assert_eq(voice.profile_for_npc("mechanic", {}), "man_southern")
+	assert_eq(voice.profile_for_npc("fence-01", { "role": "merchant", "voice_profile": "man_shady" }), "man_shady")
+
+
+## Issue #164: Skrugs is a goofy man, T-89 a robot, and the Odas off the home
+## planet each get a woman's voice instead of the male fallback.
+func test_issue_164_voice_picks() -> void:
+	var voice = _voice()
+	assert_eq(voice.voice_for(voice.profile_for_npc("skrugs", {})).label, "Man (goofy)")
+	assert_eq(voice.voice_for(voice.profile_for_npc("t89", {})).label, "Robot (male)")
+	var odas := {}
+	for pid in ["dune_2", "ice_7", "jungle_3", "rock_9", "ocean_1"]:
+		var p: String = voice.profile_for_npc("cantina_owner_" + pid, { "voice_role": "planet_owner" })
+		assert_true(str(voice.voice_for(p).label).begins_with("Woman"), "%s gets a woman's voice" % pid)
+		odas[p] = true
+	assert_gte(odas.size(), 2, "the off-world Odas do not all share one voice")
+
+
+## Every name voice_profiles.json hands out is a library voice with an ID and a
+## description to pick it by.
+func test_every_profile_resolves_to_a_described_library_voice() -> void:
+	var voice = _voice()
+	var names: Array = [voice._profiles.get("default", "")]
+	names.append_array(voice._profiles.get("npc_profiles", {}).values())
+	for pool in voice._profiles.get("role_profiles", {}).values():
+		names.append_array(pool)
+	for n in names:
+		var v: Dictionary = voice.voice_for(str(n))
+		assert_ne(str(v.get("voice_id", "")), "", "%s has a voice id" % n)
+		assert_ne(str(v.get("label", "")), "", "%s has a description" % n)
+	var ids := {}
+	var labels := {}
+	for k in voice._library:
+		ids[voice._library[k].voice_id] = true
+		labels[voice._library[k].label] = true
+	assert_eq(ids.size(), voice._library.size(), "no voice is in the library twice")
+	assert_eq(labels.size(), voice._library.size(), "every description is unique")
 
 
 func test_voice_assignment_is_stable_and_varies_across_locals() -> void:

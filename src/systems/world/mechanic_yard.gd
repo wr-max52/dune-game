@@ -273,7 +273,7 @@ func _open(text: String, opts: Array, pick: Callable) -> void:
 	said = text
 	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, text)
 	if mechanic != null:
-		NpcVoice.speak(text, "relaxed", "warm", mechanic)
+		NpcVoice.speak(text, NpcVoice.profile_for_npc("mechanic", {}), "warm", mechanic)
 	if player != null and not player.locked:
 		player.locked = true
 		_was_locked = true
@@ -284,7 +284,7 @@ func _say(text: String) -> void:
 	if gear != null and gear.hud != null and text != "":
 		gear.hud.toast("%s: %s" % [npc_name(), text], 4.5)
 	if mechanic != null:
-		NpcVoice.speak(text, "relaxed", "warm", mechanic)
+		NpcVoice.speak(text, NpcVoice.profile_for_npc("mechanic", {}), "warm", mechanic)
 
 
 func _on_option_selected(_id: String) -> void:

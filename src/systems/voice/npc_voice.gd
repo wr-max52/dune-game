@@ -3,9 +3,12 @@ extends Node
 ## failed requests, and uncached audio are all silent and never block a turn.
 ## The player supplies their own key in the existing settings panel. Keys are kept
 ## in user://llm/keys.cfg; generated MP3s stay in user://npc_voice_cache/.
+## Issue #164: a profile name is a key in voice_library.json ("man_goofy",
+## "robot_male"), a voice picked by description; voice_profiles.json says who uses which.
 
 const LLMConfigScript := preload("res://src/systems/llm/llm_config.gd")
 const PROFILES_PATH := "res://content/core/npcs/voice_profiles.json"
+const LIBRARY_PATH := "res://content/core/npcs/voice_library.json"
 const SETTINGS_PATH := "user://npc_voice_settings.cfg"
 const CACHE_DIR := "user://npc_voice_cache"
 const KEY_ID := "elevenlabs"
@@ -13,6 +16,7 @@ const API_URL := "https://api.elevenlabs.io/v1/text-to-speech/"
 const FALLBACK_MODEL := "eleven_v4"
 
 var _profiles: Dictionary = {}
+var _library: Dictionary = {}      ## voice_library.json "voices": key -> voice
 var _speed := 1.0
 var _tokens: Dictionary = {}       ## target instance id -> latest utterance token
 var _requests: Dictionary = {}     ## target instance id -> HTTPRequest
@@ -24,11 +28,15 @@ func _ready() -> void:
 
 
 func _load_profiles() -> void:
-	if not FileAccess.file_exists(PROFILES_PATH):
-		_profiles = {}
-		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(PROFILES_PATH))
-	_profiles = parsed if parsed is Dictionary else {}
+	_profiles = _read_json(PROFILES_PATH)
+	_library = _read_json(LIBRARY_PATH).get("voices", {})
+
+
+static func _read_json(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed if parsed is Dictionary else {}
 
 
 func _load_settings() -> void:
@@ -60,6 +68,8 @@ func set_api_key(key: String) -> bool:
 
 ## Resolve a stable voice profile for a soldier or dialogue NPC. A supplied
 ## `voice_profile` always wins; role variants are assigned deterministically.
+## `voice_role` picks a pool without giving the NPC a gameplay role (the Odas
+## on other planets use "planet_owner").
 func profile_for_npc(npc_id: String, npc_data: Dictionary) -> String:
 	var explicit := str(npc_data.get("voice_profile", ""))
 	if explicit != "":
@@ -67,13 +77,18 @@ func profile_for_npc(npc_id: String, npc_data: Dictionary) -> String:
 	var named: Dictionary = _profiles.get("npc_profiles", {})
 	if named.has(npc_id):
 		return str(named[npc_id])
-	var role := str(npc_data.get("role", ""))
+	var role := str(npc_data.get("voice_role", npc_data.get("role", "")))
 	if role == "" and str(npc_data.get("faction", "")) == "imperial_remnant":
 		role = "guard"
 	var choices: Array = _profiles.get("role_profiles", {}).get(role, [])
 	if choices.is_empty():
-		return "relaxed"
+		return str(_profiles.get("default", "man_casual"))
 	return str(choices[posmod(hash(npc_id), choices.size())])
+
+
+## The library entry for a profile name ({} when it is not in the library).
+func voice_for(profile_name: String) -> Dictionary:
+	return _library.get(profile_name, {})
 
 
 static func mood_tags_for(profile: Dictionary, mood: String, shout: bool = false) -> PackedStringArray:
@@ -124,23 +139,27 @@ static func build_payload(text: String, voice: Dictionary, model_id: String,
 	}
 
 
-func speak(text: String, profile_name: String, mood: String, target: Node3D, shout: bool = false) -> void:
+## `live_line`: a fresh LLM line, spoken at the player's speed setting. Canned
+## lines (barks, menus, the tutorial) always render at normal speed so their
+## cached clips survive a change of the speed slider and are generated once.
+func speak(text: String, profile_name: String, mood: String, target: Node3D, shout: bool = false,
+		live_line: bool = false) -> void:
 	if text.strip_edges() == "" or target == null or not is_instance_valid(target):
 		return
 	# Avoid accidental web requests from headless tests and server processes.
 	if DisplayServer.get_name() == "headless":
 		return
-	var voices: Dictionary = _profiles.get("voice_profiles", {})
-	var voice: Dictionary = voices.get(profile_name, {})
-	var voice_id := str(voice.get("voice_id", ""))
+	var v := voice_for(profile_name)
+	var voice_id := str(v.get("voice_id", ""))
 	if voice_id == "":
 		return
 
 	var mood_map: Dictionary = _profiles.get("mood_tags", {})
 	var model_id := str(_profiles.get("model_id", FALLBACK_MODEL))
-	var payload := build_payload(text, voice, model_id, _speed, mood_map, mood, shout)
+	var speed_value := _speed if live_line else 1.0
+	var payload := build_payload(text, v, model_id, speed_value, mood_map, mood, shout)
 	var spoken_text := str(payload.text)
-	var key := cache_key(spoken_text, voice_id, model_id, _speed, float(voice.get("stability", 0.55)))
+	var key := cache_key(spoken_text, voice_id, model_id, speed_value, float(v.get("stability", 0.55)))
 	var cache_path := CACHE_DIR.path_join(key.sha256_text() + ".mp3")
 	var target_id := target.get_instance_id()
 	stop(target)

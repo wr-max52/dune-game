@@ -2,6 +2,29 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Voices cleanup: a voice library, Skrugs and T-89 recast (2026-10-29, issue #164)
+
+- **Voice library.** `content/core/npcs/voice_library.json` lists every ElevenLabs
+  voice the game can use, keyed by how it sounds ("Man (goofy)", "Robot (male)",
+  "Woman (sultry)"), with its voice ID, ElevenLabs name and stability. Spare
+  voices are in it too, ready for new NPCs. `voice_profiles.json` now names
+  library voices instead of holding raw IDs.
+- **Skrugs is a goofy man** (Dr. Quibble), not the woman's voice he had.
+  **T-89 has a real robot voice** (Sigma Centauri). Its old ID had been quietly
+  remapped by ElevenLabs to the same voice as the mechanic.
+- **The Odas on other planets sound like women again.** They had fallen through
+  to the male default. Each one picks from four women's voices by planet.
+- **Recast where the old fallback voice was used:** the mechanic sounds southern
+  and warm (Wade). Troopers on outposts, towers and the yard use the gate guards'
+  two voices. Desert natives sound fierce (Harry), the fence and the bounty
+  officer shady (Callum), and stall merchants laid-back (Roger). Villagers draw
+  from a wider mix of five men's and women's voices.
+- **Oda and the gate guards are unchanged.**
+- **Canned lines are generated once.** Villager barks, the mechanic's menus and
+  T-89's tutorial always render at normal speed, so their cached clips no longer
+  depend on the speech-speed slider. Moving the slider no longer regenerates
+  them. The slider now changes only live conversation lines.
+
 ## The energy saber, redrawn (2026-10-29)
 
 - **A glowing staff on a metal hilt.** The energy sword's forged spine and brass

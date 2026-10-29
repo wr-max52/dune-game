@@ -44,6 +44,7 @@ static func card(planet: Dictionary, book: NameBook = null) -> Dictionary:
 	if str(ctx.town) == "":
 		ctx.town = "the town"
 	c["id"] = card_id(pid)
+	c["voice_role"] = "planet_owner"   # issue #164: a woman's voice of her own, by planet
 	c["name"] = full
 	c["note"] = "Generated (issue #75) by src/systems/planets/planet_owner.gd for planet %s." % pid
 	for k in ["identity", "backstory", "people"]:
