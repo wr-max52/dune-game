@@ -2,7 +2,7 @@
 
 The smallest playable build that proves the concept: a frontier desert spaceport
 days after an empire collapses. Land, roam a port district, talk to locals, take a
-contract into the desert, fight, return, get paid. One LLM-driven cantina owner.
+contract into the desert, fight, return, get paid. Multiple LLM-driven NPCs, like the cantina owner who pushes the plot like a a boomer pushes conspiracy theories.
 
 This is a **vertical slice**, not the full game.
 
