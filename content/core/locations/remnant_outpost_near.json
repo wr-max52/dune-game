@@ -2,7 +2,7 @@
   "id": "remnant_outpost_near",
   "kind": "remnant_outpost",
   "label": "the dry wash outpost",
-  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point, and puts three troopers (outpost_trooper) at guard_a / guard_b / guard_c, an assassin droid walking 'patrol', and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different.",
+  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point, and puts three troopers (outpost_trooper) at guard_a / guard_b / guard_c, an assassin droid walking 'patrol', a floating droid on 'floater' and a cargo droid shuffling along 'cargo' (issue #76: it runs into the desert on the alarm and is left there broken), and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different. Issue #76: 'props' are the crates, canisters and drums lying about (solid: cover); 'stack' piles that many, 'lying' tips one on its side.",
   "buildings": [
     { "id": "block", "shape": "box", "size": [8,4.5,6], "position": [0, 0, 0], "visual": false }
   ],
@@ -14,6 +14,18 @@
     "guard_c": [-7, 0, -6],
     "target": [-2, 0, 7],
     "ship": [-14,0,2],
-    "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]]
-  }
+    "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]],
+    "floater": [[5, 0, 7], [9, 0, 0], [5, 0, -7]],
+    "cargo": [[1.0, 0, -6.4], [-3.2, 0, -6.6]]
+  },
+  "props": [
+    { "kind": "crate", "at": [2.5, 0, -4.6], "yaw": 8, "stack": 2 },
+    { "kind": "crate", "at": [3.7, 0, -5.3], "yaw": -12 },
+    { "kind": "canister", "at": [-1.5, 0, -4.2] },
+    { "kind": "canister", "at": [-0.9, 0, -4.6], "yaw": 30 },
+    { "kind": "drum", "at": [-5.6, 0, 1.5], "yaw": 70, "lying": true },
+    { "kind": "canister", "at": [-5.4, 0, -1.2] },
+    { "kind": "crate", "at": [9.0, 0, 0.5], "yaw": 15 },
+    { "kind": "drum", "at": [-3.0, 0, 4.2] }
+  ]
 }

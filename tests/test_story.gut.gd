@@ -209,6 +209,27 @@ func test_three_outposts_further_and_further_out_the_front_gate() -> void:
 	assert_eq(looks.size(), 3, "each a little different")
 
 
+## Issue #76: crates, canisters and drums lie about each outpost, solid (cover),
+## and its droids have their routes.
+func test_outposts_have_props_and_droid_routes() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var o: RemnantOutposts = t.outposts
+	for spec in o.droid_specs():
+		for r in ["patrol", "floater", "cargo"]:
+			assert_false((spec.routes.get(r, []) as Array).is_empty(), "%s has a %s route" % [spec.outpost, r])
+	for op in o.outposts:
+		var list: Array = o.props(op)
+		assert_gte(list.size(), 8, "%s has props lying about" % op.id)
+		var body: StaticBody3D = o.get_node_or_null("Props_" + str(op.id))
+		assert_not_null(body, "and they are solid")
+		assert_eq(body.get_child_count(), list.size(), "one shape each")
+		var stacked: Array = list.filter(func(p): return int(p.level) == 1)
+		assert_gt(stacked.size(), 0, "a crate on a crate")
+		for p in stacked:
+			assert_gt(float(p.base), 0.8, "sitting on the one below")
+
+
 func test_target_and_trooper_profiles() -> void:
 	var t: Dictionary = content.get_soldier("bounty_target")
 	assert_eq(str(t.faction), "imperial_remnant")
@@ -268,7 +289,7 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 		assert_false(og.handles_player)
 	var outpost_droids: Array = t.droids.remnant.filter(func(u): return u.spec.has("outpost")) if t.droids != null else []
 	if t.droids != null:
-		assert_eq(outpost_droids.size(), 3, "an assassin droid each")
+		assert_eq(outpost_droids.size(), 9, "an assassin, a floating and a cargo droid each (issue #76)")
 	assert_null(o.target, "no target without a contract")
 	Story.skip_to("bounty")
 	Story.beat("cantina_owner")

@@ -252,6 +252,15 @@ func roll_wreck(rng: RandomNumberGenerator, center: Vector3, ground: Callable = 
 	return {}
 
 
+## Issue #76: a wreck at a given spot (an outpost's cargo droid that ran off and
+## broke down out there), whatever the random field holds.
+func add_wreck(kind: String, variant: String, at: Vector3) -> Dictionary:
+	var w := { "uid": next_uid, "kind": kind, "variant": variant, "pos": [at.x, at.y, at.z] }
+	next_uid += 1
+	wrecks.append(w)
+	return w
+
+
 ## A fixed wreck resets and joins the roster. Returns the new droid, or {} when
 ## the roster is full (the wreck stays where it is).
 func fix_wreck(uid: int) -> Dictionary:
