@@ -38,6 +38,7 @@ var _turns: Dictionary = {}          ## turn id -> state
 var _next_id := 1
 var _recheck_left := 0.0
 var _health_reqs: Dictionary = {}    ## id -> HTTPRequest
+var _sidecar_start_pending := false
 
 
 func _ready() -> void:
@@ -73,13 +74,19 @@ static func make_provider(id: String, prof: Dictionary, key: String) -> LLMProvi
 ## Start the bundled llama-server if the local profile wants one (reusing a
 ## healthy server that is already up).
 func start_sidecar() -> void:
-	if config == null:
+	if config == null or _sidecar_start_pending:
+		return
+	if sidecar != null and sidecar.state in [LLMSidecar.State.STARTING, LLMSidecar.State.READY, LLMSidecar.State.REUSED]:
 		return
 	var prof := config.profile("local")
 	if not bool(prof.get("sidecar", {}).get("enabled", false)):
 		return
+	if sidecar != null:
+		sidecar.stop()
 	sidecar = LLMSidecar.new(prof)
+	_sidecar_start_pending = true
 	_check_health("local", func(ok: bool):
+		_sidecar_start_pending = false
 		if ok:
 			sidecar.reused = true
 			sidecar.state = LLMSidecar.State.REUSED

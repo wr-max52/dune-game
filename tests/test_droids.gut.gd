@@ -224,17 +224,30 @@ func test_controller_buy_sell_follow_and_ship() -> void:
 func test_chirp_timer_uses_droid_quirk() -> void:
 	var s := _scene()
 	var ctl: DroidController = s[0]
-	WorldState.credits = 100
-	assert_eq(ctl.buy("assassin"), "bought")
-	var u = ctl.companions.values()[0]
-	u.global_position = Vector3(100, 0, 0) # Keep this timer test silent.
-	u.chirp_cd = 0.0
+	WorldState.credits = 200
+	for kind in ["floating", "cargo", "assassin"]:
+		assert_eq(ctl.buy(kind), "bought")
+	var units: Array = ctl.companions.values() + ctl.remnant
+	for u in units:
+		u.global_position = Vector3(100, 0, 0) # Keep this timer test silent.
+		u.chirp_cd = 0.0
 
 	ctl._chirps(0.016)
 
-	var range_s: Array = DroidRoster.kind_cfg(u.kind).get("chirp_s", [9.0, 20.0])
-	assert_gte(u.chirp_cd, float(range_s[0]) * 0.8, "the reset timer uses the low jitter bound")
-	assert_lte(u.chirp_cd, float(range_s[1]) * 1.2, "the reset timer uses the high jitter bound")
+	for u in units:
+		var range_s: Array = DroidRoster.kind_cfg(u.kind).get("chirp_s", [9.0, 20.0])
+		assert_gte(u.chirp_cd, float(range_s[0]) * 0.8, "the reset timer uses the low jitter bound")
+		assert_lte(u.chirp_cd, float(range_s[1]) * 1.2, "the reset timer uses the high jitter bound")
+
+
+func test_dead_droid_does_not_reset_its_chirp_timer() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var u = ctl.remnant[0]
+	u.dead = true
+	u.chirp_cd = 0.0
+	ctl._chirps(0.016)
+	assert_eq(u.chirp_cd, 0.0)
 
 
 func test_controller_make_room_then_fix_in_ten_seconds() -> void:
