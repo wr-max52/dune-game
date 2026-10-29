@@ -44,6 +44,10 @@ var lowest_floor := 0.0
 ## Ground height under (x, z), when the scene has terrain (the town's desert).
 ## Unset: the town's lowest floor stands in for the ground everywhere.
 var ground_at := Callable()
+## Issue #93: the world's ground (the ship's), set once the ship is built. Out on the home
+## planet's ball the fall guard asks it how high you are over the ground along its up,
+## because the flat (x, z) line above is wrong past the equator.
+var ground: WorldGround
 ## Whether the stall at a vendor marker trades right now: (marker: String) -> bool.
 ## Unset: always open. The town's locals close a stall while they fight, or for good
 ## once its keeper is dead (Townsfolk.vendor_open).
@@ -99,6 +103,20 @@ func floor_below(p: Vector3) -> float:
 	if ground_at.is_valid():
 		return minf(float(ground_at.call(p.x, p.z)), lowest_floor if _over_town(p) else INF)
 	return lowest_floor
+
+
+## Fallen out of the world: under the ground by FALL_MARGIN. Away from the town on the
+## ball that is measured along the ground's up; everywhere else, on world y as before.
+func fell_out_of_world(p: Vector3) -> bool:
+	if ground != null and ground.sphere() != null and not _town_here(p):
+		return ground.height_above(p) < -FALL_MARGIN
+	return p.y < floor_below(p) - FALL_MARGIN
+
+
+## Over the town's footprint and on its side of the ball (not the same x, z through the
+## planet on the far side).
+func _town_here(p: Vector3) -> bool:
+	return _over_town(p) and (ground == null or ground.sphere() == null or ground.up_at(p).y > 0.5)
 
 
 func _over_town(p: Vector3) -> bool:
@@ -457,7 +475,7 @@ func _guard_fall() -> void:
 	if player.is_on_floor():
 		_last_safe = player.global_position
 		return
-	if player.global_position.y < floor_below(player.global_position) - FALL_MARGIN:
+	if fell_out_of_world(player.global_position):
 		player.global_position = _last_safe + Vector3(0, 0.1, 0)
 		player.velocity = Vector3.ZERO
 		player.controller.velocity = Vector3.ZERO

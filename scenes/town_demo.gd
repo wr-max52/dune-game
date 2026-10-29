@@ -687,6 +687,8 @@ func _build_ship() -> void:
 	pilot = ShipPilot.new()
 	pilot.setup(self)
 	add_child(pilot)
+	if gear != null:
+		gear.ground = pilot.ground      # issue #93: the fall guard, round the ball
 
 
 func _physics_process(dt: float) -> void:

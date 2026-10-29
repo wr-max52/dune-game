@@ -23,6 +23,12 @@ var friends: Array = []        ## issue #64: never hits these either (your droid
 var splash_radius := 0.0
 var splash_damage := 0.0
 var ground_at: Callable
+## Issue #93: on the home planet's ball the ground is not a function of (x, z) (past the
+## equator the same x, z is under the planet), so a ship's bolt there asks how high it is over
+## the ground along the ground's up instead: over_ground: (p: Vector3) -> float (<= 0 is in
+## it), ground_up: (p: Vector3) -> Vector3. When over_ground is set it replaces ground_at.
+var over_ground: Callable
+var ground_up: Callable
 var stylize := false           ## a stretched glowing streak instead of the sphere
 var sweep := false             ## ray-test each step so fast bolts cannot tunnel
 var color := Color(1.0, 0.45, 0.2)
@@ -187,9 +193,25 @@ func _physics_process(dt: float) -> void:
 			apply_to(hit.collider if hit_target == null else hit_target)
 			return
 	global_position += step
-	if _alive and ground_at.is_valid() and global_position.y <= float(ground_at.call(global_position.x, global_position.z)):
-		global_position.y = float(ground_at.call(global_position.x, global_position.z))
+	if _alive and _in_ground():
 		apply_to(null)
+
+
+## Whether the ground has stopped the bolt; if so it is moved to the surface it hit.
+func _in_ground() -> bool:
+	if over_ground.is_valid():
+		var h := float(over_ground.call(global_position))
+		if h > 0.0:
+			return false
+		var up: Vector3 = ground_up.call(global_position) if ground_up.is_valid() else Vector3.UP
+		global_position -= up * h
+		return true
+	if ground_at.is_valid():
+		var gy := float(ground_at.call(global_position.x, global_position.z))
+		if global_position.y <= gy:
+			global_position.y = gy
+			return true
+	return false
 
 
 func _on_body_entered(body: Node3D) -> void:

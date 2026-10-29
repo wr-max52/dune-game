@@ -931,7 +931,13 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 		var wc: Dictionary = content.weapons.get(str(s.get("weapon_id", "")), {})
 		b.splash_radius = float(wc.get("splash_radius", 0.0))
 		b.splash_damage = float(wc.get("splash_damage", 0.0))
-		b.ground_at = func(x: float, z: float) -> float: return ground.terrain.height_at(x, z)
+		if ground.sphere() != null:
+			# Issue #93: round the ball the ground is what is under the bolt along "up", not
+			# the flat (x, z) line (which is only the port's half of the planet).
+			b.over_ground = func(p: Vector3) -> float: return ground.height_above(p)
+			b.ground_up = func(p: Vector3) -> Vector3: return ground.up_at(p)
+		else:
+			b.ground_at = func(x: float, z: float) -> float: return ground.terrain.height_at(x, z)
 		demo.add_child(b)
 		b.global_position = s.origin
 		shots += 1
