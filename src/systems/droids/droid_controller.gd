@@ -1078,7 +1078,7 @@ func _chirps(dt: float) -> void:
 		if u.chirp_cd <= 0.0:
 			var ch: Array = DroidRoster.kind_cfg(u.kind).get("chirp_s", [9.0, 20.0])   # issue #80: slow, per-kind rates, per-droid spread
 			var t := rng.randf_range(float(ch[0]), float(ch[1]))   # per-droid spread so no two beep in step
-			u.chirp_cd = t * (0.8 + u.hash() / 1e9 % 0.4)
+			u.chirp_cd = t * (0.8 + u.quirk().x * 0.4)
 			if u.global_position.distance_to(player.global_position) <= 25.0:
 				_beep(u)
 
