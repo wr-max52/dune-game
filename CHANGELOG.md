@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Dogfights in the port's sky (2026-10-29, issue #76 part 3)
+
+- **The outposts' ships are the Remnant's, and you can fly them.** The near
+  outpost keeps a dark interceptor, the other two a dark freighter (the port's
+  models painted dark: textured ones through the dark-gun shader, the flat-colour
+  interceptor by hand, accents in oxblood). Each is a berth like the pit's ships.
+  Climbing into one sets off that outpost's alarm. If it goes down (shot or
+  crashed) it is gone and you wake in the pit.
+- **The barracks has a landing pad with a dark interceptor on it.** It takes off
+  after you when you fly a stolen ship, or when the Remnant wants you (the
+  garrison's alarm, a hostile standing, or the fleet is beaten) and you are
+  300 m out past the town.
+- **It fights like the space fighters.** Same AI pilot (pursue, attack, break,
+  extend), guns, shield and hull as the space dogfights, flying with your ship's
+  atmosphere flight. It pulls up near the ground and stays under the edge of
+  space. Nothing to chase for 10 s and it flies home and lands on its pad.
+- **Shot down, a new one is on the pad two minutes later.** If it shoots you
+  down, you both start again in town: you in the pit, it on its pad.
+- **Your flight HUD boxes it** like a space target: a box, its hull, the range,
+  the lead dot to aim at, and an arrow when it is off screen.
+
 ## Fewer hitches after a planet handoff (2026-10-29, issue #162)
 
 - **Troopers no longer reload their rifle from disk.** Each trooper loaded

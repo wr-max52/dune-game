@@ -99,6 +99,7 @@ var travel: SpaceTravel          ## issue #45: the other planets in this sky, an
 var _engine: AudioStreamPlayer   ## issue #16: the engine drone while the ship flies
 var bay_landing := false          ## issue #75: Z near the bay: she is flying herself in
 var bay_landings := 0             ## times that brought her down (traces, tests)
+var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
 
 
 func setup(town_scene) -> void:
@@ -221,6 +222,22 @@ func add_berth(v: Node3D, id: String, box_id: String) -> int:
 	if WorldState.ships_destroyed.has(box_id):
 		_wreck_berth(i, false)          # issue #64: shot to pieces in an earlier session
 	return i
+
+
+## Issue #76: a Remnant ship parked at a desert outpost. Flyable, but boarding it
+## the first time sets off that outpost's alarm (and scrambles the barracks
+## interceptor, AtmoFighter). Lost (shot down or crashed), it is gone and you wake
+## in the pit. Not saved: a new session finds it back at its outpost.
+func add_outpost_berth(v: Node3D, id: String, outpost_id: String) -> int:
+	var i := add_berth(v, id, "outpost_ship_" + outpost_id)
+	berths[i]["outpost"] = outpost_id
+	berths[i]["stolen"] = false
+	return i
+
+
+## Flying a ship taken from an outpost (the barracks interceptor hunts it).
+func flying_stolen() -> bool:
+	return piloting and bool(berths[berth].get("stolen", false))
 
 
 ## Issue #58: the last berth leaves (sold back to T-89): its model goes, and you
@@ -354,6 +371,8 @@ func board() -> bool:
 		return false
 	if i != berth:
 		_use_berth(i)
+	if berths[i].has("outpost") and not bool(berths[i].stolen):
+		_steal(i)
 	var p := player()
 	piloting = true
 	_motion_basis = atmo.flight.basis
@@ -912,6 +931,9 @@ func _tow_home() -> void:
 	defense = ShipDefense.new(ship_cfg)       # patched up at the pad
 	if piloting:
 		exit_ship()
+	if bool(berths[berth].get("stolen", false)):
+		_lose_stolen()
+		return
 	hud.toast(GameFlow.label("towed"), 4.0)
 	if demo.pads.size() > 0:
 		demo.pads[0].toast(GameFlow.label("towed"), 4.0)
@@ -945,6 +967,9 @@ func _update_hud(agl_now: float) -> void:
 		AtmoFlight.State.LANDING:
 			tip = GameFlow.label("landing")
 	hud.set_prompt(tip)
+	# Issue #76: the Remnant interceptor, boxed and led like a space target.
+	var foe = demo.interceptor if "interceptor" in demo else null
+	hud.target = foe.hud_target() if foe != null and is_instance_valid(foe) else {}
 
 
 # ------------------------------------------------------------------ guns and hull (issue #55)
@@ -976,34 +1001,42 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 	for s in guns.fire(dt, atmo.transform(), v, trigger, false):
 		if str(s.kind) != "bolt":
 			continue
-		var b = BoltScene.instantiate()
-		var vel: Vector3 = s.velocity
-		b.direction = vel.normalized()
-		b.speed = vel.length()
-		b.damage = float(s.damage)
-		b.range_m = float(s.range)
-		b.shooter = hull
-		b.sweep = true
-		b.stylize = true
-		b.streak_length = 2.4
-		b.streak_radius = 0.07
-		b.color = Color("#ff6a3a")
-		var wc: Dictionary = content.weapons.get(str(s.get("weapon_id", "")), {})
-		b.splash_radius = float(wc.get("splash_radius", 0.0))
-		b.splash_damage = float(wc.get("splash_damage", 0.0))
-		if ground.sphere() != null:
-			# Issue #93: round the ball the ground is what is under the bolt along "up", not
-			# the flat (x, z) line (which is only the port's half of the planet).
-			b.over_ground = func(p: Vector3) -> float: return ground.height_above(p)
-			b.ground_up = func(p: Vector3) -> Vector3: return ground.up_at(p)
-		else:
-			b.ground_at = func(x: float, z: float) -> float: return ground.terrain.height_at(x, z)
+		var b := ship_bolt(s, hull, content, ground, Color("#ff6a3a"))
 		demo.add_child(b)
 		b.global_position = s.origin
 		shots += 1
 		volley = true
 	if volley:
 		Sound.play("ship_cannon", atmo.position())
+
+
+## One cannon shot from ShipLoadout.fire() as a real bolt in the air (sweeping, so
+## it cannot tunnel; bursting where it lands). Issue #76: the Remnant interceptor's
+## guns use it too. The caller adds it to the scene and sets its position.
+static func ship_bolt(s: Dictionary, shooter: Node, content, ground: WorldGround, color: Color) -> Node3D:
+	var b = BoltScene.instantiate()
+	var vel: Vector3 = s.velocity
+	b.direction = vel.normalized()
+	b.speed = vel.length()
+	b.damage = float(s.damage)
+	b.range_m = float(s.range)
+	b.shooter = shooter
+	b.sweep = true
+	b.stylize = true
+	b.streak_length = 2.4
+	b.streak_radius = 0.07
+	b.color = color
+	var wc: Dictionary = content.weapons.get(str(s.get("weapon_id", "")), {})
+	b.splash_radius = float(wc.get("splash_radius", 0.0))
+	b.splash_damage = float(wc.get("splash_damage", 0.0))
+	if ground.sphere() != null:
+		# Issue #93: round the ball the ground is what is under the bolt along "up", not
+		# the flat (x, z) line (which is only the port's half of the planet).
+		b.over_ground = func(p: Vector3) -> float: return ground.height_above(p)
+		b.ground_up = func(p: Vector3) -> Vector3: return ground.up_at(p)
+	else:
+		b.ground_at = func(x: float, z: float) -> float: return ground.terrain.height_at(x, z)
+	return b
 
 
 ## A bolt hit berth `i`'s hull. Only the ship you are flying keeps score; a hull
@@ -1068,13 +1101,38 @@ func _wreck_berth(i: int, boom: bool) -> void:
 	if key != "" and key == pad_id:
 		WorldState.hangar = ""             # T-89's pad is free again
 		demo.salesman.bought_ship = null
-	elif key != "" and not WorldState.ships_destroyed.has(key):
+	elif key != "" and not b.has("outpost") and not WorldState.ships_destroyed.has(key):
 		WorldState.ships_destroyed.append(key)
 	if i == berth and not piloting:
 		for j in berths.size():
 			if not bool(berths[j].get("destroyed", false)):
 				_use_berth(j)
 				break
+
+
+# ------------------------------------------------------------------ stolen ships (issue #76)
+
+## Taking an outpost's ship: its garrison sounds the alarm.
+func _steal(i: int) -> void:
+	berths[i].stolen = true
+	steals += 1
+	var outposts = demo.outposts if "outposts" in demo else null
+	var g = outposts.garrisons.get(str(berths[i].outpost)) if outposts != null else null
+	if g != null:
+		g._raise("ship_stolen")
+	WorldState.log_event("A Remnant ship was stolen from %s." % Story.outpost_label(str(berths[i].outpost)))
+
+
+## A stolen ship that went down is gone; you wake in the pit, flying your own again.
+func _lose_stolen() -> void:
+	var p := player()
+	var i := berth
+	_wreck_berth(i, false)
+	if p != null and demo.town != null:
+		p.global_position = demo.town.spawn_pos() + Vector3(0, 0.05, 0)
+		if p.has_method("align_to_ground"):
+			p.call("align_to_ground", true)
+	hud.toast(GameFlow.label("stolen_lost"), 4.0)
 
 
 # ------------------------------------------------------------------ helpers

@@ -89,7 +89,8 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 		outposts.append(o)
 		var parts: Array = [_build_ground.bind(o), _build_nav.bind(o), _build_props.bind(o)]
 		if demo.use_look:
-			parts.append_array([_dress.bind(o), _park_ship.bind(o)])
+			parts.append(_dress.bind(o))
+		parts.append(_park_ship.bind(o))
 		for p in ["guard_a", "guard_b", "guard_c"]:
 			parts.append(_add_guard.bind(o, p))
 		_queue = parts + _queue          # this outpost's pieces next, then the others
@@ -457,30 +458,35 @@ func _prop_look(parent: Node3D, pr: Dictionary, xf: Transform3D, mats: LookMater
 				add.call(_cyl(r * 1.03, 0.06), mats.flat(Color("#8a1a16"), 0.6, 0.3), Transform3D(Basis.IDENTITY, Vector3(0, y, 0)))
 
 
-## The cargo ship (the location's "ship"): its model on the sand at the ship
-## point, with a box collider round it so nobody walks through it.
+## The outpost's ship (the location's "ship"; issue #76: the Remnant's dark
+## interceptor or freighter): its model on the sand at the ship point, or a bare
+## node in the greybox. The pilot makes it a berth you can fly (its own hull is
+## what you bump into); boarding it sets off this outpost's alarm.
 func _park_ship(o: Dictionary) -> void:
-	var look_id := str(_cc.get_ship(str(o.cfg.get("ship", ""))).get("look", ""))
+	var ship_id := str(o.cfg.get("ship", ""))
+	var look_id := str(_cc.get_ship(ship_id).get("look", ""))
 	if look_id == "":
 		return
-	var ship := ShipKit.new().build(look_id)
-	ship.name = "Ship_" + str(o.id)
-	add_child(ship)
 	var at := point(o, "ship")
-	# Measured upright at the origin, then stood on the sand in the outpost's frame.
-	var a := TownDecor.visual_aabb(ship)
 	var b: Basis = (o.xf as Transform3D).basis * Basis(Vector3.UP, PI * 0.5)
-	var lift := Vector3(-a.get_center().x, -a.position.y, -a.get_center().z)
-	ship.global_transform = Transform3D(b, at + b * lift)
-	var body := StaticBody3D.new()
-	body.name = "ShipCollider_" + str(o.id)
-	var cs := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = a.size * Vector3(0.8, 0.9, 0.8)
-	cs.shape = box
-	body.add_child(cs)
-	add_child(body)
-	body.global_transform = Transform3D(b, at + b * (lift + a.get_center()))
+	var ship: Node3D
+	if demo.use_look:
+		ship = ShipKit.new().build(look_id)
+		add_child(ship)
+		# Measured upright at the origin, then stood on the sand in the outpost's frame.
+		var a := TownDecor.visual_aabb(ship)
+		var lift := Vector3(-a.get_center().x, -a.position.y, -a.get_center().z)
+		ship.global_transform = Transform3D(b, at + b * lift)
+	else:
+		ship = Node3D.new()
+		add_child(ship)
+		ship.global_transform = Transform3D(b, at + b * Vector3(0, 1.0, 0))
+	ship.name = "Ship_" + str(o.id)
+	ship.set_meta("ship_id", ship_id)
+	ship.set_meta("outpost", str(o.id))
+	o["ship"] = ship
+	if demo.pilot != null:
+		demo.pilot.add_outpost_berth(ship, ship_id, str(o.id))
 
 
 func _mesh(o: Dictionary, mesh: Mesh, mat: Material, local: Vector3, basis := Basis.IDENTITY) -> MeshInstance3D:
