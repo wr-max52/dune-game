@@ -34,6 +34,7 @@ var joints: Dictionary = {}
 var anim := BodyAnimator.new()
 var look: Dictionary = {}
 var weapons: Dictionary = {}       ## id -> wrapper Node3D (child of chest)
+var blade_color := Color(0, 0, 0, 0)  ## issue #148: the sword's colour when not the default (alpha 0 = default)
 var current := ""                  ## weapon in hand (or being drawn/holstered)
 var drawn := 0.0                   ## 0 = holstered, 1 = ready
 var sword_pose: Dictionary = {}    ## from SwordCombo.pose() while the sword is out
@@ -122,7 +123,7 @@ func build_weapons(ids: Array) -> void:
 		wrap.name = "W_" + str(id)
 		var spec: Dictionary = look.get(id, {})
 		if id == "energy_blade":
-			var sword := kit.make_energy_sword()
+			var sword := kit.make_energy_sword(blade_color)
 			wrap.add_child(sword)
 			wrap.set_meta("grips", sword.get_meta("grips"))
 			wrap.set_meta("sword", sword)
@@ -281,6 +282,15 @@ func blade_points(fractions: Array = [0.3, 0.65, 1.0]) -> Array:
 	for f in fractions:
 		out.append(sword.global_transform * Vector3(0, length * float(f), 0))
 	return out
+
+
+## Issue #148: the energy sword's colour (the red saber); the sword already built
+## is recoloured, one built later starts in it.
+func set_blade_color(color: Color) -> void:
+	blade_color = color
+	var w := weapon_node("energy_blade")
+	if w != null and color.a > 0.0:
+		CharacterKit.recolor_energy_sword(w.get_meta("sword"), color)
 
 
 ## 0 = retracted, 1 = full length.

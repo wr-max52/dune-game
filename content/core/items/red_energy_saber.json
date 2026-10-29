@@ -1,0 +1,9 @@
+{
+  "id": "red_energy_saber",
+  "label": "Red energy saber",
+  "kind": "weapon",
+  "value": 400,
+  "look": "red_saber",
+  "blade_color": "#ff2a2a",
+  "note": "Issue #148: an officer's saber the Remnant left aboard the crashed starcruiser; an old cargo droid in the deep hold carries it (droids.json, wreck.hauler). Owning it turns your energy sword red (blade_color); it fights as the energy blade does. IP-neutral. Not worn (no slot)."
+}
