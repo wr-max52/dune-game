@@ -25,7 +25,7 @@ extends DesertTerrain
 @export var mid_step := 4.0
 @export var mid_recenter := 160.0
 @export var far_chunks := 4             ## per cube face side
-@export var far_cells := 48             ## per chunk side
+@export var far_cells := 64             ## per chunk side; 4 chunks span each face (issue #93)
 @export var hole_sink := 6.0            ## metres an outer layer drops under an inner one
 ## The town's own collider: a fixed square round the port, built once, so people,
 ## droids and dropped things anywhere in and around town always have ground under
@@ -418,6 +418,8 @@ static func _grid_arrays(verts: PackedVector3Array, n: int) -> Array:
 
 ## The whole ball: each cube face split into far_chunks^2 meshes, built in
 ## parallel at load. All chunks share one spacing, so their edges meet exactly.
+## 64 cells per chunk cuts the previous far-surface spacing by 25% without adding
+## chunks/draw calls or changing the height source or radial curvature.
 func _build_far() -> void:
 	far_root = Node3D.new()
 	far_root.name = "Far"
