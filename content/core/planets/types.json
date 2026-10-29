@@ -100,7 +100,7 @@
                                 { "count": 900, "radius": [9.0, 26.0], "depth": 0.22, "seed": 23 },
                                 { "count": 5000, "radius": [2.5, 8.0], "depth": 0.24, "seed": 37 } ],
                    "look": { "rock_light": "#9c9fa8", "rock_mid": "#6d7079", "rock_dark": "#34363d" },
-                   "boulders": 900, "debris": 40 },
+                    "boulders": 20, "debris": 40 },
       "station": { "wall_height": 6.0, "gate_half": 6.0, "dome_height": 0.85, "hall_width": 9.0, "hall_height": 5.0,
                    "liner_height": 13.0, "liner_door_height": 6.0, "note": "Issue #99: the station is sealed (the locals cannot breathe outside): a round wall under a glass dome, a shield door in the gate, a windowed hallway lit along its ceiling from the gate to the landing pit, through a door in the pit's tall round liner, over the pit's ramp to a round shield; and a shield over the pit itself. Metres; dome_height is its height over the wall's radius." },
       "sky": { "ambient": { "energy": 0.85 },
