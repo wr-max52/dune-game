@@ -337,6 +337,26 @@
   },
   "note": "Issue #64: outpost_unit is the assassin droid each desert outpost keeps (walking the outpost's 'patrol' points). The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
   },
+  "wreck": {
+    "landmark": "starcruiser_wreck",
+    "routes": {
+      "bridge": { "frame": "level", "points": [[-9, 146, 128], [9, 146, 128], [9, 146, 146], [-9, 146, 146]] },
+      "interior": { "frame": "level", "points": [[10, 136, 186], [20, 136, 186], [20, 136, 226], [2, 136, 226], [-6, 136, 206]] },
+      "hold": { "frame": "hull", "points": [[0, -24, -60], [0, -24, 60], [22, -24, 60], [22, -24, -60]] },
+      "deep_hold": { "frame": "level", "points": [[4, 136, 238], [18, 136, 238], [18, 136, 214], [4, 136, 214]] }
+    },
+    "units": [
+      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "bridge", "start": 0 },
+      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "interior", "start": 0 },
+      { "kind": "floating", "variant": "remnant", "hp": 30, "route": "interior", "start": 3,
+        "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
+      { "kind": "floating", "variant": "remnant", "hp": 30, "route": "hold", "start": 0,
+        "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } }
+    ],
+    "respawn_s": 180.0,
+    "hauler": { "variant": "olive", "carries": "wreck_red_saber", "route": "deep_hold", "walk_speed": 1.1, "pause_s": 5.0, "load_lift": 1.05 },
+    "note": "Issue #148: what is left of the Remnant aboard the crashed starcruiser (src/systems/world/starcruiser_wreck.gd). routes: patrol points in one of the wreck's frames ('level': x, height v, stern-ward w, unpitched; 'hull': the pitched ship's own parts() frame), turned into world points by StarcruiserWreck.site_point. units walk their route and shoot on sight; they answer to no garrison, so nothing out there sounds the town's alarm. A destroyed one comes back on its route after respawn_s. hauler: an old cargo droid in the deep hold with the pickup named by 'carries' (pickups/port_town.json, wreck_red_saber) on its back, like the pit hauler."
+  },
   "labels": {
     "trade": "[E] Trade droids with the %s",
     "menu_trade": "%s  -  you have %d cr, %d of %d droids",

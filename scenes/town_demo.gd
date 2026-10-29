@@ -104,6 +104,7 @@ var _respawned := 0
 
 
 func _ready() -> void:
+	var t0 := Time.get_ticks_usec()
 	# Issue #45: the planet decides the town, the world, the ground and the look.
 	planet = GameFlow.planet()
 	PlanetSphere.current = null       # issue #77: only a ball planet sets it again (_build_desert)
@@ -117,18 +118,169 @@ func _ready() -> void:
 	if town.data.is_empty():
 		push_error("TownDemo: planet %s has no town" % str(planet.id))
 		return
-	var errs := town.validate()
+	var errs := TownCheck.errors(str(planet.id), town.data)   # issue #121: once per town per session
 	if not errs.is_empty():
 		for e in errs:
 			push_error("TownDemo: " + str(e))
 		return                  # never build a broken town
-	_build_boxes()
-	_build_markers()
-	if with_npcs and not lookdev_mode:
-		_build_nav()
+	# Issue #121: the build is a plan of named steps. A normal arrival runs them all
+	# now, in order. A no-fade handoff (the ship flying straight in from another
+	# planet) runs only the flight shell now and the rest over the next frames.
+	staging = staged_handoff and not lookdev_mode and str(GameFlow.arrival.get("mode", "")) == "handoff"
+	staged = StagedBuild.new()
+	staged.budget_ms = stage_budget_ms
+	for s in build_plan(staging):
+		if staging and s.tier == SHELL:
+			staged.run_now(s.name, s.fn)
+		elif s.poll:
+			staged.add_poll(s.name, s.fn)
+		else:
+			staged.add(s.name, s.fn)
+	if staging:
+		staged.step_done.connect(func(_n, _ms): _register_detail())
+		add_child(staged)
+		staged.start()
+	else:
+		staged.run_all()
+		add_child(staged)
+	ready_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+# ---------------------------------------------------------------- the build plan (issue #121)
+
+const SHELL := "shell"    ## built on the scene's first frame, even on a handoff
+const LATER := "later"    ## on a handoff: built over the frames after, under the budget
+
+@export var staged_handoff := true    ## issue #121: a no-fade handoff builds a flight shell now and the rest over the next frames
+@export var stage_budget_ms := 5.0    ## issue #121: main-thread ms a frame the staged part may spend
+var staged: StagedBuild               ## issue #121: this scene's build plan and what each step took
+var staging := false                  ## issue #121: this build is a handoff's, spread over frames
+var ready_ms := 0.0                   ## issue #121: wall ms _ready took (the scene's first frame)
+
+
+## Every build step, in the order a normal arrival runs them, from the same planet,
+## feature and export flags as always. The shell is what a ship flying in needs to
+## carry on with nothing on screen changing: the planet's ball (a coarse far mesh
+## at first) and its sky at the carried hour, the town's boxes and pads, the
+## player and camera, the ship with its pilot, travel and HUD, and the altitude
+## detail. Everything else is LATER. A LATER step may rely on any earlier step
+## and on the whole shell; a SHELL step only on earlier SHELL steps.
+## `staged_build` adds the steps that only exist on a handoff (the terrain's
+## worker-thread jobs, waited on as polls).
+func build_plan(staged_build: bool) -> Array:
+	var plan: Array = []
 	var ground_kind := str(planet.get("ground", "terrain"))
-	if with_desert and ground_kind in ["terrain", "ball"]:
-		_build_desert()           # issue #99: "ball" (the asteroid) is a real ball too
+	var add := func(n: String, tier: String, fn: Callable, poll := false) -> void:
+		plan.append({ "name": n, "tier": tier, "fn": fn, "poll": poll })
+	add.call("boxes", SHELL, func(): _build_boxes(); return true)
+	# One step per character: each is a whole procedural body (tens to hundreds of ms).
+	add.call("markers", LATER, func(): _markers_root(); return true)
+	for m in town.markers():
+		if _shows_marker(m):
+			add.call("marker:" + str(m.id), LATER, func(): _build_marker(m); return true)
+	if with_npcs and not lookdev_mode:
+		add.call("nav", LATER, func(): _build_nav(); return true)
+	var ball_terrain := with_desert and ground_kind in ["terrain", "ball"]
+	if ball_terrain:
+		add.call("desert", SHELL, func(): _build_desert(staged_build); return true)   # issue #99: "ball" (the asteroid) is a real ball too
+	add.call("platform", SHELL, func(): _build_platform(ground_kind); return true)
+	if use_look:
+		add.call("look", SHELL, func(): _build_look(); return true)
+		add.call("decor", SHELL, func(): _build_decor(); return true)
+		add.call("dress_desert", SHELL, func():
+			if terrain != null:
+				_dress_desert()
+			return true)
+		add.call("dress_platform", SHELL, func():
+			if platform != null:
+				platform.dress(look, decor.mats)
+			return true)
+	else:
+		add.call("light_and_sky", SHELL, func(): _add_light_and_sky(); return true)
+	if not lookdev_mode:
+		add.call("ui_scale", SHELL, func(): RetroUI.apply_scale(get_tree()); return true)   # issue #71: text size (F11 > HUD), greybox too
+	if use_look and not lookdev_mode:
+		add.call("retro_skin", SHELL, func(): add_child(RetroSkin.new()); return true)   # issue #52: the 80s HUD look, on everything from here on
+	if lookdev_mode:
+		add.call("shots", SHELL, func(): _build_shot_camera(); return true)
+		return plan
+	add.call("music", SHELL, func(): Sound.start_music(); return true)      # issue #16: carries on across launches and landings
+	add.call("player", SHELL, func(): _spawn_player(); return true)
+	add.call("pads", SHELL, func(): _build_launch_pads(); return true)
+	add.call("world_flags", SHELL, func(): _world_from_scene(); return true)
+	if use_look and with_body:
+		add.call("body", LATER, func(): _attach_body(has_feature("training_range")); return true)
+	if use_look and with_bar:
+		add.call("bar", LATER, func(): _build_bar(); return true)
+	if with_gear:
+		add.call("gear", LATER, func(): _build_gear(); return true)      # after the bar: the save (and the inventory in it) is loaded
+	if with_ship:
+		add.call("ship", SHELL, func(): _build_ship(); return true)
+	if staged_build and ball_terrain:
+		# Ground round the town for the people about to stand on it.
+		add.call("terrain_town_ground", LATER, func(_left): return _terrain_town_ground(), true)
+	if with_npcs:
+		add.call("npcs", LATER, func(): _npcs_root(); return true)
+		for m in town.markers():
+			if _is_live_npc(m):
+				add.call("npc:" + str(m.id), LATER, func(): _build_npc(m); return true)
+		add.call("outposts", LATER, func(): _build_outposts(); return true)
+		add.call("npc_brains", LATER, func(): _npc_brains(); return true)
+	add.call("speeders", LATER, func():
+		if with_speeders and pilot != null and has_feature("speeders"):
+			_build_speeder_post()
+			_park_gate_speeders()
+		return true)
+	add.call("droids", LATER, func():
+		if use_look and with_droids and gear != null:
+			_build_droids()
+		return true)
+	add.call("salesman", LATER, func():
+		if with_salesman and gear != null:
+			_build_salesman()
+		return true)
+	add.call("mechanic", LATER, func():
+		if speeder_post != null and gear != null:
+			_build_mechanic()
+		return true)
+	add.call("natives", LATER, func():
+		if with_natives and pilot != null and gear != null and terrain != null:
+			_build_natives()
+		return true)
+	if staged_build:
+		# One pack member or animal at a time: each is a whole procedural body.
+		add.call("native_bodies", LATER, func(left): return _native_bodies(left), true)
+	add.call("detail", SHELL, func(): _build_detail(); return true)
+	add.call("names", LATER, func(): _name_places(); return true)          # after the bar: a loaded save keeps the names it had
+	add.call("dev_settings", LATER, func():
+		dev_settings = DevSettingsPanel.new()
+		dev_settings.name = "DevSettings"
+		dev_settings.demo = self
+		add_child(dev_settings)
+		return true)
+	if use_look:
+		add.call("retro_hud", LATER, func():
+			retro_hud = RetroHud.new()
+			retro_hud.demo = self
+			add_child(retro_hud)
+			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
+			return true)
+	if staged_build and ball_terrain:
+		add.call("terrain_far", LATER, func(left): return _terrain_far(left), true)
+	return plan
+
+
+## Issue #121: the town's own collider, from its worker thread (a poll step).
+func _terrain_town_ground() -> bool:
+	return (terrain as PlanetTerrain).finish_town_collider() if terrain is PlanetTerrain else true
+
+
+## Issue #121: the ball's full-detail far mesh, a few chunks a frame (a poll step).
+func _terrain_far(budget_left: float) -> bool:
+	return (terrain as PlanetTerrain).refine_far_step(budget_left) if terrain is PlanetTerrain else true
+
+
+func _build_platform(ground_kind: String) -> void:
 	if ground_kind == "platform":
 		platform = PlatformWorld.new()
 	elif ground_kind == "ball" and bool(planet.get("type_cfg", {}).get("enclosed", false)) and terrain != null:
@@ -137,78 +289,38 @@ func _ready() -> void:
 	if platform != null:
 		platform.setup(self, planet)
 		add_child(platform)
-	if use_look:
-		look = LookEnvironment.new()
-		_lay_sky(look, planet.get("sky", {}))
-		add_child(look)
-		set_preset(preset)
-		# Issue #99: flown in from another planet with no fade: the same time of day,
-		# so the sun is where it was.
-		var arr: Dictionary = GameFlow.arrival
-		if str(arr.get("mode", "")) == "handoff":
-			if float(arr.get("hour", -1.0)) >= 0.0:
-				set_hour(float(arr.hour))
-			elif str(arr.get("preset", "")) != "":
-				set_preset(str(arr.preset))
-		decor = TownDecor.new()
-		decor.style = style
-		add_child(decor)
-		decor.dress(town, look)
-		if terrain != null:
-			_dress_desert()
-		if platform != null:
-			platform.dress(look, decor.mats)
-	else:
-		_add_light_and_sky()
-	if not lookdev_mode:
-		RetroUI.apply_scale(get_tree())        # issue #71: text size (F11 > HUD), greybox too
-	if use_look and not lookdev_mode:
-		add_child(RetroSkin.new())   # issue #52: the 80s HUD look, on everything from here on
-	if lookdev_mode:
-		shots = _load_shots()
-		camera = Camera3D.new()
-		camera.name = "ShotCamera"
-		camera.far = view_far()
-		add_child(camera)
-		camera.current = true
-		show_shot("gate_approach")
-	else:
-		Sound.start_music()      # issue #16: carries on across launches and landings
-		_spawn_player()
-		_build_launch_pads()
-		_world_from_scene()
-		if use_look and with_body:
-			_attach_body(has_feature("training_range"))
-		if use_look and with_bar:
-			_build_bar()
-		if with_gear:
-			_build_gear()            # after the bar: the save (and the inventory in it) is loaded
-		if with_ship:
-			_build_ship()
-		if with_npcs:
-			_build_npcs()
-		if with_speeders and pilot != null and has_feature("speeders"):
-			_build_speeder_post()
-			_park_gate_speeders()
-		if use_look and with_droids and gear != null:
-			_build_droids()
-		if with_salesman and gear != null:
-			_build_salesman()
-		if speeder_post != null and gear != null:
-			_build_mechanic()
-		if with_natives and pilot != null and gear != null and terrain != null:
-			_build_natives()
-		_build_detail()
-		_name_places()          # after the bar: a loaded save keeps the names it had
-		dev_settings = DevSettingsPanel.new()
-		dev_settings.name = "DevSettings"
-		dev_settings.demo = self
-		add_child(dev_settings)
-		if use_look:
-			retro_hud = RetroHud.new()
-			retro_hud.demo = self
-			add_child(retro_hud)
-			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
+
+
+func _build_look() -> void:
+	look = LookEnvironment.new()
+	_lay_sky(look, planet.get("sky", {}))
+	add_child(look)
+	set_preset(preset)
+	# Issue #99: flown in from another planet with no fade: the same time of day,
+	# so the sun is where it was.
+	var arr: Dictionary = GameFlow.arrival
+	if str(arr.get("mode", "")) == "handoff":
+		if float(arr.get("hour", -1.0)) >= 0.0:
+			set_hour(float(arr.hour))
+		elif str(arr.get("preset", "")) != "":
+			set_preset(str(arr.preset))
+
+
+func _build_decor() -> void:
+	decor = TownDecor.new()
+	decor.style = style
+	add_child(decor)
+	decor.dress(town, look)
+
+
+func _build_shot_camera() -> void:
+	shots = _load_shots()
+	camera = Camera3D.new()
+	camera.name = "ShotCamera"
+	camera.far = view_far()
+	add_child(camera)
+	camera.current = true
+	show_shot("gate_approach")
 
 
 # ---------------------------------------------------------------- names (issue #15)
@@ -273,20 +385,36 @@ func _build_boxes() -> void:
 
 func _build_markers() -> void:
 	## Static capsules: no AI, no collision (so they never block the bot).
-	var root := Node3D.new()
-	root.name = "Markers"
-	add_child(root)
+	_markers_root()
 	for m in town.markers():
-		if not ROLE_COLORS.has(m.role):
-			continue           # spawn/waypoint/interact are invisible
-		if _is_live_npc(m):
-			continue           # gets a real body in _build_npcs instead
-		var v := _make_marker_visual(m)
-		v.name = m.id
-		# Capsules are centered; built characters stand on their feet.
-		v.position = town.marker_pos(m.id) + (Vector3.ZERO if v.has_meta("feet") else Vector3(0, 0.9, 0))
-		root.add_child(v)
-		built_markers += 1
+		_build_marker(m)
+
+
+## The markers' parent (issue #121: the build plan makes them one at a time).
+func _markers_root() -> Node3D:
+	var root := get_node_or_null("Markers") as Node3D
+	if root == null:
+		root = Node3D.new()
+		root.name = "Markers"
+		add_child(root)
+	return root
+
+
+func _shows_marker(m: Dictionary) -> bool:
+	if not ROLE_COLORS.has(m.role):
+		return false           # spawn/waypoint/interact are invisible
+	return not _is_live_npc(m) # a live NPC gets a real body in _build_npcs instead
+
+
+func _build_marker(m: Dictionary) -> void:
+	if not _shows_marker(m):
+		return
+	var v := _make_marker_visual(m)
+	v.name = m.id
+	# Capsules are centered; built characters stand on their feet.
+	v.position = town.marker_pos(m.id) + (Vector3.ZERO if v.has_meta("feet") else Vector3(0, 0.9, 0))
+	_markers_root().add_child(v)
+	built_markers += 1
 
 
 ## The one seam the character art pass replaces. M11: with the look on, markers
@@ -412,30 +540,52 @@ func _build_nav() -> void:
 ## Local combatants go to Townsfolk, ambient performers stay out of combat groups,
 ## and the remaining combatants go to the Garrison.
 func _build_npcs() -> void:
-	var root := Node3D.new()
-	root.name = "Npcs"
-	add_child(root)
+	_npcs_root()
 	for m in town.markers():
-		if not _is_live_npc(m):
-			continue
-		if _is_remnant_post(m) and not Story.town_garrison():
-			continue
-		var here := town.marker_pos(str(m.id))
-		var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
-		if m.has("face"):
-			face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
-		var npc := make_soldier(str(m.soldier), here, atan2(face.x - here.x, face.z - here.z), str(m.id),
-			"npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
-		if npc == null:
-			continue
-		characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
-		built_markers += 1
+		_build_npc(m)
+	_build_outposts()
+	_npc_brains()
+
+
+## The NPCs' parent (issue #121: the build plan makes them one at a time).
+func _npcs_root() -> Node3D:
+	var root := get_node_or_null("Npcs") as Node3D
+	if root == null:
+		root = Node3D.new()
+		root.name = "Npcs"
+		add_child(root)
+	return root
+
+
+func _build_npc(m: Dictionary) -> void:
+	if not _is_live_npc(m):
+		return
+	if _is_remnant_post(m) and not Story.town_garrison():
+		return
+	var here := town.marker_pos(str(m.id))
+	var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
+	if m.has("face"):
+		face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
+	var npc := make_soldier(str(m.soldier), here, atan2(face.x - here.x, face.z - here.z), str(m.id),
+		"npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
+	if npc == null:
+		return
+	characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
+	built_markers += 1
+
+
+## Once every town NPC stands: the desert outposts and their guards.
+func _build_outposts() -> void:
 	# The Remnant's outposts are the port's desert's (issue #75: not on other planets).
 	if with_outposts and pilot != null and str(planet.get("id", "")) == PlanetGen.home_id():
 		outposts = RemnantOutposts.new()
 		outposts.setup(self, pilot.ground)
 		add_child(outposts)
 		outposts.build()
+
+
+## Then the brains that run them all.
+func _npc_brains() -> void:
 	if npc_brains:
 		# The town's garrison, and (issue #64) one per desert outpost: each has its
 		# own alarm, so a fight out there never puts the town on alert. The town's
@@ -634,7 +784,20 @@ func _build_natives() -> void:
 		return
 	natives = NativesDirector.new()
 	natives.setup(self, n, pilot.ground, gear)
+	natives.staged = staging          # issue #121: a handoff makes the bodies in native_bodies
 	add_child(natives)
+
+
+## Issue #121: the natives' bodies, at least one a frame and more while the frame's
+## budget lasts (a poll step). Nothing to do without natives.
+func _native_bodies(budget_left: float) -> bool:
+	if natives == null or not is_instance_valid(natives):
+		return true
+	var t0 := Time.get_ticks_usec()
+	while not natives.build_step():
+		if (Time.get_ticks_usec() - t0) / 1000.0 >= budget_left:
+			return false
+	return true
 
 
 ## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
@@ -651,6 +814,17 @@ func _build_salesman() -> void:
 func _build_detail() -> void:
 	detail = AltitudeDetail.new()
 	detail.setup(world.get("detail", {}), look)
+	_register_detail()
+	add_child(detail)
+
+
+## Hand AltitudeDetail every group built so far. Safe to call again: a node is
+## only added once, and (issue #121) one built after the tier was set (a staged
+## handoff builds the people while the ship is still high up) takes that tier's
+## state at once, so nothing pops in.
+func _register_detail() -> void:
+	if detail == null:
+		return
 	detail.add_group("people", [get_node_or_null("Markers"), get_node_or_null("Npcs"), cantina_owner, garrison, townsfolk,
 		speeder_post.skrugs if speeder_post != null else null, mechanic.mechanic if mechanic != null else null, natives,
 		droid_merchant_outposts])
@@ -662,7 +836,6 @@ func _build_detail() -> void:
 		detail.add_group("props", [landforms.get_node_or_null("Boulders")])
 	if dust != null:
 		detail.add_group("weather", [dust])
-	add_child(detail)
 
 
 func npc(post_id: String) -> NpcBody:
@@ -714,6 +887,8 @@ func _build_gear() -> void:
 		gear.ground_at = terrain.ground_at
 	elif platform != null:
 		gear.ground_at = platform.ground_at      # the void: the deck's own fall handles it
+	if pilot != null:
+		gear.ground = pilot.ground      # issue #121: a staged handoff builds the ship first
 	add_child(gear)
 
 
@@ -795,7 +970,9 @@ func desert_site() -> Dictionary:
 	return { "floor": floor_rect, "walls": walls, "sunken": sunken }
 
 
-func _build_desert() -> void:
+## `staged_build` (issue #121, a handoff): a ball's terrain builds only what the
+## first frame needs (a coarse far mesh) and the rest on worker threads.
+func _build_desert(staged_build := false) -> void:
 	var site := desert_site()
 	# Issue #77: a world with a sphere_radius is a whole ball (the home planet);
 	# the rest are still a square of desert.
@@ -817,7 +994,10 @@ func _build_desert() -> void:
 	terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
 	terrain.configure_flat_sites(_droid_merchant_flat_sites())
 	add_child(terrain)
-	terrain.build(use_look)          # greybox: collider only
+	if staged_build and terrain is PlanetTerrain:
+		(terrain as PlanetTerrain).build_staged(use_look)
+	else:
+		terrain.build(use_look)          # greybox: collider only
 	if terrain is PlanetTerrain:
 		PlanetSphere.current = (terrain as PlanetTerrain).sphere
 		tree_exiting.connect(func():

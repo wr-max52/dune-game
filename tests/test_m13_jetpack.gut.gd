@@ -24,7 +24,7 @@ func test_trace_exists() -> void:
 func test_town_places_the_pickup_and_the_trader() -> void:
 	assert_eq(t.get("GEAR_BUILT"), "true")
 	assert_eq(str(t.get("JETPACK_PICKUP_PLACED", "")), "true", "the jetpack lies in the pit")
-	assert_eq(int(t.get("PICKUPS_PLACED", 0)), 2, "with (M15) the cache outside the gate")
+	assert_eq(int(t.get("PICKUPS_PLACED", 0)), 3, "with (M15) the cache outside the gate and (#148) the wreck's red saber")
 	assert_eq(int(t.get("VENDORS_PLACED", 0)), 2, "the gear trader and (M15) the fence")
 
 
