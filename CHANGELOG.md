@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Fewer hitches after a planet handoff (2026-10-29, issue #162)
+
+- **Troopers no longer reload their rifle from disk.** Each trooper loaded
+  `rifle.glb` twice with nothing keeping it, about 78 ms per trooper. The rifle
+  and a droid's carried weapon now come from `ModelCache`.
+- **Outfit textures are shared and loaded ahead of time.** Every NPC has its own
+  `CharacterKit`, so the "shared" outfit materials were really per body, and each
+  new colour read a 2048² texture on the main thread (35-110 ms). The materials
+  are now shared by every kit. A first-frame step, `warm_outfits`, starts all 25
+  colour textures loading on worker threads (`ModelCache.prefetch`).
+- **Outposts build one piece a frame:** the ground, the nav, the look, the ship
+  and each trooper, instead of a whole outpost (about 55 ms) at once.
+- Worst staged frame after a handoff, look on, headless: to the station 129.5 →
+  14.7 ms, home 100.1 → 26.5 ms. Staged total: 517 → 81 ms and 1078 → 444 ms.
+
 ## Smoother terrain uploads in flight (2026-10-29, issue #123)
 
 - **Ground meshes no longer pile up on one frame.** When the sand under the

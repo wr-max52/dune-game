@@ -49,20 +49,23 @@ func build() -> void:
 
 
 var _cc: CoreContent                ## issue #121: the content a staged build reads from
-var _left: Array = []               ## outpost ids still to build
+var _queue: Array = []              ## issue #162: the pieces still to build, in order (Callables)
 
 
-## Issue #121: build the next outpost (ground, nav, look, troopers: tens of ms).
-## True once all are built. A staged handoff calls this once a frame.
+## Issue #121: build the next piece of an outpost. True once all are built. A
+## staged handoff calls this once a frame. Issue #162: a piece is the ground,
+## the nav, the look, the ship or one trooper, not a whole outpost (~55 ms).
 func build_step() -> bool:
 	if _cc == null:
 		_cc = CoreContent.new()
 		_cc.load_from()
-		_left = Story.OUTPOSTS.duplicate()
-	if _left.is_empty():
+		var world := _cc.world_for_town("port_town")
+		for id in Story.OUTPOSTS:
+			_queue.append(_build_outpost.bind(str(id), world))
+	if _queue.is_empty():
 		return true
-	_build_outpost(str(_left.pop_front()), _cc.world_for_town("port_town"))
-	return _left.is_empty()
+	(_queue.pop_front() as Callable).call()
+	return _queue.is_empty()
 
 
 func _build_outpost(id: String, world: Dictionary) -> void:
@@ -81,13 +84,12 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 			o.origin = sp.surface_at(at.x, at.z)
 		o.xf = Transform3D(PlanetSphere.tilt_to(ground.up_at(o.origin)) * Basis(Vector3.UP, yaw), o.origin)
 		outposts.append(o)
-		_build_ground(o)
-		_build_nav(o)
+		var parts: Array = [_build_ground.bind(o), _build_nav.bind(o)]
 		if demo.use_look:
-			_dress(o)
-			_park_ship(o)
+			parts.append_array([_dress.bind(o), _park_ship.bind(o)])
 		for p in ["guard_a", "guard_b"]:
-			_add_guard(o, p)
+			parts.append(_add_guard.bind(o, p))
+		_queue = parts + _queue          # this outpost's pieces next, then the others
 
 
 func outpost(id: String) -> Dictionary:
@@ -297,9 +299,7 @@ func _dress(o: Dictionary) -> void:
 ## The cargo ship (the location's "ship"): its model on the sand at the ship
 ## point, with a box collider round it so nobody walks through it.
 func _park_ship(o: Dictionary) -> void:
-	var cc := CoreContent.new()
-	cc.load_from()
-	var look_id := str(cc.get_ship(str(o.cfg.get("ship", ""))).get("look", ""))
+	var look_id := str(_cc.get_ship(str(o.cfg.get("ship", ""))).get("look", ""))
 	if look_id == "":
 		return
 	var ship := ShipKit.new().build(look_id)

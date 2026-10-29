@@ -172,6 +172,10 @@ func build_plan(staged_build: bool) -> Array:
 	var ground_kind := str(planet.get("ground", "terrain"))
 	var add := func(n: String, tier: String, fn: Callable, poll := false) -> void:
 		plan.append({ "name": n, "tier": tier, "fn": fn, "poll": poll })
+	if use_look:
+		# Issue #162: the outfit textures load on worker threads from here, so the
+		# people built over the next frames (or after the next handoff) never wait on disk.
+		add.call("warm_outfits", SHELL, func(): ModelCache.prefetch(CharacterKit.outfit_textures()); return true)
 	add.call("boxes", SHELL, func(): _build_boxes(); return true)
 	# One step per character: each is a whole procedural body (tens to hundreds of ms).
 	add.call("markers", LATER, func(): _markers_root(); return true)
@@ -226,7 +230,7 @@ func build_plan(staged_build: bool) -> Array:
 				add.call("npc:" + str(m.id), LATER, func(): _build_npc(m); return true)
 		add.call("outposts", LATER, func(): _build_outposts(not staged_build); return true)
 		if staged_build:
-			# One outpost a frame: each is its ground, nav and troopers (tens of ms).
+			# One piece of an outpost a frame: its ground, nav, look, ship or a trooper.
 			add.call("outpost_sites", LATER, func(_left): return outposts == null or outposts.build_step(), true)
 		add.call("npc_brains", LATER, func(): _npc_brains(); return true)
 	add.call("speeders", LATER, func():
