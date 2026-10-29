@@ -141,23 +141,39 @@ void fragment() {
 	float rh = 0.0;
 	float dr = 0.0;
 	float t = TIME * wind_strength;
+	// The existing fades are exactly zero at these endpoints. Avoid sampling
+	// procedural fields once their contribution cannot reach the final material.
+	bool ripple_active = dist < 160.0 && flat_k > 0.0;
+	bool drift_active = dist < 250.0 && wind_strength > 0.0;
 	if (aw.y > 0.01) {
-		vec3 r = ripples(wpos.xz, wd, fade_near, fade_mid);
-		g3 += vec3(r.x, 0.0, r.y) * aw.y;
-		rh += r.z * aw.y;
-		dr += drift(wpos.xz, wd, t) * aw.y;
+		if (ripple_active) {
+			vec3 r = ripples(wpos.xz, wd, fade_near, fade_mid);
+			g3 += vec3(r.x, 0.0, r.y) * aw.y;
+			rh += r.z * aw.y;
+		}
+		if (drift_active) {
+			dr += drift(wpos.xz, wd, t) * aw.y;
+		}
 	}
 	if (aw.x > 0.01) {
-		vec3 r = ripples(wpos.zy, wd, fade_near, fade_mid);
-		g3 += vec3(0.0, r.y, r.x) * aw.x;
-		rh += r.z * aw.x;
-		dr += drift(wpos.zy, wd, t) * aw.x;
+		if (ripple_active) {
+			vec3 r = ripples(wpos.zy, wd, fade_near, fade_mid);
+			g3 += vec3(0.0, r.y, r.x) * aw.x;
+			rh += r.z * aw.x;
+		}
+		if (drift_active) {
+			dr += drift(wpos.zy, wd, t) * aw.x;
+		}
 	}
 	if (aw.z > 0.01) {
-		vec3 r = ripples(wpos.xy, wd, fade_near, fade_mid);
-		g3 += vec3(r.x, r.y, 0.0) * aw.z;
-		rh += r.z * aw.z;
-		dr += drift(wpos.xy, wd, t) * aw.z;
+		if (ripple_active) {
+			vec3 r = ripples(wpos.xy, wd, fade_near, fade_mid);
+			g3 += vec3(r.x, r.y, 0.0) * aw.z;
+			rh += r.z * aw.z;
+		}
+		if (drift_active) {
+			dr += drift(wpos.xy, wd, t) * aw.z;
+		}
 	}
 	g3 *= flat_k * ripple_strength / 0.16;
 	g3 -= up * dot(g3, up);                     // along the ground only
@@ -178,12 +194,15 @@ void fragment() {
 	SPECULAR = 0.35;
 
 	// Glitter: a few cells per metre catch the sun, only near the camera.
-	vec2 cell = floor((aw.y >= max(aw.x, aw.z) ? wpos.xz : (aw.x >= aw.z ? wpos.zy : wpos.xy)) * 14.0);
-	float hsh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
-	vec3 v = normalize(CAMERA_POSITION_WORLD - wpos);
-	float flick = fract(hsh * 37.0 + dot(v, vec3(3.1, 1.7, 2.3)) * 3.0);
-	float sunlit = clamp(dot(nw, normalize(sun_dir)) * 3.0, 0.0, 1.0);
-	EMISSION = vec3(1.0, 0.88, 0.7) * step(0.9985, flick) * fade_near * sunlit * glitter * 2.0;
+	EMISSION = vec3(0.0);
+	if (dist < 40.0 && glitter > 0.0) {
+		vec2 cell = floor((aw.y >= max(aw.x, aw.z) ? wpos.xz : (aw.x >= aw.z ? wpos.zy : wpos.xy)) * 14.0);
+		float hsh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+		vec3 v = normalize(CAMERA_POSITION_WORLD - wpos);
+		float flick = fract(hsh * 37.0 + dot(v, vec3(3.1, 1.7, 2.3)) * 3.0);
+		float sunlit = clamp(dot(nw, normalize(sun_dir)) * 3.0, 0.0, 1.0);
+		EMISSION = vec3(1.0, 0.88, 0.7) * step(0.9985, flick) * fade_near * sunlit * glitter * 2.0;
+	}
 	float sun_up = dot(up, normalize(sun_dir));
 	if (planet_radius > 0.0) {
 		EMISSION += alb * dusk_color.rgb * dusk_strength * smoothstep(0.25, -0.35, sun_up);
