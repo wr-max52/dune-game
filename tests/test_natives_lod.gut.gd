@@ -191,3 +191,61 @@ func test_a_runner_coming_close_spooks_a_lod_pig_at_once() -> void:
 	tg.velocity = Vector3(8, 0, 0)
 	pig._physics_process(DT)
 	assert_gt(pig._flee, 0.0, "within a tick of a runner coming in range")
+
+
+# ------------------------------------------------------------------ staged build (issue #121)
+
+func _describe(nat) -> Dictionary:
+	var packs_out: Array = []
+	for p in nat.packs:
+		var ms: Array = []
+		for m in p.members:
+			ms.append([m.thrower, m.child, str(m.weapon.get("id", "")), m.cd, m.slot])
+		packs_out.append({ "id": p.id, "members": ms })
+	var pig_pos: Array = []
+	for pig in nat.pigs:
+		pig_pos.append((pig as Node3D).global_position)
+	return { "packs": packs_out, "pigs": pig_pos }
+
+
+func test_staged_natives_build_one_body_a_step_into_the_same_world() -> void:
+	var t = _town()
+	await wait_physics_frames(3)
+	var whole = t.natives
+	assert_not_null(whole, "the town has natives")
+	assert_true(whole.is_built(), "a normal build makes every body at once")
+	var staged := NativesDirector.new()
+	staged.setup(t, t.planet.get("natives", {}), t.pilot.ground, t.gear)
+	staged.staged = true
+	staged.set_physics_process(false)
+	add_child_autofree(staged)
+	var bodies := 0
+	for p in whole.packs:
+		bodies += p.members.size()
+	bodies += whole.pigs.size()
+	assert_gt(bodies, 0)
+	var made := func() -> int:
+		var n := staged.pigs.size()
+		for p in staged.packs:
+			n += p.members.size()
+		return n
+	assert_eq(made.call(), 0, "staged: nothing built in _ready")
+	var calls := 0
+	while calls < bodies + 5:
+		var before: int = made.call()
+		var done := staged.build_step()
+		calls += 1
+		assert_eq(made.call() - before, 1 if before < bodies else 0, "one body per step")
+		if done:
+			break
+	assert_true(staged.is_built())
+	assert_eq(calls, bodies, "exactly one step per body")
+	assert_eq(JSON.stringify(_describe(staged)), JSON.stringify(_describe(whole)),
+		"the same packs, members, weapons, cooldowns and animals (the same random draws) as building at once")
+	# The whole build's bodies have already settled for a few physics ticks; the
+	# staged ones were just made. Same spawn spots, give or take that settling.
+	for pi in whole.packs.size():
+		for mi in whole.packs[pi].members.size():
+			var a: Vector3 = (whole.packs[pi].members[mi].npc as Node3D).global_position
+			var b: Vector3 = (staged.packs[pi].members[mi].npc as Node3D).global_position
+			assert_lt(a.distance_to(b), 0.5, "member %d of pack %d spawned in the same spot" % [mi, pi])

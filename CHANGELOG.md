@@ -2,6 +2,22 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Smooth on foot again (2026-10-29)
+
+- **Walking near the dune packs no longer drops the game to a crawl.** Every
+  sand pig and every far-off pack member asked the ground "how high am I?" each
+  physics tick, and each answer checked all 1164 town boxes and 386 boulders.
+  Near a pack a physics tick took longer than its 16 ms budget, so the game ran
+  several ticks a frame and fell to 5 to 28 fps. The ground now only checks
+  what is near (same answers, about 100 times faster), and far-off packs and
+  pigs move every fourth tick (same speed). A tick by a pack went from 14-22 ms
+  to about 4 ms.
+- **Characters move as smoothly as the screen draws.** The game now draws at
+  120 fps on a 120 Hz screen but physics ticks at 60, so you, the camera and the
+  people moved in steps, and turning the mouse swung your body for a frame and
+  snapped it back. The camera, your body and nearby people are now drawn
+  between ticks.
+
 ## Staged planet handoffs (2026-10-29, issue #121)
 
 - **Flying from the port to the station (and back) no longer freezes for the

@@ -132,8 +132,10 @@ func test_handoffs_are_staged() -> void:
 		assert_gt(int(t.get(k + "STAGED_STEPS", 0)), 10, leg + ": most of the build is staged")
 		assert_gt(int(t.get(k + "STAGED_FRAMES", 0)), 1, leg + ": over more than one frame")
 		assert_lt(float(t.get(k + "READY_MS", 9999)), 400.0, leg + ": the first frame is the shell only")
-		assert_lt(float(t.get(k + "READY_MS", 9999)), float(t.get(k + "STAGED_TOTAL_MS", 0)),
-			leg + ": less on the first frame than after it")
+		# More of the build is staged than run on the first frame. (By steps, not ms:
+		# the staged part can now be cheaper than the shell, which is the point.)
+		assert_gt(int(t.get(k + "STAGED_STEPS", 0)), int(t.get(k + "SHELL_STEPS", 9999)),
+			leg + ": more steps after the first frame than on it")
 		# The runner never stacks work on a frame past its budget: the worst frame
 		# is at most one step that alone is over it, plus the budget.
 		assert_lte(float(t.get(k + "WORST_STAGED_FRAME_MS", 9999)),

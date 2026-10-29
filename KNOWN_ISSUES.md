@@ -2,6 +2,26 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the on-foot frame rate fix (2026-10-29)
+
+**Checked:** rendered on an Apple Silicon Mac, standing by the Red Wind pack,
+a physics step went from 14-22 ms (so 3 to 8 catch-up steps a frame, 5 to 28 fps)
+to about 4 ms (one step a frame). A ground query went from 671 to 7 microseconds.
+The isolated tests for the ground index, the natives' far ticks, the render
+smoothing, the camera rig and the natives trace pass headless.
+
+**Not done, honestly:**
+- **The render smoothing has not been watched on screen by us.** It is off
+  headless (so traces and tests are unchanged), and its maths is unit tested.
+  Things to look at: the gun sight while sprinting and turning, the first frame
+  after leaving a ship or speeder, and a downed body.
+- **NPC health bars and speech lines still step at 60 Hz** while the NPC's body
+  is smoothed.
+- **A ground query from a ship 4 km up is still a full scan** (about 0.6 ms):
+  nearly every town box is within reach from that high. One a frame is fine.
+- **Physics still ticks at 60 Hz.** Characters are drawn between ticks; their
+  movement itself is not faster.
+
 ## After issue #121, staged planet handoffs (2026-10-29)
 
 **Checked** (run on their own, headless; the full suite was not run):
@@ -23,15 +43,14 @@ Honest list of what is broken or faked. Updated every milestone.
   and one procedural character costs tens to hundreds of milliseconds. With
   the look on, these were measured after arriving (container, headless):
   - the player's body: 1.2 to 2.5 s;
-  - the port's native packs: 3.9 s;
   - the port's outpost guards: 2.4 s;
   - the cantina owner: 0.6 s;
-  - the settings panel: 0.2 to 1.7 s;
   - the station's stage dancer: 0.7 s.
   So the ship keeps flying between them, but each one is still a visible stall.
-  They live in code this issue did not own (player, natives, NPCs, outposts,
-  UI). They need cheaper or threaded character builds, or packs and guards
-  that build one body per step.
+  They need cheaper or threaded character builds, or guards that build one body
+  per step. (Fixed since: the native packs now build one body per step, about
+  0.1 s each instead of 3.9 s in one go, and the settings panel builds its pages
+  the first time F11 opens it instead of on every arrival.)
 - **The port's shell is still about 1 s with the look on.** Most of it is the
   decor parking every bay's ship (0.5 s) and the station drawn in the port's
   sky. Parking only the flown ship first would need a small split in
@@ -43,10 +62,12 @@ Honest list of what is broken or faked. Updated every milestone.
   last run passed at 30 ms. On a busy machine, some runs had a 0.22 to 0.26 s
   frame while flying out of the port, and the untouched code did the same
   (0.24 and 0.25 s). That port scene is built the normal way, not staged.
-- **The settings panel is the slowest staged step in the greybox trace** (about
-  1 s on either handoff), and the station's town collider takes about 1.5 s on
-  its worker thread. The people wait for that collider, so the whole staged
-  build takes about 90 frames there.
+- **In the greybox trace the worst staged frame is now 27 ms (station) and
+  0.27 s (home, Skrugs's speeder post).** The station's town collider still takes
+  about 1.5 s on its worker thread, and the people wait for it, so the whole
+  staged build takes about 90 frames there.
+- **Not looked at on a real screen.** Everything above is headless; the look-on
+  numbers come from a profiling script on a busy machine.
 
 ## After issue #96, desert packs (first milestone) (2026-10-28)
 

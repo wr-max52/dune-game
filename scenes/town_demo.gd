@@ -247,6 +247,9 @@ func build_plan(staged_build: bool) -> Array:
 		if with_natives and pilot != null and gear != null and terrain != null:
 			_build_natives()
 		return true)
+	if staged_build:
+		# One pack member or animal at a time: each is a whole procedural body.
+		add.call("native_bodies", LATER, func(left): return _native_bodies(left), true)
 	add.call("detail", SHELL, func(): _build_detail(); return true)
 	add.call("names", LATER, func(): _name_places(); return true)          # after the bar: a loaded save keeps the names it had
 	add.call("dev_settings", LATER, func():
@@ -781,7 +784,20 @@ func _build_natives() -> void:
 		return
 	natives = NativesDirector.new()
 	natives.setup(self, n, pilot.ground, gear)
+	natives.staged = staging          # issue #121: a handoff makes the bodies in native_bodies
 	add_child(natives)
+
+
+## Issue #121: the natives' bodies, at least one a frame and more while the frame's
+## budget lasts (a poll step). Nothing to do without natives.
+func _native_bodies(budget_left: float) -> bool:
+	if natives == null or not is_instance_valid(natives):
+		return true
+	var t0 := Time.get_ticks_usec()
+	while not natives.build_step():
+		if (Time.get_ticks_usec() - t0) / 1000.0 >= budget_left:
+			return false
+	return true
 
 
 ## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
