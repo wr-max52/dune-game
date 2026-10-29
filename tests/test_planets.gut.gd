@@ -9,6 +9,7 @@ extends GutTest
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const AsteroidWorld := preload("res://src/systems/planets/asteroid_world.gd")
+const PlanetSphere := preload("res://src/systems/planets/planet_sphere.gd")
 
 var cc
 
@@ -128,6 +129,9 @@ func test_the_port_is_unchanged() -> void:
 	assert_eq(p.town_id, "port_town", "the hand-built town")
 	assert_eq(p.town.boxes.size(), cc.get_location("port_town").boxes.size())
 	assert_eq(p.world.id, "port_desert", "the hand-built world")
+	assert_eq(p.ground, "terrain")
+	assert_true(TownStyle.parse(p.style).is_identity(), "the port's own look")
+	assert_eq(PlanetGen.home_id(), "port_desert")
 
 
 func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
@@ -146,9 +150,6 @@ func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
 	other_town.load_from_dict(other.town)
 	assert_eq(other_town.markers().filter(func(m): return str(m.get("soldier", "")) == "cantina_dancer").size(), 0,
 		"generated towns without the station flag stay unchanged")
-	assert_eq(p.ground, "terrain")
-	assert_true(TownStyle.parse(p.style).is_identity(), "the port's own look")
-	assert_eq(PlanetGen.home_id(), "port_desert")
 
 
 func test_the_asteroid_station() -> void:
@@ -194,6 +195,34 @@ func test_asteroid_station_walls_have_panel_detail() -> void:
 	var liner: MultiMesh = station.get_node("LinerExteriorPanels/PanelPlates").multimesh
 	assert_gt(ring.instance_count, 40, "repeated hull plates around the whole station")
 	assert_gt(liner.instance_count, 30, "repeated hull plates around the landing pad")
+
+
+func test_asteroid_boulders_are_globe_wide_deterministic_and_clear_of_station() -> void:
+	var surface: Dictionary = PlanetGen.types().types.asteroid.surface
+	assert_eq(int(surface.boulders), 20, "the station planet config keeps only twenty rocks")
+	var sphere := PlanetSphere.new(1500.0)
+	sphere.site_rect = Rect2(Vector2(-120.0, -120.0), Vector2(240.0, 240.0))
+	var a := AsteroidWorld.new()
+	a.sphere = sphere
+	a.surface = surface
+	a._place_boulders()
+	var b := AsteroidWorld.new()
+	b.sphere = sphere
+	b.surface = surface
+	b._place_boulders()
+	assert_eq(a.boulders.size(), 20)
+	assert_eq(a.boulders, b.boulders, "same seed produces the same rocks")
+	var north := -1.0
+	var south := 1.0
+	for rock in a.boulders:
+		var pos: Vector3 = rock.xform.origin
+		var dir := pos.normalized()
+		north = maxf(north, dir.y)
+		south = minf(south, dir.y)
+		assert_false(sphere.site_rect.grow(14.0).has_point(sphere.world_to_map(pos)),
+			"no boulder is in the station keep-out")
+	assert_gt(north, 0.9, "rocks reach the far northern latitudes")
+	assert_lt(south, -0.9, "rocks reach the far southern latitudes")
 
 
 func test_asteroid_ambient_fill_scale_preserves_the_preset() -> void:
