@@ -47,6 +47,7 @@ func _ready() -> void:
 	cfg = SpeederUpgrades.mechanic()
 	menu = DroidMenu.new()
 	add_child(menu)
+	menu.option_selected.connect(_on_option_selected)
 	var cc := CoreContent.new()
 	cc.load_from()
 	var world: Dictionary = demo.world if "world" in demo and not demo.world.is_empty() else cc.world_for_town("port_town")
@@ -264,6 +265,8 @@ func scrap() -> int:
 func _open(text: String, opts: Array, pick: Callable) -> void:
 	said = text
 	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, text)
+	if mechanic != null:
+		NpcVoice.speak(text, "relaxed", "warm", mechanic)
 	if player != null and not player.locked:
 		player.locked = true
 		_was_locked = true
@@ -273,6 +276,13 @@ func _say(text: String) -> void:
 	said = text
 	if gear != null and gear.hud != null and text != "":
 		gear.hud.toast("%s: %s" % [npc_name(), text], 4.5)
+	if mechanic != null:
+		NpcVoice.speak(text, "relaxed", "warm", mechanic)
+
+
+func _on_option_selected(_id: String) -> void:
+	if mechanic != null:
+		NpcVoice.stop(mechanic)
 
 
 # ------------------------------------------------------------------ Dorrin

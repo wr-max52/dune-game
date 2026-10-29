@@ -9,6 +9,10 @@ config/name="Desert Spaceport Slice"
 run/main_scene="res://scenes/town_demo.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
+[autoload]
+
+NpcVoice="*res://src/systems/voice/npc_voice.gd"
+
 ; Left at defaults; UI is greybox for the slice.
 
 [input]

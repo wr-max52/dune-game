@@ -1,10 +1,8 @@
 class_name LLMSettingsPanel
 extends CanvasLayer
-## F10 at the bar (M12): pick where her brain runs and test it, no restart.
-## Mode: auto (local -> ollama -> cloud) / local / ollama / cloud. Local and
-## Ollama URLs and models; the cloud profile's type, URL, model and key (stored in
-## user://llm/keys.cfg, shown masked). "Test" sends a one-line request through the
-## chosen mode and shows the time and the answer. "Save" writes user://llm_config.json.
+## F10 at the bar (M12): configure character AI and NPC voice, no restart.
+## The cloud and ElevenLabs keys are stored in user://llm/keys.cfg and shown masked.
+## "Test" sends a one-line LLM request; "Save" writes the settings.
 
 var llm: LLMService
 var _panel: PanelContainer
@@ -14,8 +12,12 @@ var _cloud_type: OptionButton
 var _cloud_on: CheckBox
 var _key: LineEdit
 var _key_now: Label
+var _elevenlabs_key: LineEdit
+var _elevenlabs_key_now: Label
+var _speech_speed: SpinBox
 var _result: Label
 var _test_id := -1
+var _voice_settings_saved := true
 var _content: VBoxContainer
 var host                          ## issue #80: the F11 panel this lives in (its "LLM" tab), or null
 const MODES := ["auto", "local", "ollama", "cloud"]
@@ -27,8 +29,8 @@ func _ready() -> void:
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_panel.offset_left = -330
 	_panel.offset_right = 330
-	_panel.offset_top = -270
-	_panel.offset_bottom = 270
+	_panel.offset_top = -340
+	_panel.offset_bottom = 340
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.06, 0.06, 0.96)
 	sb.border_color = Color("#b08e50")
@@ -42,7 +44,7 @@ func _ready() -> void:
 	_panel.add_child(v)
 	_content = v
 	var title := Label.new()
-	title.text = "Cantina Owner brain"
+	title.text = "AI and NPC voice settings"
 	title.add_theme_font_size_override("font_size", 18)
 	v.add_child(title)
 	_mode = OptionButton.new()
@@ -70,6 +72,19 @@ func _ready() -> void:
 	v.add_child(_row("Cloud key", _key))
 	_key_now = Label.new()
 	v.add_child(_key_now)
+	_elevenlabs_key = LineEdit.new()
+	_elevenlabs_key.secret = true
+	_elevenlabs_key.placeholder_text = "enter your ElevenLabs API key"
+	_elevenlabs_key.custom_minimum_size = Vector2(380, 0)
+	v.add_child(_row("ElevenLabs key", _elevenlabs_key))
+	_elevenlabs_key_now = Label.new()
+	v.add_child(_elevenlabs_key_now)
+	_speech_speed = SpinBox.new()
+	_speech_speed.min_value = 0.7
+	_speech_speed.max_value = 1.2
+	_speech_speed.step = 0.05
+	_speech_speed.value = 1.0
+	v.add_child(_row("NPC speech speed", _speech_speed))
 	var h := HBoxContainer.new()
 	v.add_child(h)
 	for b in [["Test", _test], ["Save", _save], ["Close", _close]]:
@@ -132,10 +147,13 @@ func _load() -> void:
 	_cloud_type.select(1 if str(cfg.profile("cloud").get("type", "")) == "anthropic" else 0)
 	_cloud_on.button_pressed = bool(cfg.profile("cloud").get("enabled", false))
 	_key_now.text = "stored key: " + LLMConfig.masked(cfg.api_key("cloud"))
+	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(NpcVoice.api_key())
+	_speech_speed.value = NpcVoice.speed()
 
 
 func _apply() -> void:
 	var cfg := llm.config
+	_voice_settings_saved = true
 	for path in _fields:
 		cfg.set_value("profiles/" + path, (_fields[path] as LineEdit).text.strip_edges())
 	cfg.set_value("profiles/cloud/type", _cloud_type.get_item_text(_cloud_type.selected))
@@ -143,14 +161,22 @@ func _apply() -> void:
 	if _key.text.strip_edges() != "":
 		cfg.set_api_key("cloud", _key.text.strip_edges())
 		_key.text = ""
+	if _elevenlabs_key.text.strip_edges() != "":
+		_voice_settings_saved = NpcVoice.set_api_key(_elevenlabs_key.text.strip_edges())
+		if _voice_settings_saved:
+			_elevenlabs_key.text = ""
+	var speed_saved := NpcVoice.set_speed(_speech_speed.value)
+	_voice_settings_saved = _voice_settings_saved and speed_saved
 	llm.configure(cfg)
 	llm.set_mode(MODES[_mode.selected])
 	_key_now.text = "stored key: " + LLMConfig.masked(cfg.api_key("cloud"))
+	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(NpcVoice.api_key())
 
 
 func _save() -> void:
 	_apply()
-	_result.text = "Saved." if llm.config.save_user() else "Could not save."
+	var llm_saved := llm.config.save_user()
+	_result.text = "Saved." if llm_saved and _voice_settings_saved else "Could not save settings."
 
 
 func _test() -> void:

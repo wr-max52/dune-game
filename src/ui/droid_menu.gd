@@ -15,6 +15,7 @@ var list: VBoxContainer
 var options: Array = []           ## [{ id, text }]
 var on_pick: Callable             ## (id: String) -> void; "" = walked away
 var rows: Array = []              ## the text of each row, for tests
+signal option_selected(id: String)
 
 
 func _init() -> void:
@@ -84,6 +85,7 @@ func choose(id: String) -> void:
 		panel.visible = false
 	var cb := on_pick
 	on_pick = Callable()
+	option_selected.emit(id)
 	if cb.is_valid():
 		cb.call(id)
 
