@@ -371,11 +371,12 @@ static func _recolored(mat: Material, rc: Dictionary) -> Material:
 ## [low, high]; any hue when left out), whose saturation and value reach mv.min_sv and
 ## stay under mv.max_sv (grey hoses beside a yellow hood), with its centre above
 ## mv.above (so the boots, further down, stay) and under mv.below (a stand-up collar
-## the cut gave the head), goes from mv.from to
+## the cut gave the head) and inside mv.box ({ min, max }, the triangle's centre), goes from mv.from to
 ## mv.to (a tunic hem that hangs past the waist stays with the tunic), pushed out along
 ## its normals by mv.push (so a separately made legs piece stays under it). With
 ## mv.drop_back, the matching triangles behind the body (z < 0) are dropped instead,
-## so a tunic hem hangs only in front, like an apron.
+## so a tunic hem hangs only in front, like an apron. With mv.copy the triangles stay
+## in mv.from as well (a collar both the head and the jacket should have); no push.
 static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array, mv: Dictionary) -> void:
 	var from := -1
 	var to := -1
@@ -401,24 +402,32 @@ static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array
 	var above := float(mv.get("above", -INF))
 	var below := float(mv.get("below", INF))
 	var drop_back := bool(mv.get("drop_back", false))
+	var copy := bool(mv.get("copy", false))
+	var box := AABB(-Vector3.INF, Vector3.INF)
+	if mv.has("box"):
+		var b_lo := Vector3(mv.box.min[0], mv.box.min[1], mv.box.min[2])
+		box = AABB(b_lo, Vector3(mv.box.max[0], mv.box.max[1], mv.box.max[2]) - b_lo)
 	var kept := PackedInt32Array()
 	var moved := 0
 	var t_from: PackedInt32Array = tris[from]
 	for t in range(0, t_from.size(), 3):
 		var c := (uv[t_from[t]] + uv[t_from[t + 1]] + uv[t_from[t + 2]]) / 3.0
 		var px := img.get_pixel(clampi(int(fposmod(c.x, 1.0) * w), 0, w - 1), clampi(int(fposmod(c.y, 1.0) * h), 0, h - 1))
-		var cy := (vv[t_from[t]].y + vv[t_from[t + 1]].y + vv[t_from[t + 2]].y) / 3.0
-		if cy >= above and cy < below and px.h >= lo and px.h <= hi and px.s >= float(sv[0]) and px.v >= float(sv[1]) \
+		var cc := (vv[t_from[t]] + vv[t_from[t + 1]] + vv[t_from[t + 2]]) / 3.0
+		var cy := cc.y
+		if cy >= above and cy < below and (not mv.has("box") or box.has_point(cc)) and px.h >= lo and px.h <= hi and px.s >= float(sv[0]) and px.v >= float(sv[1]) \
 				and px.s <= float(sv_max[0]) and px.v <= float(sv_max[1]):
 			if drop_back and (vv[t_from[t]].z + vv[t_from[t + 1]].z + vv[t_from[t + 2]].z) / 3.0 < 0.0:
 				continue
 			tris[to].append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
 			moved += 1
+			if copy:
+				kept.append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
 		else:
 			kept.append_array([t_from[t], t_from[t + 1], t_from[t + 2]])
 	tris[from] = kept
 	var push := float(mv.get("push", 0.0))
-	if push != 0.0 and moved > 0:
+	if push != 0.0 and moved > 0 and not copy:
 		var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
 		var done := {}
 		var t_to: PackedInt32Array = tris[to]
@@ -427,7 +436,7 @@ static func _move_by_colour(arr: Array, mat: Material, tris: Array, bases: Array
 				done[t_to[i]] = true
 				vv[t_to[i]] += nn[t_to[i]] * push
 		arr[Mesh.ARRAY_VERTEX] = vv
-	print("fit: moved %d triangles %s -> %s" % [moved, mv.from, mv.to])
+	print("fit: %s %d triangles %s -> %s" % ["copied" if copy else "moved", moved, mv.from, mv.to])
 
 
 ## The triangles that stay when those whose centre is under `y` and within `radius`

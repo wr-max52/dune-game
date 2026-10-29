@@ -10,12 +10,14 @@ Plain English, newest on top. One entry per milestone.
   Hyper3D generation. Its head, upper and lower body show in the character builder
   (F11, Character) and mix with any other piece. Villagers still get a random
   colour per part from the same six colourways.
-- **The player's jacket keeps its collar.** The stand-up collar had been cut onto
-  the head piece; it now belongs to the upper body.
+- **The player's jacket keeps its collar.** The stand-up collar ring had been cut
+  onto the head piece; it now belongs to the upper body. The bandana's chin stays
+  on the head.
 - **The cantina owner's breathing hoses are on her helmet**, not her upper body,
   so her tunic goes cleanly under any head and the hoses come with her mask.
-- `fit_parts.gd` dress `move` can now pick triangles by height alone (`below`) or
-  by a saturation/value ceiling (`max_sv`); `hue` is optional.
+- `fit_parts.gd` dress `move` can now pick triangles by region (`below`, `box`) or
+  by a saturation/value ceiling (`max_sv`), and can `copy` instead of move; `hue`
+  is optional.
 
 ## Fewer hitches after a planet handoff (2026-10-29, issue #162)
 
