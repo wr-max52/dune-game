@@ -133,3 +133,25 @@ func test_airborne_tucks_rising_and_reaches_falling() -> void:
 	var down := _step(a, 20, { "grounded": false, "vy": -7.0 })
 	assert_gt(up.joints.l_knee.x, down.joints.l_knee.x, "knees tucked on the way up")
 	assert_gt(absf(down.joints.l_shoulder.z), absf(up.joints.l_shoulder.z), "arms out for the landing")
+
+
+func test_cantina_dance_is_a_ten_second_loop_with_a_wall_turn_and_bend() -> void:
+	var start := BodyAnimator.dance_pose(0.0)
+	var end := BodyAnimator.dance_pose(BodyAnimator.DANCE_LOOP_S)
+	assert_almost_eq(start.yaw, end.yaw, 0.001, "the loop closes facing the audience")
+	assert_almost_eq(start.pelvis_x, end.pelvis_x, 0.001)
+	for joint in start.joints:
+		assert_almost_eq(start.joints[joint].x, end.joints[joint].x, 0.001, str(joint) + " loops cleanly")
+	var facing_wall := BodyAnimator.dance_pose(4.5)
+	assert_gt(facing_wall.yaw, 2.9, "the dancer turns to face the wall")
+	var bent := BodyAnimator.dance_pose(5.55)
+	assert_gt(bent.joints.chest.x, 20.0, "the bend reaches the waist")
+	assert_lt(bent.pelvis_y, start.pelvis_y, "the bend lowers the hips")
+
+
+func test_cantina_dance_state_advances_without_walking() -> void:
+	var a := BodyAnimator.new()
+	var out := _step(a, 600, { "dance": true, "speed": 0.0, "grounded": true })
+	assert_eq(out.state, "DANCE")
+	assert_almost_eq(a.dance_time, 0.0, 0.001, "600 frames at 60 Hz complete one loop")
+	assert_eq(a.phase, 0.0, "dancing never advances the walk cycle")
