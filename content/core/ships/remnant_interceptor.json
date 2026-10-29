@@ -1,0 +1,99 @@
+{
+  "id": "remnant_interceptor",
+  "class": "starfighter",
+  "label": "Kaldor VX-88 Kestrel (Remnant)",
+  "faction": "imperial_remnant",
+  "look": "interceptor_dark",
+  "pilot": "remnant_hunter",
+  "hull": 120,
+  "shield": {
+    "max": 80,
+    "regen": 12.0,
+    "delay": 2.5
+  },
+  "hit_radius": 3.2,
+  "convergence": 320.0,
+  "flight": {
+    "min_speed": 14.0,
+    "max_speed": 48.0,
+    "boost_speed": 78.0,
+    "accel": 30.0,
+    "pitch_rate": 1.9,
+    "yaw_rate": 1.1,
+    "roll_rate": 3.2,
+    "boost_time": 3.0,
+    "boost_recharge": 0.5,
+    "boost_turn_scale": 0.6,
+    "ability": {
+      "kind": "boost"
+    }
+  },
+  "hardpoints": [
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        -3.4,
+        0.0,
+        -0.8
+      ]
+    },
+    {
+      "weapon": "ship_cannon",
+      "mount": [
+        3.4,
+        0.0,
+        -0.8
+      ]
+    },
+    {
+      "weapon": "ship_missile",
+      "mount": [
+        0.0,
+        -0.7,
+        -1.6
+      ]
+    }
+  ],
+  "atmosphere": {
+    "min_speed": 0.0,
+    "max_speed": 170.0,
+    "boost_speed": 300.0,
+    "accel": 40.0,
+    "boost_time": 8.0,
+    "boost_recharge": 1.0,
+    "boost_turn_scale": 0.7,
+    "edge_speed_mult": 4.0,
+    "speed_curve": 1.0,
+    "climb_drag": 0.3,
+    "liftoff_height": 18.0,
+    "liftoff_speed": 7.0,
+    "land_max_agl": 150.0,
+    "land_descent": 12.0,
+    "land_slow": 4.0,
+    "land_brake": 45.0,
+    "touchdown_speed": 9.0,
+    "crash_speed": 32.0,
+    "body_radius": 2.0,
+    "clearance": 1.0
+  },
+  "note": "Issue #76: the Remnant's own interceptor, painted dark: the same airframe and guns as the port's (interceptor.json). One sits beside each desert outpost (flyable: taking it sets off that outpost's alarm and scrambles the barracks interceptor), and one dark interceptor stands on the barracks pad and hunts you in the air (src/systems/flight/atmo_fighter.gd). 'scramble' (interceptor only) is how that one behaves.",
+  "naming": {
+    "kind": "person_drift",
+    "callsign": true,
+    "vessel": "vessel"
+  },
+  "blaster_power": 1.0,
+  "scramble": {
+    "launch_distance": 300.0,
+    "floor_agl": 45.0,
+    "look_ahead_s": 2.5,
+    "ceiling_margin": 900.0,
+    "give_up_s": 10.0,
+    "respawn_s": 120.0,
+    "land_from": 60.0,
+    "return_altitude": 90.0,
+    "kill_standing": -10,
+    "bolt_color": "#ff3020",
+    "note": "launch_distance: metres from the town's edge you must be before it takes off after you (a stolen outpost ship scrambles it at once). floor_agl / look_ahead_s: it pulls up when it is lower than this above the ground now or look_ahead_s ahead. ceiling_margin: it never climbs closer than this to the edge of space. give_up_s: seconds with nothing to chase (you landed, went to space, or are not wanted) before it flies home. respawn_s: shot down, a new one stands on the pad this long after. land_from: metres from the pad where it comes straight down; return_altitude: how high it flies home."
+  }
+}

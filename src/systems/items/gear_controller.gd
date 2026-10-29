@@ -435,7 +435,7 @@ func sync_gear() -> void:
 	var avatar := player.get_node_or_null("Avatar")
 	var color := blade_color()
 	if avatar != null and avatar.has_method("set_blade_color") and color.a > 0.0:
-		avatar.set_blade_color(color)
+		avatar.set_blade_color(color, blade_hilt())
 
 
 ## Issue #148: the energy sword's colour from what the player owns (an item with
@@ -446,6 +446,15 @@ func blade_color() -> Color:
 		if inv().has(str(id)) and item.has("blade_color"):
 			return Color(str(item.blade_color))
 	return Color(0, 0, 0, 0)
+
+
+## The sword's hilt model from the same item ("hilt"), or "" for the default.
+func blade_hilt() -> String:
+	for id in inv().owned:
+		var item: Dictionary = content.get_item(str(id))
+		if inv().has(str(id)) and item.has("blade_color"):
+			return str(item.get("hilt", ""))
+	return ""
 
 
 func _mount_worn(id: String, item: Dictionary) -> void:

@@ -1,0 +1,415 @@
+class_name AtmoFighter
+extends Node3D
+## The Remnant's interceptor in the port's sky (issue #76). It stands on the
+## barracks pad (the town box with a "remnant_ship") and hunts you in the air:
+##   - it takes off when you fly a ship stolen from an outpost, or when you are
+##     wanted (the garrison's alarm is up, your Remnant standing is hostile, or the
+##     fleet is beaten and the Remnant shoot on sight) and are `launch_distance`
+##     past the edge of the town,
+##   - it flies with the same AtmoFlight as your ship (the ground, the air thinning,
+##     crashing) and fights with the same parts as the space dogfights: the
+##     FighterBrain pilot (pursue, attack, break, extend) from a pilot profile, the
+##     ship's ShipLoadout guns firing real bolts (ShipPilot.ship_bolt), its
+##     ShipDefense shield and hull behind a ShipHull your bolts hit,
+##   - on top of the space pilot it keeps off the ground (`floor_agl` now and
+##     `look_ahead_s` ahead) and under the edge of space (`ceiling_margin`),
+##   - with nothing to chase for `give_up_s` (you landed, climbed into space, are
+##     not wanted any more) it flies home and lands on its pad,
+##   - shot down, it blows up and a new one stands on the pad `respawn_s` later;
+##     if it shoots you down you both start again in town (you in the pit, it on
+##     its pad).
+## Numbers: the ship's "scramble" block (content/core/ships/remnant_interceptor.json)
+## and its pilot (content/core/pilots/remnant_hunter.json).
+##
+## Tests and traces drive it through the same step() the frame calls.
+
+const FighterBrain := preload("res://src/systems/ai/fighter_brain.gd")
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const ShipDefense := preload("res://src/systems/flight/ship_defense.gd")
+const ShipLoadout := preload("res://src/systems/flight/ship_loadout.gd")
+const LeadSolver := preload("res://src/systems/flight/lead_solver.gd")
+const TownDecor := preload("res://src/systems/world/town_decor.gd")
+
+enum Mode { PARKED, LAUNCHING, HUNTING, RETURNING, DOWN }
+
+signal launched
+signal shot_down
+signal landed_home
+
+var demo                          ## the town scene (town_demo.gd)
+var pilot: ShipPilot              ## the player's flying
+var content
+var ship_id := ""
+var cfg: Dictionary = {}          ## the ship's data
+var sc: Dictionary = {}           ## its "scramble" block
+var atmo: AtmoFlight
+var brain
+var guns                          ## ShipLoadout
+var defense                       ## ShipDefense
+var hull: ShipHull
+var visual: Node3D
+var pad_box: Dictionary = {}
+var home := Vector3.ZERO
+var home_yaw := 0.0
+var mode := Mode.PARKED
+var respawn_left := -1.0
+var idle_left := 0.0              ## seconds left with nothing to chase before it goes home
+var reset_pending := false        ## it shot you down: back to the pad once you are towed
+
+## For traces and tests.
+var launches := 0
+var kills_of_player := 0
+var times_shot_down := 0
+var shots := 0
+var log_events: Array = []
+
+var _was_crashed := false
+
+
+func setup(town_demo, box: Dictionary, ship_pilot: ShipPilot) -> void:
+	demo = town_demo
+	pilot = ship_pilot
+	pad_box = box
+	name = "RemnantInterceptor"
+
+
+func _ready() -> void:
+	content = CoreContent.new()
+	content.load_from()
+	ship_id = str(pad_box.get("remnant_ship", "remnant_interceptor"))
+	cfg = content.get_ship(ship_id)
+	sc = cfg.get("scramble", {})
+	atmo = AtmoFlight.new()
+	atmo.setup(cfg, pilot.ground)
+	brain = FighterBrain.new(content.get_pilot(str(cfg.get("pilot", "veteran"))), atmo.flight, 76)
+	var mn := WorldGround._v3(pad_box.min)
+	var mx := WorldGround._v3(pad_box.max)
+	home = Vector3((mn.x + mx.x) * 0.5, mx.y, (mn.z + mx.z) * 0.5)
+	home_yaw = deg_to_rad(float(pad_box.get("parked_yaw_deg", 0.0)))
+	_build_visual()
+	_reset_home()
+
+
+func _build_visual() -> void:
+	var look_id := str(cfg.get("look", ""))
+	if demo.use_look and look_id != "":
+		visual = ShipKit.new(demo._flat_mats()).build(look_id)
+	else:
+		visual = Node3D.new()
+	visual.name = "Ship"
+	add_child(visual)
+	var acc := [null]
+	TownDecor._merge_aabb(visual, Transform3D.IDENTITY, acc)
+	var size := Vector3(9.0, 2.5, 8.0)
+	var center := Vector3.ZERO
+	if acc[0] != null:
+		var a: AABB = acc[0]
+		atmo.clearance = maxf(0.3, -a.position.y)
+		size = a.size
+		center = a.get_center()
+	hull = ShipHull.new()
+	hull.name = "ShipHull"
+	var cs := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	cs.shape = box
+	cs.position = center
+	hull.add_child(cs)
+	visual.add_child(hull)
+	hull.on_damage = _on_hit
+
+
+func p(key: String, fallback: float) -> float:
+	return float(sc.get(key, fallback))
+
+
+func mode_label() -> String:
+	return Mode.keys()[mode]
+
+
+func flying() -> bool:
+	return mode == Mode.LAUNCHING or mode == Mode.HUNTING or mode == Mode.RETURNING
+
+
+func position() -> Vector3:
+	return atmo.position()
+
+
+func velocity() -> Vector3:
+	return atmo.flight.velocity() if atmo.state == AtmoFlight.State.FLYING else Vector3.ZERO
+
+
+# ------------------------------------------------------------------ who it hunts
+
+## Your ship, while it is in the air down here (not in a space fight).
+func target_up() -> bool:
+	return pilot != null and pilot.piloting and pilot.fight == null \
+		and pilot.atmo.state in [AtmoFlight.State.LIFTOFF, AtmoFlight.State.FLYING, AtmoFlight.State.LANDING]
+
+
+## The Remnant wants you: a stolen ship, the garrison's alarm, a hostile standing,
+## or the fleet is beaten (they shoot on sight from then on).
+func wanted() -> bool:
+	if (pilot != null and pilot.flying_stolen()) or Story.remnant_hostile():
+		return true
+	var g = demo.garrison if "garrison" in demo else null
+	if g == null:
+		return false
+	return g.alarm.active() or g.checkpoint.base_band(int(WorldState.standing.get("imperial_remnant", 0))) == "hostile"
+
+
+## Should it take off now?
+func should_scramble() -> bool:
+	if not target_up() or not wanted():
+		return false
+	if pilot.flying_stolen():
+		return true
+	return not TownNav.in_town(demo.town, pilot.atmo.position(), p("launch_distance", 300.0))
+
+
+# ------------------------------------------------------------------ frame
+
+func _physics_process(dt: float) -> void:
+	step(dt)
+
+
+func step(dt: float) -> void:
+	_watch_player()
+	match mode:
+		Mode.PARKED:
+			if should_scramble():
+				scramble()
+		Mode.LAUNCHING:
+			atmo.set_command(0.0, 0.0, 0.0, 0.0, false)
+			_events(atmo.step(dt))
+			if atmo.state == AtmoFlight.State.FLYING:
+				mode = Mode.HUNTING
+				idle_left = p("give_up_s", 10.0)
+		Mode.HUNTING:
+			_hunt(dt)
+		Mode.RETURNING:
+			_return(dt)
+		Mode.DOWN:
+			respawn_left -= dt
+			if respawn_left <= 0.0:
+				_reset_home()
+	defense.step(dt)
+	_sync_visual()
+
+
+func scramble() -> bool:
+	if mode != Mode.PARKED or not atmo.takeoff():
+		return false
+	mode = Mode.LAUNCHING
+	launches += 1
+	launched.emit()
+	_toast(GameFlow.label("interceptor_up"))
+	return true
+
+
+## It shot you down: once you are towed (in town again), it is back on its pad.
+func _watch_player() -> void:
+	if pilot == null:
+		return
+	var crashed: bool = pilot.piloting and pilot.atmo.state == AtmoFlight.State.CRASHED
+	if crashed and not _was_crashed and flying():
+		var last: Dictionary = pilot.log_events.back() if not pilot.log_events.is_empty() else {}
+		if str(last.get("what", "")) == "shot_down":
+			kills_of_player += 1
+		reset_pending = true         # down while it was up: you both start again in town
+	_was_crashed = crashed
+	if reset_pending and not crashed and pilot.crash_left < 0.0:
+		reset_pending = false
+		if mode != Mode.DOWN:
+			_reset_home()
+
+
+func _hunt(dt: float) -> void:
+	var up := target_up()
+	if up and wanted():
+		idle_left = p("give_up_s", 10.0)
+	else:
+		idle_left -= dt
+		if idle_left <= 0.0:
+			mode = Mode.RETURNING
+			_toast(GameFlow.label("interceptor_home"))
+			return
+	var b = brain
+	b.has_target = up
+	if up:
+		b.target_pos = pilot.atmo.position()
+		b.target_vel = pilot.atmo.flight.velocity()
+	b.arena_center = b.target_pos if up else home + atmo.up() * p("return_altitude", 90.0)
+	b.arena_radius = 100000.0
+	var pc: Dictionary = guns.group_config("primary")
+	b.bolt_speed = float(pc.get("bolt_speed", 300.0))
+	b.weapon_range = float(pc.get("range", 900.0))
+	b.has_missiles = false
+	b.update(dt)
+	var cmd: Dictionary = b.command.duplicate()
+	var fire: bool = b.fire_primary and up
+	if _keep_clear(cmd):
+		fire = false
+	atmo.set_command(cmd.pitch, cmd.yaw, cmd.roll, cmd.throttle, cmd.boost)
+	_events(atmo.step(dt))
+	_fire(dt, fire)
+
+
+## The space pilot does not know about the ground. Pull up when it is low now or
+## will be soon, and level out under the edge of space. Rewrites `cmd`; true when
+## it took over (no shooting while it does).
+func _keep_clear(cmd: Dictionary) -> bool:
+	var f = atmo.flight
+	var up := atmo.up()
+	var ahead: Vector3 = f.position + f.velocity() * p("look_ahead_s", 2.5)
+	var floor_h := p("floor_agl", 45.0)
+	var low := atmo.agl() < floor_h or pilot.ground.height_above(ahead - up * atmo.clearance) < floor_h * 0.6
+	var high := atmo.altitude() > atmo.space_altitude - p("ceiling_margin", 900.0)
+	if not low and not high:
+		return false
+	var fwd: Vector3 = f.forward()
+	var flat := (fwd - up * fwd.dot(up))
+	if flat.length() < 0.05:
+		flat = f.basis.y - up * f.basis.y.dot(up)
+	var aim: Vector3 = f.position + flat.normalized() * 100.0 + up * (90.0 if low else -60.0)
+	steer(cmd, aim)
+	cmd.throttle = 1.0
+	return true
+
+
+## The brain's steering toward a world point, into `cmd`.
+func steer(cmd: Dictionary, point: Vector3) -> void:
+	brain._steer_to(point, float(cmd.get("throttle", 1.0)), bool(cmd.get("boost", false)))
+	for k in ["pitch", "yaw", "roll"]:
+		cmd[k] = brain.command[k]
+
+
+## Home: across at return_altitude, then straight down onto the pad.
+func _return(dt: float) -> void:
+	if atmo.state == AtmoFlight.State.LANDING:
+		_events(atmo.step(dt))
+		return
+	if target_up() and wanted():
+		mode = Mode.HUNTING
+		idle_left = p("give_up_s", 10.0)
+		return
+	var up := atmo.up()
+	var over := home + up * (p("return_altitude", 90.0) + atmo.clearance)
+	var to := over - atmo.position()
+	var flat := to - up * to.dot(up)
+	var cmd := { "throttle": clampf(flat.length() / 300.0, 0.25, 1.0), "boost": false, "pitch": 0.0, "yaw": 0.0, "roll": 0.0 }
+	if flat.length() < p("land_from", 60.0):
+		atmo.state = AtmoFlight.State.LANDING    # straight down onto the pad, wherever it is
+		_events(atmo.step(dt))
+		return
+	if not _keep_clear(cmd):
+		steer(cmd, over)
+	atmo.set_command(cmd.pitch, cmd.yaw, cmd.roll, cmd.throttle, false)
+	_events(atmo.step(dt))
+
+
+func _events(events: Array) -> void:
+	for e in events:
+		log_events.append(e)
+		match str(e.type):
+			"crashed":
+				_go_down(e.at, false)
+			"landed":
+				if mode == Mode.RETURNING:
+					_reset_home()
+					landed_home.emit()
+
+
+func _fire(dt: float, trigger: bool) -> void:
+	var v: Vector3 = atmo.flight.velocity()
+	var volley := false
+	for s in guns.fire(dt, atmo.transform(), v, trigger, false):
+		if str(s.kind) != "bolt":
+			continue
+		var b := ShipPilot.ship_bolt(s, hull, content, pilot.ground, Color(str(sc.get("bolt_color", "#ff3020"))))
+		demo.add_child(b)
+		b.global_position = s.origin
+		shots += 1
+		volley = true
+	if volley:
+		Sound.play("ship_cannon", atmo.position())
+
+
+# ------------------------------------------------------------------ damage
+
+## A bolt hit it. The Remnant's own (troopers, droids) do not count; parked it
+## shrugs it off too (the pad's ship is not a target until it flies).
+func _on_hit(amount: float, shooter: Node) -> void:
+	if not flying():
+		return
+	if shooter != null and "faction" in shooter and str(shooter.get("faction")) == str(cfg.get("faction", "")):
+		return
+	if shooter == hull:
+		return
+	defense.apply_damage(amount)
+	if brain != null:
+		brain.notify_hit()
+	if not defense.is_alive():
+		_go_down(atmo.position(), true)
+
+
+func _go_down(at: Vector3, shot: bool) -> void:
+	if mode == Mode.DOWN:
+		return
+	atmo._crash(at, "shot_down" if shot else "ground")
+	mode = Mode.DOWN
+	respawn_left = p("respawn_s", 120.0)
+	visual.visible = false
+	_set_solid(false)
+	if pilot != null:
+		pilot._crash_fx(at)
+	Sound.play("ship_boom", at)
+	if shot:
+		times_shot_down += 1
+		WorldState.change_standing("imperial_remnant", int(sc.get("kill_standing", -10)), "A Remnant interceptor was shot down.")
+		WorldState.log_event("A Remnant interceptor was shot down over the desert.")
+		_toast(GameFlow.label("interceptor_down"))
+	shot_down.emit()
+
+
+## On the pad, patched up, waiting.
+func _reset_home() -> void:
+	atmo.reached_space = false
+	atmo.park(home, home_yaw)
+	defense = ShipDefense.new(cfg)
+	guns = ShipLoadout.new(cfg, content)
+	mode = Mode.PARKED
+	respawn_left = -1.0
+	visual.visible = true
+	_set_solid(true)
+	_sync_visual()
+
+
+func _set_solid(on: bool) -> void:
+	hull.collision_layer = 1 if on else 0
+
+
+func _sync_visual() -> void:
+	if visual != null:
+		visual.global_transform = atmo.transform()
+
+
+func _toast(text: String) -> void:
+	if text != "" and pilot != null and pilot.piloting and pilot.hud != null:
+		pilot.hud.toast(text, 3.5)
+
+
+# ------------------------------------------------------------------ the HUD
+
+## What the pilot's HUD draws for it: where it is, where to aim (the lead), how
+## hurt it is. Empty while it is not in the air.
+func hud_target() -> Dictionary:
+	if not flying() or mode == Mode.LAUNCHING or pilot == null:
+		return {}
+	var me := pilot.atmo
+	var pc: Dictionary = pilot.guns.group_config("primary") if pilot.guns != null else {}
+	var lead: Dictionary = LeadSolver.intercept(me.position(), me.flight.velocity(), atmo.position(), velocity(),
+		float(pc.get("bolt_speed", 300.0)))
+	return { "pos": atmo.position(), "lead": lead.point, "lead_ok": bool(lead.valid),
+		"label": str(cfg.get("label", "")), "dist": me.position().distance_to(atmo.position()),
+		"hull": float(defense.hull_hp()) / maxf(1.0, float(defense.hull_max())) }

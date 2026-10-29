@@ -803,7 +803,8 @@ func _animate(dt: float, move: Vector3) -> void:
 	if look_body.has_meta("weapon"):
 		var w: Node3D = look_body.get_meta("weapon")
 		var grips: Dictionary = w.get_meta("grips", {})
-		w.transform = WeaponCarry.blend(WeaponCarry.rest_xf("rifle", grips.get("r", Vector3.ZERO)), _rifle_aim_xf, carry.eased())
+		var kind := str(w.get_meta("carry", "rifle"))      # issue #76: the marked officer's pistol
+		w.transform = WeaponCarry.blend(WeaponCarry.rest_xf(kind, grips.get("r", Vector3.ZERO)), _rifle_aim_xf, carry.eased())
 		if grips.has("r"):
 			kit.reach(look_body, "r", w.transform * (grips.r as Vector3), Vector3(-0.5, -0.7, -0.5))
 		if grips.has("l"):

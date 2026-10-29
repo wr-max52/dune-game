@@ -2,17 +2,30 @@
   "id": "remnant_outpost_mid",
   "kind": "remnant_outpost",
   "label": "the broken ridge outpost",
-  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point, and puts two troopers (outpost_trooper) at guard_a / guard_b, an assassin droid walking 'patrol', and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different.",
+  "note": "Issue #64: one of the Remnant's three desert outposts out the front gate (near, mid, far: each further out and a little different). Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with the building. Local frame: +x faces the town. 'visual': false = no placeholder box; src/systems/world/remnant_outposts.gd dresses it dark grey, black and red, parks the 'ship' at the 'ship' point (issue #76: the Remnant's dark interceptor or freighter, flyable: boarding it sets off the outpost's alarm), and puts three troopers (outpost_trooper) at guard_a / guard_b / guard_c, an assassin droid walking 'patrol', a floating droid on 'floater' and a cargo droid shuffling along 'cargo' (issue #76: it runs into the desert on the alarm and is left there broken), and a bounty target (bounty_target) at 'target' when Oda's contract names this outpost. 'look' says what makes this one different. Issue #76: 'props' are the crates, canisters and drums lying about (solid: cover); 'stack' piles that many, 'lying' tips one on its side.",
   "buildings": [
     { "id": "block", "shape": "box", "size": [10,5.5,7], "position": [0, 0, 0], "visual": false }
   ],
-  "ship": "freighter",
+  "ship": "remnant_freighter",
   "look": { "mast": true, "tower": false },
   "points": {
     "guard_a": [6, 0, 4],
     "guard_b": [6, 0, -5],
+    "guard_c": [-7, 0, -6],
     "target": [-2, 0, 7],
     "ship": [-17,0,-3],
-    "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]]
-  }
+    "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]],
+    "floater": [[6, 0, 7.5], [10, 0, 0], [6, 0, -8]],
+    "cargo": [[1.5, 0, -7.0], [-3.5, 0, -7.2]]
+  },
+  "props": [
+    { "kind": "crate", "at": [3.0, 0, -5.2], "yaw": -6, "stack": 2 },
+    { "kind": "crate", "at": [4.3, 0, -5.6], "yaw": 10 },
+    { "kind": "canister", "at": [-2.0, 0, -4.8] },
+    { "kind": "canister", "at": [-1.3, 0, -5.1], "yaw": 40 },
+    { "kind": "canister", "at": [-2.6, 0, -5.3], "yaw": -20, "lying": true },
+    { "kind": "drum", "at": [-7.0, 0, 2.0], "yaw": 110, "lying": true },
+    { "kind": "crate", "at": [9.5, 0, -1.5], "yaw": 20 },
+    { "kind": "drum", "at": [-4.0, 0, 4.7] }
+  ]
 }

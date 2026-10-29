@@ -9,6 +9,7 @@
     "nameplate_range": 8.0
   },
   "hp": 60,
+  "kill_reward": 20,
   "walk_speed": 3.2,
   "sprint_speed": 6.2,
   "turn_rate_deg": 260.0,
