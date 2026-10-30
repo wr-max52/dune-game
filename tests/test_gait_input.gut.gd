@@ -19,21 +19,21 @@ func _run(frames: int, dir: Vector2, shift: bool = false) -> Dictionary:
 	return out
 
 
-func test_a_tap_walks_four_steps_then_stops() -> void:
-	# 4 steps x 1.05 m at 4 m/s = 1.05 s (and 4.2 / 4 = 1.05 again from distance).
-	assert_almost_eq(g.burst_s(), 1.05, 0.001)
+func test_a_tap_walks_two_steps_then_stops() -> void:
+	# 2 steps x 1.05 m at 4 m/s = 0.525 s (and 2.1 / 4 = 0.525 again from distance).
+	assert_almost_eq(g.burst_s(), 0.525, 0.001)
 	_run(6, FWD)                          # a 0.1 s tap
-	var walking := _run(30, Vector2.ZERO)   # 0.6 s after release
+	var walking := _run(18, Vector2.ZERO)   # 0.3 s after release
 	assert_eq(walking.dir, FWD, "still walking after the key is up")
 	assert_false(walking.run)
-	var stopped := _run(30, Vector2.ZERO)   # 1.1 s from the press
-	assert_eq(stopped.dir, Vector2.ZERO, "four steps, then stop")
+	var stopped := _run(18, Vector2.ZERO)   # 0.7 s from the press
+	assert_eq(stopped.dir, Vector2.ZERO, "two steps, then stop")
 
 
 func test_tapping_again_keeps_walking() -> void:
 	for i in 4:
 		_run(6, FWD)
-		var mid := _run(36, Vector2.ZERO)  # 0.7 s between taps
+		var mid := _run(21, Vector2.ZERO)  # 0.35 s between taps
 		assert_eq(mid.dir, FWD, "tap %d still walking" % i)
 
 

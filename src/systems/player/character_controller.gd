@@ -34,6 +34,10 @@ var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "ju
 # before step(). While it is on, upward speed is capped at max_rise (0 = no cap).
 var lift := 0.0
 var max_rise := 0.0
+# A shove on top of the walk (m/s, world XZ): the jetpack's kick as it lights.
+# It fades by push_fade m/s every second and ends when you touch the ground.
+var push := Vector3.ZERO
+var push_fade := 5.0
 var pose := Pose.STAND
 
 ## Sprint slide (issue #65). Off by default: guards share this controller and
@@ -163,10 +167,12 @@ func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 	if not _tick_slide(delta, world_dir):
 		want = current_speed()  # a slide that just ended already stands
 		var target_vel := world_dir * want
-		var horiz := Vector3(velocity.x, 0.0, velocity.z)
+		# The push rides on top: steer the rest, then put the (faded) push back.
+		var horiz := Vector3(velocity.x - push.x, 0.0, velocity.z - push.z)
 		horiz = horiz.lerp(target_vel, minf(1.0, delta * ground_accel / maxf(want, 0.001)))
-		velocity.x = horiz.x
-		velocity.z = horiz.z
+		push = push.move_toward(Vector3.ZERO, push_fade * delta)
+		velocity.x = horiz.x + push.x
+		velocity.z = horiz.z + push.z
 
 	# Vertical.
 	if on_ground and command.jump:
@@ -191,6 +197,8 @@ func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 	body_pos.x += velocity.x * delta
 	body_pos.z += velocity.z * delta
 
+	if on_ground:
+		push = Vector3.ZERO     # the ground's grip takes over what is left
 	# Pose bookkeeping when grounded and not jumping.
 	if on_ground and pose != Pose.JUMP:
 		pose = Pose.CROUCH if crouching() else Pose.STAND
