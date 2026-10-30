@@ -184,6 +184,55 @@ func test_wide_and_high_queries_match() -> void:
 	assert_eq(bad, 0)
 
 
+func test_high_over_an_item_matches_and_counts_it() -> void:
+	# A ship in orbit straight over a roof, a mesa or a boulder (the item's own
+	# axis, a little off it, and the gravity up): the line test keeps exactly the
+	# items the plain scan finds.
+	var bad := 0
+	var touched := 0
+	var tops: Array = []
+	for b in _g.boxes:
+		var xf := WorldGround.box_xf(b)
+		var mid: Vector3 = ((b.min as Vector3) + (b.max as Vector3)) * 0.5
+		tops.append([xf * Vector3(mid.x, (b.max as Vector3).y, mid.z), xf.basis.y.normalized()])
+	for c in _g.columns:
+		var up: Vector3 = c.get("up", Vector3.UP)
+		tops.append([(c.center as Vector3) + up * float(c.get("h", float(c.top) - (c.center as Vector3).y)), up])
+	for bd in _g.boulders:
+		tops.append([(bd.center as Vector3) + (bd.up as Vector3) * float(bd.height), bd.up])
+	for t in tops:
+		for alt in [1300.0, 3000.0, 6000.0]:
+			for dir in [t[1], _sp.up_at(t[0])]:
+				var p: Vector3 = t[0] + (dir as Vector3) * alt + Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1))
+				var want := _brute(_g, p)
+				if _g.height_above(p) != want:
+					bad += 1
+				if want != _sp.height_above_ground(p):
+					touched += 1
+	assert_eq(bad, 0, "high queries straight over items are exactly the linear scan's")
+	assert_gt(touched, 200, "the items under those points really count")
+
+
+func test_high_queries_are_cheap() -> void:
+	# Issue: from orbit every item was in the sphere's reach and each query scanned
+	# them all (a ship's agl is five queries, every physics step).
+	var pts: Array = []
+	for i in 200:
+		var m := _map_pt(2500.0)
+		var base := _sp.surface_at(m.x, m.y)
+		pts.append(base + _sp.up_at(base) * _rng.randf_range(1500.0, 6000.0))
+	_g.height_above(pts[0])
+	var t0 := Time.get_ticks_usec()
+	for p in pts:
+		_g.height_above(p)
+	var indexed := Time.get_ticks_usec() - t0
+	t0 = Time.get_ticks_usec()
+	for p in pts:
+		_g._height_above_linear(p, _sp.height_above_ground(p))
+	var linear := Time.get_ticks_usec() - t0
+	assert_lt(float(indexed), float(linear) * 0.5, "indexed %d us vs linear %d us" % [indexed, linear])
+
+
 func test_far_below_the_ground_nothing_counts() -> void:
 	var base := _sp.surface_at(50.0, 50.0)
 	var p := base - _sp.up_at(base) * 3.0

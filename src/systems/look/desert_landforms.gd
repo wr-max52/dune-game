@@ -20,6 +20,14 @@ var boulder_spots := PackedVector3Array()   ## where they went (the renderer may
 ## { center: Vector3 (on the ground), up, radius, height } for WorldGround.add_boulders.
 var boulders: Array = []
 
+## Made once a session: the port is built again when you fly home from the moon,
+## and its rocks never change (~110 ms of noise, meshes and colliders on that
+## handoff's first frame). Rock meshes by recipe, their trimesh shapes by mesh, and
+## the boulders' hulls by where they stand.
+static var _meshes := {}
+static var _shapes := {}
+static var _boulder_hulls := {}
+
 
 static func load_data(path: String = DATA_PATH) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -69,13 +77,14 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		var g := _ground(terrain, hd[0], hd[1])
 		var gy := _ground_h(terrain, g, hd[0], hd[1])
 		var mat := mats.rock(gy, 0.35)
-		var col := _add(LookMeshKit.rock(base, noise, 0.28, 3.0, float(hd[0]), 0.4), mat, g, h * 0.45)
+		var col := _add(_cached("hoodoo/%s/%s/%s" % [r, h, hd[0]], func(): return LookMeshKit.rock(base, noise, 0.28, 3.0, float(hd[0]), 0.4)),
+			mat, g, h * 0.45)
 		var cap := SphereMesh.new()
 		cap.radius = r * 0.9
 		cap.height = r * 0.8
 		cap.radial_segments = 12
 		cap.rings = 6
-		_add(LookMeshKit.rock(cap, noise, 0.3, 0.0, float(hd[1])), mat, g, h * 0.95,
+		_add(_cached("hoodoo_cap/%s/%s" % [r, hd[1]], func(): return LookMeshKit.rock(cap, noise, 0.3, 0.0, float(hd[1]))), mat, g, h * 0.95,
 			Vector3(0, 0, rng.randf_range(-12, 12)))
 		if solid:
 			_solid(col)
@@ -108,7 +117,7 @@ func build(terrain: DesertTerrain, mats: LookMaterials, keep_out: Rect2) -> void
 		xforms.append(Transform3D(g.basis * basis, g.origin + g.basis.y * (-s * 0.25)))
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = LookMeshKit.rock(boulder_src, noise, 0.4, 0.0, 3.0)
+	mm.mesh = _cached("boulder", func(): return LookMeshKit.rock(boulder_src, noise, 0.4, 0.0, 3.0))
 	if solid:
 		_solid_boulders(mm.mesh, xforms)
 	mm.instance_count = xforms.size()
@@ -134,7 +143,8 @@ func _build_local_mesas(terrain: DesertTerrain, mats: LookMaterials, clear: Rect
 		var h: float = m[3]
 		if _hits(clear, m[0], m[1], r) or _in_circles(m[0], m[1], r):
 			continue
-		var mesh := _mesa_mesh(r, h, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
+		var so := float(m[0]) * 0.01 + float(m[1]) * 0.003
+		var mesh := _cached("mesa/%s/%s/%s" % [r, h, so], func(): return _mesa_mesh(r, h, noise, so))
 		var g := _ground(terrain, m[0], m[1])
 		var gy := _ground_h(terrain, g, m[0], m[1])
 		var mi := _add(mesh, mats.rock(gy, 0.11), g, h * 0.46 - MESA_BURY,
@@ -152,8 +162,8 @@ func _build_planet_mesas(terrain: PlanetTerrain, mats: LookMaterials, clear: Rec
 		var height := float(m[3])
 		if _hits(clear, map.x, map.y, radius) or _in_circles(map.x, map.y, radius):
 			continue
-		noise.frequency = 1.0 / radius
-		var mesh := _mesa_mesh(radius, height, noise, float(m[0]) * 0.01 + float(m[1]) * 0.003)
+		var so := float(m[0]) * 0.01 + float(m[1]) * 0.003
+		var mesh := _cached("mesa/%s/%s/%s" % [radius, height, so], func(): return _mesa_mesh(radius, height, noise, so))
 		var g := _ground(terrain, map.x, map.y)
 		var gy := _ground_h(terrain, g, map.x, map.y)
 		var placed := _add(mesh, mats.rock(gy, 0.11), g, height * 0.46 - MESA_BURY,
@@ -297,28 +307,19 @@ func _add(mesh: Mesh, mat: Material, g: Transform3D, up: float, rot_deg: Vector3
 ## One static body per boulder: a convex hull of the very rock mesh drawn there (its
 ## points put through that boulder's transform), so what you stand on is what you see.
 func _solid_boulders(mesh: Mesh, xforms: Array[Transform3D]) -> void:
-	var pts := PackedVector3Array()
-	var seen := {}
-	for v in (mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-		var key := v.snapped(Vector3.ONE * 0.01)
-		if not seen.has(key):
-			seen[key] = true
-			pts.append(v)
+	var key := "%d/%s/%s" % [xforms.size(), xforms[0], xforms[-1]] if not xforms.is_empty() else ""
+	var made: Array = _boulder_hulls.get(key, [])      # [shape, top, rad] per rock
+	if made.size() != xforms.size():
+		made = _boulder_shapes(mesh, xforms)
+		_boulder_hulls[key] = made
 	var root := StaticBody3D.new()
 	root.name = "BoulderColliders"
 	add_child(root)
-	for xf in xforms:
-		var hull := PackedVector3Array()
-		hull.resize(pts.size())
-		var top := 0.0
-		var rad := 0.0
-		for i in pts.size():
-			var w: Vector3 = xf.basis * pts[i]
-			hull[i] = w
-			top = maxf(top, w.dot(xf.basis.y.normalized()))
-			rad = maxf(rad, (w - xf.basis.y.normalized() * w.dot(xf.basis.y.normalized())).length())
-		var shape := ConvexPolygonShape3D.new()
-		shape.points = hull
+	for k in xforms.size():
+		var xf := xforms[k]
+		var shape: Shape3D = made[k][0]
+		var top: float = made[k][1]
+		var rad: float = made[k][2]
 		var cs := CollisionShape3D.new()
 		cs.shape = shape
 		cs.position = xf.origin
@@ -332,6 +333,48 @@ func _solid_boulders(mesh: Mesh, xforms: Array[Transform3D]) -> void:
 		boulders.append({ "center": xf.origin, "up": up, "radius": rad * 0.85, "height": top })
 
 
+## One convex hull per boulder: the very rock mesh drawn there (its points put
+## through that boulder's transform), with its height and reach along its up.
+static func _boulder_shapes(mesh: Mesh, xforms: Array[Transform3D]) -> Array:
+	var pts := PackedVector3Array()
+	var seen := {}
+	for v in (mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+		var key := v.snapped(Vector3.ONE * 0.01)
+		if not seen.has(key):
+			seen[key] = true
+			pts.append(v)
+	var out: Array = []
+	for xf in xforms:
+		var hull := PackedVector3Array()
+		hull.resize(pts.size())
+		var top := 0.0
+		var rad := 0.0
+		for i in pts.size():
+			var w: Vector3 = xf.basis * pts[i]
+			hull[i] = w
+			top = maxf(top, w.dot(xf.basis.y.normalized()))
+			rad = maxf(rad, (w - xf.basis.y.normalized() * w.dot(xf.basis.y.normalized())).length())
+		var shape := ConvexPolygonShape3D.new()
+		shape.points = hull
+		out.append([shape, top, rad])
+	return out
+
+
+## The same as mi.create_trimesh_collision(), with the shape made once a session.
 func _solid(mi: MeshInstance3D) -> void:
-	mi.create_trimesh_collision()
+	var shape: Shape3D = _shapes.get(mi.mesh)
+	if shape == null:
+		shape = mi.mesh.create_trimesh_shape()
+		_shapes[mi.mesh] = shape
+	var body := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	cs.shape = shape
+	body.add_child(cs)
+	mi.add_child(body)
 	solid_count += 1
+
+
+static func _cached(key: String, make: Callable) -> Mesh:
+	if not _meshes.has(key):
+		_meshes[key] = make.call()
+	return _meshes[key]

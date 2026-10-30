@@ -1,9 +1,9 @@
 class_name FlightHud
 extends CanvasLayer
 ## The cockpit read-out in the port's sky (M14): speed, throttle, boost, altitude
-## above the ground and above sea level, climb rate, a bar that fills toward the
-## edge of space, a centre reticle, the control prompt and a toast. No logic:
-## ShipPilot fills it in.
+## above the ground and above sea level, climb rate, a centre reticle, the control
+## prompt and a toast. No logic: ShipPilot fills it in. There is no "edge of
+## space" read-out: the sky just darkens as you climb, and space is the same sky.
 ##
 ## Issue #181: it reads like a shooter now.
 ##   - The chase view draws the numbers as a flight-sim HUD (FlightSimHud) in place
@@ -15,7 +15,6 @@ extends CanvasLayer
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const DIM := Color(0.95, 0.92, 0.85, 0.55)
-const SPACE := Color(0.55, 0.75, 1.0, 0.95)
 const WARN := Color(1.0, 0.45, 0.3, 0.95)
 
 var sim: FlightSimHud            ## issue #181: the chase view's HUD
@@ -27,9 +26,6 @@ var values: Dictionary = {}       ## the last show_values(), for the views and t
 var prompt: Label
 var toast_label: Label
 var gauge: Control
-var space_label := "EDGE OF SPACE"
-var space_fraction := 0.0
-var space_altitude := 8000.0
 var boost := 1.0
 var vessel_name := ""            ## issue #15: shown on the HUD (issue #181: and the dash)
 var target: Dictionary = {}       ## issue #76: an enemy in the air (AtmoFighter.hud_target), or {}
@@ -90,7 +86,7 @@ func _center_label(from_bottom: float) -> Label:
 	return l
 
 
-## values: speed, throttle (0..1), boost (0..1), agl, altitude, climb, space_fraction, state,
+## values: speed, throttle (0..1), boost (0..1), agl, altitude, climb, state,
 ## (issue #55) hull, hull_max, shield, and (issue #181) shield_max, max_speed, the
 ## attitude (pitch, roll, heading in degrees: attitude()), and the Shift ability
 ## (ability: its kind, ability_on: running now)
@@ -98,7 +94,6 @@ func show_values(v: Dictionary) -> void:
 	if gauge == null:
 		return
 	values = v
-	space_fraction = float(v.get("space_fraction", 0.0))
 	boost = float(v.get("boost", 0.0))
 	for view in [sim, cockpit]:
 		view.values = v
@@ -189,20 +184,6 @@ func _draw_gauge() -> void:
 	gauge.draw_line(c + Vector2(-26, 0), c + Vector2(-16, 0), DIM, 1.5)
 	gauge.draw_line(c + Vector2(16, 0), c + Vector2(26, 0), DIM, 1.5)
 	_draw_target()
-	if cockpit_view:
-		return                                       # the dash has its own space bar
-	# Edge-of-space bar on the right edge.
-	var h := vp.y * 0.5
-	var x := vp.x - 34.0
-	var top := c.y - h * 0.5
-	gauge.draw_rect(Rect2(Vector2(x, top), Vector2(10, h)), Color(0, 0, 0, 0.45))
-	var fill := h * clampf(space_fraction, 0.0, 1.0)
-	gauge.draw_rect(Rect2(Vector2(x, top + h - fill), Vector2(10, fill)), SPACE)
-	gauge.draw_rect(Rect2(Vector2(x, top), Vector2(10, h)), DIM, false, 1.0)
-	var font := ThemeDB.fallback_font
-	var fs := RetroUI.size("flight_gauge", 17)
-	gauge.draw_string(font, Vector2(x - 200, top - 10), space_label, HORIZONTAL_ALIGNMENT_RIGHT, 210, fs, SPACE)
-	gauge.draw_string(font, Vector2(x - 200, top + fs + 4), "%d m" % int(space_altitude), HORIZONTAL_ALIGNMENT_RIGHT, 190, fs - 2, DIM)
 
 
 ## Issue #76: the space fight's target box and lead pip, for an enemy in the air: a

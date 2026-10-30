@@ -349,6 +349,26 @@ func test_town_troopers_come_back_behind_the_barracks() -> void:
 	assert_lt(back.global_position.distance_to(t.town.marker_pos("remnant_respawn")), 3.0)
 
 
+func test_roof_riflemen_come_back_on_the_roof() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var g = t.npc("trooper_roof_c")
+	assert_not_null(g, "the barracks roof is manned from the start")
+	assert_eq(t.garrison.members.filter(func(n): return n.soldier_id == "roof_rifleman").size(), 3)
+	g.apply_damage(9999.0)
+	await wait_physics_frames(2)
+	var r: Dictionary = t.garrison.respawns[0]
+	assert_almost_eq(float(r.t) - t.garrison._clock, 60.0, 1.0, "a minute later, like the others")
+	assert_eq(r.at, g.post_pos, "at its post: no way up from behind the barracks")
+	t.garrison.alarm.state = TownAlarm.State.CALM
+	t.garrison._clock = float(r.t) + 0.1
+	await wait_physics_frames(2)
+	assert_eq(t.garrison.respawned, 1)
+	var back: NpcBody = t.garrison.members[t.garrison.members.size() - 1]
+	assert_eq(back.soldier_id, "roof_rifleman")
+	assert_lt(back.global_position.distance_to(g.post_pos), 1.5, "back on the roof")
+
+
 func test_after_the_fleet_the_town_is_free_and_outposts_shoot_on_sight() -> void:
 	var t = _town()
 	await wait_physics_frames(2)

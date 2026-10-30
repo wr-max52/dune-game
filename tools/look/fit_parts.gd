@@ -19,7 +19,11 @@ extends SceneTree
 ##            straighten: share of the height that is hips; the legs below are
 ##              stood up straight (a piece generated mid-stride),
 ##            align_top: share of the height whose middle is matched to the
-##              reference's (a waistband onto the hips) instead of the bounds' } }
+##              reference's (a waistband onto the hips) instead of the bounds',
+##            recolor: as a dress's, bakes a new base colour into the piece (the
+##              nomad heads came back grey and brass and are baked to sand and bone),
+##            texture_size: largest side of the piece's textures in pixels (keeps
+##              parts.glb under GitHub's 100 MB file limit) } }
 ##   dress: { outfit name: { source: raw .glb of a whole dressed character, decimate,
 ##            uniform, axis, scale, own_weights: true keeps a rigged source's own
 ##            weights (bones matched by name) instead of the copied ones, recolor: { swaps: { "#from": "#to" }, tol, min_l } bakes
@@ -118,6 +122,10 @@ func _fit(target: MeshInstance3D, ref_mesh: Mesh, pc: Dictionary) -> void:
 	if src.is_empty():
 		return
 	var arr: Array = src[0]
+	if pc.has("texture_size"):
+		src[1] = _shrunk(src[1], int(pc.texture_size))
+	if pc.has("recolor"):
+		src[1] = _recolored(src[1], pc.recolor)
 	var to := ref_mesh.get_aabb()
 	if pc.has("box"):
 		var lo := Vector3(pc.box.min[0], pc.box.min[1], pc.box.min[2])
@@ -353,16 +361,64 @@ func _dress(outfit: String, pc: Dictionary, bases: Array, refs: Dictionary) -> v
 
 
 ## A copy of the material with its albedo recoloured (recolor_fitted.gd's swap):
-## rc = { swaps: { "#from": "#to" }, tol, min_l }. Bakes a new base colour into the
-## outfit (the guard's white armour made gunmetal grey).
+## rc = { swaps: { "#from": "#to" }, tol, min_l, metallic }. Bakes a new base colour
+## into the outfit (the guard's white armour made gunmetal grey); metallic replaces
+## the metallic map with one flat value (brass recoloured to bone should not shine).
+## Swaps all read the original texture and a texel takes its nearest `from`, so one
+## swap's result is never caught by the next (a grey hood made sand, then an olive
+## mask made bone).
 static func _recolored(mat: Material, rc: Dictionary) -> Material:
 	var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
 	var img := m.albedo_texture.get_image()
 	img.decompress()
 	img.convert(Image.FORMAT_RGBA8)
+	var tol := float(rc.get("tol", 0.35))
+	var min_l := float(rc.get("min_l", 0.02))
+	var swaps: Array = []
 	for from in rc.swaps:
-		img = Recolor._recolor(img, Color(str(from)), Color(str(rc.swaps[from])), float(rc.get("tol", 0.35)), float(rc.get("min_l", 0.02)))
+		var fc := Color(str(from))
+		swaps.append([Recolor._chroma(fc), maxf(fc.get_luminance(), 0.001), Color(str(rc.swaps[from]))])
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			var l := c.get_luminance()
+			if l < min_l:
+				continue
+			var ch := Recolor._chroma(c)
+			var best: Array = swaps[0]
+			for sw: Array in swaps:
+				if ch.distance_to(sw[0]) < ch.distance_to(best[0]):
+					best = sw
+			var w := 1.0 - smoothstep(tol * 0.6, tol, ch.distance_to(best[0]))
+			if w <= 0.0:
+				continue
+			var k := l / float(best[1])
+			var to: Color = best[2]
+			img.set_pixel(x, y, c.lerp(Color(to.r * k, to.g * k, to.b * k, c.a).clamp(), w))
 	m.albedo_texture = ImageTexture.create_from_image(img)
+	if rc.has("metallic"):
+		m.metallic = float(rc.metallic)
+		m.metallic_texture = null
+	return m
+
+
+## A copy of the material with every texture at most `size` pixels on a side. A
+## texture used twice (the metallic-roughness map) stays one texture.
+static func _shrunk(mat: Material, size: int) -> Material:
+	var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+	var done := {}
+	for prop in ["albedo_texture", "normal_texture", "metallic_texture", "roughness_texture", "ao_texture", "emission_texture"]:
+		var tex := m.get(prop) as Texture2D
+		if tex == null:
+			continue
+		if not done.has(tex):
+			var img := tex.get_image()
+			img.decompress()
+			var k := float(size) / maxf(img.get_width(), img.get_height())
+			if k < 1.0:
+				img.resize(int(img.get_width() * k), int(img.get_height() * k), Image.INTERPOLATE_LANCZOS)
+			done[tex] = ImageTexture.create_from_image(img)
+		m.set(prop, done[tex])
 	return m
 
 

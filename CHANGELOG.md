@@ -17,9 +17,71 @@ Plain English, newest on top. One entry per milestone.
   Shift ability, hull and shield. It uses your HUD colour.
 - **A cockpit in the cockpit view.** V now puts you behind a canopy (two struts,
   the rest faint glass) with a dashboard whose instruments move: airspeed,
-  altimeter, an attitude ball, climb, compass, throttle, hull, shield, boost and
-  the edge of space. The Shift ability is one lamp, lit while it runs. Every ship
+  altimeter, an attitude ball, climb, compass, throttle, hull, shield and boost.
+  The Shift ability is one lamp, lit while it runs. Every ship
   shares the one cockpit.
+
+## Flying to the moon without a seam (2026-10-29)
+
+- **The switch to the moon's scene is ~4x shorter.** The frame it happened on
+  took ~680 ms; it is now ~130 ms, then 55-75 ms for two frames. The port's scene
+  is freed a little each frame after it leaves (`SceneReaper`) instead of all at
+  once (330 ms). The moon's coarse ball and the home planet's ball in its sky are
+  built on worker threads ~1.5 km before the switch (`PlanetTerrain.prewarm_far`,
+  `SpaceTravel.prewarm_bodies`). The station's walls and dome are built first and
+  its floors, inner panels and lamps a few frames later.
+- **The last frame before and the first after look the same.** In space the sky
+  takes the parent planet's up in every scene (it had turned to the moon's, which
+  put a dark brown "ground" behind it), and every planet's ambient light eases to
+  the plain time of day (the station's 1.6x fill had made the moon brighter). The
+  moon drawn in the port's sky uses the same noise as its own scene. The HUD's top
+  and bottom bars are there on the first frame and keep the old place names until
+  the new ones are known; no "Approaching..." toast and no stamina bar in the
+  cockpit. The chase camera keeps its view and lag.
+- **Nothing you hear stops.** The engine drone is one player that outlives the
+  scene, the music plays on (a fight broken off by the switch ends quietly, its
+  space track playing until you come down), and arriving above the moon's edge of
+  space no longer counts as climbing out (no new orbital fight on arrival).
+- `scenes/handoff_trace.gd`: a rendered trace of the switch (frame times, the
+  pictures either side and how different they are, the music and the engine).
+- **No black, turned frame at the switch.** The new scene's camera blended in
+  over ~0.4 s from the on-foot camera, which stands on the town's ground: one
+  frame of the town at a tilt, then a few of black sky. A handoff now puts the
+  camera straight onto the chase view it carried (`CameraRigNode.snap_override`),
+  with the flight read-out filled in on that same frame and the footer's HP,
+  stamina and fuel kept until the new scene's body and gear are built.
+- **The way home is ~40% shorter.** The port's first frame on arrival went from
+  ~335 ms to ~205 ms: its rocks (mesas, hoodoos, boulders and their colliders),
+  the moon's ball in its sky and the town's cover spots are made once a session
+  and reused, since the port was already built before you left. Four garrisons
+  each working out the same 56 ms of cover spots in one frame (a 240 ms spike a
+  second after arrival) now share one list.
+- The trace flies there and back, and keeps every frame drawn around each switch.
+
+## Smooth orbit over the port; no "edge of space" (2026-10-29)
+
+- **No more stutter flying high.** Climbing past ~2 km and on toward the moon
+  ran at ~150 ms a frame whenever the Remnant's interceptor was up hunting you.
+  Its ground checks (and your ship's) scanned every box, mesa and boulder in the
+  desert from that high, and 60 Hz physics fell behind. The ground lookup now
+  also skips anything not under the line it measures along, with the same
+  answers as before. Orbit runs at ~10 ms a frame, none over 25 ms.
+- **Space is just the sky.** The HUD's "EDGE OF SPACE" bar, the "In orbit"
+  toast and the music switching to the space track at 4,000 m are gone; the sky
+  darkens as you climb and that is all. The space track now plays during a fight
+  in orbit. Climbing out still starts the pad's orbital fight.
+- `scenes/orbit_trace.gd`: a rendered trace from the pad to the moon handoff,
+  frame times by altitude.
+
+## Sand nomad heads for the native packs (2026-10-29)
+
+- **The dune nomads wear a new sand head.** It is the same freaky beaked goggle mask
+  as before, remade with Hyper3D: a sand cloth hood and a matte bone mask instead
+  of the teal hood and brass. Every pack uses it; leaders still wear the helmet.
+- **Three variations for later NPCs:** `nomad_crest`, `nomad_maw` and `nomad_horn`,
+  each in its own sand and bone tones. No pack uses them yet.
+- **All four are in the character builder** (F11, Character, Head).
+- The snow planets' frost folk keep the goggle head in their cold colours.
 
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 

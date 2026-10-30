@@ -60,7 +60,7 @@ func _sync_bolts(df) -> void:
 			bolt_nodes.erase(uid)
 
 
-## Flashes for the director's hit and kill events, and (issue #16) the sound of
+## Flashes for the director's hits, an explosion for each kill, and (issue #16) the sound of
 ## every gun, missile, hit and kill where it happened.
 func on_event(e: Dictionary) -> void:
 	match str(e.type):
@@ -73,8 +73,7 @@ func on_event(e: Dictionary) -> void:
 			Sound.play("ship_hit", e.point)
 		"kill":
 			Sound.play("ship_boom", e.point)
-			flash(e.point, 6.0, 0.9, Color("#ff9a4a"))
-			flash(e.point, 3.0, 0.4, Color("#fff4dc"))
+			ExplosionFx.big(self, e.point, 1.2, true)
 
 
 func flash(point: Vector3, size: float, life: float, color: Color) -> void:

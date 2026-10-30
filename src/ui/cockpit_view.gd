@@ -5,8 +5,8 @@ extends Control
 ## a dashboard runs across the bottom. Its instruments work, from the same values
 ## the chase view's HUD gets:
 ##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
-##   hull, shield and boost meters, the edge-of-space bar, and one lamp for the
-##   Shift ability (lit while it runs, dark when not).
+##   hull, shield and boost meters, and one lamp for the Shift ability (lit while
+##   it runs, dark when not).
 ##
 ## Drawn flat over the camera, not modelled: the cockpit camera is locked to the
 ## ship (ChaseCamera.COCKPIT), so a painted frame stays put exactly as a modelled
@@ -118,8 +118,6 @@ func _draw_instruments(vp: Vector2) -> void:
 	_lamp(lamp, 9.0, on)
 	draw_string(font, lamp + Vector2(18, fs * 0.35), str(values.get("ability", "boost")).to_upper(),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 4, LAMP_ON if on else Color(0.6, 0.55, 0.5, 0.9))
-	# The edge-of-space bar, upright at the panel's right edge.
-	_bar_v(Vector2(px + pw + 18.0, row), r * 1.6, _v("space_fraction"), "SPACE", font, fs)
 	if vessel_name != "":
 		draw_string(font, Vector2(0, vp.y - 10.0), vessel_name.to_upper(), HORIZONTAL_ALIGNMENT_CENTER, vp.x, fs - 5,
 			Color(0.62, 0.58, 0.52, 0.8))

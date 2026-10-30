@@ -38,7 +38,7 @@ func _town() -> Node:
 func _values() -> Dictionary:
 	return {
 		"speed": 120.0, "throttle": 0.6, "max_speed": 300.0, "boost": 0.5, "agl": 400.0, "altitude": 1234.0,
-		"climb": 12.0, "space_fraction": 0.2, "state": "FLYING", "hull": 80, "hull_max": 100, "shield": 30,
+		"climb": 12.0, "state": "FLYING", "hull": 80, "hull_max": 100, "shield": 30,
 		"shield_max": 60.0, "pitch": 12.0, "roll": -25.0, "heading": 275.0, "ability": "drift", "ability_on": true,
 	}
 
