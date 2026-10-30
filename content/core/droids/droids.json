@@ -161,6 +161,11 @@
           "trim": "#2e2e32",
           "eye": "#ff2020",
           "dark_gun": true
+        },
+        "white": {
+          "body": "#eeece6",
+          "trim": "#9aa0a8",
+          "eye": "#4ad0ff"
         }
       },
       "look": {
@@ -284,6 +289,18 @@
     "pause_s": 4.0,
     "load_lift": 1.05,
     "note": "Issue #64: an old cargo droid that rattles round the landing pit, like T-89 a fixture of the pit. Nobody owns it. It carries the pickup named by 'carries' (pickups/port_town.json, pit_jetpack) on its back until someone takes it ([E] beside it, the same pickup as before, so saves still know it is taken). route: pit floor points (town coordinates) it walks in turn, stopping pause_s at each. Oda knows it as a rumor (rumors/port_town.json, r_pit_hauler)."
+  },
+  "locals": {
+    "note": "Issue #187: the locals' white assassin droids. One walks each outpost the locals hold (its 'patrol' route), and once they hold the barracks two walk the Remnant's old main street patrol (remnant.patrol). They leave you alone until you hurt a local (their side's alarm) or shoot one, then fight like the Remnant's. Not for sale: the merchant's variants are player_variants.",
+    "faction": "locals",
+    "units": [
+      { "kind": "assassin", "variant": "white", "hp": 140, "start": 0 },
+      { "kind": "assassin", "variant": "white", "hp": 140, "start": 3 }
+    ],
+    "outpost_units": [
+      { "kind": "assassin", "variant": "white", "hp": 140, "route": "patrol" }
+    ],
+    "gun": { "range": 34.0, "interval": 0.9, "damage": 20.0, "bolt_speed": 46.0, "spread_deg": 0.5, "color": "#ffb02a" }
   },
   "remnant": {
     "faction": "imperial_remnant",

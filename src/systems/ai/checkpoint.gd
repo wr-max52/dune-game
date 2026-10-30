@@ -62,6 +62,10 @@ var _search_from := Vector3.ZERO
 var _went_on := false         ## said "go on" this visit while cleared
 var _s: Dictionary = {}
 var found: Array = []         ## what the search turned up (FOUND state)
+## Issue #187: how rattled the Remnant are by the outposts they have lost
+## (Territory.gate_strict / bribe_mult; the garrison sets them each frame).
+var strict := 0               ## bands one worse per step
+var bribe_mult := 1.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -132,7 +136,7 @@ func _bands() -> Array:
 ## The band with the modifiers: armed close or a recent shot each make it one worse;
 ## at night a hostile band becomes night_hostile (they will take a bribe).
 func band_for(standing: int, night: bool, armed_close: bool, recent_shot: bool) -> String:
-	var i := BANDS.find(base_band(standing))
+	var i := BANDS.find(base_band(standing)) + strict
 	if armed_close:
 		i += 1
 	if recent_shot:
@@ -146,8 +150,8 @@ func band_for(standing: int, night: bool, armed_close: bool, recent_shot: bool) 
 func bribe_price(b: String, night: bool) -> int:
 	var prices: Dictionary = cfg.get("bribe", { "papers": 10, "search": 25, "night_hostile": 40 })
 	if b == "search" and night:
-		return int(prices.get("papers", 10))
-	return int(prices.get(b, 0))
+		return int(round(int(prices.get("papers", 10)) * bribe_mult))
+	return int(round(int(prices.get(b, 0)) * bribe_mult))
 
 
 func choices_for(b: String, night: bool, credits: int) -> Array:

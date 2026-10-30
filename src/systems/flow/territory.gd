@@ -1,0 +1,220 @@
+class_name Territory
+extends RefCounted
+## Who holds each place (issue #187): the Remnant or the locals. Pure and static,
+## like Story; its state lives in WorldState.control (saved with the world):
+##   { <outpost id>: { owner: "locals", hold: seconds left }, supply: <outpost id> }
+## An outpost with no entry is the Remnant's.
+##
+##   an outpost    the Remnant's until every trooper there is dead (take), then the
+##                 locals' for hold_s of play. A supply run from Oda (j_supply)
+##                 fills that up again; when it runs out, or the locals' guards
+##                 there are all dead, the Remnant take it back (retake).
+##   the barracks  the Remnant's until the story is done (the fleet beaten) or the
+##                 Remnant are driven off (all three outposts held at once); then
+##                 the locals'. Story.town_garrison() reads it.
+##
+## What it changes: who stands at each place (RemnantOutposts, the town scene and
+## DroidController ask owner()), the gate checkpoint (gate_strict, bribe_mult),
+## the fence's prices (fence_mult), Oda's supply job, rumors (the flags below),
+## the objective pointer and the F1 screen (summary).
+##
+## Numbers and lines: content/core/story/territory.json.
+
+const PATH := "res://content/core/story/territory.json"
+const BARRACKS := "barracks"
+const REMNANT := "remnant"
+const LOCALS := "locals"
+const DRIVEN_OFF := "remnant_driven_off"
+const SUPPLY_JOB := "j_supply"
+
+static var _cfg: Dictionary = {}
+
+
+static func cfg() -> Dictionary:
+	if _cfg.is_empty():
+		var f := FileAccess.open(PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f != null else null
+		_cfg = d if d is Dictionary else {}
+	return _cfg
+
+
+static func n(key: String, fallback: float) -> float:
+	return float(cfg().get(key, fallback))
+
+
+static func line(key: String) -> String:
+	return str(cfg().get("lines", {}).get(key, ""))
+
+
+static func places() -> Array:
+	return Story.OUTPOSTS + [BARRACKS]
+
+
+## "remnant" or "locals".
+static func owner(id: String) -> String:
+	if id == BARRACKS:
+		return LOCALS if Story.remnant_hostile() or WorldState.has_flag(DRIVEN_OFF) else REMNANT
+	if WorldState.has_flag(DRIVEN_OFF):
+		return LOCALS
+	var c = WorldState.control.get(id, {})
+	return str(c.get("owner", REMNANT)) if c is Dictionary else REMNANT
+
+
+static func held() -> Array:
+	return Story.OUTPOSTS.filter(func(id): return owner(str(id)) == LOCALS)
+
+
+## Outposts the Remnant have lost.
+static func lost() -> int:
+	return held().size()
+
+
+static func hold_left(id: String) -> float:
+	var c = WorldState.control.get(id, {})
+	return float(c.get("hold", 0.0)) if c is Dictionary else 0.0
+
+
+## The locals there are running short (a supply run would help).
+static func short(id: String) -> bool:
+	return owner(id) == LOCALS and not WorldState.has_flag(DRIVEN_OFF) and hold_left(id) <= n("supply_warn_s", 420.0)
+
+
+# ------------------------------------------------------------------ changes
+
+## Every trooper at the outpost is dead: the locals have it.
+static func take(id: String) -> void:
+	if not Story.OUTPOSTS.has(id) or owner(id) == LOCALS:
+		return
+	WorldState.control[id] = { "owner": LOCALS, "hold": n("hold_s", 900.0) }
+	WorldState.bump("outposts_taken")
+	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("outpost_taken", 6)), "The locals took an outpost.")
+	WorldState.log_event(line("taken") % Story.outpost_label(id))
+	if lost() == Story.OUTPOSTS.size():
+		WorldState.set_flag(DRIVEN_OFF)
+		_cancel_supply()
+		WorldState.log_event(line("driven_off"))
+	_sync_flags()
+
+
+## The Remnant have it again.
+static func retake(id: String) -> void:
+	if owner(id) != LOCALS or WorldState.has_flag(DRIVEN_OFF):
+		return
+	WorldState.control.erase(id)
+	if supply_out() == id:
+		_cancel_supply()
+	WorldState.bump("outposts_retaken")
+	WorldState.set_flag("outpost_retaken")
+	WorldState.log_event(line("retaken") % Story.outpost_label(id))
+	_sync_flags()
+
+
+## The locals' guards at an outpost are all dead: the Remnant take it on the next tick.
+static func guards_lost(id: String) -> void:
+	if owner(id) == LOCALS and WorldState.control.get(id) is Dictionary:
+		WorldState.control[id].hold = 0.0
+
+
+## Seconds of play (WorldState.tick). The locals' hold on each outpost runs down.
+static func tick(dt: float) -> void:
+	if WorldState.has_flag(DRIVEN_OFF):
+		return
+	var warn := n("supply_warn_s", 420.0)
+	for id in held():
+		var c: Dictionary = WorldState.control[id]
+		var was := float(c.hold)
+		c.hold = was - dt
+		if was > warn and float(c.hold) <= warn:
+			WorldState.log_event(line("warn") % Story.outpost_label(str(id)))
+		if float(c.hold) <= 0.0:
+			retake(str(id))
+	_sync_flags()
+
+
+## Flags the rumors and the board read.
+static func _sync_flags() -> void:
+	WorldState.set_flag("locals_hold_outpost", lost() > 0)
+	WorldState.set_flag("outpost_short", Story.OUTPOSTS.any(func(id): return short(str(id))))
+
+
+# ------------------------------------------------------------------ supply runs (Oda's j_supply)
+
+## The outpost a supply run would go to (the one shortest on time), or "".
+static func supply_target() -> String:
+	var best := ""
+	for id in Story.OUTPOSTS:
+		if short(str(id)) and (best == "" or hold_left(str(id)) < hold_left(best)):
+			best = str(id)
+	return best
+
+
+## Where the supplies you carry are going, or "".
+static func supply_out() -> String:
+	return str(WorldState.control.get("supply", ""))
+
+
+static func start_supply() -> bool:
+	var to := supply_target()
+	if to == "" or supply_out() != "":
+		return false
+	WorldState.control["supply"] = to
+	WorldState.jobs_taken[SUPPLY_JOB] = "active"
+	WorldState.log_event("Took the job: supplies for %s." % Story.outpost_label(to))
+	return true
+
+
+## The player brought the supplies to outpost `id`. Returns the pay (0 = not theirs).
+static func deliver(id: String) -> int:
+	if supply_out() != id or owner(id) != LOCALS:
+		return 0
+	WorldState.control[id].hold = n("hold_s", 900.0)
+	_cancel_supply()
+	var pay := int(cfg().get("supply_pay", 120))
+	WorldState.credits += pay
+	WorldState.bump("supplies_delivered")
+	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("supplied", 3)), "Supplies reached the locals.")
+	WorldState.log_event(line("supplied") % [Story.outpost_label(id), pay])
+	_sync_flags()
+	return pay
+
+
+## The job is open again (done, or its outpost is gone).
+static func _cancel_supply() -> void:
+	WorldState.control.erase("supply")
+	WorldState.jobs_taken.erase(SUPPLY_JOB)
+
+
+# ------------------------------------------------------------------ what it changes
+
+## The soldier profile the locals put on a post ("outposts" or "barracks"), or "".
+static func locals_post(where: String, post: String) -> String:
+	return str(cfg().get(where, {}).get("posts", {}).get(post, ""))
+
+
+## Bands stricter at the Remnant's gate (0 or 1).
+static func gate_strict() -> int:
+	return 1 if lost() >= int(cfg().get("gate", {}).get("strict_from", 2)) else 0
+
+
+static func bribe_mult() -> float:
+	return 1.0 + lost() * float(cfg().get("gate", {}).get("bribe_per_lost", 0.5))
+
+
+## The fence pays more for contraband with every outpost the locals hold.
+static func fence_mult() -> float:
+	return 1.0 + lost() * n("fence_per_held", 0.15)
+
+
+## For the F1 screen: one line per place, "Dry wash outpost   LOCALS 12:30".
+static func summary() -> Array:
+	var labels: Dictionary = cfg().get("labels", {})
+	var out: Array = []
+	for id in places():
+		var label := "Barracks" if id == BARRACKS else Story.outpost_label(str(id)).trim_prefix("the ")
+		var who := owner(str(id))
+		var tag := str(labels.get(who, who.to_upper()))
+		if id != BARRACKS and who == LOCALS and not WorldState.has_flag(DRIVEN_OFF):
+			var left := maxf(0.0, hold_left(str(id)))
+			tag = "%s %d:%02d" % [str(labels.get("short", tag)) if short(str(id)) else tag, int(left) / 60, int(left) % 60]
+		out.append("%-17s %s" % [label.capitalize().left(17), tag])
+	return out

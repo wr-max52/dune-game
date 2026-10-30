@@ -207,6 +207,11 @@ func info_text() -> String:
 	for f in WorldState.FACTIONS:
 		var v := int(WorldState.standing.get(f, 0))
 		t.append("%-17s %s %+4d %s" % [str(f).capitalize(), RetroUI.bar((v + 100) / 200.0, 10), v, standing_word(v)])
+	if Objective.home():
+		t.append("")
+		t.append("==[ CONTROL ]==================")    # issue #187: who holds each place
+		for s in Territory.summary():
+			t.append("  " + str(s))
 	t.append("")
 	t.append("==[ LATEST ]===================")
 	var ev: Array = WorldState.events.slice(-4)

@@ -594,14 +594,19 @@ func _npcs_root() -> Node3D:
 func _build_npc(m: Dictionary) -> void:
 	if not _is_live_npc(m):
 		return
+	var soldier := str(m.soldier)
+	var key := "npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)]
 	if _is_remnant_post(m) and not Story.town_garrison():
-		return
+		# Issue #187: the locals hold the barracks; their guard on this post, if any.
+		soldier = Territory.locals_post("barracks", str(m.id))
+		key += "/locals"
+		if soldier == "":
+			return
 	var here := town.marker_pos(str(m.id))
 	var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
 	if m.has("face"):
 		face = Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
-	var npc := make_soldier(str(m.soldier), here, atan2(face.x - here.x, face.z - here.z), str(m.id),
-		"npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)])
+	var npc := make_soldier(soldier, here, atan2(face.x - here.x, face.z - here.z), str(m.id), key)
 	if npc == null:
 		return
 	characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
@@ -637,14 +642,42 @@ func _npc_brains() -> void:
 					continue
 				var first := garrison == null and outposts.garrisons.is_empty()
 				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin)
+		# Issue #187: someone always counts the player out when they are downed, even
+		# with no Remnant left in town or at the outposts (a garrison of nobody).
+		if garrison == null and (outposts == null or outposts.garrisons.is_empty()):
+			garrison = _make_garrison("Garrison", [], true)
 	if npc_brains and not locals.is_empty():
-		townsfolk = Townsfolk.new()
-		townsfolk.name = "Townsfolk"
-		add_child(townsfolk)
-		townsfolk.setup(self, locals)
+		townsfolk = make_townsfolk("Townsfolk", locals)
 		if gear != null:
 			gear.vendor_open = townsfolk.vendor_open
 			gear.closed_line = townsfolk.closed_line
+	if npc_brains and outposts != null:
+		# Issue #187: the locals at each outpost they hold have their own alarm.
+		for o in outposts.outposts:
+			var mine: Array = outposts.held_by.filter(func(g): return str(g.get_meta("outpost", "")) == str(o.id))
+			if not mine.is_empty():
+				outposts.folks[str(o.id)] = make_townsfolk("Locals_" + str(o.id), mine)
+
+
+## Issue #187: a director for some of the port's locals (the town's, or one outpost's).
+func make_townsfolk(node_name: String, members: Array) -> Townsfolk:
+	var t := Townsfolk.new()
+	t.name = node_name
+	add_child(t)
+	t.setup(self, members)
+	return t
+
+
+## Issue #187: a garrison for an outpost the Remnant have just taken back.
+func make_outpost_garrison(o: Dictionary, members: Array) -> Garrison:
+	return _make_garrison("Garrison_" + str(o.id), members, false, o.origin)
+
+
+## The Townsfolk running the locals at outpost `id` ("" = the town's own).
+func townsfolk_for(id: String) -> Townsfolk:
+	if id != "" and outposts != null and outposts.folks.has(id):
+		return outposts.folks[id]
+	return townsfolk
 
 
 func _make_garrison(node_name: String, members: Array, handles_player: bool, klaxon_at := Vector3.INF) -> Garrison:
@@ -738,6 +771,8 @@ func respawn(r: Dictionary) -> NpcBody:
 	var is_outpost := r.has("outpost")
 	if not is_outpost and not Story.town_garrison():
 		return null
+	if is_outpost and Territory.owner(str(r.outpost)) != Territory.REMNANT:
+		return null                   # issue #187: the locals hold it now
 	_respawned += 1
 	var npc := make_soldier(str(r.soldier), r.at, float(r.yaw), str(r.post),
 		"npc:%s/%s#%d" % [str(town.data.get("id", "town")), str(r.post), _respawned])
@@ -770,6 +805,23 @@ func _withdraw_town_remnant() -> void:
 	if droids != null:
 		droids.withdraw_town_remnant()
 	WorldState.set_flag("gate_checkpoint_up", false)
+	_locals_take_barracks()
+
+
+## Issue #187: the locals move into the barracks: their guards on the posts the
+## Remnant left (territory.json "barracks").
+func _locals_take_barracks() -> void:
+	if not npc_brains or not with_npcs:
+		return
+	for m in town.markers():
+		if not _is_live_npc(m) or not _is_remnant_post(m):
+			continue
+		var before := locals.size()
+		_build_npc(m)
+		if townsfolk != null and locals.size() > before:
+			townsfolk.add_member(locals.back())
+	if gear != null and gear.hud != null:
+		gear.hud.toast(Territory.line("barracks"), 5.0)
 
 
 ## Issue #42: Skrugs's speeder stall outside the back gate. Skrugs joins the bar's

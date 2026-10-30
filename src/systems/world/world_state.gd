@@ -49,6 +49,7 @@ static var ship_fits: Dictionary = {}      ## issue #207: ship id -> [upgrade id
 static var gear_fits: Array = []           ## issues #208, #209: fence offers bought (GearUpgrades)
 static var wreck_ship := ""                ## issue #207: the ship id of the wreck T-89 rebuilt ("" = none)
 static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
+static var control: Dictionary = {}        ## issue #187: who holds each outpost, and the supply run out (Territory)
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -82,6 +83,7 @@ static func reset() -> void:
 	game_hours = 0.0
 	mode = FREEPLAY
 	quests = {}
+	control = {}
 	Quests.news.clear()
 	ship_fits = {}
 	wreck_ship = ""
@@ -180,6 +182,7 @@ static func cooldown_ok(key: String, seconds: float) -> bool:
 
 static func tick(dt: float) -> void:
 	clock += dt
+	Territory.tick(dt)          # issue #187: the locals' hold on each outpost runs down
 
 
 # ------------------------------------------------------------------ things that happen
@@ -314,6 +317,8 @@ static func job(id: String) -> Dictionary:
 					return _smuggle_job(j)
 				"bounty":
 					return _bounty_job(j)
+				"supply":
+					return _supply_job(j)
 			return j
 	return {}
 
@@ -334,6 +339,8 @@ static func open_jobs(tier: String) -> Array:
 		if kind == "smuggle" and (not smuggle_ready() or str(j.get("location", "")) != here):
 			continue
 		if kind == "bounty" and not (bounty_ready() and (away or Story.bounties_open())):
+			continue
+		if kind == "supply" and (away or Territory.supply_target() == ""):
 			continue
 		var req: Dictionary = j.get("requires", {})
 		if away and kind in ["smuggle", "bounty"]:
@@ -361,6 +368,8 @@ static func accept_job(id: String) -> bool:
 		return _start_smuggle(job(id))
 	if str(job(id).get("kind", "")) == "bounty":
 		return _start_bounty(job(id))
+	if str(job(id).get("kind", "")) == "supply":
+		return Territory.start_supply()
 	if job(id).is_empty() or jobs_taken.has(id):
 		return false
 	jobs_taken[id] = "active"
@@ -376,6 +385,18 @@ static func _complete_jobs(trigger: String) -> void:
 			credits += int(j.get("pays", 0))
 			set_flag("job_done_" + id)
 			log_event("Finished the job: " + str(j.get("title", id)))
+
+
+## Issue #187: Oda's supply run, its text naming the outpost short of supplies
+## (or the one the supplies are going to, once taken).
+static func _supply_job(j: Dictionary) -> Dictionary:
+	var out := j.duplicate()
+	var to := Territory.supply_out()
+	if to == "":
+		to = Territory.supply_target()
+	out.text = str(j.get("text", "%s %d")) % [Story.outpost_label(to) if to != "" else "an outpost", int(Territory.cfg().get("supply_pay", 120))]
+	out.pays = int(Territory.cfg().get("supply_pay", 120))
+	return out
 
 
 # ------------------------------------------------------------------ smuggling
@@ -717,6 +738,7 @@ static func to_save() -> Dictionary:
 		"ship_fits": ship_fits.duplicate(true),
 		"wreck_ship": wreck_ship,
 		"gear_fits": gear_fits.duplicate(),
+		"control": control.duplicate(true),
 	}
 
 
@@ -756,6 +778,7 @@ static func from_save(d: Dictionary) -> void:
 	ship_fits = d.get("ship_fits", {}).duplicate(true)
 	wreck_ship = str(d.get("wreck_ship", ""))
 	gear_fits = d.get("gear_fits", []).duplicate()
+	control = d.get("control", {}).duplicate(true)
 
 
 static func _read_json(path: String) -> Variant:

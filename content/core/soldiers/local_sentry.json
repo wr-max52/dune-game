@@ -1,0 +1,25 @@
+{
+  "id": "local_sentry",
+  "base": "local_guard",
+  "label": "Local sentry",
+  "role": "sentry",
+  "note": "Issue #187: a local guard who holds a post and never leaves it: the outposts the locals take and the barracks tower. Longer eyes, tougher, like the Remnant's outpost troopers. Only the blocks below differ from local_guard.json.",
+  "hp": 90,
+  "perception": {
+    "sight_range": 55.0,
+    "fov_deg": 160.0,
+    "reaction_s": 0.7
+  },
+  "combat": {
+    "hold_ground": true,
+    "aim_error_deg": 1.8,
+    "cover_search_radius": 0.0,
+    "hold_radius": 3.0,
+    "chase_leash": 30.0
+  },
+  "patrol": {
+    "pause_s": 6.0,
+    "look_around_deg": 90.0,
+    "look_every_s": 3.0
+  }
+}

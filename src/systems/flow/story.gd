@@ -17,8 +17,9 @@ extends RefCounted
 ## the player talks to them and says the line it gets back.
 ##
 ## The Remnant follow the story too: before the fleet is beaten the town's
-## garrison respawns behind the barracks; after, the town is free of them, and
-## the desert outposts are always hostile.
+## garrison respawns behind the barracks; after, the town is free of them (issue
+## #187: the locals hold the barracks), and the desert outposts are always hostile.
+## Who holds the outposts in between: Territory.
 
 const PATH := "res://content/core/story/main.json"
 const OUTPOSTS := ["remnant_outpost_near", "remnant_outpost_mid", "remnant_outpost_far"]
@@ -252,8 +253,10 @@ static func remnant_hostile() -> bool:
 	return WorldState.has_flag("remnant_fleet_beaten")
 
 
+## The Remnant hold the town's barracks (issue #187: until the story is done or
+## they are driven off; then the locals do, Territory.owner).
 static func town_garrison() -> bool:
-	return not remnant_hostile()
+	return Territory.owner(Territory.BARRACKS) == Territory.REMNANT
 
 
 ## Issue #193: the cruiser's general is dead; nobody is left aboard.

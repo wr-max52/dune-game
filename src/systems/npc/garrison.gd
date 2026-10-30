@@ -227,8 +227,10 @@ func _physics_process(dt: float) -> void:
 	var night := (profile.get("checkpoint", {}).get("night_times", ["dusk"]) as Array).has(WorldState.time_of_day)
 	var vehicle := _hostile_vehicle()
 
-	# The gate.
+	# The gate. Issue #187: edgier for every outpost the Remnant have lost.
 	var gate_alive := alive.filter(func(g): return guards.has(g))
+	checkpoint.strict = Territory.gate_strict()
+	checkpoint.bribe_mult = Territory.bribe_mult()
 	checkpoint.update(dt, {
 		"standing": int(WorldState.standing.get("imperial_remnant", 0)), "night": night,
 		"credits": WorldState.credits, "player_pos": ppos, "gate_pos": gate_pos, "gate_x": gate_pos.x,

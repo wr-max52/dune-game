@@ -21,6 +21,12 @@ extends Node3D
 ## Before the fleet is beaten they are like the town's garrison (standing decides);
 ## after, they shoot on sight (Story.remnant_hostile, read by the Garrison).
 ## Dead troopers come back after a few minutes (the town's respawn rule).
+##
+## Issue #187: an outpost changes hands (Territory). Kill every trooper at one and
+## the locals have it: their desert guards (territory.json "outposts" posts) and a
+## white assassin droid move in once you are out of sight (or after move_in_s),
+## run by the outpost's own Townsfolk. When the Remnant take it back their
+## troopers and droids return the same way, once you are swap_dist away.
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
@@ -33,6 +39,9 @@ var ground: WorldGround
 var outposts: Array = []           ## { id, label, origin, yaw, cfg }
 var guards: Array = []             ## NpcBody at the outposts (also in demo.npcs)
 var garrisons: Dictionary = {}     ## outpost id -> its own Garrison (the town builds them)
+var folks: Dictionary = {}         ## issue #187: outpost id -> the Townsfolk running the locals there
+var held_by: Array = []            ## issue #187: NpcBody, the locals' guards at the outposts (also in demo.locals)
+var swaps := 0                     ## issue #187: outposts that changed hands in this scene, for traces
 var target: NpcBody                ## the bounty target, while one is out there
 var target_run := -1               ## which contract it is
 var bounty_kills := 0              ## for tests and traces
@@ -78,7 +87,7 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
 		var loc: Dictionary = _cc.get_location(id)
 		var yaw := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
-		var o := { "id": id, "label": str(loc.get("label", id)), "cfg": loc,
+		var o := { "id": id, "label": str(loc.get("label", id)), "cfg": loc, "side": Territory.owner(id), "wait": 0.0,
 			"origin": Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z), "yaw": yaw }
 		# Issue #77: on the home planet's ball the outpost stands along the ground's
 		# up there, in the same frame WorldGround gives its buildings.
@@ -91,8 +100,13 @@ func _build_outpost(id: String, world: Dictionary) -> void:
 		if demo.use_look:
 			parts.append(_dress.bind(o))
 		parts.append(_park_ship.bind(o))
-		for p in ["guard_a", "guard_b", "guard_c"]:
-			parts.append(_add_guard.bind(o, p))
+		if o.side == Territory.LOCALS:
+			var posts: Dictionary = Territory.cfg().get("outposts", {}).get("posts", {})
+			for p in posts:
+				parts.append(_add_local.bind(o, str(p), str(posts[p])))
+		else:
+			for p in TROOPER_POSTS:
+				parts.append(_add_guard.bind(o, p))
 		_queue = parts + _queue          # this outpost's pieces next, then the others
 
 
@@ -136,6 +150,8 @@ func droid_specs() -> Array:
 
 # ------------------------------------------------------------------ people
 
+const TROOPER_POSTS := ["guard_a", "guard_b", "guard_c"]
+
 func _add_guard(o: Dictionary, key: String) -> NpcBody:
 	var here := point(o, key)
 	var face: Vector3 = here + (here - (o.origin as Vector3)).normalized()      # looking out, away from the building
@@ -148,6 +164,120 @@ func _add_guard(o: Dictionary, key: String) -> NpcBody:
 	return g
 
 
+## Issue #187: one of the locals' guards on an outpost post, facing out like a trooper.
+func _add_local(o: Dictionary, key: String, soldier: String) -> NpcBody:
+	var here := point(o, key)
+	var face: Vector3 = here + (here - (o.origin as Vector3)).normalized()
+	var g: NpcBody = demo.make_soldier(soldier, here, atan2(face.x - here.x, face.z - here.z),
+		"%s/%s" % [o.id, key], "npc:%s/locals/%s#%d" % [o.id, key, WorldState.count("outposts_taken")])
+	if g == null:
+		return null
+	adopt(g, str(o.id))
+	held_by.append(g)
+	return g
+
+
+## The people standing at outpost `o` for one side, alive or not.
+func people(o: Dictionary, side: String) -> Array:
+	var list: Array = held_by if side == Territory.LOCALS else guards
+	return list.filter(func(g): return is_instance_valid(g) and str(g.get_meta("outpost", "")) == str(o.id))
+
+
+func _alive_at(o: Dictionary, side: String) -> int:
+	return people(o, side).filter(func(g): return not g.dead).size()
+
+
+## Outposts sleep their people while the player is far; who holds each one is
+## checked every frame (three of them: nothing to it).
+func _tick_control(dt: float, p: Node3D) -> void:
+	for o in outposts:
+		var id := str(o.id)
+		var want := Territory.owner(id)
+		var away: float = p.global_position.distance_to(o.origin) if p != null else INF
+		if want == o.side:
+			o.wait = 0.0
+			if not people(o, o.side).is_empty() and _alive_at(o, o.side) == 0:
+				if o.side == Territory.REMNANT:
+					Territory.take(id)          # every trooper dead: the locals have it
+				else:
+					Territory.guards_lost(id)   # the locals' guards dead: the Remnant will be back
+			if o.side == Territory.LOCALS and Territory.supply_out() == id and away <= Territory.n("supply_reach", 25.0):
+				var pay := Territory.deliver(id)
+				_toast(Territory.line("supplied") % [o.label, pay])
+			continue
+		o.wait = float(o.wait) + dt
+		# Change hands out of sight; the locals also walk in while you watch.
+		if away > Territory.n("swap_dist", 110.0) or (want == Territory.LOCALS and float(o.wait) >= Territory.n("move_in_s", 30.0)):
+			swap(o, want)
+
+
+## Outpost `o` is `side`'s now: the other side's people and droids go, this side's come.
+func swap(o: Dictionary, side: String) -> void:
+	var id := str(o.id)
+	var p: Node3D = demo._player if demo != null else null
+	var seen: bool = p != null and p.global_position.distance_to(o.origin) <= Territory.n("swap_dist", 110.0)
+	for g in people(o, o.side):
+		if g.dead and seen:
+			continue                       # the fallen stay where they fell while you are looking
+		_drop(g, id)
+	var g0 = garrisons.get(id, null)
+	if g0 != null:
+		g0.respawns = g0.respawns.filter(func(r): return str(r.get("outpost", "")) != id)
+	o.side = side
+	o.wait = 0.0
+	swaps += 1
+	if side == Territory.LOCALS:
+		var posts: Dictionary = Territory.cfg().get("outposts", {}).get("posts", {})
+		var mine: Array = []
+		for k in posts:
+			var g := _add_local(o, str(k), str(posts[k]))
+			if g != null:
+				mine.append(g)
+		var folk = folks.get(id, null)
+		if folk == null:
+			folks[id] = demo.make_townsfolk("Locals_" + id, mine)
+		else:
+			for g in mine:
+				folk.add_member(g)
+		_toast(Territory.line("taken") % o.label)
+	else:
+		var mine: Array = []
+		for k in TROOPER_POSTS:
+			var g := _add_guard(o, k)
+			if g != null:
+				mine.append(g)
+		var gar = garrisons.get(id, null)
+		if gar == null:
+			garrisons[id] = demo.make_outpost_garrison(o, mine)
+		else:
+			for g in mine:
+				gar.add_member(g)
+		_toast(Territory.line("retaken") % o.label)
+	if demo.droids != null:
+		demo.droids.clear_outpost_units(id)
+		demo.droids.build_outpost_units(id)
+
+
+## One body leaves outpost `id` for good.
+func _drop(g: NpcBody, id: String) -> void:
+	var gar = garrisons.get(id, null)
+	if gar != null:
+		gar.remove_member(g)
+	var folk = folks.get(id, null)
+	if folk != null:
+		folk.remove_member(g)
+	guards.erase(g)
+	held_by.erase(g)
+	demo.npcs.erase(g)
+	demo.locals.erase(g)
+	g.queue_free()
+
+
+func _toast(text: String) -> void:
+	if text != "" and demo.gear != null and demo.gear.hud != null:
+		demo.gear.hud.toast(text, 5.0)
+
+
 ## Outpost guards use the shared map, which includes a small terrain tile around
 ## each outpost; they still sleep while the player is far away.
 func adopt(g: NpcBody, outpost_id: String) -> void:
@@ -155,16 +285,18 @@ func adopt(g: NpcBody, outpost_id: String) -> void:
 	g.set_meta("outpost", outpost_id)
 
 
-func _physics_process(_dt: float) -> void:
+func _physics_process(dt: float) -> void:
 	_sync_target()
 	var p: Node3D = demo._player if demo != null else null
 	if p == null:
 		return
-	for g in guards + ([target] if target != null else []):
+	_tick_control(dt, p)
+	for g in guards + held_by + ([target] if target != null else []):
 		if is_instance_valid(g) and not g.dead:
 			var far: bool = g.global_position.distance_to(p.global_position) > WAKE_DIST
 			g.process_mode = Node.PROCESS_MODE_DISABLED if far else Node.PROCESS_MODE_INHERIT
 	guards = guards.filter(func(g): return is_instance_valid(g))
+	held_by = held_by.filter(func(g): return is_instance_valid(g))
 
 
 ## Put the contract's officer at its outpost, or take them away when the contract
