@@ -21,6 +21,8 @@ var _wait := 0
 var _frame := 0
 var _only: Array = []
 var _follow := Vector3.ZERO     ## third person: camera offset from the player (zero = off)
+var _detail: Array = []         ## [weapon id, eye, target] in the weapon's space: a close-up
+var _each := Callable()         ## run every frame while a shot waits (turning the view)
 
 
 func _initialize() -> void:
@@ -45,11 +47,16 @@ func _initialize() -> void:
 		["fpv_pistol_ads", _fpv_ads.bind("pistol_blaster")],
 		["fpv_pistol_fire", _fpv_fire.bind("pistol_blaster")],
 		["fpv_rifle", _fpv.bind("rifle_blaster", 0.0)],
+		["fpv_rifle_fire", _fpv_fire.bind("rifle_blaster")],
 		["fpv_rifle_down", _fpv.bind("rifle_blaster", -0.6)],
 		["fpv_rifle_ads", _fpv_ads.bind("rifle_blaster")],
 		["fpv_rifle_into_sun", _fpv.bind("rifle_blaster", 0.0, true)],
 		["fpv_rifle_sprint", _fpv_move.bind("rifle_blaster", true, 40)],
 		["fpv_rifle_wall", _fpv_wall.bind("rifle_blaster")],
+		["fpv_rifle_walk", _fpv_move.bind("rifle_blaster", false, 47)],
+		["fpv_rifle_turn", _fpv_turn.bind("rifle_blaster", 3.0)],
+		["fpv_rifle_turn_back", _fpv_turn.bind("rifle_blaster", -3.0)],
+		["fpv_rifle_look_up", _fpv_turn.bind("rifle_blaster", 0.0, 1.6)],
 		["fpv_rifle_reload", _fpv_reload.bind("rifle_blaster")],
 		["fpv_pistol_reload", _fpv_reload.bind("pistol_blaster")],
 		["fpv_rifle_draw", _fpv_swap.bind("", "rifle_blaster", 0.5)],
@@ -60,13 +67,43 @@ func _initialize() -> void:
 		["fpv_sword_swing_b", _fpv_swing.bind(10)],
 		["fpv_sword_swing_c", _fpv_swing.bind(18)],
 		["fpv_sword_block", _fpv_block],
-		["tpv_rifle_rest_side", _tpv.bind("rifle_blaster", false, Vector3(-2.6, 0.3, 0.3))],
-		["tpv_rifle_sprint_side", _tpv.bind("rifle_blaster", true, Vector3(-2.6, 0.3, 0.3))],
-		["tpv_rifle_sprint_front", _tpv.bind("rifle_blaster", true, Vector3(-0.8, 0.3, 2.4))],
-		["tpv_rifle_sprint_back", _tpv.bind("rifle_blaster", true, Vector3(-0.6, 0.6, -3.2))],
+		["detail_scope", _close.bind("rifle_blaster", Vector3(-0.2, 0.26, 0.05), Vector3(0, 0.17, 0.02))],
+		["detail_scope_rear", _close.bind("rifle_blaster", Vector3(-0.12, 0.24, -0.3), Vector3(0, 0.17, -0.02))],
+		["detail_rifle_hands", _close.bind("rifle_blaster", Vector3(-0.35, 0.12, 0.25), Vector3(0, 0.0, 0.05))],
+		["detail_pistol_hand", _close.bind("pistol_blaster", Vector3(-0.22, 0.1, 0.18), Vector3(0, 0.0, -0.04))],
+		["detail_pistol_ads", _close_ads.bind("pistol_blaster", Vector3(-0.25, 0.08, 0.05), Vector3(0, 0.0, -0.05))],
+		["detail_sword_hands", _close.bind("energy_blade", Vector3(-0.3, 0.05, 0.25), Vector3(0, 0.05, 0.0))],
+		["tpv_rifle_rest_side", _tpv.bind("rifle_blaster", false, Vector3(2.2, 0.2, 0.5))],
+		["tpv_rifle_sprint_side", _tpv.bind("rifle_blaster", true, Vector3(2.2, 0.2, 0.5))],
+		["tpv_rifle_sprint_front", _tpv.bind("rifle_blaster", true, Vector3(0.5, 0.3, 2.4))],
+		["tpv_rifle_sprint_left", _tpv.bind("rifle_blaster", true, Vector3(-2.2, 0.2, 0.6))],
+		["tpv_rifle_sprint_close", _tpv.bind("rifle_blaster", true, Vector3(1.1, -0.1, 0.9))],
+		["tpv_rifle_sprint_close_b", _tpv.bind("rifle_blaster", true, Vector3(1.1, -0.1, 0.9), 51)],
+		["tpv_rifle_sprint_close_c", _tpv.bind("rifle_blaster", true, Vector3(1.1, -0.1, 0.9), 57)],
+		["tpv_rifle_sprint_front_b", _tpv.bind("rifle_blaster", true, Vector3(0.5, 0.3, 2.4), 52)],
+		["tpv_pistol_sprint_side", _tpv.bind("pistol_blaster", true, Vector3(2.2, 0.2, 0.5))],
 	]
+	# A strip through one swipe (strip_<frames>), and a chained second and third
+	# (the combo: double click), for judging the whole arc.
+	for f in range(4, 61, 5):
+		_shots.append(["strip_jump_%02d" % f, _fpv_jump.bind("rifle_blaster", f)])
+	for i in 12:
+		_shots.append(["strip_rreload_%02d" % i, _fpv_reload.bind("rifle_blaster", 4 + i * 11)])
+		_shots.append(["strip_preload_%02d" % i, _fpv_reload.bind("pistol_blaster", 3 + i * 7)])
+	for f in range(1, 13):
+		_shots.append(["strip_draw_%02d" % f, _fpv_swap.bind("", "rifle_blaster", f / 10.0)])
+		_shots.append(["strip_holster_%02d" % f, _fpv_swap.bind("rifle_blaster", "", f / 11.0)])
+		_shots.append(["strip_pdraw_%02d" % f, _fpv_swap.bind("", "pistol_blaster", f / 10.0)])
+	for f in range(0, 24, 2):
+		_shots.append(["strip_unarmed_sprint_%02d" % f, _fpv_move.bind("", true, 30 + f)])
+	for f in range(2, 27, 2):
+		_shots.append(["strip_left_%02d" % f, _fpv_swing.bind(f)])
+	for f in range(2, 27, 2):
+		_shots.append(["strip_right_%02d" % f, _fpv_swing_right.bind(f)])
+	for f in range(2, 37, 3):
+		_shots.append(["strip_combo_%02d" % f, _fpv_combo.bind(f)])
 	if not _only.is_empty():
-		_shots = _shots.filter(func(s): return _only.has(s[0]))
+		_shots = _shots.filter(func(s): return _only.has(s[0]) or _only.any(func(o): return o.ends_with("*") and str(s[0]).begins_with(o.trim_suffix("*"))))
 
 
 func _process(_d: float) -> bool:
@@ -78,6 +115,13 @@ func _process(_d: float) -> bool:
 		rig_node = demo._rig
 		player = demo._player
 	_hide_ui(get_root())
+	if _each.is_valid():
+		_each.call()
+	if not _detail.is_empty():
+		var w: Node3D = kit.avatar.weapon_node(_detail[0])
+		var eye: Vector3 = w.global_transform * (_detail[1] as Vector3)
+		rig_node.set_override(Transform3D(Basis(), eye).looking_at(w.global_transform * (_detail[2] as Vector3), Vector3.UP))
+		rig_node._override_blend = 1.0
 	if _follow != Vector3.ZERO:
 		var at: Vector3 = player.global_position + Vector3(0, 1.0, 0)
 		var b := Basis(Vector3.UP, kit.avatar.facing_yaw)
@@ -123,6 +167,8 @@ func _zoom(img: Image, path: String) -> void:
 
 func _reset() -> void:
 	_follow = Vector3.ZERO
+	_detail = []
+	_each = Callable()
 	player.locked = false
 	player.clear_external_command()
 	player.set_command(Vector2.ZERO, false, false, false)
@@ -131,6 +177,7 @@ func _reset() -> void:
 	rig_node._override_blend = 0.0
 	kit.weapons.release_fire()
 	kit.weapons.set_alt(false)
+	kit.weapons.combo.reset()       # else the next swipe alternates side from the last shot
 
 
 ## Facing away from the low sun (lit hands), or into it.
@@ -179,8 +226,28 @@ func _fpv_move(id: String, sprint: bool, frames: int) -> int:
 	_place(false, Vector3(-14, -6, 18))
 	rig_node.set_first_person(true)
 	_hold(id)
-	player.set_command(Vector2(0, 1), sprint, false, false)
+	player.set_command(Vector2(0, 1), sprint, false, false, false, sprint)
 	return frames
+
+
+## Turn the view at `yaw_rate` (and `pitch_rate`) radians a second: the sway.
+func _fpv_turn(id: String, yaw_rate: float, pitch_rate := 0.0) -> int:
+	_fpv(id, 0.0)
+	var n := [0]
+	_each = func():
+		n[0] += 1
+		if n[0] > 24:
+			rig_node.rig.yaw += yaw_rate / 60.0
+			rig_node.rig.add_pitch(pitch_rate / 60.0)
+	return 34
+
+
+## Jump on the spot; shot `frames` after take-off.
+func _fpv_jump(id: String, frames: int) -> int:
+	_fpv(id, 0.0)
+	_after(20, func(): player.set_command(Vector2.ZERO, false, false, true, true))
+	_after(23, func(): player.set_command(Vector2.ZERO, false, false, false))
+	return 20 + frames
 
 
 ## Nose up to a wall: back off till the ray finds one 0.45 m ahead.
@@ -206,10 +273,14 @@ func _fpv_wall(id: String) -> int:
 	return 40
 
 
-func _fpv_reload(id: String) -> int:
+func _fpv_reload(id: String, frames := 30) -> int:
 	_fpv(id, 0.0)
-	_after(20, func(): (kit.weapons.guns[id]).start_reloading())
-	return 20 + 30
+	_after(20, func():
+		var g = kit.weapons.guns[id]
+		g._reloading = false                  # one left running from an earlier shot
+		g.ammo = maxi(0, g.ammo - 5)          # a full gun will not reload
+		g.start_reloading())
+	return 20 + frames
 
 
 ## `from` in hand, then ask for `to`; shot `frac` of the way through the swap.
@@ -229,21 +300,60 @@ func _fpv_swing(frames: int) -> int:
 	return 25 + frames
 
 
+## A left swipe, then a click once it ends: the right swipe, shot `frames` in.
+func _fpv_swing_right(frames: int) -> int:
+	_fpv("energy_blade", 0.0)
+	for at in [20, 48]:
+		_after(at, func():
+			kit.weapons.press_fire()
+			kit.weapons.release_fire())
+	return 48 + frames
+
+
+## A double click (the combo: left, right, centre), shot `frames` after the
+## right swipe starts.
+func _fpv_combo(frames: int) -> int:
+	_fpv("energy_blade", 0.0)
+	_after(25, func():
+		kit.weapons.press_fire()
+		kit.weapons.release_fire())
+	_after(27, func():
+		kit.weapons.press_fire()
+		kit.weapons.release_fire())
+	return 25 + int(0.42 * 0.74 * 60.0) + frames
+
+
 func _fpv_block() -> int:
 	_fpv("energy_blade", 0.0)
 	_after(20, func(): kit.weapons.set_alt(true))
 	return 45
 
 
+## First person, the camera moved to `eye` looking at `at` (both in the weapon's
+## space): a close-up of the gun and the hands on it.
+func _close(id: String, eye: Vector3, at: Vector3) -> int:
+	_fpv(id, 0.0)
+	_detail = [id, eye, at]
+	return 40
+
+
+## The same close-up, aimed in (the camera moves after the aim has settled).
+func _close_ads(id: String, eye: Vector3, at: Vector3) -> int:
+	_fpv(id, 0.0)
+	_after(15, func(): kit.weapons.set_alt(true))
+	_after(40, func(): _detail = [id, eye, at])
+	return 46
+
+
 ## Third person, the camera at `off` in the player's facing frame (+Z ahead).
-func _tpv(id: String, sprint: bool, off: Vector3) -> int:
-	_place(false, Vector3(-14, -6, 18))
+func _tpv(id: String, sprint: bool, off: Vector3, frames := 45) -> int:
+	_place(true, Vector3(10, -6, 12))
 	rig_node.set_first_person(false)
 	_hold(id)
-	if sprint:
-		player.set_command(Vector2(0, 1), true, false, false)
+	if sprint:     # the dash is the sprint that lowers the gun (issue #133)
+		player.set_command(Vector2(0, 1), true, false, false, false, true)
 	_follow = off
-	return 45
+	return frames
 
 
 func _after(frames: int, f: Callable) -> void:

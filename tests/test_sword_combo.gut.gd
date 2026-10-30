@@ -88,3 +88,27 @@ func test_pose_transform_points_blade_along_dir() -> void:
 	var xf := SwordCombo.pose_transform({ "pos": Vector3(1, 2, 3), "dir": Vector3(0, 0, 1) })
 	assert_almost_eq(xf.basis.y.dot(Vector3(0, 0, 1)), 1.0, 0.001)
 	assert_almost_eq(xf.basis.determinant(), 1.0, 0.001)
+
+
+func test_first_person_keys_are_continuous_and_in_view() -> void:
+	# Issue #229: first person has its own keys, from and back to GUARD_FPV, with no
+	# jump between samples, and the blade never points back past the camera.
+	for i in SwordCombo.SWINGS.size():
+		assert_true(SwordCombo.SWINGS[i].has("fpv_keys"), "swing %d has first person keys" % i)
+		var prev: Dictionary = SwordCombo.sample(i, 0.0, true)
+		assert_almost_eq((prev.pos as Vector3).distance_to(SwordCombo.GUARD_FPV.pos), 0.0, 0.001)
+		for k in range(1, 41):
+			var p := SwordCombo.sample(i, k / 40.0, true)
+			assert_lt((p.pos as Vector3).distance_to(prev.pos), 0.12, "swing %d step %d" % [i, k])
+			assert_gt((p.dir as Vector3).z, -0.55, "swing %d step %d: blade not behind the eye" % [i, k])
+			prev = p
+		assert_almost_eq((prev.pos as Vector3).distance_to(SwordCombo.GUARD_FPV.pos), 0.0, 0.001)
+
+
+func test_first_person_pose_uses_its_own_guard_and_block() -> void:
+	var c := SwordCombo.new(CFG)
+	assert_eq(c.pose(true), SwordCombo.GUARD_FPV)
+	assert_eq(c.pose(false), SwordCombo.GUARD)
+	c.set_block(true)
+	assert_eq(c.pose(true), SwordCombo.BLOCK_FPV)
+	assert_eq(c.pose(false), SwordCombo.BLOCK)

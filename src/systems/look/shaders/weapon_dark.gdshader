@@ -13,6 +13,10 @@ uniform float body_mul : hint_range(0.0, 1.0) = 0.3;     // multiplier on neutra
 uniform float accent_mul : hint_range(0.0, 1.0) = 0.8;   // multiplier on saturated texels
 uniform float glow : hint_range(0.0, 4.0) = 0.6;         // emission on saturated texels
 uniform vec3 body_tint : source_color = vec3(0.85, 0.9, 1.0);
+// Issue #229: a held gun is near-black, so against the sun or in shade it went to
+// a flat silhouette. A rim keeps its outline; fill lifts the body a touch.
+uniform float rim : hint_range(0.0, 1.0) = 0.0;
+uniform float fill : hint_range(0.0, 1.0) = 0.0;
 
 void fragment() {
 	vec3 c = texture(albedo_tex, UV).rgb;
@@ -21,7 +25,9 @@ void fragment() {
 	vec3 dark = c * body_tint * body_mul;
 	vec3 keep = c * accent_mul;
 	ALBEDO = mix(dark, keep, is_accent);
-	EMISSION = c * glow * is_accent;
+	EMISSION = c * glow * is_accent + dark * fill;
+	RIM = rim;
+	RIM_TINT = 0.35;
 	if (use_normal) {
 		NORMAL_MAP = texture(normal_tex, UV).rgb;
 	}
