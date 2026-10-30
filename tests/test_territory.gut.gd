@@ -1,7 +1,7 @@
 extends GutTest
 ## Issue #187: who holds each place (territory.gd, pure). An outpost flips to the
 ## locals, runs short, is supplied, is retaken; the gate's checkpoint and the
-## fence change with it; holding all three drives the Remnant off and hands the
+## fence change with it; holding them all drives the Remnant off and hands the
 ## locals the barracks; the story's end does too; it all survives a save.
 
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
@@ -77,24 +77,24 @@ func test_the_gate_and_the_fence_change_with_control() -> void:
 	var item: Dictionary = cc.get_item("holocrystals")
 	var fence := { "buys": [str(item.get("kind", ""))], "buy_rate": 0.5 }
 	var price := Inventory.sell_price(item, fence)
-	Territory.take(NEAR)
-	Territory.take("remnant_outpost_mid")
+	for i in int(Territory.cfg().get("gate", {}).get("strict_from", 3)):
+		Territory.take(str(Story.OUTPOSTS[i]))
 	c.strict = Territory.gate_strict()
 	c.bribe_mult = Territory.bribe_mult()
-	assert_eq(c.band_for(10, false, false, false), "search", "two outposts lost: the gate is edgier")
+	assert_eq(c.band_for(10, false, false, false), "search", "enough outposts lost: the gate is edgier")
 	assert_gt(c.bribe_price("papers", false), papers, "and dearer")
 	assert_gt(Inventory.sell_price(item, fence), price, "the fence pays more")
 	assert_eq(Territory.summary().size(), Territory.places().size())
 
 
-func test_holding_all_three_drives_the_remnant_off() -> void:
+func test_holding_every_outpost_drives_the_remnant_off() -> void:
 	for id in Story.OUTPOSTS:
 		Territory.take(str(id))
 	assert_true(WorldState.has_flag(Territory.DRIVEN_OFF))
 	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS, "the locals take the barracks too")
 	assert_false(Story.town_garrison())
 	Territory.tick(100000.0)
-	assert_eq(Territory.lost(), 3, "nothing is retaken after that")
+	assert_eq(Territory.lost(), Story.OUTPOSTS.size(), "nothing is retaken after that")
 
 
 func test_the_story_ending_hands_the_locals_the_barracks() -> void:

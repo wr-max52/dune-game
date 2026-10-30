@@ -10,7 +10,7 @@ extends RefCounted
 ##                 fills that up again; when it runs out, or the locals' guards
 ##                 there are all dead, the Remnant take it back (retake).
 ##   the barracks  the Remnant's until the story is done (the fleet beaten) or the
-##                 Remnant are driven off (all three outposts held at once); then
+##                 Remnant are driven off (every outpost held at once); then
 ##                 the locals'. Story.town_garrison() reads it.
 ##
 ## What it changes: who stands at each place (RemnantOutposts, the town scene and
@@ -216,5 +216,5 @@ static func summary() -> Array:
 		if id != BARRACKS and who == LOCALS and not WorldState.has_flag(DRIVEN_OFF):
 			var left := maxf(0.0, hold_left(str(id)))
 			tag = "%s %d:%02d" % [str(labels.get("short", tag)) if short(str(id)) else tag, int(left) / 60, int(left) % 60]
-		out.append("%-17s %s" % [label.capitalize().left(17), tag])
+		out.append("%-19s %s" % [label.capitalize().left(19), tag])
 	return out

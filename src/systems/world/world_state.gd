@@ -519,7 +519,7 @@ static func _item(id: String) -> Dictionary:
 # ------------------------------------------------------------------ bounties (issue #64)
 
 ## Oda's other repeating job (kind "bounty"): a named Remnant officer at one of
-## the three desert outposts (Story.OUTPOSTS). Taking it puts them there
+## the desert outposts (Story.OUTPOSTS). Taking it puts them there
 ## (RemnantOutposts spawns whoever bounty_target() names); killing them makes the
 ## bounty collectable at the fence. One at a time.
 
@@ -600,7 +600,7 @@ static func _bounty_job(j: Dictionary) -> Dictionary:
 	return out
 
 
-## The next contract: a fresh name, a crime, one of the three outposts (the first
+## The next contract: a fresh name, a crime, one of the outposts (the first
 ## one is the nearest), and the pay (the story's first bounty pays less).
 static func _roll_bounty() -> void:
 	var cfg := Story.bounty_cfg()

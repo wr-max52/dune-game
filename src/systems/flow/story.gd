@@ -22,7 +22,10 @@ extends RefCounted
 ## Who holds the outposts in between: Territory.
 
 const PATH := "res://content/core/story/main.json"
-const OUTPOSTS := ["remnant_outpost_near", "remnant_outpost_mid", "remnant_outpost_far"]
+## The Remnant's desert outposts, nearest the front gate first (issue #187: and
+## four more round the other sides of the town).
+const OUTPOSTS := ["remnant_outpost_near", "remnant_outpost_mid", "remnant_outpost_far",
+	"remnant_outpost_north", "remnant_outpost_south", "remnant_outpost_west", "remnant_outpost_southwest"]
 const JETPACK := "jetpack"
 
 static var _data: Dictionary = {}

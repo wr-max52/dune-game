@@ -4,7 +4,7 @@
   "npcs": ["fixer", "cantina_owner"],
   "weapons": ["pistol_blaster", "rifle_blaster", "energy_blade", "ship_cannon", "ship_missile"],
   "factions": ["imperial_remnant", "smuggler", "locals", "dune_nomads"],
-  "locations": ["outpost", "port_town", "skrugs_post", "remnant_outpost_near", "remnant_outpost_mid", "remnant_outpost_far", "mechanic_yard", "droid_post_wash", "droid_post_ridge", "droid_post_basin"],
+  "locations": ["outpost", "port_town", "skrugs_post", "remnant_outpost_near", "remnant_outpost_mid", "remnant_outpost_far", "remnant_outpost_north", "remnant_outpost_south", "remnant_outpost_west", "remnant_outpost_southwest", "mechanic_yard", "droid_post_wash", "droid_post_ridge", "droid_post_basin"],
   "missions": ["crate_retrieval"],
   "ships": ["interceptor", "freighter", "courier", "gunship", "remnant_fighter", "remnant_heavy", "remnant_interceptor", "remnant_freighter"],
   "pilots": ["rookie", "veteran", "ace", "remnant_hunter"],

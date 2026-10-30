@@ -1,7 +1,8 @@
 class_name RemnantOutposts
 extends Node3D
-## The Remnant's three desert outposts out the front gate (issue #64): near, mid
-## and far, each a little different. Their footprints are world data (landmarks
+## The Remnant's desert outposts: three out the front gate (issue #64), near, mid
+## and far, and four round the other sides of the town (issue #187: north, south,
+## west, southwest), each a little different. Their footprints are world data (landmarks
 ## in content/core/worlds/port_desert.json, buildings in
 ## content/core/locations/remnant_outpost_*.json), so ships and speeders already
 ## collide with them. This node adds, for each one:
