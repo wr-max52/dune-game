@@ -276,6 +276,7 @@ func build_plan(staged_build: bool) -> Array:
 		dev_settings.name = "DevSettings"
 		dev_settings.demo = self
 		add_child(dev_settings)
+		NewGameMenu.show_if_fresh(self, dev_settings)   # issue #200: a first launch picks Story or Free Roam
 		return true)
 	if use_look:
 		# On the first frame: the HUD's frame must not blink out over a handoff.

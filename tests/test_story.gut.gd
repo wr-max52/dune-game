@@ -415,7 +415,7 @@ func test_ships_locked_until_oda_says() -> void:
 	assert_true(t.pilot.board(), "the keys are in it")
 
 
-func test_reset_story_starts_over() -> void:
+func test_new_story_game_starts_over() -> void:
 	Story.skip_to("free")
 	WorldState.credits = 9000
 	WorldState.inventory.add("jetpack")
@@ -424,13 +424,13 @@ func test_reset_story_starts_over() -> void:
 	var names := WorldState.names
 	var panel := DevSettingsPanel.new()
 	add_child_autofree(panel)
-	panel.reset_story(false)
+	panel.new_game(WorldState.STORY, false)
 	assert_eq(Story.chapter(), "meet_oda")
 	assert_eq(WorldState.credits, 60)
 	assert_false(WorldState.inventory.has("jetpack"), "equipment gone")
 	assert_eq(WorldState.hangar, "")
 	assert_eq(WorldState.droids.owned.size(), 0, "droids gone")
-	assert_eq(int(WorldState.standing.locals), int(WorldState.DEFAULT_STANDING.locals), "standing back to the start")
+	assert_eq(int(WorldState.standing.locals), 0, "a story starts neutral")
 	assert_false(Story.ships_unlocked())
 	assert_false(Story.remnant_hostile())
 	assert_eq(WorldState.names, names, "names are kept")

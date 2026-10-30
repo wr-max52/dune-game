@@ -26,6 +26,7 @@ var settings: LLMSettingsPanel
 var save := SaveSystem.new()
 var save_path := SAVE_PATH
 var autosave := true
+var fresh := false                ## issue #200: no save was found (a first launch): NewGameMenu asks the mode
 var spots: Array = []                 ## TalkSpot, the Cantina Owner first
 var active: TalkSpot                  ## who the player is talking to (null when not)
 var owner_spot: TalkSpot              ## the Cantina Owner's
@@ -451,6 +452,7 @@ func _load_save() -> void:
 				WorldState.flags[k] = true
 	else:
 		save.new_game()
+		fresh = true
 	_loaded_once = true
 
 

@@ -484,18 +484,21 @@ func _story_tab() -> Control:
 			Story.skip_to(str(Story.chapter_ids()[pick.selected]))
 			refresh())
 	_row(v, "Chapter", pick).add_child(go)
-	_section(v, "Start again")
+	_section(v, "New game")
 	var note := Label.new()
-	note.text = "Resets the story to the beginning: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you, as on a first play. Names are kept. The town reloads."
+	note.text = "Starts again as on a first play: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you. Names are kept. The town reloads.\nStory: the story from the start, every faction neutral, the pistol only, locked to the smuggler.\nFree roam: drops and bounties on repeat, any character."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
-	var reset := Button.new()
-	reset.text = "Reset story"
-	reset.pressed.connect(func(): reset_story())
-	_row(v, "", reset)
+	var row := HBoxContainer.new()
+	for m in [[WorldState.STORY, "New story game"], [WorldState.FREEPLAY, "New free roam game"]]:
+		var b := Button.new()
+		b.text = m[1]
+		b.pressed.connect(func(): new_game(m[0]))
+		row.add_child(b)
+	_row(v, "", row)
 	_refreshers.append(func():
 		var b := WorldState.bounty
-		now.text = "Now: %s%s" % [Story.chapter().replace("_", " "),
+		now.text = "Now: %s save, %s%s" % ["story" if WorldState.story_mode() else "free roam", Story.chapter().replace("_", " "),
 			("   ·   bounty on %s (%s)" % [b.name, b.state]) if str(b.get("state", "")) in ["out", "dead"] else ""]
 		pick.select(maxi(0, Story.index(Story.chapter()))))
 	return v.get_parent()
@@ -504,11 +507,12 @@ func _story_tab() -> Control:
 ## Issue #64: back to the start, as on a first play. Everything the player has or
 ## has done goes (WorldState: credits, gear, droids, the bought ship, flags,
 ## standing, the story), every character's opinion of them goes back to a
-## stranger's, T-89 says hello again; the names stay. Saved, then the town is
-## built again from scratch. `reload` false: just the state (tests).
-func reset_story(reload := true) -> void:
+## stranger's, T-89 says hello again; the names stay. Issue #200: in `mode`
+## (WorldState.STORY or FREEPLAY). Saved, then the town is built again from
+## scratch. `reload` false: just the state (tests).
+func new_game(mode: String, reload := true) -> void:
 	var kept := WorldState.names
-	WorldState.reset()
+	WorldState.new_game(mode)
 	WorldState.names = kept
 	ShipSalesman.greeted = false
 	if demo != null and demo.bar != null:
