@@ -168,9 +168,14 @@ func _physics_process(_dt: float) -> void:
 	if taken() and not near and not crew.is_empty():
 		_abandon()                     # the survivors took the pods while you were away
 	var sleep := float(cfg.get("sleep_distance", 460.0))
+	var now := Time.get_ticks_usec()
 	for g in crew:
-		if is_instance_valid(g) and not g.dead:
-			g.process_mode = Node.PROCESS_MODE_DISABLED if g.global_position.distance_to(at) > sleep else Node.PROCESS_MODE_INHERIT
+		if not is_instance_valid(g):
+			continue
+		# Awake while dying or just hit (a shot from your ship far off), so they fall
+		# or answer it; asleep they are still solid to bolts (_enlist).
+		var awake: bool = g.dead or g.global_position.distance_to(at) <= sleep or now - g.damage_usec < 5000000
+		g.process_mode = Node.PROCESS_MODE_INHERIT if awake else Node.PROCESS_MODE_DISABLED
 	crew = crew.filter(func(g): return is_instance_valid(g))
 	_fall_guard(p)
 
@@ -187,6 +192,9 @@ func _fall_guard(p: Node3D) -> void:
 		_last_aboard = p.global_position
 		return
 	if not _was_aboard:
+		return
+	if distance(p.global_position) > 1000.0:
+		_was_aboard = false            # moved away (woken in the pit, towed home), not fallen
 		return
 	var local := inv * p.global_position
 	if local.y > CruiserHull.DECK_Y - 12.0 and CruiserHull.GRAVITY_BOX.has_point(local):
@@ -245,6 +253,9 @@ func _add_general() -> void:
 ## A body joins the cruiser's garrison (made by the first one aboard).
 func _enlist(g: NpcBody) -> void:
 	g.set_meta("cruiser", id)
+	# Asleep (far from you) a body's process is off, which by default takes it out
+	# of physics too: bolts would pass through a trooper you can see.
+	g.disable_mode = CollisionObject3D.DISABLE_MODE_KEEP_ACTIVE
 	g.nav = demo.nav
 	crew.append(g)
 	if garrison == null:

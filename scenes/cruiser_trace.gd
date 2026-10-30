@@ -190,6 +190,8 @@ func _aboard(c) -> void:
 		if is_instance_valid(g) and not c.aboard(g.global_position):
 			fallen += 1
 	out("CREW_FALLEN", fallen)
+	await _shot_asleep(c)
+	await _downed_aboard(c)
 	var credits: int = WorldState.credits
 	var locals: int = WorldState.standing.get("locals", 0)
 	if c.general != null:
@@ -204,6 +206,46 @@ func _aboard(c) -> void:
 	player.global_position = c.frame.origin + Vector3(0, 0, 4000)
 	await frames(5)
 	out("CREW_AFTER_LEAVING", c.crew.size())
+
+
+## A trooper asleep (you far off, as in your ship) is still solid to a bolt, and
+## wakes to fall when it kills him.
+func _shot_asleep(c) -> void:
+	var g = c.crew[2]
+	c._was_aboard = false
+	player.global_position = g.global_position + Vector3(0, 0, 700)
+	player.process_mode = Node.PROCESS_MODE_DISABLED
+	await frames(3)
+	out("ASLEEP", not g.can_process())
+	var b = load("res://scenes/entities/bolt.tscn").instantiate()
+	b.direction = Vector3.RIGHT
+	b.speed = 60.0
+	b.damage = 1000.0
+	b.range_m = 30.0
+	b.shooter = player
+	b.sweep = true
+	demo.add_child(b)
+	b.global_position = g.global_position + Vector3(-3, 1.2, 0)
+	await frames(30)
+	out("ASLEEP_SHOT_DEAD", g.dead)
+	out("ASLEEP_SHOT_WOKE", g.can_process())
+	player.process_mode = Node.PROCESS_MODE_INHERIT
+
+
+## Downed aboard: woken in the port's pit, and left there (not pulled back aboard).
+func _downed_aboard(c) -> void:
+	player.global_position = c.frame * ((CruiserHull.dock_pad().at as Vector3) + Vector3(-16, 0.1, 0))
+	player.align_to_ground(true)
+	await frames(10)
+	player.apply_damage(100000.0)
+	out("DOWNED_ABOARD", player.is_downed)
+	await frames(60 * 4)
+	out("DOWNED_WOKE", not player.is_downed and not player.locked)
+	await frames(60 * 2)
+	out("DOWNED_IN_TOWN_KM", snappedf(c.distance(player.global_position) / 1000.0, 0.1))
+	player.global_position = c.frame * ((CruiserHull.dock_pad().at as Vector3) + Vector3(-16, 0.1, 0))
+	player.align_to_ground(true)
+	await frames(10)
 
 
 func _finish() -> void:
