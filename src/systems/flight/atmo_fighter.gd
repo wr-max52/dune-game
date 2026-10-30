@@ -3,9 +3,9 @@ extends Node3D
 ## The Remnant's interceptor in the port's sky (issue #76). It stands on the
 ## barracks pad (the town box with a "remnant_ship") and hunts you in the air:
 ##   - it takes off when you fly a ship stolen from an outpost, or when you are
-##     wanted (the garrison's alarm is up, your Remnant standing is hostile, or the
-##     fleet is beaten and the Remnant shoot on sight) and are `launch_distance`
-##     past the edge of the town,
+##     wanted (the garrison's alarm is up or your Remnant standing is hostile) and
+##     are `launch_distance` past the edge of the town; once the fleet is beaten
+##     it never comes after you again (issue #180),
 ##   - it flies with the same AtmoFlight as your ship (the ground, the air thinning,
 ##     crashing) and fights with the same parts as the space dogfights: the
 ##     FighterBrain pilot (pursue, attack, break, extend) from a pilot profile, the
@@ -147,10 +147,13 @@ func target_up() -> bool:
 		and pilot.atmo.state in [AtmoFlight.State.LIFTOFF, AtmoFlight.State.FLYING, AtmoFlight.State.LANDING]
 
 
-## The Remnant wants you: a stolen ship, the garrison's alarm, a hostile standing,
-## or the fleet is beaten (they shoot on sight from then on).
+## The Remnant wants you: a stolen ship, the garrison's alarm or a hostile standing.
+## Issue #180: once the fleet is beaten the Remnant is defeated and it stops
+## chasing (one already up gives up and flies home).
 func wanted() -> bool:
-	if (pilot != null and pilot.flying_stolen()) or Story.remnant_hostile():
+	if Story.remnant_hostile():
+		return false
+	if pilot != null and pilot.flying_stolen():
 		return true
 	var g = demo.garrison if "garrison" in demo else null
 	if g == null:
@@ -347,6 +350,7 @@ func _on_hit(amount: float, shooter: Node) -> void:
 	if shooter == hull:
 		return
 	defense.apply_damage(amount)
+	hull.took_damage()                  # issue #181: a hit marker for whoever shot it
 	if brain != null:
 		brain.notify_hit()
 	if not defense.is_alive():
@@ -358,6 +362,7 @@ func _go_down(at: Vector3, shot: bool) -> void:
 		return
 	atmo._crash(at, "shot_down" if shot else "ground")
 	mode = Mode.DOWN
+	hull.dead = true
 	respawn_left = p("respawn_s", 120.0)
 	visual.visible = false
 	_set_solid(false)
@@ -379,6 +384,7 @@ func _reset_home() -> void:
 	defense = ShipDefense.new(cfg)
 	guns = ShipLoadout.new(cfg, content)
 	mode = Mode.PARKED
+	hull.dead = false
 	respawn_left = -1.0
 	visual.visible = true
 	_set_solid(true)

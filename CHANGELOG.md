@@ -17,6 +17,109 @@ Plain English, newest on top. One entry per milestone.
 - **What your droids hit counts as yours.** A native your droid kills locks that
   pack hostile, and a local your droid kills costs you standing, as if you had
   fired.
+## Remnant interceptor stands down after the fleet, flies wider loops (2026-10-30, issue #180)
+
+- **No chase once the Remnant is beaten.** After the fleet in orbit falls, the
+  barracks pad's dark interceptor stays on its pad, even for a stolen outpost ship.
+  One already in the air gives up and flies home.
+- **Bigger loops at the same speed.** Its pilot (`remnant_hunter.json`) breaks off
+  at 140 m instead of 70 m and extends to 650 m instead of 300 m before turning
+  back in, so it swings much wider around you. The ship's speeds are unchanged.
+## Objective pointer and job log (2026-10-29)
+
+- **Always know what to do next.** A line under the banner says the next thing
+  to do ("Find Oda Vell at the cantina, far end of town   84 m"), with an arrow
+  turning towards it and a diamond over the place while it is on screen. It
+  follows the story chapter by chapter, then whatever job is on: a bounty to
+  collect or hunt (the outpost), goods to sell (the fence), a drop to find (the
+  drop's area, not the exact spot, so the search is still yours). Lines and
+  targets are data (`content/core/story/main.json` "objectives"); the logic is
+  `src/systems/flow/objective.gd`, the HUD `src/ui/objective_hud.gd`.
+- **A job log on I.** The inventory screen has a JOBS column beside the items:
+  the story's current chapter, the smuggling run (what the goods are, where they
+  were left), the bounty (who, where, the pay, their crime) and any job taken
+  from Oda's board, with runs sold and bounties paid at the bottom.
+
+## Ship fights feel like a shooter (2026-10-30, issue #181)
+
+- **Hit markers for the ship's guns.** The same white X as on foot pops when your
+  cannons hurt something: another ship, a trooper or local on the ground (a bolt's
+  burst counts too), a parked ship. It turns red and bigger for a kill. In space the
+  fight's own hits and kills drive it. Shots a target shrugs off (a parked
+  interceptor, a wall) show nothing.
+- **A red flash when you are hit.** The edge of the screen glows red, holds for a
+  second and fades slowly, in the air and in space. Each new hit lights it again.
+- **A flight-sim HUD in the chase view.** The block of numbers in the top left is
+  gone. In its place: a pitch ladder round the reticle that rolls with the ship, a
+  heading tape, speed and altitude tapes either side, and bars for throttle, the
+  Shift ability, hull and shield. It uses your HUD colour.
+- **A cockpit in the cockpit view.** V now puts you behind a canopy (two struts,
+  the rest faint glass) with a dashboard whose instruments move: airspeed,
+  altimeter, an attitude ball, climb, compass, throttle, hull, shield and boost.
+  The Shift ability is one lamp, lit while it runs. Every ship
+  shares the one cockpit.
+
+## Flying to the moon without a seam (2026-10-29)
+
+- **The switch to the moon's scene is ~4x shorter.** The frame it happened on
+  took ~680 ms; it is now ~130 ms, then 55-75 ms for two frames. The port's scene
+  is freed a little each frame after it leaves (`SceneReaper`) instead of all at
+  once (330 ms). The moon's coarse ball and the home planet's ball in its sky are
+  built on worker threads ~1.5 km before the switch (`PlanetTerrain.prewarm_far`,
+  `SpaceTravel.prewarm_bodies`). The station's walls and dome are built first and
+  its floors, inner panels and lamps a few frames later.
+- **The last frame before and the first after look the same.** In space the sky
+  takes the parent planet's up in every scene (it had turned to the moon's, which
+  put a dark brown "ground" behind it), and every planet's ambient light eases to
+  the plain time of day (the station's 1.6x fill had made the moon brighter). The
+  moon drawn in the port's sky uses the same noise as its own scene. The HUD's top
+  and bottom bars are there on the first frame and keep the old place names until
+  the new ones are known; no "Approaching..." toast and no stamina bar in the
+  cockpit. The chase camera keeps its view and lag.
+- **Nothing you hear stops.** The engine drone is one player that outlives the
+  scene, the music plays on (a fight broken off by the switch ends quietly, its
+  space track playing until you come down), and arriving above the moon's edge of
+  space no longer counts as climbing out (no new orbital fight on arrival).
+- `scenes/handoff_trace.gd`: a rendered trace of the switch (frame times, the
+  pictures either side and how different they are, the music and the engine).
+- **No black, turned frame at the switch.** The new scene's camera blended in
+  over ~0.4 s from the on-foot camera, which stands on the town's ground: one
+  frame of the town at a tilt, then a few of black sky. A handoff now puts the
+  camera straight onto the chase view it carried (`CameraRigNode.snap_override`),
+  with the flight read-out filled in on that same frame and the footer's HP,
+  stamina and fuel kept until the new scene's body and gear are built.
+- **The way home is ~40% shorter.** The port's first frame on arrival went from
+  ~335 ms to ~205 ms: its rocks (mesas, hoodoos, boulders and their colliders),
+  the moon's ball in its sky and the town's cover spots are made once a session
+  and reused, since the port was already built before you left. Four garrisons
+  each working out the same 56 ms of cover spots in one frame (a 240 ms spike a
+  second after arrival) now share one list.
+- The trace flies there and back, and keeps every frame drawn around each switch.
+
+## Smooth orbit over the port; no "edge of space" (2026-10-29)
+
+- **No more stutter flying high.** Climbing past ~2 km and on toward the moon
+  ran at ~150 ms a frame whenever the Remnant's interceptor was up hunting you.
+  Its ground checks (and your ship's) scanned every box, mesa and boulder in the
+  desert from that high, and 60 Hz physics fell behind. The ground lookup now
+  also skips anything not under the line it measures along, with the same
+  answers as before. Orbit runs at ~10 ms a frame, none over 25 ms.
+- **Space is just the sky.** The HUD's "EDGE OF SPACE" bar, the "In orbit"
+  toast and the music switching to the space track at 4,000 m are gone; the sky
+  darkens as you climb and that is all. The space track now plays during a fight
+  in orbit. Climbing out still starts the pad's orbital fight.
+- `scenes/orbit_trace.gd`: a rendered trace from the pad to the moon handoff,
+  frame times by altitude.
+
+## Sand nomad heads for the native packs (2026-10-29)
+
+- **The dune nomads wear a new sand head.** It is the same freaky beaked goggle mask
+  as before, remade with Hyper3D: a sand cloth hood and a matte bone mask instead
+  of the teal hood and brass. Every pack uses it; leaders still wear the helmet.
+- **Three variations for later NPCs:** `nomad_crest`, `nomad_maw` and `nomad_horn`,
+  each in its own sand and bone tones. No pack uses them yet.
+- **All four are in the character builder** (F11, Character, Head).
+- The snow planets' frost folk keep the goggle head in their cold colours.
 
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 

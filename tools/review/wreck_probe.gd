@@ -186,6 +186,16 @@ func _review() -> void:
 		await _photo(camera, deck_xf * Vector3(75, 55, 410),
 			deck_xf * Vector3(0, 0, 315), shots + "/wreck_engines.png")
 		await _photo(camera, town_view, town_view + Vector3(1600, 0, 0), shots + "/wreck_town_vista.png")
+		# Wreck cleanup: the hung decks, catwalks and ramps, and the open hold floor.
+		var lv := func(x: float, v: float, w: float) -> Vector3:
+			return StarcruiserWreck.site_point(ground, Vector3(x, v, w), "level")
+		var hull := func(x: float, y: float, z: float) -> Vector3:
+			return StarcruiserWreck.site_point(ground, Vector3(x, y, z), "hull")
+		await _photo(camera, hull.call(24, -19, 286), lv.call(0, 128, 196), shots + "/wreck_top_of_floor.png")
+		await _photo(camera, lv.call(0, 131, 146), lv.call(0, 128, 215), shots + "/wreck_tiers_from_mid_catwalk.png")
+		await _photo(camera, hull.call(0, -18, 120), hull.call(0, -10, 280), shots + "/wreck_speeder_lane.png")
+		await _photo(camera, lv.call(30, 165, 165), lv.call(0, 146, 136), shots + "/wreck_landing_pad.png")
+		await _photo(camera, lv.call(30, 139.5, 241), lv.call(30, 135, 220), shots + "/wreck_stern_ramp_deck.png")
 	PlanetSphere.current = null
 	quit(1 if failed else 0)
 

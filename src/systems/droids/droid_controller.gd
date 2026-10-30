@@ -1039,6 +1039,8 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		g._raise("droid_shot")
 	if u.hp <= 0.0:
 		u.dead = true
+		ExplosionFx.small(u.get_parent(), u.center())
+		Sound.play("droid_pop", u.center())
 		_lay_down(u)
 		u.collision_layer = 0
 		var rsc := Story.remnant_cfg()

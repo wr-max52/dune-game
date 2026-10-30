@@ -5,13 +5,13 @@
   "aim_cone_deg": 5.0,
   "aim_error": 0.03,
   "engage_range": 520.0,
-  "break_distance": 70.0,
+  "break_distance": 140.0,
   "break_time": 1.3,
   "break_on_hit": 0.35,
-  "extend_distance": 300.0,
+  "extend_distance": 650.0,
   "evade_missile": 0.5,
   "attack_throttle": 0.8,
   "retarget_interval": 1.5,
   "missile_use": false,
-  "note": "Issue #76: the barracks interceptor's pilot, tuned for the air over the port: the space veteran's habits on shorter ranges (ships are faster and the ground is close). Its ground and ceiling rules are the ship's 'scramble' block."
+  "note": "Issue #76: the barracks interceptor's pilot, tuned for the air over the port: the space veteran's habits on shorter ranges (ships are faster and the ground is close). Its ground and ceiling rules are the ship's 'scramble' block. Issue #180: break_distance and extend_distance roughly doubled so it swings much wider loops around you at the same speed (speeds live in the ship file and are unchanged)."
 }

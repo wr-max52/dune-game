@@ -104,6 +104,18 @@ func set_override(xf: Transform3D, fov: float = -1.0) -> void:
 	_override_fov = fov
 
 
+## The override at once, no blend in from the on-foot view: a no-fade handoff's
+## new scene must show the very view the last scene ended on, from its first frame.
+func snap_override(xf: Transform3D, fov: float = -1.0) -> void:
+	set_override(xf, fov)
+	_override_blend = 1.0
+	if _camera.is_inside_tree():
+		_camera.global_transform = xf
+	if fov > 0.0:
+		_camera.fov = fov
+	_camera.make_current()
+
+
 func clear_override() -> void:
 	_override = false
 

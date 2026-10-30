@@ -85,6 +85,9 @@
   },
   "checkpoint": {
     "zone_radius": 11.0,
+    "talk_dist": 2.2,
+    "card_wait_s": 6.0,
+    "face_turn_s": 0.4,
     "hostile_radius": 26.0,
     "warn_s": 3.0,
     "cleared_s": 180.0,

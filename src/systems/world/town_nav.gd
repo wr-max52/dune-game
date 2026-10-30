@@ -49,37 +49,52 @@ var desert_regions: Array[NavigationRegion3D] = []
 ## Recast only sees surfaces, so the floor inside a closed box (a building, a
 ## crate) would bake as a walkable island, and a "nearest point" query could hand
 ## a guard a spot inside a wall. Every blocking box is also an obstruction, which
-## clears its footprint, except a box something stands on (the watchtower top).
+## clears its footprint, except a box something stands on (the watchtower top,
+## the barracks hall roof): that one clears only below its top, so the roof keeps
+## its floor and the inside still has none.
 static func source_geometry(town) -> NavigationMeshSourceGeometryData3D:
 	var src := NavigationMeshSourceGeometryData3D.new()
 	src.add_faces(box_faces(town), Transform3D.IDENTITY)
 	for b in obstruction_boxes(town):
-		var mn := Vector3(float(b.min[0]), float(b.min[1]), float(b.min[2]))
-		var mx := Vector3(float(b.max[0]), float(b.max[1]), float(b.max[2]))
-		var outline := PackedVector3Array([Vector3(mn.x, 0, mn.z), Vector3(mx.x, 0, mn.z), Vector3(mx.x, 0, mx.z), Vector3(mn.x, 0, mx.z)])
-		src.add_projected_obstruction(outline, mn.y, mx.y - mn.y + 0.5, false)
+		_obstruct(src, b, 0.5)
+	for b in stood_on_boxes(town):
+		_obstruct(src, b, -0.5)
 	return src
+
+
+## Clear a box's footprint from its foot to `over` metres above its top.
+static func _obstruct(src: NavigationMeshSourceGeometryData3D, b: Dictionary, over: float) -> void:
+	var mn := Vector3(float(b.min[0]), float(b.min[1]), float(b.min[2]))
+	var mx := Vector3(float(b.max[0]), float(b.max[1]), float(b.max[2]))
+	var outline := PackedVector3Array([Vector3(mn.x, 0, mn.z), Vector3(mx.x, 0, mn.z), Vector3(mx.x, 0, mx.z), Vector3(mn.x, 0, mx.z)])
+	src.add_projected_obstruction(outline, mn.y, mx.y - mn.y + over, false)
 
 
 ## Blocking boxes (the town's blocking_kinds) that no marker stands on. Ramps are
 ## never obstructions.
 static func obstruction_boxes(town) -> Array:
+	return _blocking_boxes(town).filter(func(b): return not _stood_on(town, b))
+
+
+## Blocking boxes a marker stands on (a post on a roof).
+static func stood_on_boxes(town) -> Array:
+	return _blocking_boxes(town).filter(func(b): return _stood_on(town, b))
+
+
+static func _blocking_boxes(town) -> Array:
 	var blocking: Array = town.data.get("blocking_kinds", ["wall", "solid", "cover", "counter", "ship"])
-	var out: Array = []
-	for b in town.boxes():
-		# The stair tower and lookout are walked through, not into, but their
-		# helix is not on the navmesh: guards keep out of the whole footprint.
-		if not (str(b.kind) in blocking) and not (str(b.kind) in ["spiral", "lookout"]):
-			continue
-		var stood_on := false
-		for m in town.markers():
-			var p: Array = m.pos
-			if absf(float(b.max[1]) - float(p[1])) < 0.05 and float(p[0]) >= float(b.min[0]) and float(p[0]) <= float(b.max[0]) \
-					and float(p[2]) >= float(b.min[2]) and float(p[2]) <= float(b.max[2]):
-				stood_on = true
-		if not stood_on:
-			out.append(b)
-	return out
+	# The stair tower and lookout are walked through, not into, but their
+	# helix is not on the navmesh: guards keep out of the whole footprint.
+	return town.boxes().filter(func(b): return str(b.kind) in blocking or str(b.kind) in ["spiral", "lookout"])
+
+
+static func _stood_on(town, b: Dictionary) -> bool:
+	for m in town.markers():
+		var p: Array = m.pos
+		if absf(float(b.max[1]) - float(p[1])) < 0.05 and float(p[0]) >= float(b.min[0]) and float(p[0]) <= float(b.max[0]) \
+				and float(p[2]) >= float(b.min[2]) and float(p[2]) <= float(b.max[2]):
+			return true
+	return false
 
 
 ## Every box as 12 triangles (36 vertices), in world space. The round pit is a

@@ -1,0 +1,15 @@
+{
+  "id": "roof_rifleman",
+  "base": "tower_sentry",
+  "label": "Roof rifleman",
+  "role": "sentry",
+  "note": "The three riflemen on the barracks hall roof. Like the tower sentry they never come down: they watch the yard and the street, shout the alarm and shoot from the parapet. Killed, one comes back at its post on the roof (no stair up from behind the barracks). Only the blocks below differ from tower_sentry.json.",
+  "hp": 55,
+  "perception": {
+    "sight_range": 55.0,
+    "fov_deg": 140.0
+  },
+  "combat": {
+    "hold_radius": 3.0
+  }
+}

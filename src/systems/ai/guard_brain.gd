@@ -14,7 +14,8 @@ extends RefCounted
 ##
 ## States:
 ##   PATROL   walk the loop, pause and look around at each point
-##   ATTEND   stand, face the player, rifle at the ready (a challenge is on)
+##   ATTEND   stand, face the player, rifle at the ready (a challenge is on);
+##            with walk_up set, walk up to the player first
 ##   COMBAT   cover, hide, wind up, burst, back down; in the open if no cover
 ##   SEARCH   walk to where the player was last seen or heard and look around
 ##   RETURN   back to the loop
@@ -43,6 +44,7 @@ var reloading := false
 var alarm_pos := Vector3.INF      ## M15: where the town alarm last placed the player (shared)
 var facing := 0.0                 ## the body's current yaw (radians)
 var post_facing := 0.0            ## the yaw it was posted with
+var walk_up := 0.0                ## ATTEND: walk to this far from the player (0 = stand at the post)
 
 ## Outputs, read after update().
 var go_to := Vector3.INF
@@ -77,6 +79,7 @@ var _opening := false
 var _investigate_left := 0.0
 var _investigate_at := Vector3.INF
 var _look_base := 0.0
+var _walking_up := false
 
 
 func _init(soldier: Dictionary = {}, rng_seed: int = 1) -> void:
@@ -207,6 +210,14 @@ func update(dt: float) -> int:
 			sprint = false
 			face = target_pos
 			aim = Vector3.INF
+			# The one asking for papers comes up to you. A little slack before it
+			# starts again, so a half step back is not a shuffle.
+			if walk_up > 0.0 and target_pos != Vector3.INF:
+				_walking_up = not _near(target_pos, walk_up if _walking_up else walk_up + 1.0)
+				if _walking_up:
+					go_to = _leashed(target_pos, c("attend_leash", 16.0))
+			else:
+				_walking_up = false
 		State.SEARCH:
 			_search(dt)
 		State.COMBAT:
