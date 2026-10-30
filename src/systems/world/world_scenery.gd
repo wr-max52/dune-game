@@ -156,12 +156,18 @@ func _build_wreck_plate(root: Node3D, b: Dictionary) -> void:
 	var finish := str(b.wreck_finish)
 	var frame: Transform3D = b.wreck_frame
 	var key := str(b.id).get_slice("/", 0) + "/" + finish
+	# Ramp cleats and landing-pad paint are laid out on the plate itself.
+	if finish in ["ramp", "pad"]:
+		key += "/%s" % size
 	if not _wreck_mats.has(key):
 		var material := ShaderMaterial.new()
 		material.shader = WRECK_SHADER
 		material.set_shader_parameter("noise_tex", _mats.noise)
 		material.set_shader_parameter("wreck_from_world", frame.affine_inverse())
-		material.set_shader_parameter("finish", { "hull": 0, "rib": 1, "scorch": 2, "marking": 3, "nozzle": 4 }.get(finish, 0))
+		material.set_shader_parameter("level_from_world", (b.get("wreck_level", frame) as Transform3D).affine_inverse())
+		material.set_shader_parameter("plate_half", size * 0.5)
+		material.set_shader_parameter("finish", { "hull": 0, "rib": 1, "scorch": 2, "marking": 3, "nozzle": 4,
+			"deck": 5, "grate": 6, "ramp": 7, "pad": 8 }.get(finish, 0))
 		_wreck_mats[key] = material
 	mi.material_override = _wreck_mats[key]
 	mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY,

@@ -16,6 +16,13 @@ extends RefCounted
 ##     to the bridge platform; another drops to the stern end of the upper gallery.
 ##     Broken railings line the open edges.
 ##   - Everything is a wreck plate, so it all wears the wreck's metal (WorldScenery).
+## Wreck cleanup: the hold floor is the speeder ramp, open from the breach right
+## up to the stern bulkhead. The interior is decks hung off the port and starboard
+## plating in three tiers, catwalks across the hold between them and ramps along
+## the walls; nothing comes within six metres of the middle of the floor. A ramp
+## drops from the top of the floor along the starboard plating to the upper tier.
+## Walkways wear decking, catwalks grating, ramps cleats and the bridge platform
+## landing-pad paint (finishes "deck", "grate", "ramp", "pad").
 ## The Remnant droids that patrol it, and the cargo droid in the deep hold, are
 ## data (content/core/droids/droids.json, "wreck"); site_point() turns their
 ## routes into world points.
@@ -25,8 +32,14 @@ const DECK_Y := -24.0
 const ENTRY := Vector3(30, DECK_Y, -35)
 const PITCH_DEG := -34.0
 const HATCH_SECTION := 16          ## the dorsal plates torn away over the bridge ramp
-const INTERIOR_V := 136.0          ## the interior deck's floor (level frame)
+const HULL_RX := 48.0              ## the hull's half-width aft of the bow taper
+const HULL_RY := 38.0
+const INTERIOR_V := 136.0          ## the upper tier: wall decks and the bridge catwalk (level frame)
+const MID_V := 126.0               ## the mid tier: wall ledges and a second catwalk
+const LOW_V := 119.0               ## the low tier: balconies under the upper decks
 const BRIDGE_V := 146.0            ## the bridge platform's floor (level frame)
+const STERN_RAMP_W := 250.0        ## where the starboard ramp leaves the top of the hold floor
+const CLEAR_X := 19.0              ## the hold floor is open this far either side of the keel
 ## The speeder kicker, level frame on the sand: start, end, and how high its lip is.
 const KICKER_X := 120.0
 const KICKER_W := Vector2(20.0, 55.0)
@@ -167,6 +180,9 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 	# The entire lower deck is traversable; no invisible box across the breach.
 	_box(out, "lower_deck", Vector3(66, 2, 570), Vector3(0, DECK_Y - 1.0, 0), "rib")
 	out[-1]["floor"] = true
+	# Wreck cleanup: the floor runs on to the stern bulkhead, no pit at the top of the ramp.
+	_box(out, "lower_deck_stern", Vector3(66, 2, 12.6), Vector3(0, DECK_Y - 1.0, 291.2), "rib")
+	out[-1]["floor"] = true
 	# An upper gallery only on the intact flank leaves the breach a tall atrium.
 	_box(out, "upper_gallery", Vector3(17, 1.4, 270), Vector3(-22, -4, 100), "rib")
 	out[-1]["floor"] = true
@@ -239,44 +255,97 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 
 
 ## Issue #148: the level interior (all positions in the level frame, x, v, w).
-## The interior deck meets the climbing hold floor at its stern end, where the
-## hold reaches INTERIOR_V: walk up the hold's starboard side (x > 26), step onto
-## the deck there and walk back toward the bow along it.
+## Wreck cleanup: decks hang off the hull's port and starboard plating in three
+## tiers and catwalks cross the hold between them, all well clear of the hold
+## floor's middle (|x| < CLEAR_X), which stays an open speeder ramp to the stern.
+##   - Upper tier (INTERIOR_V): the starboard deck, reached by the stern ramp from
+##     the top of the hold floor; the port decks, round the gallery ramp's opening;
+##     the upper catwalk between them, where the bridge ramp climbs out through the
+##     torn dorsal plates to the bridge platform (the landing pad).
+##   - Mid tier (MID_V): stairs drop bow-ward from the upper catwalk along both
+##     sides to the mid catwalk and the wall ledges off it.
+##   - Low tier (LOW_V): from each ledge's stern end a ramp drops back aft under
+##     the upper decks to a balcony on the plating.
 static func _interior(out: Array, pitch_deg: float) -> void:
-	var meet := (INTERIOR_V - DECK_Y * cos(deg_to_rad(-pitch_deg))) / sin(deg_to_rad(-pitch_deg))
-	var meet_w := _level_w(Vector3(0, DECK_Y, meet), pitch_deg)
-	# The interior deck, and the landing where the gallery ramp arrives.
-	_slab(out, "interior_deck", Vector2(-12, 26), Vector2(172, meet_w + 0.6), INTERIOR_V, pitch_deg)
-	_slab(out, "gallery_landing", Vector2(-26, -11), Vector2(218, 228), INTERIOR_V, pitch_deg)
-	# The upper gallery's stern end (it is pitched with the hull) up to the landing.
-	var g_end := Vector3(-20, -3.3, 235)
-	_ramp(out, "gallery_ramp", Vector3(-20, _level_v(g_end, pitch_deg), _level_w(g_end, pitch_deg)),
-		Vector3(-20, INTERIOR_V, 218.5), 10.0, pitch_deg)
-	# Up through the torn dorsal plating to the bridge platform.
-	_ramp(out, "bridge_ramp", Vector3(0, INTERIOR_V, 180), Vector3(0, BRIDGE_V, 150), 10.0, pitch_deg)
-	_slab(out, "bridge_platform", Vector2(-14, 14), Vector2(112, 151), BRIDGE_V, pitch_deg)
+	var u := INTERIOR_V
+	var m := MID_V
+	var l := LOW_V
+	var g_end := Vector3(-20, -3.3, 235)       # the upper gallery's stern end (hull frame)
+	var gallery := Vector3(-20, _level_v(g_end, pitch_deg), _level_w(g_end, pitch_deg))
+	# Decks: id, x from-to (+-INF: out to that side's plating), w from-to, floor v, finish.
+	for d in [
+		["starboard_deck", Vector2(22, INF), Vector2(186, 232), u, "deck"],
+		["upper_catwalk", Vector2(-INF, INF), Vector2(178, 186), u, "grate"],
+		["port_deck_bow", Vector2(-INF, -12), Vector2(186, 196), u, "deck"],
+		["port_deck_outer", Vector2(-INF, -26), Vector2(196, 218.5), u, "deck"],
+		["port_deck_stern", Vector2(-INF, -12), Vector2(218.5, 228), u, "deck"],
+		["mid_catwalk", Vector2(-INF, INF), Vector2(150, 154), m, "grate"],
+		["starboard_ledge", Vector2(27, INF), Vector2(154, 176), m, "deck"],
+		["port_ledge", Vector2(-INF, -27), Vector2(154, 176), m, "deck"],
+		["starboard_balcony", Vector2(20, INF), Vector2(199.5, 207), l, "deck"],
+		["port_balcony", Vector2(-INF, -31), Vector2(199.5, 207), l, "deck"],
+	]:
+		_deck(out, str(d[0]), d[1], d[2], float(d[3]), str(d[4]), pitch_deg)
+	# Ramps: id, from, to (their tops, level frame), width, rails ([toward x, t from, t to]).
+	var top := Vector3(31, floor_v(STERN_RAMP_W, pitch_deg), STERN_RAMP_W)
+	for r in [
+		["stern_ramp", top, Vector3(33, u, 232), 8.0, [[-1, 0.4, 1.0]]],
+		["gallery_ramp", gallery, Vector3(-20, u, 218.5), 10.0, [[1, 0.0, 1.0]]],
+		["bridge_ramp", Vector3(0, u, 180), Vector3(0, BRIDGE_V, 150), 10.0, [[-1, 0.05, 0.8], [1, 0.05, 0.8]]],
+		["starboard_stair", Vector3(23, u, 178), Vector3(23, m, 154), 8.0, [[-1, 0.0, 1.0], [1, 0.0, 0.6]]],
+		["port_stair", Vector3(-23, u, 178), Vector3(-23, m, 154), 8.0, [[1, 0.0, 1.0], [-1, 0.0, 0.6]]],
+		["starboard_drop", Vector3(39, m, 176), Vector3(36, l, 200), 8.0, [[-1, 0.0, 1.0]]],
+		["port_drop", Vector3(-39, m, 176), Vector3(-36, l, 200), 8.0, [[1, 0.0, 1.0]]],
+	]:
+		_ramp(out, str(r[0]), r[1], r[2], float(r[3]), pitch_deg)
+		for rail in r[4]:
+			var a: Vector3 = r[1]
+			var b: Vector3 = r[2]
+			var side := _ramp_side(a, b, float(rail[0])) * (float(r[3]) * 0.5 - 0.2)
+			_railing(out, "%s_rail_%s" % [r[0], "s" if float(rail[0]) > 0 else "p"],
+				a.lerp(b, float(rail[1])) + side, a.lerp(b, float(rail[2])) + side, [], pitch_deg)
+	_slab(out, "bridge_platform", Vector2(-14, 14), Vector2(112, 151), BRIDGE_V, pitch_deg, "pad")
 	_level(out, "bridge", Vector3(26, 10, 12), Vector3(0, BRIDGE_V + 5.0, 118), "hull", pitch_deg)
 	_level(out, "bridge_windows", Vector3(26.4, 2, 9), Vector3(0, BRIDGE_V + 7.0, 118), "scorch", pitch_deg)
 	# Struts from the platform's bow corners down onto the hull.
 	for sx in [-11.0, 11.0]:
-		var top := BRIDGE_V - 1.0
+		var strut_top := BRIDGE_V - 1.0
 		var foot := _level_v(Vector3(sx, 34.0, 0), pitch_deg, 116.0)
-		_level(out, "bridge_strut_%d" % int(sx), Vector3(1.6, top - foot, 1.6),
-			Vector3(sx, (top + foot) * 0.5, 116), "rib", pitch_deg)
+		_level(out, "bridge_strut_%d" % int(sx), Vector3(1.6, strut_top - foot, 1.6),
+			Vector3(sx, (strut_top + foot) * 0.5, 116), "rib", pitch_deg)
 	# Broken railings: runs of 6 m panels along the open edges, some missing,
-	# some sagging. Each entry: id, from (x, w), to (x, w), floor v, gaps (panel
-	# indexes knocked out).
+	# some sagging. Each entry: id, from, to (x, floor v, w; x +-INF stops at that
+	# side's plating), gaps (panel indexes knocked out).
 	for r in [
-		["deck_bow_rail", Vector2(-12, 172), Vector2(26, 172), INTERIOR_V, [2, 5]],
-		["deck_starboard_rail", Vector2(26, 172), Vector2(26, 232), INTERIOR_V, [3, 7]],
-		["deck_port_rail", Vector2(-12, 186), Vector2(-12, 216), INTERIOR_V, [1]],
-		["landing_rail", Vector2(-26, 228), Vector2(-12, 228), INTERIOR_V, []],
-		["bridge_port_rail", Vector2(-14, 124), Vector2(-14, 151), BRIDGE_V, [2]],
-		["bridge_starboard_rail", Vector2(14, 124), Vector2(14, 151), BRIDGE_V, [1, 3]],
-		["bridge_stern_rail_a", Vector2(-14, 151), Vector2(-6, 151), BRIDGE_V, []],
-		["bridge_stern_rail_b", Vector2(6, 151), Vector2(14, 151), BRIDGE_V, [0]],
+		["starboard_deck_rail", Vector3(22, u, 186), Vector3(22, u, 232), [3, 6]],
+		["starboard_deck_stern_rail", Vector3(22, u, 232), Vector3(29, u, 232), []],
+		["upper_catwalk_bow_rail_s", Vector3(27, u, 178), Vector3(INF, u, 178), [1]],
+		["upper_catwalk_bow_rail_sc", Vector3(5, u, 178), Vector3(19, u, 178), []],
+		["upper_catwalk_bow_rail_pc", Vector3(-19, u, 178), Vector3(-5, u, 178), [0]],
+		["upper_catwalk_bow_rail_p", Vector3(-INF, u, 178), Vector3(-27, u, 178), []],
+		["upper_catwalk_stern_rail", Vector3(-12, u, 186), Vector3(22, u, 186), [3]],
+		["port_deck_bow_rail", Vector3(-12, u, 186), Vector3(-12, u, 196), []],
+		["port_deck_hole_rail", Vector3(-26, u, 196), Vector3(-12, u, 196), [1]],
+		["port_deck_outer_rail", Vector3(-26, u, 196), Vector3(-26, u, 218.5), [2]],
+		["port_deck_stern_rail", Vector3(-12, u, 218.5), Vector3(-12, u, 228), []],
+		["port_deck_stern_end_rail", Vector3(-INF, u, 228), Vector3(-12, u, 228), [2]],
+		["mid_catwalk_bow_rail", Vector3(-INF, m, 150), Vector3(INF, m, 150), [3, 8]],
+		["mid_catwalk_stern_rail", Vector3(-19, m, 154), Vector3(19, m, 154), [4]],
+		["starboard_ledge_rail", Vector3(27, m, 162), Vector3(27, m, 176), []],
+		["starboard_ledge_stern_rail", Vector3(27, m, 176), Vector3(35, m, 176), []],
+		["port_ledge_rail", Vector3(-27, m, 162), Vector3(-27, m, 176), []],
+		["port_ledge_stern_rail", Vector3(-35, m, 176), Vector3(-27, m, 176), []],
+		["starboard_balcony_rail", Vector3(20, l, 199.5), Vector3(20, l, 207), []],
+		["starboard_balcony_bow_rail", Vector3(20, l, 199.5), Vector3(32, l, 199.5), []],
+		["starboard_balcony_stern_rail", Vector3(20, l, 207), Vector3(INF, l, 207), [1]],
+		["port_balcony_rail", Vector3(-31, l, 199.5), Vector3(-31, l, 207), []],
+		["port_balcony_stern_rail", Vector3(-INF, l, 207), Vector3(-31, l, 207), []],
+		["bridge_port_rail", Vector3(-14, BRIDGE_V, 124), Vector3(-14, BRIDGE_V, 151), [2]],
+		["bridge_starboard_rail", Vector3(14, BRIDGE_V, 124), Vector3(14, BRIDGE_V, 151), [1, 3]],
+		["bridge_stern_rail_a", Vector3(-14, BRIDGE_V, 151), Vector3(-6, BRIDGE_V, 151), []],
+		["bridge_stern_rail_b", Vector3(6, BRIDGE_V, 151), Vector3(14, BRIDGE_V, 151), [0]],
 	]:
-		_railing(out, str(r[0]), r[1], r[2], float(r[3]), r[4], pitch_deg)
+		_railing(out, str(r[0]), r[1], r[2], r[3], pitch_deg)
 
 
 ## The level frame's height and stern-ward distance of a hull-frame point
@@ -293,6 +362,22 @@ static func _level_w(hull: Vector3, pitch_deg: float) -> float:
 	return -hull.y * sin(a) + hull.z * cos(a)
 
 
+## The level height of the hold floor's top (hull height DECK_Y) at stern-ward distance w.
+static func floor_v(w: float, pitch_deg: float = PITCH_DEG) -> float:
+	return _level_v(Vector3(0, DECK_Y, 0), pitch_deg, w)
+
+
+## How far out the hull plating's mid-line is at level height v, stern-ward w:
+## the octagon's flank facets, then the steep dorsal/ventral ones.
+static func _wall_x(v: float, w: float, pitch_deg: float) -> float:
+	var a := deg_to_rad(-pitch_deg)
+	var y := absf(v * cos(a) - w * sin(a))
+	var corner := Vector2(cos(PI / 4.0) * HULL_RX, sin(PI / 4.0) * HULL_RY)
+	if y <= corner.y:
+		return HULL_RX - (HULL_RX - corner.x) * y / corner.y
+	return corner.x * maxf(0.0, HULL_RY - y) / (HULL_RY - corner.y)
+
+
 ## A box placed in the level frame (center (x, v, w), its own `basis` in that
 ## frame), stored in the hull frame like every other part.
 static func _level(out: Array, id: String, size: Vector3, center: Vector3, finish: String,
@@ -301,45 +386,96 @@ static func _level(out: Array, id: String, size: Vector3, center: Vector3, finis
 	_box(out, id, size, to_hull * center, finish, to_hull * basis)
 
 
-## A level floor one metre thick with its top at v.
-static func _slab(out: Array, id: String, xs: Vector2, ws: Vector2, v: float, pitch_deg: float) -> void:
-	_level(out, id, Vector3(xs.y - xs.x, 1.0, ws.y - ws.x),
-		Vector3((xs.x + xs.y) * 0.5, v - 0.5, (ws.x + ws.y) * 0.5), "rib", pitch_deg)
+## A level floor `thick` metres thick with its top at v.
+static func _slab(out: Array, id: String, xs: Vector2, ws: Vector2, v: float, pitch_deg: float,
+		finish: String = "deck", thick: float = 1.0) -> void:
+	_level(out, id, Vector3(xs.y - xs.x, thick, ws.y - ws.x),
+		Vector3((xs.x + xs.y) * 0.5, v - thick * 0.5, (ws.x + ws.y) * 0.5), finish, pitch_deg)
 	out[-1]["floor"] = true
 
 
-## A straight ramp whose top runs from a to b (level frame, same x), `width` wide.
+## Wreck cleanup: a deck hung in the hull. An infinite x edge runs out to that
+## side's plating: the slab stops where the plating is narrowest along it (into the
+## plate, never through it), 3 m filler strips carry it on to the plating where the
+## hull bulges, and diagonal braces under it bear on the wall.
+static func _deck(out: Array, id: String, xs: Vector2, ws: Vector2, v: float, finish: String,
+		pitch_deg: float) -> void:
+	var thick := 0.5 if finish == "grate" else 1.0
+	var reach := func(a: float, b: float) -> float:
+		return minf(minf(_wall_x(v, a, pitch_deg), _wall_x(v, b, pitch_deg)),
+			minf(_wall_x(v - thick, a, pitch_deg), _wall_x(v - thick, b, pitch_deg))) - 0.2
+	var lo: float = -reach.call(ws.x, ws.y) if is_inf(xs.x) else xs.x
+	var hi: float = reach.call(ws.x, ws.y) if is_inf(xs.y) else xs.y
+	_slab(out, id, Vector2(lo, hi), ws, v, pitch_deg, finish, thick)
+	var strips := ceili((ws.y - ws.x) / 3.0)
+	for side in [-1, 1]:
+		if not is_inf(xs.x if side < 0 else xs.y):
+			continue
+		var edge := absf(lo if side < 0 else hi)
+		for i in strips:
+			var a := lerpf(ws.x, ws.y, float(i) / strips)
+			var b := lerpf(ws.x, ws.y, float(i + 1) / strips)
+			var out_to: float = reach.call(a, b)
+			if out_to - edge > 0.3:
+				var span := Vector2(edge, out_to) if side > 0 else Vector2(-out_to, -edge)
+				_slab(out, "%s_fill_%s%d" % [id, "s" if side > 0 else "p", i], span, Vector2(a, b), v, pitch_deg, finish, thick)
+		if xs.x == -INF and xs.y == INF:
+			continue                 # a catwalk spans wall to wall; it needs no braces
+		var length := ws.y - ws.x
+		for f: float in ([0.5] if length < 12.0 else [0.25, 0.75]):
+			var w := ws.x + length * f
+			var drop := 5.5
+			var head := Vector3(side * (edge - 6.0), v - thick, w)
+			var foot := Vector3(side * (_wall_x(v - drop, w, pitch_deg) - 0.6), v - drop, w)
+			var run := foot - head
+			_level(out, "%s_brace_%d" % [id, int(f * 100)], Vector3(run.length(), 0.7, 0.9),
+				(head + foot) * 0.5, "rib", pitch_deg, Basis(Vector3.BACK, atan2(run.y, run.x)))
+
+
+## A straight ramp whose top runs from a to b (level frame), `width` wide.
 static func _ramp(out: Array, id: String, a: Vector3, b: Vector3, width: float, pitch_deg: float) -> void:
 	if b.z < a.z:
 		var t := a
 		a = b
 		b = t
 	var run := b - a
-	var basis := Basis(Vector3.RIGHT, -atan2(run.y, run.z))
+	var flat := Vector2(run.x, run.z).length()
+	var basis := Basis(Vector3.UP, atan2(run.x, run.z)) * Basis(Vector3.RIGHT, -atan2(run.y, flat))
 	_level(out, id, Vector3(width, 1.0, run.length() + 0.6),
-		(a + b) * 0.5 - basis.y * 0.5, "rib", pitch_deg, basis)
+		(a + b) * 0.5 - basis.y * 0.5, "ramp", pitch_deg, basis)
 	out[-1]["floor"] = true
 
 
-## A railing along a floor edge: a top rail and a post per 6 m panel, 1.1 m high.
+## The level-plane unit vector across a ramp from a to b, on its edge toward x sign `toward`.
+static func _ramp_side(a: Vector3, b: Vector3, toward: float) -> Vector3:
+	var across := Vector3.UP.cross(Vector3(b.x - a.x, 0, b.z - a.z)).normalized()
+	return across if across.x * toward > 0.0 else -across
+
+
+## A railing along a floor edge from `from` to `to` (x, floor v, w; level frame;
+## an infinite x stops short of that side's plating), a top rail and a post per
+## 6 m panel, 1.1 m high. It follows a ramp's slope when the two v differ.
 ## Knocked-out panels leave a gap; every third standing one sags outward.
-static func _railing(out: Array, id: String, from: Vector2, to: Vector2, v: float,
-		gaps: Array, pitch_deg: float) -> void:
+static func _railing(out: Array, id: String, from: Vector3, to: Vector3, gaps: Array,
+		pitch_deg: float) -> void:
+	if is_inf(from.x):
+		from.x = signf(from.x) * (_wall_x(from.y + 1.0, from.z, pitch_deg) - 1.6)
+	if is_inf(to.x):
+		to.x = signf(to.x) * (_wall_x(to.y + 1.0, to.z, pitch_deg) - 1.6)
 	var span := to - from
 	var panels := maxi(1, int(round(span.length() / 6.0)))
-	var along := Vector3(span.x, 0, span.y).normalized()
-	var yaw := atan2(along.x, along.z)
+	var along := span.normalized()
+	var across := Vector3.UP.cross(along).normalized()
+	var rail_basis := Basis(across, along.cross(across), along)
 	for i in panels:
 		if i in gaps:
 			continue
 		var a := from + span * (float(i) / panels)
 		var b := from + span * (float(i + 1) / panels)
-		var mid := (a + b) * 0.5
 		var sag := Basis(along, deg_to_rad(18.0)) if i % 3 == 2 else Basis.IDENTITY
-		var length := (b - a).length()
-		_level(out, "%s_%d" % [id, i], Vector3(0.16, 0.12, length), Vector3(mid.x, v + 1.05, mid.y),
-			"marking", pitch_deg, sag * Basis(Vector3.UP, yaw))
-		_level(out, "%s_post_%d" % [id, i], Vector3(0.16, 1.1, 0.16), Vector3(a.x, v + 0.55, a.y),
+		_level(out, "%s_%d" % [id, i], Vector3(0.16, 0.12, (b - a).length()), (a + b) * 0.5 + Vector3(0, 1.05, 0),
+			"marking", pitch_deg, sag * rail_basis)
+		_level(out, "%s_post_%d" % [id, i], Vector3(0.16, 1.1, 0.16), a + Vector3(0, 0.55, 0),
 			"rib", pitch_deg)
 
 
