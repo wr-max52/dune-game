@@ -2,6 +2,13 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Cantina owner's hood tufts go with her helmet (2026-10-29)
+
+- **A clean hood under any head.** Two small dark tufts on the rim of the cantina
+  owner's hood, once hidden behind her breathing hoses, stuck out in front of her
+  shoulders whenever she wore another head. They now belong to her helmet piece, where
+  the hoses still cover them, so her own look is unchanged.
+
 ## Voices cleanup: a voice library, Skrugs and T-89 recast (2026-10-29, issue #164)
 
 - **Voice library.** `content/core/npcs/voice_library.json` lists every ElevenLabs

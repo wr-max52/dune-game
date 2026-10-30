@@ -214,7 +214,7 @@
     "min_claim_tris": 300
   },
   "kit": {
-    "note": "Issue #48 parts library, outfits redone in issue #79. One featureless base body (Hyper3D Rodin Gen-2.5 High from a prompt, generation 8b97c0b9-57a0-4253-8603-e60e781f949a, rigged with the human template b98261e0-96e3-445e-a4e3-dc5c494dfd96) gives every outfit its skeleton, proportions and seams. Each outfit is one whole costumed character generated from its concept sheet's front and back views plus a prompt, rigged with the human template, turned to the base body's rest pose, fitted onto it and cut at its head/torso/legs seams (tools/look/fit_parts.gd, dress). Player d8edcd4d-c677-4a2d-a9d6-9bf95511e919 (rig 87225e2b-cd02-4690-8eea-7b1a0cf82873); guard 6c15f9cd-8d84-4775-856f-638447246a19 (rig 2a576a9e-5b48-47d3-8f2e-2fbe975977f7), generated white and baked to gunmetal grey in the fit (recolor); cantina owner ee1da12c-527b-4b87-be46-5ff9d73d57f8 (rig 2ca5dd83-1250-433d-b08f-e2c3e4750d87), her long tunic hem moved to her upper body by colour (move). Her legs are their own piece (4faf8200-a481-4c44-8a07-68b0b1999d2c, generated square from renders of an earlier pair), fitted into the legs slot by the waistband (align_top) and trimmed (trim_top), so they go under anyone's torso. Prompts and the picks: docs/kit/HYPER3D_PROMPTS.md. A spare head for future NPCs, a brass goggle mask on a teal hood (goggles_head, 1eefa49e-0dd4-4022-8599-0a53fce4446a), came out of an issue #48 player head retry. The villager (local) is dressed from its own rigged model (see local). Seams fixed by move: the player's stand-up collar ring (behind and beside the neck, below the chin) goes from the head to the torso, the bandana's chin stays on the head, the owner's grey breathing hoses from the torso to the head (by low saturation), and yellow hood scraps under her helmet back to the torso.",
+    "note": "Issue #48 parts library, outfits redone in issue #79. One featureless base body (Hyper3D Rodin Gen-2.5 High from a prompt, generation 8b97c0b9-57a0-4253-8603-e60e781f949a, rigged with the human template b98261e0-96e3-445e-a4e3-dc5c494dfd96) gives every outfit its skeleton, proportions and seams. Each outfit is one whole costumed character generated from its concept sheet's front and back views plus a prompt, rigged with the human template, turned to the base body's rest pose, fitted onto it and cut at its head/torso/legs seams (tools/look/fit_parts.gd, dress). Player d8edcd4d-c677-4a2d-a9d6-9bf95511e919 (rig 87225e2b-cd02-4690-8eea-7b1a0cf82873); guard 6c15f9cd-8d84-4775-856f-638447246a19 (rig 2a576a9e-5b48-47d3-8f2e-2fbe975977f7), generated white and baked to gunmetal grey in the fit (recolor); cantina owner ee1da12c-527b-4b87-be46-5ff9d73d57f8 (rig 2ca5dd83-1250-433d-b08f-e2c3e4750d87), her long tunic hem moved to her upper body by colour (move). Her legs are their own piece (4faf8200-a481-4c44-8a07-68b0b1999d2c, generated square from renders of an earlier pair), fitted into the legs slot by the waistband (align_top) and trimmed (trim_top), so they go under anyone's torso. Prompts and the picks: docs/kit/HYPER3D_PROMPTS.md. A spare head for future NPCs, a brass goggle mask on a teal hood (goggles_head, 1eefa49e-0dd4-4022-8599-0a53fce4446a), came out of an issue #48 player head retry. The villager (local) is dressed from its own rigged model (see local). Seams fixed by move: the player's stand-up collar ring (behind and beside the neck, below the chin) goes from the head to the torso, the bandana's chin stays on the head, the owner's grey breathing hoses from the torso to the head (by low saturation), yellow hood scraps under her helmet back to the torso, and the two hood-rim tufts in front of her shoulders (box) to the head, where the hoses cover them.",
     "source": "res://assets/characters/kit/source/base_body_rigged.glb",
     "out": "res://assets/characters/kit/base_body.glb",
     "flatten": [],
@@ -329,6 +329,14 @@
                 0.35,
                 1.0
               ]
+            },
+            {
+              "from": "torso",
+              "to": "head",
+              "box": {
+                "min": [-0.22, 0.5, 0.18],
+                "max": [0.22, 0.6, 0.4]
+              }
             },
             {
               "from": "head",
