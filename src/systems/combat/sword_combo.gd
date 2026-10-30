@@ -185,6 +185,16 @@ func is_active() -> bool:
 	return p >= float(a[0]) and p <= float(a[1])
 
 
+## True through the cut itself, a little either side of when it can hit: the blade
+## leaves a trail (SwordTrail).
+func cutting() -> bool:
+	if mode != Mode.SWING:
+		return false
+	var a: Array = swing_def().active
+	var p := progress()
+	return p >= float(a[0]) - 0.1 and p <= float(a[1]) + 0.1
+
+
 func damage() -> int:
 	return blade.heavy_damage() if swing_def().heavy else blade.light_damage()
 

@@ -21,6 +21,8 @@ const MIN_GAP_MS := 50          ## a rifle burst must not stack into noise
 enum Result { NONE, HIT, KILL }
 
 var marker: HitMarker
+var world_markers_shown := 0    ## markers pinned where a hit landed (seekers, mark_at)
+var _hud: CanvasLayer
 var hit_markers_shown := 0
 var kill_markers_shown := 0
 var thuds_played := 0           ## thuds that actually started (after the rate limit)
@@ -32,6 +34,7 @@ var _kill: AudioStreamPlayer
 ## Put the marker on `hud` (its own child, so it ignores the crosshair's visibility).
 func setup(hud: CanvasLayer) -> void:
 	name = "HitFeedback"
+	_hud = hud
 	marker = HitMarker.new()
 	hud.add_child(marker)
 	_thud = _player(THUD, -4.0)
@@ -84,6 +87,20 @@ func confirm(kill: bool) -> void:
 	else:
 		hit_markers_shown += 1
 	_play_thud(kill)
+
+
+## A seeker's hit lands far from the crosshair: pin a marker on `at` (world space)
+## as well, held long enough to find. Silent; the hit's own confirm() makes the thud.
+func mark_at(at: Vector3, kill: bool) -> void:
+	if _hud == null:
+		return
+	var m := HitMarker.new()
+	m.world_point = at
+	m.life = 0.7
+	_hud.add_child(m)
+	m.show_hit(kill)
+	world_markers_shown += 1
+	get_tree().create_timer(m.life + 0.1, false).timeout.connect(m.queue_free)
 
 
 func _play_thud(kill: bool) -> void:

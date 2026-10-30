@@ -34,6 +34,7 @@ var hull: StaticBody3D
 var visual: Node3D
 var chase = ChaseCamera.new()
 var gun: WeaponActor
+var feedback: HitFeedback             ## hit markers and the thud for the lasers, as on foot
 var shots := 0
 var log_events: Array = []            ## every HoverModel event, for traces and tests
 
@@ -82,6 +83,8 @@ func _ready() -> void:
 			b.stylize = true
 			b.sweep = true
 			b.color = color
+			b.on_hit.connect(_on_laser_hit)
+			b.on_splash.connect(_on_laser_hit)
 		chase.fit_to(float(cfg.get("look", {}).get("length", 4.6)))
 		chase.chase_back = 9.0
 		chase.chase_up = 3.2
@@ -285,6 +288,13 @@ func _fire(dt: float, trigger: bool) -> void:
 			gun.shots_fired += 1
 		shots += 1
 		Sound.play("speeder_laser", model.position)
+
+
+## A laser bolt landed on `target`: the hit marker pops if it really took damage
+## (people, droids, other speeders, ships), as for the guns on foot.
+func _on_laser_hit(target: Object) -> void:
+	if feedback != null:
+		feedback.on_hit(target)
 
 
 ## Where the lasers meet: the first thing straight ahead of the nose (not the
@@ -662,6 +672,9 @@ func _build_hud() -> void:
 	help.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	help.add_theme_constant_override("outline_size", 4)
 	_hud.add_child(help)
+	feedback = HitFeedback.new()
+	add_child(feedback)
+	feedback.setup(_hud)
 	var layer := CanvasLayer.new()
 	layer.layer = 4
 	add_child(layer)

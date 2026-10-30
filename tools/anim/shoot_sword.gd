@@ -1,8 +1,8 @@
 extends SceneTree
 ## The energy sword's moves on the real player in the town: a left swipe, a right
 ## swipe, a flurry of single clicks, the double-click combo (left, right, centre),
-## and Remnant droids batted away by a killing cut. Each clip saves every other
-## frame (30 fps) to test_results/sword/<clip>/NNN.png and a contact sheet to
+## and Remnant droids batted away by a killing cut. Each clip saves every frame
+## (60 fps) to test_results/sword/<clip>/NNN.png and a contact sheet to
 ## test_results/sword/<clip>.png; shoot_sword.sh turns the frames into GIFs.
 ##
 ## Needs a real renderer: ./tools/anim/shoot_sword.sh [clips=left,combo]
@@ -115,10 +115,9 @@ func _record(clip: String, frames: int, act: Dictionary) -> void:
 		if act.has(f):
 			(act[f] as Callable).call()
 		await RenderingServer.frame_post_draw
-		if f % 2 == 0:
-			var img := get_root().get_texture().get_image()
-			img.save_png("%s/%03d.png" % [dir, f / 2])
-			shots.append(img)
+		var img := get_root().get_texture().get_image()
+		img.save_png("%s/%03d.png" % [dir, f])
+		shots.append(img)
 	_sheet(clip, shots)
 	print("CLIP ", clip, " -> ", dir, " (", shots.size(), " frames)")
 

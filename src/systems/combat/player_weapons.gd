@@ -210,6 +210,7 @@ func _physics_process(dt: float) -> void:
 	if cur == "energy_blade" and blade_extent > 0.5:
 		_intercept_bolts()
 	avatar.sword_pose = combo.pose(avatar.first_person) if cur == "energy_blade" else {}
+	avatar.sword_trail_on = cur == "energy_blade" and combo.cutting()
 	avatar.current = cur
 	avatar.drawn = holder.drawn()
 	_update_hud(dt)

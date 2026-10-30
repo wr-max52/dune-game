@@ -997,7 +997,8 @@ func _fight_step(dt: float) -> void:
 
 
 ## Issue #181: a hit in the fight. Theirs on you flashes the screen's edge; yours on
-## them pops the hit marker (a kill's marker comes with its own event).
+## them pops the hit marker (a kill's marker comes with its own event), and a seeker's
+## also pins one where it struck.
 func _fight_hit(e: Dictionary) -> void:
 	if fight == null:
 		return
@@ -1005,6 +1006,10 @@ func _fight_hit(e: Dictionary) -> void:
 		hud.flash_damage()
 	elif int(e.get("by", -1)) == fight.df.player_id:
 		hud.confirm_hit(false)
+		if str(e.get("kind", "")) == "missile":
+			# A seeker lands far off the nose: mark where (red if it was the kill).
+			var victim: Dictionary = fight.df.get_ship(int(e.get("id", -1)))
+			hud.mark_hit_at(e.point, not victim.is_empty() and not victim.alive)
 
 
 ## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash

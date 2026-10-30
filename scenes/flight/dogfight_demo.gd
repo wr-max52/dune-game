@@ -29,6 +29,7 @@ var chase = ChaseCamera.new()
 var hud: Control
 var hud_label: Label
 var banner: Label
+var feedback: HitFeedback   ## hit markers and the thud for your guns and seekers, as in town
 
 var view: DogfightView     ## issue #46: ships, bolts and flashes (shared with SpaceFight)
 var ship_nodes: Dictionary:  ## runtime id -> ShipNode
@@ -227,8 +228,16 @@ func warm_up(seconds: float, step: float = 1.0 / 60.0) -> void:
 func _on_event(e: Dictionary) -> void:
 	view.on_event(e)
 	match str(e.type):
+		"hit":
+			if int(e.by) == df.player_id and feedback != null:
+				feedback.confirm(false)
+				if str(e.get("kind", "")) == "missile":
+					var victim: Dictionary = df.get_ship(int(e.id))
+					feedback.mark_at(e.point, not victim.is_empty() and not victim.alive)
 		"kill":
 			if e.by == df.player_id:
+				if feedback != null:
+					feedback.confirm(true)
 				_show_banner("Kill  ·  " + str(e.who) if str(e.get("who", "")) != "" else "Kill")
 		"wave":
 			_show_banner("Wave %d" % e.index)
@@ -359,6 +368,9 @@ func _build_hud() -> void:
 	banner.size = Vector2(320, 30)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.add_child(banner)
+	feedback = HitFeedback.new()
+	add_child(feedback)
+	feedback.setup(layer)
 
 
 func _show_banner(text: String, secs: float = 2.0) -> void:
