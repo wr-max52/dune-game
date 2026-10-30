@@ -270,7 +270,21 @@ static func _hull(out: Array) -> void:
 	var tip: Array = STATIONS[0]
 	_box(out, "bow_cap", Vector3(108.0 * float(tip[1]) + 2.0, 78.0 * float(tip[2]), PLATE),
 		Vector3(0, 3.0 * float(tip[2]), float(tip[0]) - 1.0), "trim")
-	_box(out, "stern_bulkhead", Vector3(110, 80, PLATE * 2.0), Vector3(0, 3, 332), "hull")
+	_stern_cap(out, float((STATIONS[-1] as Array)[0]) + PLATE)
+
+
+## The stern's bulkhead at z, the hull's own cross-section (a box would stick out
+## past its corners): one box per facet, from the facet in to the keel's middle
+## line. Each covers the wedge between its facet and the middle, so together they
+## fill the section exactly, and none reaches outside it.
+static func _stern_cap(out: Array, z: float) -> void:
+	for f in HULL.size():
+		var p := Vector3((HULL[f] as Vector2).x, (HULL[f] as Vector2).y, z)
+		var q := Vector3((HULL[(f + 1) % HULL.size()] as Vector2).x, (HULL[(f + 1) % HULL.size()] as Vector2).y, z)
+		var n := _normal(p, q)
+		var depth := Vector3(p.x, p.y, 0).dot(n)        # from the facet in to the middle line
+		_box(out, "stern_bulkhead_%s" % FACETS[f], Vector3((q - p).length() + 0.8, depth, PLATE * 2.0),
+			(p + q) * 0.5 - n * depth * 0.5, "hull", _plate_basis(q - p, Vector3(0, 0, 1)))
 
 
 ## A hull corner `i` at station `st` ([z, sx, sy]).
