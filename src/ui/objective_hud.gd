@@ -1,8 +1,9 @@
 class_name ObjectiveHud
 extends CanvasLayer
 ## The objective pointer: what to do next (Objective.current) on a line under
-## the banner, with how far it is, an arrow turning towards it, and a diamond
-## over the place itself while it is on screen.
+## the banner's left end, with how far it is, an arrow before it turning towards
+## it, and a diamond over the place itself while it is on screen. Left, not
+## centred: the middle of the top is where arrival titles and toasts go.
 ##
 ## It only reads. `demo` (town_demo.gd) turns the objective's target word into a
 ## place: live bodies, town markers, the range, the pit, the desert outposts.
@@ -12,6 +13,7 @@ const AMBER := Color("#e0a050")
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const TOP := 48.0                     ## below RetroHud's 40 px banner
 const EDGE := 36.0                    ## the diamond stays this far inside the screen
+const LEFT := 26.0                    ## the arrow's centre from the left edge; the text starts after it
 
 var demo                              ## town_demo.gd
 var label: Label
@@ -33,12 +35,12 @@ func _ready() -> void:
 	marks.draw.connect(_draw_marks)
 	add_child(marks)
 	label = Label.new()
-	label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	label.offset_left = -360
-	label.offset_right = 360
+	label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	label.offset_left = LEFT + 20.0
+	label.offset_right = LEFT + 760.0
 	label.offset_top = TOP
 	label.offset_bottom = TOP + 28
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.add_theme_font_size_override("font_size", 18)
 	label.add_theme_color_override("font_color", INK)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -130,7 +132,7 @@ func _marker(id: String) -> Vector3:
 
 # ------------------------------------------------------------------ drawing
 
-## The arrow under the line (the target's bearing from where the camera looks),
+## The arrow before the line (the target's bearing from where the camera looks),
 ## and the diamond over the target while it is in front of the camera.
 func _draw_marks() -> void:
 	if objective.is_empty() or target_pos == Vector3.INF or not label.visible:
@@ -143,7 +145,7 @@ func _draw_marks() -> void:
 	# Bearing in the camera's frame (works round a ball planet too): 0 = straight
 	# ahead, + = to the right, PI = behind.
 	var bearing := atan2(to.dot(cam.global_basis.x), to.dot(-cam.global_basis.z))
-	var c := Vector2(size.x * 0.5, TOP + 44.0)
+	var c := Vector2(LEFT, TOP + 14.0)
 	var tip := Vector2(sin(bearing), -cos(bearing))
 	var side := Vector2(-tip.y, tip.x)
 	var pts := PackedVector2Array([c + tip * 11.0, c - tip * 7.0 + side * 8.0, c - tip * 3.0, c - tip * 7.0 - side * 8.0])
@@ -152,7 +154,7 @@ func _draw_marks() -> void:
 	if cam.is_position_behind(target_pos + Vector3.UP * 2.0):
 		return
 	var at := cam.unproject_position(target_pos + Vector3.UP * 2.0)
-	at = at.clamp(Vector2(EDGE, TOP + 70.0), size - Vector2(EDGE, EDGE + 40.0))
+	at = at.clamp(Vector2(EDGE, TOP + 50.0), size - Vector2(EDGE, EDGE + 40.0))
 	var r := 9.0
 	var dia := PackedVector2Array([at + Vector2(0, -r), at + Vector2(r, 0), at + Vector2(0, r), at + Vector2(-r, 0)])
 	marks.draw_colored_polygon(dia, Color(AMBER, 0.85))
