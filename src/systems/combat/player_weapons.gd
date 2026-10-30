@@ -53,6 +53,7 @@ var _alt_on := false
 var _hitstop := 0.0
 var _tip_was := Vector3.INF         ## the blade tip last frame of a swing (INF = not swinging)
 var _sfx: Dictionary = {}
+var _sfx_pitch: Dictionary = {}     ## key -> base pitch (the rifle is the pistol's shot, slowed and deeper)
 var _hum: AudioStreamPlayer
 var _hud: CanvasLayer
 var _cross: Control
@@ -455,6 +456,7 @@ func _build_sfx() -> void:
 	var blade_vol: Dictionary = lk.get("blade_volume", {})
 	for id in ["pistol_blaster", "rifle_blaster"]:
 		map["shot_" + id] = lk.get(id, {}).get("sound", "")
+		_sfx_pitch["shot_" + id] = float(lk.get(id, {}).get("sound_pitch", 1.0))
 	for k in map:
 		var path := str(map[k])
 		if path == "" or not ResourceLoader.exists(path):
@@ -484,7 +486,7 @@ func _build_sfx() -> void:
 func _play(key: String) -> void:
 	if _sfx.has(key) and is_inside_tree():
 		var p: AudioStreamPlayer = _sfx[key]
-		p.pitch_scale = randf_range(0.94, 1.06)
+		p.pitch_scale = float(_sfx_pitch.get(key, 1.0)) * randf_range(0.94, 1.06)
 		p.play()
 
 

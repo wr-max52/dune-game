@@ -43,7 +43,8 @@
     "aim": { "pos": [-0.1, -0.02, 0.4], "rot": [0, 0, 0] },
     "aim_fpv": { "pos": [-0.22, 0.05, 0.5], "rot": [4, 13, 0] },
     "holster": "back",
-    "sound": "res://assets/third_party/kenney_starter_kit_fps/sounds/blaster_repeater.ogg",
+    "sound": "res://assets/third_party/kenney_starter_kit_fps/sounds/blaster.ogg",
+    "sound_pitch": 0.72,
     "slot": 3
   },
   "bolt": { "length": 0.9, "radius": 0.035, "energy": 5.0 },
