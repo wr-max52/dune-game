@@ -1,5 +1,5 @@
 {
-  "note": "Issue #25: how bodies fall (src/systems/anim/ragdoll.gd). Speeds are m/s, gravity m/s^2 (the game's 20). kick is the push of the killing blow away from whoever landed it, scaled by its damage up to kick_max; kick_up lifts it a little so the body leaves its feet. knee_buckle pushes the knees forward so legs fold. friction and bounce act where a particle touches the world (collision_mask). It sleeps once nothing moves faster than sleep_speed for sleep_after seconds, or after max_seconds. Dropped weapons are thrown with the hand's speed plus weapon_toss.",
+  "note": "Issue #25: how bodies fall (src/systems/anim/ragdoll.gd). Speeds are m/s, gravity m/s^2 (the game's 20). kick is the push of the killing blow away from whoever landed it, scaled by its damage up to kick_max; kick_up lifts it a little so the body leaves its feet. knee_buckle pushes the knees forward so legs fold. friction and bounce act where a particle touches the world (collision_mask). It sleeps once nothing moves faster than sleep_speed for sleep_after seconds, or after max_seconds. Dropped weapons are thrown with the hand's speed plus weapon_toss. A kill with the energy sword flings the whole body along the blade's sweep at blade_fling (m/s), lifted by blade_fling_up, so it goes flying a few metres sideways.",
   "gravity": 20.0,
   "air_drag": 0.02,
   "iterations": 8,
@@ -17,5 +17,7 @@
   "max_seconds": 6.0,
   "weapon_toss": 1.5,
   "weapon_spin": 6.0,
-  "weapon_rest_seconds": 20.0
+  "weapon_rest_seconds": 20.0,
+  "blade_fling": 8.0,
+  "blade_fling_up": 5.5
 }
