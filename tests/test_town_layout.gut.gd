@@ -40,7 +40,7 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
 	assert_eq(t.boxes().size(), 182)   # issue #76: + the barracks landing pad
-	assert_eq(t.markers().size(), 26)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89
+	assert_eq(t.markers().size(), 31)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen
 	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
 	assert_eq(t.zones().size(), 8)
 
@@ -76,8 +76,20 @@ func test_spawn_is_on_pit_floor() -> void:
 	assert_eq(_town().spawn_pos().y, -6.0)
 
 
-func test_five_trooper_posts() -> void:
-	assert_eq(_town().markers_with_role("trooper_post").size(), 5)
+func test_eight_trooper_posts() -> void:
+	assert_eq(_town().markers_with_role("trooper_post").size(), 8)
+
+
+func test_three_riflemen_on_the_barracks_roof() -> void:
+	var t := _town()
+	var hall: Dictionary = t.get_box("barracks_hall")
+	var on_roof := t.markers_with_role("trooper_post").filter(func(m): return str(m.soldier) == "roof_rifleman")
+	assert_eq(on_roof.size(), 3)
+	for m in on_roof:
+		var p: Vector3 = t.marker_pos(str(m.id))
+		assert_almost_eq(p.y, float(hall.max[1]), 0.01, "%s stands on the hall roof" % m.id)
+		assert_true(p.x > float(hall.min[0]) and p.x < float(hall.max[0]) and p.z > float(hall.min[2]) and p.z < float(hall.max[2]),
+			"%s is inside the roof's edge" % m.id)
 
 
 func test_route_lengths_match_reference() -> void:

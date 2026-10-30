@@ -47,9 +47,12 @@ func test_obstructions_are_blocking_boxes_except_stood_on() -> void:
 	var ids := []
 	for b in TownNav.obstruction_boxes(town):
 		ids.append(str(b.id))
-	assert_true(ids.has("barracks_hall"), "buildings are cleared")
+	assert_true(ids.has("barracks_bunk"), "buildings are cleared")
 	assert_true(ids.has("stall_n6"), "so are crates and stalls")
 	assert_false(ids.has("watchtower"), "the tower top keeps its floor (a post stands there)")
+	assert_false(ids.has("barracks_hall"), "so does the hall roof (the riflemen)")
+	var stood := TownNav.stood_on_boxes(town).map(func(b): return str(b.id))
+	assert_true(stood.has("watchtower") and stood.has("barracks_hall"), "cleared below their tops instead")
 	assert_false(ids.has("ramp_ne"), "ramps are walked on")
 	assert_false(ids.has("ground_east"), "floors are walked on")
 
@@ -84,6 +87,12 @@ func test_bake_has_no_floor_inside_buildings() -> void:
 				and v.z > float(hall.min[2]) + 1.0 and v.z < float(hall.max[2]) - 1.0:
 			inside += 1
 	assert_eq(inside, 0, "no walkable ground inside the barracks hall")
+	var roof := 0
+	for v in nm.vertices:
+		if absf(v.y - float(hall.max[1])) < 0.5 and v.x > float(hall.min[0]) and v.x < float(hall.max[0]) \
+				and v.z > float(hall.min[2]) and v.z < float(hall.max[2]):
+			roof += 1
+	assert_gt(roof, 0, "but its roof is walkable (the riflemen step to the parapet)")
 
 
 func test_soldier_markers_name_real_profiles() -> void:
@@ -96,7 +105,7 @@ func test_soldier_markers_name_real_profiles() -> void:
 			var s: Dictionary = cc.get_soldier(str(m.soldier))
 			assert_false(s.is_empty(), "%s names soldier %s" % [m.id, m.soldier])
 			assert_true(s.has("perception") and s.has("nav"), "%s's profile has senses and pathing" % m.id)
-	assert_eq(live, 14, "the gate guards, the tower sentry, the barracks pair and the nine locals are live")
+	assert_eq(live, 17, "the gate guards, the tower sentry, the roof riflemen, the barracks pair and the nine locals are live")
 
 
 func test_noise_events() -> void:
