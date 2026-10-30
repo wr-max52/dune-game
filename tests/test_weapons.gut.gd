@@ -70,3 +70,16 @@ func test_energy_blade_is_melee_in_core() -> void:
 	# by class. (Full blade behavior is M3; this only proves it is present and
 	# labeled melee for the data layer.)
 	assert_eq(blade.get("class"), "melee")
+
+
+func test_reload_progress_runs_zero_to_one() -> void:
+	# Issue #229: the reload is animated from this.
+	var w = load("res://src/systems/combat/weapon.gd").new({ "mag": 4, "rate": 0.0, "reload_time": 1.0, "damage": 1 })
+	assert_eq(w.reload_progress(), -1.0, "not reloading")
+	w.ammo = 1
+	w.start_reloading()
+	assert_almost_eq(w.reload_progress(), 0.0, 0.001)
+	w.start_firing(0.25, false)
+	assert_almost_eq(w.reload_progress(), 0.25, 0.001)
+	w.start_firing(0.8, false)
+	assert_eq(w.reload_progress(), -1.0, "done")
