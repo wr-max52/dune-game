@@ -64,6 +64,9 @@ var ground: WorldGround
 var vendor_open := Callable()
 ## What a closed stall says: (marker: String) -> String ("" = the "closed" label).
 var closed_line := Callable()
+## Issue #188: stalls whose keeper talks (the fence): vendor id -> () that opens
+## the chat. "Talk" leads that stall's [E] menu.
+var vendor_talk: Dictionary = {}
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
 var menu: DroidMenu             ## issue #208: the fence's offers
@@ -308,6 +311,8 @@ func prompt_text() -> String:
 			Inventory.sell_price(it, v)]
 	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
 		return _l("browse") % str(v.get("label", "vendor")).to_lower()
+	if v.has("offers") and vendor_talk.has(str(v.get("id", ""))):
+		return _l("talk_to") % str(v.get("label", "vendor")).to_lower()
 	for id in inv().vendor_stock(v):
 		var it: Dictionary = content.get_item(str(id))
 		var cost := Inventory.buy_price(it, v)
@@ -400,7 +405,7 @@ func _trade(v: Dictionary) -> String:
 		if hud != null:
 			hud.toast(_l("sold") % [str(it.get("label", sell_id)), price])
 		return "sold"
-	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
+	if v.has("offers") and (not GearUpgrades.open_offers().is_empty() or vendor_talk.has(str(v.get("id", "")))):
 		open_offers(v)
 		return "menu"
 	for id in inv().vendor_stock(v):
@@ -423,6 +428,9 @@ func _trade(v: Dictionary) -> String:
 
 func open_offers(v: Dictionary) -> void:
 	var opts: Array = []
+	var talk: Callable = vendor_talk.get(str(v.get("id", "")), Callable())
+	if talk.is_valid():
+		opts.append({ "id": "talk", "text": _l("talk") })     # issue #188: the fence is an AI character
 	for o in GearUpgrades.open_offers():
 		opts.append({ "id": str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
 	var lock: bool = player != null and not bool(player.get("locked"))
@@ -431,7 +439,9 @@ func open_offers(v: Dictionary) -> void:
 	menu.open(_l("offers_title") % [str(v.get("label", "Fence")), WorldState.credits], opts, func(id):
 		if lock:
 			player.locked = false
-		if id != "":
+		if id == "talk":
+			talk.call()
+		elif id != "":
 			buy_offer(id))
 
 

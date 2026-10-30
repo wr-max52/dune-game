@@ -19,6 +19,8 @@
     "event_bought": "Bought a %s at the market",
     "browse": "[E] See what the %s has for sale",
     "offers_title": "%s  -  you have %d cr",
+    "talk": "Talk",
+    "talk_to": "[E] Talk to the %s",
     "offer": "%s  (%d cr): %s",
     "offer_bought": "%s: done.",
     "offer_cant_afford": "%s is %d cr. You have %d.",
