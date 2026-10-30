@@ -1159,25 +1159,7 @@ func _set_player_collision(on: bool) -> void:
 
 
 func _crash_fx(at: Vector3) -> void:
-	for spec in [[9.0, 1.2, Color("#ff9a4a")], [4.5, 0.6, Color("#fff4dc")]]:
-		var mi := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 1.0
-		sm.height = 2.0
-		mi.mesh = sm
-		var m := StandardMaterial3D.new()
-		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.albedo_color = spec[2]
-		mi.material_override = m
-		demo.add_child(mi)
-		mi.global_position = at
-		mi.scale = Vector3.ONE * float(spec[0]) * 0.3
-		var tw := mi.create_tween()
-		tw.set_parallel(true)
-		tw.tween_property(mi, "scale", Vector3.ONE * float(spec[0]), float(spec[1]))
-		tw.tween_property(m, "albedo_color:a", 0.0, float(spec[1]))
-		tw.chain().tween_callback(mi.queue_free)
+	ExplosionFx.big(demo, at)
 
 
 func _just(action: String) -> bool:
