@@ -429,9 +429,11 @@ func _dress(o: Dictionary) -> void:
 		var c := WorldGround._v3(b.get("position", [0, 0, 0]))
 		var hx := s.x * 0.5
 		var hz := s.z * 0.5
-		_mesh(o, _box(s + Vector3(0, 1.0, 0)), wall, c + Vector3(0, s.y * 0.5 - 0.5, 0))
+		# On a slope the walls run down to the lowest sand under them, so no edge floats.
+		var skirt := 1.0 + _sink(o, c, hx + 0.2, hz + 0.2)
+		_mesh(o, _box(s + Vector3(0, skirt, 0)), wall, c + Vector3(0, (s.y - skirt) * 0.5, 0))
 		_mesh(o, _box(Vector3(s.x + 0.6, 0.35, s.z + 0.6)), black, c + Vector3(0, s.y + 0.17, 0))
-		_mesh(o, _box(Vector3(s.x + 0.3, 0.5, s.z + 0.3)), black, c + Vector3(0, 0.1, 0))
+		_mesh(o, _box(Vector3(s.x + 0.3, 0.5 + skirt - 1.0, s.z + 0.3)), black, c + Vector3(0, 0.1 - (skirt - 1.0) * 0.5, 0))
 		_mesh(o, _box(Vector3(s.x + 0.04, 0.3, s.z + 0.04)), red, c + Vector3(0, s.y - 0.6, 0))
 		# Corner posts, and steel ribs down the long sides.
 		for sx in [-1.0, 1.0]:
@@ -446,7 +448,8 @@ func _dress(o: Dictionary) -> void:
 		_mesh(o, _box(Vector3(0.14, 2.5, 1.8)), red, c + Vector3(hx + 0.02, 1.25, 0))
 		_mesh(o, _box(Vector3(0.16, 2.2, 1.4)), black, c + Vector3(hx + 0.06, 1.1, 0))
 		_mesh(o, _box(Vector3(0.17, 2.1, 0.03)), steel, c + Vector3(hx + 0.07, 1.1, 0))
-		_mesh(o, _box(Vector3(0.8, 0.18, 2.0)), steel, c + Vector3(hx + 0.4, 0.09, 0))
+		var step := 0.18 + _sink(o, c + Vector3(hx + 0.4, 0, 0), 0.4, 1.0)
+		_mesh(o, _box(Vector3(0.8, step, 2.0)), steel, c + Vector3(hx + 0.4, 0.18 - step * 0.5, 0))
 		_mesh(o, _box(Vector3(0.22, 0.12, 0.7)), mats.glow(Color("#ffb04a")), c + Vector3(hx + 0.12, 2.75, 0))
 		_mesh(o, _box(Vector3(0.05, 2.6, 0.9)), red, c + Vector3(hx + 0.05, s.y - 1.7, hz - 0.9))
 		# Vents: two on the back, one on each side.
@@ -484,6 +487,17 @@ func _dress(o: Dictionary) -> void:
 	var b0: Dictionary = (o.cfg.get("buildings", []) as Array).front()
 	var s0 := WorldGround._v3(b0.get("size", [1, 1, 1]))
 	light.global_position = (o.xf as Transform3D) * (WorldGround._v3(b0.get("position", [0, 0, 0])) + Vector3(s0.x * 0.5 + 0.8, 2.6, 0))
+
+
+## How far the sand falls below the outpost's floor (local y = 0) at the corners and
+## edge midpoints of a footprint centred at `c` (local), or 0.
+func _sink(o: Dictionary, c: Vector3, hx: float, hz: float) -> float:
+	var inv := (o.xf as Transform3D).affine_inverse()
+	var low := 0.0
+	for sx in [-1.0, 0.0, 1.0]:
+		for sz in [-1.0, 0.0, 1.0]:
+			low = minf(low, (inv * world_point(o, Vector3(c.x + hx * sx, 0, c.z + hz * sz))).y - c.y)
+	return -low
 
 
 ## A vent grille facing out of a wall (its basis turns +X to the wall's normal).

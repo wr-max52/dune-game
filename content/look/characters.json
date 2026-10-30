@@ -135,11 +135,11 @@
       "model": { "tint": { "albedo": "#a6b6c8", "emission": "#4fe3ff" } }
     },
     "desert_guard": {
-      "note": "Issue #187: the locals' guards at the outposts and the barracks once they hold them. The Remnant trooper's body and rifle in the kit's desert armour, with a sand cloth and a green visor so they never read as the Remnant. Only what differs is listed.",
+      "note": "Issue #187: the locals' guards at the outposts and the barracks once they hold them. The Remnant trooper's body and rifle in sand armour with green trim (guard:locals, no Remnant red), a sand cloth and a green visor so they never read as the Remnant. Only what differs is listed.",
       "base": "remnant_trooper",
       "armor": "#b89a6a", "armor_light": "#d4bc8c", "under": "#5a4632", "trim": "#7a5a36",
       "cloth": "#a8844a", "visor": "#7fe0a0",
-      "model": { "parts": { "head": ["guard:desert"], "torso": ["guard:desert"], "legs": ["guard:desert"] } }
+      "model": { "parts": { "head": ["guard:locals"], "torso": ["guard:locals"], "legs": ["guard:locals"] } }
     }
   }
 }
