@@ -692,8 +692,10 @@ func _content() -> CoreContent:
 
 ## When a dead trooper comes back, and where (Garrison asks as each one dies).
 ## Town troopers: behind the barracks a minute later, while the garrison holds
-## the town; they walk back to their post. Outpost troopers: at their post after
-## a few minutes. The bounty target never comes back. {} = stays dead.
+## the town; they walk back to their post. A sentry up on a roof or the tower
+## (profile combat.hold_ground) has no way up from there, so it comes back at its
+## post on the same clock. Outpost troopers: at their post after a few minutes.
+## The bounty target never comes back. {} = stays dead.
 func respawn_rule(g: NpcBody) -> Dictionary:
 	if g.has_meta("bounty"):
 		return {}
@@ -705,7 +707,8 @@ func respawn_rule(g: NpcBody) -> Dictionary:
 	var mk := str(rc.get("town_respawn_marker", "remnant_respawn"))
 	if not Story.town_garrison() or town.get_marker(mk).is_empty():
 		return {}
-	r.merge({ "delay": float(rc.get("town_respawn_s", 60.0)), "at": town.marker_pos(mk) })
+	var aloft := bool(g.profile.get("combat", {}).get("hold_ground", false))
+	r.merge({ "delay": float(rc.get("town_respawn_s", 60.0)), "at": g.post_pos if aloft else town.marker_pos(mk) })
 	return r
 
 

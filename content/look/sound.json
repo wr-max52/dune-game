@@ -10,6 +10,7 @@
     "ship_missile": { "stream": "res://assets/audio/sfx/ship_missile.wav", "volume_db": -6.0, "pitch": [0.95, 1.05], "unit_size": 40.0, "max_distance": 800.0 },
     "ship_hit":     { "stream": "res://assets/audio/sfx/ship_hit.wav", "volume_db": -6.0, "pitch": [0.85, 1.1], "unit_size": 40.0, "max_distance": 800.0 },
     "ship_boom":    { "stream": "res://assets/audio/sfx/ship_boom.wav", "volume_db": -2.0, "pitch": [0.85, 1.05], "unit_size": 80.0, "max_distance": 2000.0 },
+    "droid_pop":    { "stream": "res://assets/audio/sfx/ship_boom.wav", "volume_db": -10.0, "pitch": [1.7, 2.1], "unit_size": 6.0, "max_distance": 90.0 },
     "speeder_laser": { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -12.0, "pitch": [1.1, 1.25], "unit_size": 10.0, "max_distance": 150.0 },
     "ship_cannon": { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -10.0, "pitch": [0.8, 0.92], "unit_size": 14.0, "max_distance": 250.0 },
     "droid_beep": {

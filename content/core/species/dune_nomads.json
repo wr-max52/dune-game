@@ -11,10 +11,10 @@
     "standard": { "height": 4.2, "cloth": "#b8762e", "note": "The leader's pole with a rag on top, so a pack can be seen coming from far off." }
   },
   "styles": [
-    { "id": "sun_bleached", "head": "goggles:sand", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand" },
-    { "id": "rust", "head": "goggles:oxblood", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder" },
-    { "id": "dull_dye", "head": "goggles:violet", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate" },
-    { "id": "bone", "head": "goggles:sand", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal" }
+    { "id": "sun_bleached", "head": "nomad", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand" },
+    { "id": "rust", "head": "nomad", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder" },
+    { "id": "dull_dye", "head": "nomad", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate" },
+    { "id": "bone", "head": "nomad", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal" }
   ],
   "soldier": {
     "label": "Dune nomad",
