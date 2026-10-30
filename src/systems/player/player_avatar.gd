@@ -24,6 +24,8 @@ const RETINT := preload("res://src/systems/look/shaders/weapon_retint.gdshader")
 const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 const Ads := preload("res://src/systems/look/ads.gd")
 const GunSights := preload("res://src/systems/look/gun_sights.gd")
+const WeaponMotion := preload("res://src/systems/look/weapon_motion.gd")
+const FLASH := preload("res://src/systems/look/shaders/muzzle_flash.gdshader")
 const CharBody := preload("res://src/systems/player/character_body.gd")
 const LOOK_PATH := "res://content/look/hand_weapons.json"
 
@@ -56,6 +58,9 @@ var aim_wanted := false
 ## where it runs, and gun_up() stays false so nothing fires.
 var sprint_lowered := false
 var _sprint_raise := false         ## first person: easing back up after a sprint
+var _sprint_carry := 0.0           ## 0..1: a rested rifle moving to port arms (sprinting)
+var motion := WeaponMotion.new()   ## issue #229: first person sway, bob, landing, wall
+var _look_prev := Vector2(INF, 0.0)
 var _flash_left := 0.0
 
 ## Aim down sights (first person): the weapon blends to a pose solved from the
@@ -187,18 +192,7 @@ func build_weapons(ids: Array) -> void:
 			core.material_override = _emissive(gcol.darkened(0.5), 0.8)
 			core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			muzzle.add_child(core)
-			var flash := MeshInstance3D.new()
-			flash.name = "Flash"
-			var fm := SphereMesh.new()
-			fm.radius = 0.05
-			fm.height = 0.1
-			flash.mesh = fm
-			flash.scale = Vector3(1.0, 1.0, 2.2)
-			flash.position = Vector3(0, 0, 0.06)
-			flash.material_override = _emissive(gcol.lerp(Color.WHITE, 0.4), 8.0)
-			flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			flash.visible = false
-			muzzle.add_child(flash)
+			muzzle.add_child(_make_flash(gcol))
 		wrap.visible = false
 		(joints.chest as Node3D).add_child(wrap)
 		weapons[id] = wrap
@@ -256,6 +250,44 @@ static func _darken(n: Node3D, d: Dictionary) -> void:
 			if d.has(k):
 				mat.set_shader_parameter(k, float(d[k]))
 		mi.material_override = mat
+
+
+## Issue #229: the muzzle flash, three additive quads crossed along the barrel and
+## a star facing forward (muzzle_flash.gdshader); fire_kick shows it for a moment.
+func _make_flash(col: Color) -> Node3D:
+	var flash := Node3D.new()
+	flash.name = "Flash"
+	flash.visible = false
+	var length := 0.17
+	for i in 3:
+		var q := QuadMesh.new()
+		q.size = Vector2(0.07, length)
+		var m := ShaderMaterial.new()
+		m.shader = FLASH
+		m.set_shader_parameter("color", col)
+		m.set_shader_parameter("seed", float(i))
+		var mi := MeshInstance3D.new()
+		mi.mesh = q
+		mi.material_override = m
+		# The quad's +Y runs from the muzzle (uv.y = 0 is its top edge: flip it).
+		mi.basis = Basis(Vector3.FORWARD, deg_to_rad(60.0 * i)) * Basis(Vector3.RIGHT, -PI * 0.5) * Basis(Vector3.RIGHT, PI)
+		mi.position = Vector3(0, 0, length * 0.5 + 0.005)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flash.add_child(mi)
+	var star := QuadMesh.new()
+	star.size = Vector2(0.11, 0.11)
+	var sm := ShaderMaterial.new()
+	sm.shader = FLASH
+	sm.set_shader_parameter("color", col)
+	sm.set_shader_parameter("mode", 1.0)
+	sm.set_shader_parameter("energy", 4.0)
+	var si := MeshInstance3D.new()
+	si.mesh = star
+	si.material_override = sm
+	si.position = Vector3(0, 0, 0.01)
+	si.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	flash.add_child(si)
+	return flash
 
 
 func _emissive(c: Color, energy: float) -> StandardMaterial3D:
@@ -447,6 +479,7 @@ func animate(dt: float, inp: Dictionary) -> void:
 		_sprint_raise = true
 	elif carry.ready >= 1.0:
 		_sprint_raise = false
+	_sprint_carry = move_toward(_sprint_carry, 1.0 if sprint_lowered else 0.0, dt / 0.25)
 	var held_up := first_person and not _sprint_raise
 
 	# Facing: toward the aim when a weapon is up or in first person, else toward
@@ -468,6 +501,8 @@ func animate(dt: float, inp: Dictionary) -> void:
 	var local := Basis(Vector3.UP, facing_yaw).inverse() * flat
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)
 	var pitch: float = inp.get("aim_pitch", 0.0)
+	if first_person:
+		_step_motion(dt, Vector2(cam_yaw, pitch), speed, bool(inp.get("grounded", true)), vel.y)
 	var twist := 0.0
 	if upper == BodyAnimator.UPPER_SWORD and not sword_pose.is_empty():
 		twist = float(sword_pose.get("twist", 0.0))
@@ -583,13 +618,23 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var holster := _holster_xf(current)
 	var up := 1.0 if (first_person and not _sprint_raise) or current == "energy_blade" else carry.eased()
 	if up < 1.0:
-		ready = WeaponCarry.blend(WeaponCarry.rest_xf(carry_kind(current), grips.get("r", Vector3.ZERO)), ready, up)
+		# Issue #229: sprinting carries a rifle at port arms; eased in and out.
+		var kind := carry_kind(current)
+		var g_r: Vector3 = grips.get("r", Vector3.ZERO)
+		var rest := WeaponCarry.rest_xf(kind, g_r)
+		if _sprint_carry > 0.0:
+			var s := _sprint_carry * _sprint_carry * (3.0 - 2.0 * _sprint_carry)
+			rest = rest.interpolate_with(WeaponCarry.rest_xf(kind, g_r, true), s)
+		ready = WeaponCarry.blend(rest, ready, up)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
 	if _recoil > 0.0 and current != "energy_blade":
 		var rc: Dictionary = look.get("recoil", {})
 		var k := _recoil * _recoil
 		ready = Transform3D(ready.basis * Basis(Vector3.RIGHT, -deg_to_rad(float(rc.get("up_deg", 7.0))) * k),
 			ready.origin + Vector3(0, 0.01, -float(rc.get("back", 0.05))) * k)
+	if first_person and current != "energy_blade":
+		var ae := ads_blend * ads_blend * (3.0 - 2.0 * ads_blend)
+		ready = motion.offset(ae) * ready * motion.wall_local(grips.get("r", Vector3.ZERO), ae)
 	if ads_blend > 0.0 and first_person and ads_camera != null and is_inside_tree() and current != "energy_blade":
 		var a := Ads.spec(look, current)
 		var sc := float((look.get(current, {}) as Dictionary).get("scale", 1.0))
@@ -612,12 +657,34 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	# through the view, reading as a second arm.
 	if grips.has("r"):
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), POLE_R)
-	var one_hand := first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
+	# Issue #229: aimed in, the left hand joins even a one-handed gun.
+	var one_hand := first_person and ads_blend < 0.4 \
+		and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
 	# A pistol at rest hangs from the right hand alone; the left arm swings free.
 	if carry_kind(current) == "pistol" and up < 0.5:
 		one_hand = true
 	if grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+
+
+## Feed WeaponMotion: how fast the view turns, the walk, the fall, and how far
+## ahead the view meets a wall (a ray from the camera; the player is skipped).
+func _step_motion(dt: float, look: Vector2, speed: float, grounded: bool, vy: float) -> void:
+	var lv := Vector2.ZERO
+	if _look_prev.x != INF and dt > 0.0:
+		lv = Vector2(wrapf(look.x - _look_prev.x, -PI, PI), look.y - _look_prev.y) / dt
+	_look_prev = look
+	var wall := INF
+	if ads_camera != null and is_inside_tree() and current != "" and current != "energy_blade":
+		var eye := ads_camera.global_position
+		var q := PhysicsRayQueryParameters3D.create(eye, eye - ads_camera.global_basis.z * WeaponMotion.WALL_REACH)
+		var host := get_parent() as CollisionObject3D
+		if host != null:
+			q.exclude = [host.get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty():
+			wall = eye.distance_to(hit.position)
+	motion.step(dt, lv, speed, grounded, vy, wall)
 
 
 ## Issue #229: in first person the shoulders cheat into a bladed stance (the left
@@ -641,7 +708,8 @@ func _fpv_grips(upper: String, dt: float) -> void:
 	var relaxed := float(_fpv._hand().get("relaxed", 0.3))
 	var armed := upper != BodyAnimator.UPPER_FREE and current != "" and weapons.has(current)
 	var left: bool = armed and (weapons[current] as Node3D).get_meta("grips", {}).has("l") and drawn > 0.6
-	if left and first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
+	if left and first_person and ads_blend < 0.4 \
+			and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
 		left = false
 	# Issue #229: each weapon names how each hand holds it (hand_weapons "fpv_pose").
 	var poses: Dictionary = (look.get(current, {}) as Dictionary).get("fpv_pose", {}) if armed else {}
@@ -655,6 +723,8 @@ func _fpv_grips(upper: String, dt: float) -> void:
 func gun_up() -> bool:
 	if sprint_lowered:
 		return false
+	if first_person and current != "energy_blade" and motion.blocked():
+		return false              # pulled back from a wall
 	return (first_person and not _sprint_raise) or current == "energy_blade" or carry.on_target()
 
 
