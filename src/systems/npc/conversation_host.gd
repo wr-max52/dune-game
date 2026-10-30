@@ -9,7 +9,8 @@ extends Node
 ##
 ## Walk up to a spot: "[E] Talk to Oda Vell". Talking locks movement and weapons,
 ## frees the mouse, and moves the camera to a two-shot. Esc (or them ending it)
-## walks you back out.
+## walks you back out, unless the spot holds you (hold_line: the general's pit
+## meeting ends only when he says so).
 ##
 ## town_demo.gd keeps this as `bar`; `brain`, `npc` and `bar_front` are still the
 ## Cantina Owner's, so code written for the one-character bar keeps working.
@@ -280,6 +281,9 @@ func end_talk() -> void:
 		return
 	if settings.visible:
 		settings.visible = false
+		return
+	if active != null and active.hold_line != "":
+		panel.post_notice(active.hold_line)
 		return
 	var s := active
 	talking = false

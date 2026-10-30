@@ -179,9 +179,13 @@ func _physics_process(dt: float) -> void:
 	_tick_focus()
 
 
-## Something else has the player: flying, a menu, a conversation.
+## Something else has the player: flying, a menu, a conversation, the general
+## (his pit meeting, and a moment after it: his last word is his).
 func _busy() -> bool:
 	if player.piloting or player.locked or menu.is_open():
+		return true
+	var g = demo.get("general_post") if demo != null else null
+	if g != null and is_instance_valid(g) and g.holding():
 		return true
 	return demo != null and demo.bar != null and demo.bar.is_talking()
 

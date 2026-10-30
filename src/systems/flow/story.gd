@@ -210,13 +210,18 @@ static func droid_wanted_kind() -> String:
 	return str(chapter_cfg().get("deliver", {}).get("kind", "")) if droids_wanted() > 0 else ""
 
 
-## One droid of that kind handed over at a droid post. The last one ends the chapter.
+## One droid of that kind handed over at a droid post. The last one ends the
+## chapter, and Oda's job card for it (taken or not).
 static func on_droid_delivered() -> void:
 	if droids_wanted() <= 0:
 		return
 	WorldState.bump("merchant_droids")
 	WorldState.log_event("Delivered a droid to Oda's friend, the droid merchant.")
 	if droids_wanted() == 0:
+		var job := str(chapter_cfg().get("job", ""))
+		if job != "" and not WorldState.jobs_taken.has(job):
+			WorldState.jobs_taken[job] = "active"
+		WorldState._complete_jobs("droids_delivered")
 		event("droids_delivered")
 
 
