@@ -188,12 +188,20 @@ func _apply_flat_sites(x: float, z: float, base_height: float) -> float:
 	for site in flat_sites:
 		var rect: Rect2 = site.get("rect", Rect2())
 		var distance := _rect_dist(rect, p)
-		var y := float(site.get("y", base_height))
 		var blend_distance := maxf(0.1, float(site.get("blend", 8.0)))
+		if distance >= blend_distance:
+			continue
+		var y := float(site.get("y", base_height))
+		if site.has("plane_u"):
+			# Level to the "up" bodies feel there (plane_u at plane_c), not to the
+			# ball's radius: they part where up eases from the plateau's to the ball's.
+			var pu: Vector3 = site.plane_u
+			var du := map_dir(x, z).dot(pu)
+			if du > 0.1:
+				y = ((site.plane_c as Vector3) - center).dot(pu) / du - radius
 		if distance <= 0.0:
 			return y
-		if distance < blend_distance:
-			h = lerpf(y, h, smoothstep(0.0, blend_distance, distance))
+		h = lerpf(y, h, smoothstep(0.0, blend_distance, distance))
 	return h
 
 

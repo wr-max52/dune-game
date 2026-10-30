@@ -11,15 +11,17 @@
     "standard": { "height": 4.2, "cloth": "#b8762e", "note": "The leader's pole with a rag on top, so a pack can be seen coming from far off." }
   },
   "styles": [
-    { "id": "sun_bleached", "head": "nomad", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand" },
-    { "id": "rust", "head": "nomad", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder" },
-    { "id": "dull_dye", "head": "nomad", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate" },
-    { "id": "bone", "head": "nomad", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal" }
+    { "id": "sun_bleached", "head": "nomad", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand", "hide": "#b49a72", "rug": "#9a4a2a" },
+    { "id": "rust", "head": "nomad", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder", "hide": "#8e6a4e", "rug": "#7a2a22" },
+    { "id": "dull_dye", "head": "nomad", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate", "hide": "#9a8a74", "rug": "#4a4a62" },
+    { "id": "bone", "head": "nomad", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal", "hide": "#c4b494", "rug": "#2e6a62" }
   ],
   "soldier": {
     "label": "Dune nomad",
     "faction": "dune_nomads",
     "role": "native",
+    "voiced": false,
+    "upper": "free",
     "hp": 44,
     "walk_speed": 1.7,
     "sprint_speed": 5.6,
@@ -31,23 +33,46 @@
   },
   "weapons": {
     "melee": [
-      { "id": "club", "label": "club", "damage": 9, "reach": 2.0, "cooldown_s": 1.1, "look": "club" },
-      { "id": "spear", "label": "spear", "damage": 11, "reach": 2.4, "cooldown_s": 1.4, "look": "spear" },
-      { "id": "knife", "label": "bone knife", "damage": 7, "reach": 1.7, "cooldown_s": 0.8, "look": "knife" }
+      { "id": "club", "label": "club", "damage": 9, "reach": 2.0, "cooldown_s": 1.2, "look": "club", "move": "swing" },
+      { "id": "heavy_club", "label": "heavy club", "damage": 12, "reach": 2.1, "cooldown_s": 1.6, "look": "club", "move": "swing" },
+      { "id": "spear", "label": "spear", "damage": 11, "reach": 2.4, "cooldown_s": 1.4, "look": "spear", "move": "thrust" },
+      { "id": "knife", "label": "bone knife", "damage": 7, "reach": 1.7, "cooldown_s": 0.9, "look": "knife", "move": "slash" }
     ],
     "thrown": [
-      { "id": "throwing_stick", "label": "throwing stick", "damage": 7, "speed": 22.0, "range": 16.0, "min_range": 5.0, "cooldown_s": 3.2, "color": "#8a6a3a" },
-      { "id": "light_spear", "label": "light spear", "damage": 10, "speed": 26.0, "range": 18.0, "min_range": 6.0, "cooldown_s": 4.5, "color": "#c8b48a" }
+      { "id": "rock", "label": "rock", "damage": 6, "speed": 20.0, "range": 16.0, "min_range": 5.0, "cooldown_s": 2.6, "look": "rock",
+        "color": "#141210", "matte": true, "length": 0.16, "radius": 0.06, "sfx": "" }
     ],
     "thrower_share": 0.4,
-    "note": "Melee and thrown only: slings and bows are too hard to come by in the desert, and Remnant rifles are never their kit."
+    "note": "Melee and thrown only: slings and bows are too hard to come by in the desert, and Remnant rifles are never their kit. The first melee weapon is the chief's (the chief never throws). 'move' is the NativeMoves swing a melee weapon plays. A rock is a small, short, dark bolt with no glow and no sound ('matte', 'length', 'radius', 'sfx')."
   },
-  "pack": { "spacing": 2.6, "travel_speed": 1.6, "notice_range": 45.0, "greet_range": 30.0, "trade_reach": 4.5, "far_lod_m": 90.0 },
+  "pack": { "spacing": 2.6, "travel_speed": 1.6, "charge_speed": 4.5, "notice_range": 45.0, "greet_range": 30.0, "trade_reach": 4.5, "far_lod_m": 90.0,
+            "offer_every_s": 7.0 },
+  "camp": {
+    "tents": 3, "ring_m": 9.0, "tent_radius": 3.0, "wall_h": 1.95, "roof_h": 1.5, "door_deg": 34.0, "tent_hp": 90.0, "skirt_m": 0.8,
+    "site_search_m": 45.0,
+    "hide": "#a88a64", "rug": "#8c3a26", "rock": "#6e6258", "fire_energy": 1.8, "fire_range": 10.0,
+    "keepers": 3, "spots": 20, "stop_s": 45.0, "guard_m": 60.0,
+    "night_from": 19.0, "night_to": 6.5,
+    "return_hours": 4.0, "restock_hours": 4.0, "rebuild_unseen_m": 60.0, "game_hours_per_real_min": 0.5,
+    "loot_rolls": 2,
+    "loot": [
+      { "item": "food", "weight": 5, "count": [1, 3] },
+      { "item": "quartz", "weight": 4, "count": [1, 2] },
+      { "item": "refined_quantonium", "weight": 2, "count": [1, 2] },
+      { "item": "holocrystals", "weight": 2, "count": [1, 3] },
+      { "item": "unmarked_cells", "weight": 2, "count": [1, 2] },
+      { "item": "space_whale_teeth", "weight": 1, "count": [1, 1] }
+    ],
+    "note": "A pack's camp (NativeCamp): 'tents' hide tents in a ring 'ring_m' out from an always-lit firepit, each a room (rug, rock table and seats, bedroll, a chest). The pack starts there, stops 'stop_s' seconds on every loop of its route, and comes in for the night (the hour from 'night_from' to 'night_to'). 'keepers' of them never leave it and fight only within 'guard_m' of it. Shoot a tent 'tent_hp' and it falls in; all of them down and the camp is back 'return_hours' in-game hours later (in-game time runs 'game_hours_per_real_min' hours a real minute, and a night's rest skips to morning). A chest holds 'loot_rolls' draws from 'loot' (what the town's traders and fences buy) and fills again 'restock_hours' after it is emptied. Take from it while one of the pack sees you and a friendly pack turns on you. The camp goes on the flattest ground within 'site_search_m' of where it is put. A pack's own 'camp' (the planet's data) gives where ('at', a map point) and after which route point it stops ('stop_after'), and may change any of these."
+  },
+  "rest": { "morning_hour": 8.0, "fade_s": 0.9, "dark_s": 0.8, "hours_headless": 9.0,
+            "note": "[Z] in a friendly pack's standing tent: the screen fades to black, you heal, the time of day moves on to 'morning_hour', the game is saved, the screen fades back." },
   "trade": { "wants": ["food"], "gives": "quartz", "per_food": 1, "reputation_per_trade": 1, "adults_only_bonus": 1,
              "note": "Packs only take food. Food is cheap in town (the food stall at the market); quartz sells there. An adults-only pack throws in a little more." },
   "hostile": { "survive_s": 300.0, "horn": "res://assets/audio/npc/battle_horn.wav", "chase_leash_m": 160.0,
                "note": "A hostile pack attacks on sight and fights to the last. Survive survive_s seconds without killing any of them (and without being downed) and they stop, offer trade, and the pack turns friendly. Kill one and that pack never will." },
   "voice": {
+    "note": "Never spoken aloud (the soldier block's 'voiced' is false): yells show over their heads, and the gestures are NativeMoves with these as captions.",
     "yells": ["Hyaa!", "Rrah! Rrah!", "Hoo-hoo-hoo!", "Ayaaa!", "Kshh! Kshh!", "Hah!"],
     "greet": ["Hoo?", "Mmh. Mmh.", "Eh-ya."],
     "gesture_offer": "(the leader mimes eating, then holds out a fistful of quartz)",
@@ -64,6 +89,13 @@
     "won": "The %s lower their weapons. They will trade with you now.",
     "locked": "You killed one of the %s. They will never forgive it.",
     "butcher": "[E]  Butcher the %s",
-    "butchered": "You cut %d food from the %s."
+    "butchered": "You cut %d food from the %s.",
+    "prompt_chest": "[E]  Take what is in the chest",
+    "prompt_chest_empty": "(the chest is empty)",
+    "prompt_rest": "[Z]  Rest until morning",
+    "took": "You took %s.",
+    "seen_stealing": "The %s saw you steal from them!",
+    "camp_wrecked": "The %s's camp is torn down. They will put it back up.",
+    "rested": "You wake rested. It is morning."
   }
 }

@@ -148,6 +148,10 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 		b.sweep = true
 		b.stylize = true
 		b.color = Color.html(str(weapon_cfg.get("bolt_color", "#ff3a24")))
+		# Issue #96: a thrown rock is a small, short, dark streak with no glow.
+		b.matte = bool(weapon_cfg.get("bolt_matte", false))
+		b.streak_length = float(weapon_cfg.get("bolt_length", b.streak_length))
+		b.streak_radius = float(weapon_cfg.get("bolt_radius", b.streak_radius))
 	perception = Perception.new(soldier.get("perception", {}))
 	var navc: Dictionary = soldier.get("nav", {})
 	locomotion = NpcLocomotion.new(navc)
@@ -322,6 +326,19 @@ func _ready() -> void:
 
 # ------------------------------------------------------------------ orders
 
+## Issue #96: play a one-off move over the walk for `seconds` (NativeMoves: "swing",
+## "throw", "thrust", the gestures). The upper body blends into it and back out.
+var action := ""
+var action_t := 0.0
+var action_len := 0.0
+
+
+func act(move: String, seconds: float = -1.0) -> void:
+	action = move
+	action_t = 0.0
+	action_len = seconds if seconds > 0.0 else NativeMoves.length(move)
+
+
 func go_to(point: Vector3, sprint: bool = false) -> void:
 	command.go_to = point
 	command.sprint = sprint
@@ -386,7 +403,8 @@ func fire_at(point: Vector3, dt: float) -> bool:
 	if weapon_actor.shots_fired == before:
 		return false
 	shots_fired += 1
-	play_sfx("rifle")
+	if str(weapon_cfg.get("sfx", "rifle")) != "":
+		play_sfx(str(weapon_cfg.get("sfx", "rifle")))     # a thrown rock is silent ("sfx": "")
 	Sound.battle()           # issue #16: NPCs only ever shoot at the player
 	NoiseEvents.emit(origin, float(weapon_cfg.get("noise_radius", 50.0)), "shot_guard")
 	return true
@@ -455,8 +473,8 @@ func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	_speech.text = text
 	_speech.visible = text != ""
 	_speech_left = seconds
-	if text.strip_edges() == "":
-		return
+	if text.strip_edges() == "" or not bool(profile.get("voiced", true)):
+		return             # issue #96: the desert packs yell and gesture, never through TTS
 	var stable_id := post_id if post_id != "" else display_name
 	if stable_id == "":
 		stable_id = soldier_id
@@ -483,6 +501,10 @@ func _physics_process(delta: float) -> void:
 		if _speech_left <= 0.0:
 			_speech.visible = false
 	carry.step(delta, aim_point != Vector3.INF)
+	if action != "":
+		action_t += delta
+		if action_t >= action_len:
+			action = ""
 	var move := _walk(delta)
 	_turn(delta, move)
 	var dir := NpcLocomotion.world_to_command(move, -rotation.y)
@@ -796,7 +818,7 @@ func _animate(dt: float, move: Vector3) -> void:
 	var move_local := Vector2(local.x, local.z) / maxf(speed, 0.001) if speed > 0.05 else Vector2(0, 1)
 	var out: Dictionary = anim.step(dt, {
 		"speed": speed, "move_local": move_local, "grounded": is_on_floor(), "vy": v.y,
-		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": BodyAnimatorT.UPPER_RIFLE,
+		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": str(profile.get("upper", BodyAnimatorT.UPPER_RIFLE)),
 		"aim_pitch": _aim_pitch(), "ready": carry.eased(),
 		"dance": bool(profile.get("dance_loop", false)),
 	})
@@ -836,6 +858,14 @@ func _animate(dt: float, move: Vector3) -> void:
 			yaw = clampf(rad_to_deg(atan2(l.x, l.z)), -70.0, 70.0)
 		(joints.neck as Node3D).rotation_degrees.y = yaw * 0.4
 		(joints.head as Node3D).rotation_degrees.y = yaw * 0.6
+	# Issue #96: a swing, a throw or a gesture over the walk (NativeMoves).
+	if action != "":
+		var mw := NativeMoves.weight(action, action_t / maxf(action_len, 0.001))
+		var pose := NativeMoves.pose(action, action_t / maxf(action_len, 0.001), action_t)
+		for jn in pose:
+			if joints.has(jn):
+				var j := joints[jn] as Node3D
+				j.rotation_degrees = j.rotation_degrees.lerp(pose[jn], mw)
 	# A rigged model (SkinnedBody, characters.json "model") follows the joints only
 	# when told to, after they have moved this frame.
 	if look_body.has_meta("skin"):

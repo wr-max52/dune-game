@@ -34,6 +34,7 @@ var sweep := false             ## ray-test each step so fast bolts cannot tunnel
 var color := Color(1.0, 0.45, 0.2)
 var streak_length := 0.9
 var streak_radius := 0.035
+var matte := false             ## issue #96: a thrown rock: plain colour, no glow, no light
 var reflected := 0             ## times a blade has sent it back
 var _streak: MeshInstance3D
 
@@ -135,13 +136,20 @@ func _build_streak() -> void:
 	cap.rings = 2
 	_streak.mesh = cap
 	var m := StandardMaterial3D.new()
+	_streak.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if matte:
+		m.albedo_color = color
+		m.roughness = 1.0
+		_streak.material_override = m
+		add_child(_streak)
+		_orient()
+		return
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = color.lerp(Color.WHITE, 0.45)
 	m.emission_enabled = true
 	m.emission = color
 	m.emission_energy_multiplier = 5.0
 	_streak.material_override = m
-	_streak.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_streak)
 	var light := OmniLight3D.new()
 	light.light_color = color

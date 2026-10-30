@@ -2,6 +2,50 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #96, desert pack camps (2026-10-29)
+
+**Checked:** headless only. `scenes/natives_trace.gd` (real physics, the real
+town) covers the camps, the rest, the chests (taken unseen, then seen), the
+rocks and club swings, and a camp shot down that comes back, as well as the
+first milestone. Unit tests cover the steering, the moves and the camps
+(`tests/test_native_steer.gut.gd`, `test_native_moves.gut.gd`,
+`test_native_camps.gut.gd`). The town boots with the look on and builds both
+camps. A probe walking the player into each camp found members dropping up to
+90 m through the sand (7,600 of 39,000 samples); after the fix, none.
+
+**Not done, honestly:**
+- **Looked at in stills only, never played by hand.** The camps, tents (outside
+  and in), the fire and the clutter were rendered on the Mac
+  (`docs/natives/camp.jpg`, `tent.jpg`, `tent_door.jpg`, `camp_fire.jpg`,
+  `camp_props.jpg`); a swing and a throw were seen once in a still.
+  The gesture poses (`NativeMoves`) and the rocks in flight were not watched
+  moving. The poses are first guesses at joint angles and may look wrong (an
+  arm through the head, a wrist bent the wrong way).
+- **A pack walking out of the player's reach slides frozen.** Members only get
+  physics where the sand's collider is (it follows the player and can lag tens
+  of metres behind on a run out). Until it arrives, near members slide along the
+  ground in their last pose, as far ones always have.
+- **The fire is three glowing cones.** No particles or smoke.
+- **Members crowd the fire** on their way to their spots; they do not sit on
+  the logs.
+- **A camp levels the sand in a square** 34 m across with a 22 m blend
+  (`PlanetTerrain.camp_flat_sites`); a camp moved by a rock on its spot can end
+  up at the pad's edge, where the tents' low earth floors show again.
+- **There is no running day and night.** Packs come in "at night" by the F11
+  time-of-day hour, which only changes when you move the slider or rest. Camps
+  and chests come back on in-game hours (`WorldState.game_hours`), which run on
+  their own at half an hour a real minute and jump when you rest. The sky does
+  not follow them.
+- **Sitting is a crouch.** People round the fire and the keepers crouch; there
+  is no sitting pose.
+- **The camera may clip the tent roof** in third person inside a tent.
+- **Steering is round known rocks only.** Dune faces, the starcruiser wreck and
+  anything else not in WorldGround's boulders or columns are still walked
+  straight at. Low boulders (under 0.8 m) are stepped over.
+- **Spears and knives** still hang at a fixed angle from the hand, as before.
+- **The trace still aborts at teardown**, after its file is written (as other
+  traces here sometimes do).
+
 ## After the objective pointer and job log (2026-10-29)
 
 **Checked:** `tests/test_objective.gut.gd` (10 tests: the pointer through every
