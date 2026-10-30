@@ -111,7 +111,10 @@ static func sell_price(item_cfg: Dictionary, vendor_cfg: Dictionary) -> int:
 	var kinds: Array = vendor_cfg.get("buys", [])
 	if not kinds.has(str(item_cfg.get("kind", ""))):
 		return -1
-	return int(round(float(item_cfg.get("value", 0)) * float(vendor_cfg.get("buy_rate", 0.5))))
+	var rate := float(vendor_cfg.get("buy_rate", 0.5))
+	if bool(item_cfg.get("contraband", false)):
+		rate *= Territory.fence_mult()     # issue #187: the locals' outposts open the fence's routes
+	return int(round(float(item_cfg.get("value", 0)) * rate))
 
 
 ## Credits a vendor asks for an item.

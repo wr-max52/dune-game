@@ -1,0 +1,31 @@
+{
+  "id": "remnant_outpost_south",
+  "kind": "remnant_outpost",
+  "label": "the old well outpost",
+  "note": "Issue #187: one of the Remnant's four outposts on the far sides of the town (the first three, near/mid/far, are out the front gate). Same pieces as remnant_outpost_mid.json (see its note): a building dressed by src/systems/world/remnant_outposts.gd, a ship at 'ship', three troopers at guard_a/b/c, an assassin droid on 'patrol', a floating droid on 'floater', a cargo droid on 'cargo', and the bounty target at 'target'. Local frame: +x faces the town.",
+  "buildings": [
+    { "id": "block", "shape": "box", "size": [11, 5, 7.5], "position": [0, 0, 0], "visual": false }
+  ],
+  "ship": "remnant_freighter",
+  "look": { "mast": false, "tower": true },
+  "points": {
+    "guard_a": [6, 0, 4],
+    "guard_b": [6, 0, -5],
+    "guard_c": [-7, 0, -6],
+    "target": [-2, 0, 7],
+    "ship": [-18, 0, 4],
+    "patrol": [[9, 0, 9], [9, 0, -9], [-9, 0, -9], [-9, 0, 9]],
+    "floater": [[7.0, 0, 7.75], [10.5, 0, 0], [7.0, 0, -7.75]],
+    "cargo": [[1.0, 0, -7.35], [-3.5, 0, -7.55]]
+  },
+  "props": [
+    {"kind": "crate", "at": [3.2, 0, -5.6], "yaw": 2, "stack": 2},
+    {"kind": "crate", "at": [4.6, 0, -6.0], "yaw": -16},
+    {"kind": "canister", "at": [-1.2, 0, -5.0]},
+    {"kind": "canister", "at": [-0.5, 0, -5.3], "yaw": 35, "lying": true},
+    {"kind": "drum", "at": [-8.2, 0, -1.2], "yaw": 90, "lying": true},
+    {"kind": "crate", "at": [9.8, 0, 1.2], "yaw": -6, "stack": 2},
+    {"kind": "drum", "at": [-3.2, 0, 5.0]},
+    {"kind": "canister", "at": [1.8, 0, 5.2]}
+  ]
+}

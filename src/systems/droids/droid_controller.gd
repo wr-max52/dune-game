@@ -23,6 +23,10 @@ extends Node3D
 ##   - issue #76: and a floating droid and a cargo droid (droids.json
 ##     remnant.outpost_units). When the outpost's alarm goes up the cargo droid
 ##     runs off into the desert and is left there broken: a wreck to fix and keep.
+##   - issue #187: the locals' white assassin droids (droids.json "locals"), in the
+##     same list: one at each outpost the locals hold, two on the main street once
+##     they hold the barracks. They answer to the locals' alarm (Townsfolk), not the
+##     garrison's, and leave you alone until you hurt a local or shoot one.
 ##   - issue #148: what is left of the Remnant aboard the crashed starcruiser
 ##     patrols its bridge and hold and shoots on sight, answering to no garrison,
 ##     and an old cargo droid in its deep hold carries a red energy saber.
@@ -47,7 +51,7 @@ var labels: Dictionary = {}
 var menu: DroidMenu
 var companions: Dictionary = {}     ## uid -> DroidUnit (yours, following)
 var wreck_nodes: Dictionary = {}    ## uid -> DroidUnit (broken, in the desert)
-var remnant: Array = []             ## DroidUnit (the Remnant's patrol)
+var remnant: Array = []             ## DroidUnit (the Remnant's patrol, and issue #187 the locals')
 var vendor_pos := Vector3.INF
 var vendor_face := Vector3.ZERO     ## issue #80: the way the droid merchant faces (the aisle); behind = the other way
 var vendor_sites: Array = []        ## town stall plus independent planet relays
@@ -761,11 +765,14 @@ func enemies() -> Array:
 		var g = demo.garrison_for(n) if demo.has_method("garrison_for") else _garrison()
 		if n.hostile or (g != null and g.alarm.active()):
 			out.append(n)
-	var folk = demo.get("townsfolk")
-	var up: bool = folk != null and is_instance_valid(folk) and folk.alarm != null and folk.alarm.active()
 	var locals = demo.get("locals")
 	for n in (locals if locals != null else []):
-		if is_instance_valid(n) and not n.dead and (up or n.hostile):
+		if not is_instance_valid(n) or n.dead:
+			continue
+		# Issue #187: an outpost's locals have their own alarm.
+		var folk = demo.townsfolk_for(str(n.get_meta("outpost", ""))) if demo.has_method("townsfolk_for") else demo.get("townsfolk")
+		var up: bool = folk != null and is_instance_valid(folk) and folk.alarm != null and folk.alarm.active()
+		if up or n.hostile:
 			out.append(n)
 	var nat = demo.get("natives")
 	if nat != null and is_instance_valid(nat):
@@ -857,28 +864,71 @@ func _haul(u: DroidUnit, hc: Dictionary, pause: float, dt: float) -> float:
 # ------------------------------------------------------------------ the Remnant's droids
 
 func _build_remnant() -> void:
-	var rc: Dictionary = cfg.get("remnant", {})
-	var pts: Array = rc.get("patrol", [])
-	if not pts.is_empty() and Story.town_garrison():
-		var route: Array = pts.map(func(p): return _v3(p))
-		for spec in rc.get("units", []):
-			var sp: Dictionary = spec.duplicate()
-			sp["patrol"] = route
-			_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+	if Story.town_garrison():
+		_build_town_units(cfg.get("remnant", {}))
+	else:
+		_build_town_units(_side_cfg(Territory.LOCALS))
 	_build_wreck_site()
 	var outposts = demo.outposts if demo != null and "outposts" in demo else null
 	if outposts == null:
 		return
-	var units: Array = rc.get("outpost_units", [rc.get("outpost_unit", {})])
 	for o in outposts.droid_specs():
+		build_outpost_units(str(o.outpost))
+
+
+## The main street's patrol droids for one side's block (droids.json "remnant" or
+## "locals"), on the Remnant's street route.
+func _build_town_units(side: Dictionary) -> void:
+	var pts: Array = cfg.get("remnant", {}).get("patrol", [])
+	if pts.is_empty():
+		return
+	var route: Array = pts.map(func(p): return _v3(p))
+	for spec in side.get("units", []):
+		var sp: Dictionary = _side_spec(side, spec)
+		sp["patrol"] = route
+		_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+
+
+## Issue #187: a side's block: "remnant" (the Remnant's) or "locals".
+func _side_cfg(owner: String) -> Dictionary:
+	return cfg.get("locals", {}) if owner == Territory.LOCALS else cfg.get("remnant", {})
+
+
+func _side_spec(side: Dictionary, spec: Dictionary) -> Dictionary:
+	var sp: Dictionary = spec.duplicate()
+	sp["faction"] = str(side.get("faction", "imperial_remnant"))
+	if side.has("gun") and not sp.has("gun"):
+		sp["gun"] = side.gun
+	return sp
+
+
+## Issue #187: the droids of outpost `id` for whoever holds it now (the Remnant's
+## three, or the locals' white assassin droid).
+func build_outpost_units(id: String) -> void:
+	var outposts = demo.outposts if demo != null and "outposts" in demo else null
+	if outposts == null:
+		return
+	var side := _side_cfg(Territory.owner(id))
+	var units: Array = side.get("outpost_units", [side.get("outpost_unit", {})])
+	for o in outposts.droid_specs():
+		if str(o.outpost) != id:
+			continue
 		for oc in units:
 			var route: Array = o.routes.get(str(oc.get("route", "patrol")), [])
 			if route.is_empty():
 				continue
-			var sp: Dictionary = oc.duplicate()
+			var sp := _side_spec(side, oc)
 			sp["patrol"] = route
 			sp["outpost"] = o.outpost
 			_spawn_remnant(sp, 0)
+
+
+## And gone: everyone's droids at outpost `id` (it changed hands).
+func clear_outpost_units(id: String) -> void:
+	for u in remnant.duplicate():
+		if str(u.spec.get("outpost", "")) == id:
+			remnant.erase(u)
+			u.queue_free()
 
 
 ## Issue #148: the wreck's Remnant droids and its hauler, on routes from the data
@@ -924,7 +974,7 @@ func wreck_route(name: String) -> Array:
 func _spawn_remnant(spec: Dictionary, start: int, at := Vector3.INF) -> DroidUnit:
 	var rc: Dictionary = cfg.get("remnant", {})
 	var u := _make_unit(str(spec.get("kind", "assassin")), str(spec.get("variant", "remnant")))
-	u.faction = str(rc.get("faction", "imperial_remnant"))
+	u.faction = str(spec.get("faction", rc.get("faction", "imperial_remnant")))
 	u.max_hp = float(spec.get("hp", 40))
 	u.hp = u.max_hp
 	u.gun = spec.get("gun", DroidRoster.kind_cfg(u.kind).get("gun", {}))
@@ -956,11 +1006,23 @@ func remove_site_unit(u: DroidUnit) -> void:
 
 
 ## Issue #64: the fleet is beaten; the town's droids leave with the garrison.
+## Issue #187: and the locals' two take the street.
 func withdraw_town_remnant() -> void:
 	for u in remnant.duplicate():
 		if not u.spec.has("outpost") and not u.spec.has("site"):
 			remnant.erase(u)
 			u.queue_free()
+	_build_town_units(_side_cfg(Territory.LOCALS))
+
+
+## Issue #187: the side that holds this droid's place still does (else it does not come back).
+func _still_posted(u: DroidUnit) -> bool:
+	var side := Territory.LOCALS if u.faction == "locals" else Territory.REMNANT
+	if u.spec.has("site"):
+		return true
+	if u.spec.has("outpost"):
+		return Territory.owner(str(u.spec.outpost)) == side
+	return Territory.owner(Territory.BARRACKS) == side
 
 
 ## A destroyed Remnant droid comes back: in town behind the barracks a minute
@@ -973,10 +1035,10 @@ func _tick_remnant_respawns(dt: float) -> void:
 		if u.respawn_left > 0.0:
 			continue
 		var at := Vector3.INF
-		if not u.spec.has("outpost") and not u.spec.has("site"):
-			if not Story.town_garrison():
-				u.respawn_left = -1.0
-				continue
+		if not _still_posted(u):
+			u.respawn_left = -1.0
+			continue
+		if not u.spec.has("outpost") and not u.spec.has("site") and u.faction != "locals":
 			var mk := str(Story.remnant_cfg().get("town_respawn_marker", "remnant_respawn"))
 			if demo != null and not demo.town.get_marker(mk).is_empty():
 				at = demo.town.marker_pos(mk)
@@ -986,6 +1048,8 @@ func _tick_remnant_respawns(dt: float) -> void:
 
 
 func _garrison(u: DroidUnit = null):
+	if u != null and u.faction == "locals":
+		return null                    # issue #187: the locals' droids answer to their own alarm (_folk)
 	if u != null and u.spec.get("garrison") is Garrison and is_instance_valid(u.spec.garrison):
 		return u.spec.garrison         # issue #193: the cruiser's droids answer to its crew's alarm
 	if u != null and u.spec.has("site"):
@@ -1003,6 +1067,8 @@ func _garrison(u: DroidUnit = null):
 ## They turn on you exactly when the garrison would: the alarm is up, your Remnant
 ## standing is in the hostile band, or you shot at them.
 func remnant_hostile(u: DroidUnit) -> bool:
+	if u.faction == "locals":
+		return u.provoked or _alarm_up(u)
 	if u.provoked or bool(u.spec.get("hostile", false)) or Story.remnant_hostile():
 		return true
 	var g = _garrison(u)
@@ -1055,8 +1121,15 @@ func _remnant_step(dt: float) -> void:
 
 
 func _alarm_up(u: DroidUnit) -> bool:
-	var g = _garrison(u)
-	return g != null and g.alarm.active()
+	var g = _folk(u) if u.faction == "locals" else _garrison(u)
+	return g != null and g.alarm != null and g.alarm.active()
+
+
+## Issue #187: the locals a locals' droid stands with (its outpost's, else the town's).
+func _folk(u: DroidUnit):
+	if demo == null or not demo.has_method("townsfolk_for"):
+		return null
+	return demo.townsfolk_for(str(u.spec.get("outpost", "")))
 
 
 ## Issue #76: run `flee.distance` metres away from the player (and on from the
@@ -1115,6 +1188,9 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node, sweep := Vector3.ZE
 	var g = _garrison(u)
 	if g != null and not g.alarm.active():
 		g._raise("droid_shot")
+	var folk = _folk(u) if u.faction == "locals" else null
+	if folk != null and by_player(shooter, player):
+		folk._attacked = true          # issue #187: shooting the locals' droid is shooting the locals
 	if u.hp <= 0.0:
 		u.dead = true
 		ExplosionFx.small(u.get_parent(), u.center())
@@ -1130,8 +1206,11 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node, sweep := Vector3.ZE
 			u.respawn_left = float(cfg.get("wreck", {}).get("respawn_s", 180.0))
 		if not bool(u.spec.get("respawn", true)):
 			u.respawn_left = -1.0          # issue #193: the cruiser's crew never come back
-		WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A Remnant patrol droid was destroyed.")
-		WorldState.log_event(_l("event_remnant_droid"))
+		if u.faction == "locals":
+			WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A locals' droid was destroyed.")
+		else:
+			WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A Remnant patrol droid was destroyed.")
+			WorldState.log_event(_l("event_remnant_droid"))
 
 
 # ------------------------------------------------------------------ guns

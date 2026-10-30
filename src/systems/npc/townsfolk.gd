@@ -56,19 +56,38 @@ func setup(town_demo, all: Array) -> void:
 	cfg = town.data.get("locals", {}) if town.data is Dictionary else {}
 	alarm = TownAlarm.new(cfg.get("alarm", {}))
 	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
-	var i := 0
 	for g in members:
-		var b := GuardBrain.new(g.profile, 211 + i * 37)
-		var m: Dictionary = town.get_marker(g.post_id)
-		var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
-		b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
-		b.set_post_facing(g.post_facing)
-		brains[g] = b
-		g.died.connect(_on_local_died.bind(g))
-		g.hit_by.connect(_on_local_hit.bind(g))
-		i += 1
+		if not g.has_meta("outpost") or not is_same(members, demo.locals):
+			_adopt(g)              # (issue #187: the town's leaves the outposts' locals to theirs)
 	if player != null and player.has_signal("downed"):
 		player.downed.connect(_on_player_downed)
+
+
+func _adopt(g: NpcBody) -> void:
+	var b := GuardBrain.new(g.profile, 211 + brains.size() * 37)
+	var m: Dictionary = town.get_marker(g.post_id)
+	var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
+	b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
+	b.set_post_facing(g.post_facing)
+	brains[g] = b
+	g.died.connect(_on_local_died.bind(g))
+	g.hit_by.connect(_on_local_hit.bind(g))
+
+
+## Issue #187: a local joins after setup (the locals' guards moving into the
+## barracks or an outpost), and leaves (the Remnant take the outpost back).
+func add_member(g: NpcBody) -> void:
+	if g == null or brains.has(g):
+		return
+	if not members.has(g):
+		members.append(g)
+	_adopt(g)
+
+
+func remove_member(g: NpcBody) -> void:
+	members.erase(g)
+	brains.erase(g)
+	claimed.erase(g)
 
 
 func _physics_process(dt: float) -> void:
@@ -95,7 +114,7 @@ func _physics_process(dt: float) -> void:
 	_handle(alarm.drain())
 	for g in alive:
 		var b: GuardBrain = brains[g]
-		g.drawn = alarm.active()       # pistols out while the port is up in arms
+		g.drawn = alarm.active() or not g.sidearm   # pistols out while the port is up in arms (a guard's rifle always is)
 		if alarm.active():
 			b.engage()
 			b.alarm_pos = alarm.last_known
@@ -241,10 +260,12 @@ func _player_pos() -> Vector3:
 	return player.global_position
 
 
+## (Only those it runs: the town's members list is the scene's own locals, which
+## also holds the locals at the outposts, each run by its outpost's Townsfolk.)
 func _alive() -> Array:
 	var out: Array = []
 	for g in members:
-		if is_instance_valid(g) and not g.dead:
+		if is_instance_valid(g) and not g.dead and brains.has(g):
 			out.append(g)
 	return out
 

@@ -2,6 +2,38 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Who holds the desert: the Remnant or the locals (2026-10-30, issue #187)
+
+- **Seven Remnant outposts now.** Besides the three out the front gate, four new
+  ones sit round the other sides of the town, 500-650 m out: the salt pan
+  outpost (north), the old well outpost (south), the glass flats outpost (west)
+  and the dust gap outpost (southwest). Each has its own building, ship,
+  troopers, droids and cover, and can be the bounty contract's outpost.
+- **The outposts change hands.** Kill every trooper at a Remnant outpost and the
+  locals take it: two of their guards in desert armour and a white assassin
+  droid move in once you are out of sight (or after half a minute). The
+  Remnant's troopers and droids stop coming back there.
+- **The Remnant take it back** after 20 minutes of play, or straight away if the
+  locals' guards there are all killed. They return once you are 110 m away.
+- **Supply runs from Oda.** When an outpost the locals hold is running short
+  (8 minutes left), Oda offers "Supplies for the locals". Walk up to that
+  outpost with the job on: the hold is full again and the locals pay 120 cr.
+  The objective pointer points at it.
+- **Hold all seven at once and the Remnant are driven off** the planet: nothing is
+  retaken after that, and the locals take the barracks too.
+- **When the story ends the locals own the barracks.** Once the fleet is beaten
+  and the Remnant leave town, desert guards stand at the gate, the tower and the
+  yard, and two white assassin droids walk the main street. They leave you alone
+  until you hurt a local, then fight like the Remnant did.
+- **What it changes:** with three outposts lost, the Remnant's gate checkpoint is a
+  band stricter, and every lost outpost makes bribes 25% dearer. The fence pays
+  8% more for contraband per outpost the locals hold. Oda has new rumors about
+  it. F1 shows a CONTROL section: who holds each place and how long the locals'
+  hold lasts.
+- Numbers and lines: `content/core/story/territory.json`. Not in yet: Remnant
+  raids or an interceptor hunting you after big losses, and the Remnant
+  retaking the gate.
+
 ## T-89 talks: returning hello, ship advice, and he is solid (2026-10-29)
 
 - **A returning line instead of the tutorial.** The first game, T-89 says hello
