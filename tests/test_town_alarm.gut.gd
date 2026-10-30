@@ -104,6 +104,10 @@ func test_profiles_inherit() -> void:
 	assert_eq(str(tower.weapon.base), "rifle_blaster")
 	assert_eq(str(cc.get_soldier("yard_trooper").role), "yard")
 	assert_false(cc.get_soldier("yard_trooper").combat.get("hold_ground", false))
+	var roof: Dictionary = cc.get_soldier("roof_rifleman")
+	assert_eq(str(roof.role), "sentry")
+	assert_true(bool(roof.combat.hold_ground), "from the tower sentry: never comes down")
+	assert_eq(str(roof.weapon.base), "rifle_blaster")
 
 
 func test_every_trooper_post_is_live() -> void:

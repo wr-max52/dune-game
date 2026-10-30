@@ -3344,6 +3344,54 @@
    "patrol": "patrol_yard_b"
   },
   {
+   "id": "trooper_roof_w",
+   "pos": [
+    58,
+    6,
+    46.5
+   ],
+   "role": "trooper_post",
+   "soldier": "roof_rifleman",
+   "face": [
+    48,
+    0,
+    22
+   ],
+   "note": "West roof rifleman: over the yard's west half and the crates."
+  },
+  {
+   "id": "trooper_roof_c",
+   "pos": [
+    67,
+    6,
+    46.5
+   ],
+   "role": "trooper_post",
+   "soldier": "roof_rifleman",
+   "face": [
+    64,
+    0,
+    18
+   ],
+   "note": "Centre roof rifleman: down the middle of the yard to the main street."
+  },
+  {
+   "id": "trooper_roof_e",
+   "pos": [
+    84,
+    6,
+    47
+   ],
+   "role": "trooper_post",
+   "soldier": "roof_rifleman",
+   "face": [
+    95,
+    0,
+    2
+   ],
+   "note": "East roof rifleman, in front of the upper block: the yard's east side and the gate."
+  },
+  {
    "id": "vendor_1",
    "pos": [
     42,
