@@ -148,7 +148,18 @@ func baseline_mood() -> String:
 ## Issue #204: the open jobs that are this character's to give ("giver" on the
 ## board; Oda's by default).
 func my_jobs(tier: String) -> Array:
-	return WorldState.open_jobs(tier).filter(func(j): return str(j.get("giver", "cantina_owner")) == id())
+	return WorldState.open_jobs(tier).filter(gives)
+
+
+## Issue #188: "giver" is one card id or a list of them (the smuggling run and the
+## contract are Oda's, the fence's, Skrugs's and T-89's). A planet's own Oda
+## (cantina_owner_<planet>) gives what Oda gives.
+func gives(j: Dictionary) -> bool:
+	var g = j.get("giver", "cantina_owner")
+	for who in (g if g is Array else [g]):
+		if id() == str(who) or id().begins_with(str(who) + "_"):
+			return true
+	return false
 
 
 # ------------------------------------------------------------------ hints (issues #204, #205, #210, #211)

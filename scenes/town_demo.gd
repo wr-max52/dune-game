@@ -25,6 +25,7 @@ const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
 const CantinaOwnerNPC := preload("res://src/systems/npc/cantina_owner_npc.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const FENCE_CARD := "res://content/core/npcs/fence_card.json"   ## issue #188
 const SCENE_PATH := "res://scenes/town_demo.tscn"
 const SHOTS_PATH := "res://content/look/town_shots.json"
 
@@ -265,6 +266,10 @@ func build_plan(staged_build: bool) -> Array:
 	add.call("general", LATER, func():
 		if gear != null and str(planet.get("id", PlanetGen.home_id())) == PlanetGen.home_id():
 			_build_general()
+		return true)
+	add.call("fence", LATER, func():
+		if bar != null and gear != null and townsfolk != null:
+			_build_fence()
 		return true)
 	add.call("mechanic", LATER, func():
 		if speeder_post != null and gear != null:
@@ -886,6 +891,24 @@ func _build_general() -> void:
 	add_child(general_post)
 	if bar != null:
 		general_post.attach_host(bar)
+
+
+## Issue #188: the fence talks: an AI character on the bar's host from his own card
+## (content/core/npcs/fence_card.json), in the body of the local who keeps his
+## stall. "Talk" leads the stall's [E] menu (GearController.vendor_talk), so he
+## only talks while his stall trades (alive, and the locals not fighting).
+func _build_fence() -> void:
+	for v in gear.vendors:
+		if str(v.cfg.get("id", "")) != "fence":
+			continue
+		for g in townsfolk.members:
+			if g.post_id == str(v.cfg.get("marker", "")):
+				var spot := TalkSpot.new(NpcBrain.new(null, FENCE_CARD), g, v.pos)
+				spot.manual = true
+				spot.radius = float(v.cfg.get("reach", 3.5))
+				bar.add_spot(spot)
+				gear.vendor_talk["fence"] = func(): bar.start_talk(spot)
+				return
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
