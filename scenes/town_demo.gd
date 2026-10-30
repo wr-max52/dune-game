@@ -101,6 +101,8 @@ var salesman: ShipSalesman
 @export var with_natives := true      ## issue #96: native packs and wild animals (when the planet has any)
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
 var outposts: RemnantOutposts
+@export var with_cruiser := true      ## issue #193: the Remnant's star cruiser in orbit (needs with_ship and the home ball)
+var cruiser: RemnantCruiser
 var _town_withdrawn := false          ## issue #64: the garrison left town after the fleet was beaten
 var _respawned := 0
 
@@ -251,6 +253,7 @@ func build_plan(staged_build: bool) -> Array:
 		if use_look and with_droids and gear != null:
 			_build_droids()
 		return true)
+	add.call("cruiser", LATER, func(): _build_cruiser(); return true)
 	add.call("salesman", LATER, func():
 		if with_salesman and gear != null:
 			_build_salesman()
@@ -650,6 +653,8 @@ func _make_garrison(node_name: String, members: Array, handles_player: bool, kla
 
 ## The garrison a Remnant body answers to: its outpost's, else the town's.
 func garrison_for(n: Node) -> Garrison:
+	if n != null and n.has_meta("cruiser") and cruiser != null and cruiser.garrison != null:
+		return cruiser.garrison
 	if n != null and n.has_meta("outpost") and outposts != null:
 		var g = outposts.garrisons.get(str(n.get_meta("outpost")), null)
 		if g != null:
@@ -660,7 +665,8 @@ func garrison_for(n: Node) -> Garrison:
 ## One NpcBody from a soldier profile, standing at `here` facing `yaw`, its senses
 ## on the player, named by `name_key`. It joins `npcs` (the Remnant) or `locals`
 ## by its faction; the caller hands a Remnant body to the Garrison if it is up.
-func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String, name_key: String) -> NpcBody:
+func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String, name_key: String,
+		parent: Node = null) -> NpcBody:
 	var cc := _content()
 	var soldier: Dictionary = cc.get_soldier(soldier_id)
 	if soldier.is_empty():
@@ -675,7 +681,7 @@ func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String
 	npc.assign_name(name_key)
 	npc.target_crouched = func(): return _player != null and _player.controller.pose == CharacterBody.CharacterController.Pose.CROUCH
 	npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
-	var root := get_node_or_null("Npcs")
+	var root := get_node_or_null("Npcs") if parent == null else parent
 	(root if root != null else self).add_child(npc)
 	if bool(soldier.get("ambient", false)):
 		stage_performers.append(npc)
@@ -703,7 +709,7 @@ func _content() -> CoreContent:
 ## post on the same clock. Outpost troopers: at their post after a few minutes.
 ## The bounty target never comes back. {} = stays dead.
 func respawn_rule(g: NpcBody) -> Dictionary:
-	if g.has_meta("bounty"):
+	if g.has_meta("bounty") or g.has_meta("cruiser"):
 		return {}
 	var rc := Story.remnant_cfg()
 	var r := { "soldier": g.soldier_id, "post": g.post_id, "home": g.post_pos, "yaw": g.post_facing }
@@ -746,7 +752,7 @@ func _withdraw_town_remnant() -> void:
 		return
 	_town_withdrawn = true
 	for n in npcs.duplicate():
-		if n.has_meta("outpost") or n.has_meta("bounty"):
+		if n.has_meta("outpost") or n.has_meta("bounty") or n.has_meta("cruiser"):
 			continue
 		if garrison != null:
 			garrison.remove_member(n)
@@ -795,6 +801,17 @@ func _build_interceptor() -> void:
 			interceptor.setup(self, b, pilot)
 			add_child(interceptor)
 			return
+
+
+## Issue #193: the Remnant's star cruiser, in orbit far east of the port. Part of the
+## home planet's map (its world's "cruiser" landmark put its boxes in the ship's
+## ground already); after the droids, whose Remnant units its crew includes.
+func _build_cruiser() -> void:
+	if not with_cruiser or pilot == null or not CruiserHull.has_cruiser(pilot.ground):
+		return
+	cruiser = RemnantCruiser.new()
+	cruiser.setup(self, pilot.ground)
+	add_child(cruiser)
 
 
 ## Issue #51: companion droids. After the gear (its HUD and E prompt are shared)

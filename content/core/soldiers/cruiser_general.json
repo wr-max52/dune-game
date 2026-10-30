@@ -1,0 +1,36 @@
+{
+  "id": "cruiser_general",
+  "base": "bounty_target",
+  "label": "Remnant general",
+  "archetype": "remnant_commander",
+  "voice_profile": "man_shady",
+  "naming": {
+    "kind": "person_remnant",
+    "titles": "remnant_general_rank",
+    "nameplate_range": 40.0
+  },
+  "note": "Issue #193: the general in command of the Remnant star cruiser, on its bridge at the great window. Oda's last job: kill them and the cruiser is taken (WorldState.on_cruiser_taken): a big purse, and the locals love you for it. Tough, a straight shot with a heavy pistol, and they hold the bridge. Never comes back.",
+  "hp": 360,
+  "kill_reward": 0,
+  "weapon": {
+    "base": "pistol_blaster",
+    "damage": 16,
+    "bolt_speed": 44.0,
+    "rate": 0.24,
+    "range": 70.0,
+    "mag": 18,
+    "reload_time": 1.2,
+    "noise_radius": 50.0
+  },
+  "perception": {
+    "sight_range": 60.0,
+    "fov_deg": 170.0,
+    "reaction_s": 0.5
+  },
+  "combat": {
+    "aim_error_deg": 1.2,
+    "burst_min": 3,
+    "burst_max": 5,
+    "hold_ground": true
+  }
+}

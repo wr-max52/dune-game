@@ -1,0 +1,29 @@
+{
+  "id": "cruiser_escort",
+  "label": "Cruiser Escort",
+  "world": "port_desert",
+  "location": "outpost",
+  "payout": 400,
+  "arena": { "center": [0, 0, 0], "radius": 1800.0 },
+  "player": { "ship": "interceptor", "spawn": [0, 0, 0], "facing": [0, 0, -1] },
+  "allies": [
+    { "ship": "interceptor", "pilot": "veteran", "spawn": [60, 12, 40], "facing": [0, 0, -1] },
+    { "ship": "interceptor", "pilot": "rookie", "spawn": [-70, -10, 50], "facing": [0, 0, -1] }
+  ],
+  "waves": [
+    {
+      "delay": 1.5,
+      "spawn_distance": 700.0,
+      "ships": [ { "ship": "remnant_interceptor", "count": 3 } ]
+    },
+    {
+      "delay": 3.0,
+      "spawn_distance": 900.0,
+      "ships": [
+        { "ship": "remnant_fighter", "count": 3 },
+        { "ship": "remnant_heavy", "count": 2 }
+      ]
+    }
+  ],
+  "note": "IP-neutral. Issue #193: the company on the way up to the Remnant cruiser (Oda's last job). The cruiser's interceptors scramble as you clear the atmosphere; two of the port's pilots fly up with you. Win it, or run for the cruiser's bay (Z within reach of it breaks the fight off and docks)."
+}

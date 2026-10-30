@@ -2,6 +2,34 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-30 — The Remnant cruiser is part of the home planet's map (issue #193)
+
+- **Not a planet of its own.** The cruiser is a landmark of the home world
+  (`kind: "cruiser"` in `content/core/worlds/port_desert.json`), like the wreck:
+  its boxes go into the ship's WorldGround, its look and crew are a node in the
+  home town scene (RemnantCruiser), and its data is one file
+  (`content/core/cruiser/remnant_cruiser.json`). Alternative: a new planet type
+  with its own scene and a space.handoff, as the asteroid has. Rejected: a
+  planet's scene is a town (TownGen, a cantina, an Oda, a ball of terrain), and
+  the cruiser has none of that; and a handoff ends a running space fight, while
+  Oda's job is a fight on the way up that you can run from straight into the
+  bay. In one scene the escort, the flight across and the landing are one sky.
+  The cost (a 690 m ship in the home scene) is kept small: its parts merge into a
+  dozen meshes, its crew is built only when you come within 2.6 km, and they
+  sleep when you are not near them.
+- **Level with the port, not with the ground under it.** It hangs 75 degrees
+  round the ball, where "up" is nearly sideways to the port's. Its decks are
+  square to world up instead, and a gravity zone (PlanetSphere.gravity_zones)
+  makes up world up aboard. The crew's walking, eyes, aim and paths (NpcBody,
+  NpcLocomotion, Perception, TownNav) all assume up is close to world up, as it
+  is round the port; aboard it is exactly that, so all of it works unchanged.
+  Alternative: the cruiser level with the ground below it and every NPC system
+  made frame-aware. Rejected for now: dozens of world-up assumptions, for a ship
+  in orbit, which can hold any attitude it likes.
+- **Hidden by the curve.** 4.6 km up over a point 6.5 km east along the ground,
+  the line from the port to it passes through the ball: you cannot see it from
+  town, and it is plain to see from space.
+
 ## 2026-10-30 — A shooter's feedback in the ship (issue #181)
 
 - **The cockpit is painted, not modelled.** CockpitView draws the canopy tint, two

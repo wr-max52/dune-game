@@ -116,6 +116,10 @@ func where(target: String) -> Vector3:
 		"pad":
 			if not demo.pads.is_empty() and is_instance_valid(demo.pads[0]):
 				return demo.pads[0].global_position
+		"cruiser":
+			# Issue #193: its bay from outside, its general (or the bridge) once aboard.
+			if demo.get("cruiser") != null:
+				return demo.cruiser.objective_point(_player_pos())
 		"outpost":
 			if demo.outposts != null:
 				for o in demo.outposts.outposts:

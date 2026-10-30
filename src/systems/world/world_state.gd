@@ -463,6 +463,26 @@ static func on_bounty_killed() -> void:
 	log_event(str(Story.bounty_cfg().get("event_killed", "%s was found dead.")) % str(bounty.name))
 
 
+## Issue #193: the general aboard the Remnant cruiser is dead. The cruiser is taken
+## (nobody aboard from now on), the locals' purse is paid, and the port loves you
+## for it. `reward`: { credits, locals, remnant, smuggler } (remnant_cruiser.json).
+## Returns the credits paid (0 when it was taken already).
+static func on_cruiser_taken(general: String, reward: Dictionary, line: String = "") -> int:
+	if has_flag("cruiser_taken"):
+		return 0
+	set_flag("cruiser_taken")
+	bump("generals_killed")
+	var pay := int(reward.get("credits", 0))
+	credits += pay
+	change_standing("imperial_remnant", int(reward.get("remnant", -40)), "The Remnant general aboard the star cruiser was killed.")
+	change_standing("locals", int(reward.get("locals", 60)))
+	change_standing("smuggler", int(reward.get("smuggler", 0)))
+	set_flag("locals_hero")
+	log_event(line % general if line.contains("%s") else ("%s was killed aboard the Remnant cruiser." % general))
+	Story.event("cruiser_taken")
+	return pay
+
+
 ## Paid at the fence. Returns the credits, or 0 when nothing is owed.
 static func collect_bounty() -> int:
 	if not bounty_collectable():
