@@ -15,7 +15,7 @@ extends RefCounted
 ##     planet always has the same packs, and no two planets share a people.
 ##
 ## resolve() returns { people: { id, label, data }, packs: [ { id, attitude, size,
-## children, style, route: [Vector2 map points] } ], fauna: [ { species, count,
+## children, style, route: [Vector2 map points], camp: { at: Vector2, stop_after } } ], fauna: [ { species, count,
 ## around: Vector2, radius } ] }, or {} for a planet with none. Planets with no
 ## breathable ground (platform and ball types) get none.
 
@@ -68,6 +68,9 @@ static func _authored(planet_id: String, n: Dictionary) -> Dictionary:
 	for p in n.get("packs", []):
 		var q: Dictionary = (p as Dictionary).duplicate(true)
 		q["route"] = (p.get("route", []) as Array).map(func(a): return Vector2(float(a[0]), float(a[1])))
+		if q.get("camp") is Dictionary and q.camp.has("at"):
+			var at: Array = q.camp.at
+			q.camp["at"] = Vector2(float(at[0]), float(at[1]))
 		packs.append(q)
 	var fa: Array = []
 	for f in n.get("fauna", []):
@@ -127,7 +130,10 @@ static func _generated(planet_id: String, gen: Dictionary, seed: int, town_rect:
 				"attitude": "hostile" if rng.randf() < hostile else "friendly",
 				"size": s, "children": 0 if no_kids else int(round(s * kids)),
 				"style": str(styles[i % maxi(styles.size(), 1)].get("id", "")) if not styles.is_empty() else "",
-				"route": route })
+				"route": route,
+				# Its camp halfway between the end of its loop and the start: a stop
+				# on every loop (only built when the people make camps).
+				"camp": { "at": (route[route.size() - 1] as Vector2).lerp(route[0], 0.5), "stop_after": route.size() - 1 } })
 	for f in gen.get("fauna", []):
 		out.fauna.append({ "species": str(f.get("species", "")), "count": int(f.get("count", 4)),
 			"around": Vector2.ZERO, "radius": float(f.get("radius", 900.0)) })

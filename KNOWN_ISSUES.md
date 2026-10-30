@@ -2,6 +2,42 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #96, desert pack camps (2026-10-29)
+
+**Checked:** headless only. `scenes/natives_trace.gd` (real physics, the real
+town) covers the camps, the rest, the chests (taken unseen, then seen), the
+rocks and club swings, and a camp shot down that comes back, as well as the
+first milestone. Unit tests cover the steering, the moves and the camps
+(`tests/test_native_steer.gut.gd`, `test_native_moves.gut.gd`,
+`test_native_camps.gut.gd`). The town boots with the look on and builds both
+camps.
+
+**Not done, honestly:**
+- **Looked at in stills only, never played by hand.** The camps, tents (outside
+  and in) and the firepit were rendered on the Mac (`docs/natives/camp.jpg`,
+  `tent.jpg`, `tent_door.jpg`); a swing and a throw were seen once in a still.
+  The gesture poses (`NativeMoves`) and the rocks in flight were not watched
+  moving. The poses are first guesses at joint angles and may look wrong (an
+  arm through the head, a wrist bent the wrong way).
+- **Tents stand on an earth mound.** On sloping sand each tent's floor is
+  levelled on a low platform with sloped sides (so there is no step at the
+  door); on a steep spot the mound is plain to see. Camps pick the flattest
+  ground near where their data puts them.
+- **There is no running day and night.** Packs come in "at night" by the F11
+  time-of-day hour, which only changes when you move the slider or rest. Camps
+  and chests come back on in-game hours (`WorldState.game_hours`), which run on
+  their own at half an hour a real minute and jump when you rest. The sky does
+  not follow them.
+- **Sitting is a crouch.** People round the fire and the keepers crouch; there
+  is no sitting pose.
+- **The camera may clip the tent roof** in third person inside a tent.
+- **Steering is round known rocks only.** Dune faces, the starcruiser wreck and
+  anything else not in WorldGround's boulders or columns are still walked
+  straight at. Low boulders (under 0.8 m) are stepped over.
+- **Spears and knives** still hang at a fixed angle from the hand, as before.
+- **The trace still aborts at teardown**, after its file is written (as other
+  traces here sometimes do).
+
 ## After issue #76 part 3, dogfights in the port's sky (2026-10-29)
 
 **Checked:** headless tests drive the real town with the ship and the

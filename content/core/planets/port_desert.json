@@ -14,7 +14,7 @@
     "pickups"
   ],
   "natives": {
-    "note": "Issue #96, first milestone: the dune people in one friendly and one hostile pack (no camps yet), and sand pigs. Routes are map points (metres along the ground from the port).",
+    "note": "Issue #96: the dune people in one friendly and one hostile pack, and sand pigs. Each pack has a camp (where it starts, a stop after route point 'stop_after', and where it sleeps). Routes and camps are map points (metres along the ground from the port).",
     "species": "dune_nomads",
     "packs": [
       {
@@ -24,6 +24,13 @@
         "size": 12,
         "children": 2,
         "style": "sun_bleached",
+        "camp": {
+          "at": [
+            -380,
+            260
+          ],
+          "stop_after": 3
+        },
         "route": [
           [
             -300,
@@ -50,6 +57,13 @@
         "size": 10,
         "children": 2,
         "style": "rust",
+        "camp": {
+          "at": [
+            45,
+            -560
+          ],
+          "stop_after": 3
+        },
         "route": [
           [
             150,

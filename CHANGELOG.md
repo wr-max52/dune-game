@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Desert packs: camps, tents, chests, rest, clubs and rocks (2026-10-29, issue #96)
+
+- **Every pack has a camp.** Three hide tents round a firepit that is always lit.
+  Each tent is a room you can walk into: a rug, a rock table and rock seats, a
+  bedroll and a chest. A pack starts at its camp, stops there on every loop of
+  its route, and comes back for the night. Three of each pack never leave it.
+- **Chests to loot.** Each holds food, quartz, or what the town's traders and
+  fences buy (quantonium, holocrystals, power cells, whale teeth). Get seen
+  taking it and a friendly pack turns on you. Chests fill again a few in-game
+  hours later.
+- **Wreck a camp** by shooting its tents down. It is back a few in-game hours
+  later.
+- **Rest until morning** in a friendly pack's tent with **Z**: the screen goes
+  dark, you heal, it is morning and the game is saved.
+- **Real moves instead of text.** Club swings, rock throws (a small, short,
+  dark rock), and hand gestures for greeting, trading, thanks, "no food" and a
+  truce. The chief only fights hand to hand.
+- **No more voices for the packs.** Their yells and gestures show as text, never
+  through ElevenLabs, and their entry in the voice profiles is gone ("man_fierce"
+  stays in the library as a spare).
+- **They walk round boulders and mesas** instead of through them.
+- **Follow-ups filed:** planet-wide sandstorms (#175) and packs stealing
+  vehicles (#176).
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina

@@ -57,8 +57,11 @@ func test_far_pack_covers_the_same_ground_at_a_quarter_the_ground_queries() -> v
 	assert_not_null(nat, "the town has natives")
 	nat.set_physics_process(false)
 	var p: Dictionary = nat.packs[0]
+	if p.camp != null:                           # it starts by its camp's fire: send it on its way
+		p.state = "travel"
+		p.route_i = (int(p.camp_i) + 1) % (p.route as Array).size()
 	var snap := _snapshot(p)
-	var ticks := 240                             # 4 s: not enough to reach the first route point
+	var ticks := 240                             # 4 s: not enough to reach the next route point
 	nat.far_stride = 1
 	var full := _run_pack(nat, p, ticks)
 	var full_route_i = p.route_i
@@ -79,7 +82,8 @@ func test_far_pack_covers_the_same_ground_at_a_quarter_the_ground_queries() -> v
 		var d_full: float = (full[i] as Vector3).distance_to(snap.pos[i])
 		var d_lod: float = (lod[i] as Vector3).distance_to(snap.pos[i])
 		assert_almost_eq(d_lod, d_full, 0.35, "member %d covers the same distance" % i)
-	var lead_moved: float = (lod[0] as Vector3).distance_to(snap.pos[0])
+	var up: Vector3 = nat.up_at(snap.pos[0])
+	var lead_moved: float = ((lod[0] as Vector3) - snap.pos[0]).slide(up).length()   # along the ground (the first step settles it onto it)
 	assert_almost_eq(lead_moved, speed * ticks * DT, 0.35, "the leader walks at travel_speed")
 	assert_lt((lod[0] as Vector3).distance_to(full[0]), 0.35, "and ends where it would have")
 

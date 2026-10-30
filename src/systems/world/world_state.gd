@@ -34,6 +34,8 @@ static var hangar := ""                    ## issue #58: the ship id you bought 
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
 static var ships_destroyed: Array = []     ## issue #64: town boxes whose parked ship was shot to pieces (never back)
 static var native_packs: Dictionary = {}       ## issue #96: pack id -> { rep, friendly, locked, trades, kills }
+static var native_camps: Dictionary = {}       ## issue #96: camp id -> { wrecked_h, looted: { box id -> game hour } }
+static var game_hours := 0.0               ## issue #96: in-game hours played (camps come back, boxes refill, rest)
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 
@@ -65,6 +67,8 @@ static func reset() -> void:
 	ships_destroyed = []
 	speeder_fits = []
 	native_packs = {}
+	native_camps = {}
+	game_hours = 0.0
 
 
 # ------------------------------------------------------------------ writes
@@ -593,6 +597,8 @@ static func to_save() -> Dictionary:
 		"ships_destroyed": ships_destroyed.duplicate(),
 		"speeder_fits": speeder_fits.duplicate(true),
 		"native_packs": native_packs.duplicate(true),
+		"native_camps": native_camps.duplicate(true),
+		"game_hours": game_hours,
 	}
 
 
@@ -623,6 +629,8 @@ static func from_save(d: Dictionary) -> void:
 	ships_destroyed = d.get("ships_destroyed", []).duplicate()
 	speeder_fits = d.get("speeder_fits", []).duplicate(true)
 	native_packs = d.get("native_packs", {}).duplicate(true)
+	native_camps = d.get("native_camps", {}).duplicate(true)
+	game_hours = float(d.get("game_hours", 0.0))
 
 
 static func _read_json(path: String) -> Variant:
@@ -641,3 +649,11 @@ static func native_pack(id: String, attitude: String = "friendly") -> Dictionary
 	if not native_packs.has(id):
 		native_packs[id] = { "rep": 0, "friendly": attitude == "friendly", "locked": false, "trades": 0, "kills": 0 }
 	return native_packs[id]
+
+
+## A pack's camp: when it was wrecked (game hours, -1 = standing) and when each of
+## its tents' boxes was emptied. Made the first time it is asked.
+static func native_camp(id: String) -> Dictionary:
+	if not native_camps.has(id):
+		native_camps[id] = { "wrecked_h": -1.0, "looted": {} }
+	return native_camps[id]

@@ -10,7 +10,6 @@
     "yard": ["man_serious", "man_gruff"],
     "merchant": ["man_laid_back"],
     "local": ["man_casual", "man_old", "man_southern", "woman_quirky", "woman_confident"],
-    "native": ["man_fierce"],
     "planet_owner": ["woman_sultry", "woman_warm", "woman_crisp", "woman_bright"]
   },
   "npc_profiles": {

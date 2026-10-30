@@ -8,30 +8,43 @@ extends Node3D
 ## 60%), a leader in the helmet carrying a tall pole with a rag on it so a pack is
 ## seen coming from far off. Every member of a pack wears the pack's colours.
 ## They walk their route over and over. Each NPC is an NpcBody (the guards' body,
-## senses and health) walking open ground with no navmesh (free_walk); far from
-## the player (pack.far_lod_m) they are slid along the ground instead, no physics,
-## so a pack can cross the desert where there is no collider.
+## senses and health) walking open ground with no navmesh (free_walk), steering
+## round the boulders and mesas the ground knows about (NativeSteer); far from the
+## player (pack.far_lod_m) they are slid along the ground instead, no physics, so
+## a pack can cross the desert where there is no collider.
+##
+## Camps (NativeCamp): a pack with a camp starts there, stops there on every loop
+## of its route (sitting round the fire a while) and comes back to it for the
+## night. A few of its members (the keepers) never leave it. Each tent has a chest:
+## take what is in it and, if one of the pack sees you, they turn on you. Shoot
+## the tents down and the camp is wrecked; it is back a few in-game hours later.
+## In a friendly pack's standing tent, [Z] rests: the screen goes dark, you heal,
+## it is morning, the game is saved.
 ##
 ## How a pack treats you is its own (WorldState.native_pack), never your standing
 ## with the Remnant:
 ##   friendly  the leader comes over and gestures (they do not speak the port's
 ##             language: yells, and trade by hand). [E] gestures back: one food for
 ##             quartz (a little more from an adults-only pack), reputation up.
-##   hostile   a battle horn, then they come at you on sight with clubs, spears and
-##             knives, and throw sticks and light spears from further off. They
-##             fight to the last; nobody flees. Survive survive_s (5 minutes)
-##             without killing one of them and without being downed, and they
-##             stop, offer trade and are friendly from then on. Kill one and that
-##             pack is hostile for good. Downed, you wake as from any other death
-##             and they go back to their route.
+##   hostile   a battle horn, then they come at you on sight with clubs, and throw
+##             rocks from further off (the leader never throws). They fight to the
+##             last; nobody flees. Survive survive_s (5 minutes) without killing
+##             one of them and without being downed, and they stop, offer trade and
+##             are friendly from then on. Kill one and that pack is hostile for
+##             good. Downed, you wake as from any other death and they go back to
+##             their route.
+## The moves (a club swing, a rock throw, the gestures) are NativeMoves, played
+## over the walk by NpcBody.act(). They never speak through the voice service.
 ## Animals: each roams alone (SandPig); kill one and [E] at the carcass cuts food.
 ##
-## Not in this milestone (the data has room for them): camps and tents, packs
-## fighting each other and the Remnant, sandstorms, stealing vehicles.
+## Not built yet: packs fighting each other and the Remnant, sandstorms (#175),
+## stealing vehicles (#176).
 
 signal traded(pack_id: String, quartz: int)
 signal pack_won(pack_id: String)
 signal pack_locked(pack_id: String)
+signal looted(pack_id: String, items: Dictionary, seen: bool)
+signal rested
 
 var demo                              ## town_demo.gd
 var ground: WorldGround
@@ -41,15 +54,22 @@ var natives: Dictionary = {}
 var people: Dictionary = {}           ## the species data
 var packs: Array = []                 ## see _make_pack
 var pigs: Array = []                  ## SandPig
+var camps: Array = []                 ## NativeCamp
+var steer: NativeSteer                ## the rocks they walk round
 var survive_s := 300.0
 ## Members far from the player (slid along the ground) step once in this many ticks.
 var far_stride := 4
 var trades := 0
 var butchered := 0
+var steals := 0
+var rests := 0
+var resting := false
 var _rng := RandomNumberGenerator.new()
 var _hud: CanvasLayer
 var _timer_label: Label
+var _fade: ColorRect
 var _clock := 0.0
+var _camp_check := 0.0
 
 
 func setup(town_demo, n: Dictionary, world_ground: WorldGround, p_gear: GearController) -> void:
@@ -79,6 +99,13 @@ func _ready() -> void:
 	_timer_label.add_theme_constant_override("outline_size", 6)
 	_timer_label.visible = false
 	_hud.add_child(_timer_label)
+	_fade = ColorRect.new()
+	_fade.name = "RestFade"
+	_fade.color = Color(0, 0, 0, 0)
+	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade.visible = false
+	_hud.add_child(_fade)
 	_queue_build()
 	if not staged:
 		while not build_step():
@@ -97,6 +124,7 @@ var _build_queue: Array = []          ## Callables, run in order: the same order
 
 func _queue_build() -> void:
 	_build_queue.clear()
+	_build_queue.append(func(): steer = NativeSteer.from_ground(ground))
 	if not people.is_empty():
 		var i := 0
 		for p in natives.get("packs", []):
@@ -130,6 +158,10 @@ func _voice(key: String) -> Array:
 	return people.get("voice", {}).get(key, [])
 
 
+func _camp_cfg() -> Dictionary:
+	return people.get("camp", {})
+
+
 # ------------------------------------------------------------------ ground
 
 ## A map point (metres along the ground from the port) on the ground.
@@ -149,6 +181,14 @@ func _on_ground(p: Vector3) -> Vector3:
 	return ground.surface_below(p + up_at(p) * 4.0) if ground != null else p
 
 
+## A map point on the ground, moved off any rock it lands on.
+func _clear_surface(m: Vector2) -> Vector3:
+	var at := surface(m)
+	if steer != null:
+		at = _on_ground(steer.clear_spot(at, up_at(at)))
+	return at
+
+
 # ------------------------------------------------------------------ packs
 
 ## A pack's record and root now, its members as the next jobs (in order). The
@@ -162,7 +202,7 @@ func _start_pack(p: Dictionary, index: int) -> bool:
 func _make_pack(p: Dictionary, index: int) -> Dictionary:
 	var id := str(p.get("id", "pack_%d" % index))
 	var rec := WorldState.native_pack(id, str(p.get("attitude", "friendly")))
-	var route: Array = (p.get("route", []) as Array).map(func(m): return surface(m))
+	var route: Array = (p.get("route", []) as Array).map(func(m): return _clear_surface(m))
 	if route.is_empty():
 		route = [surface(Vector2(600, 0))]
 	var style := _style(str(p.get("style", "")), index)
@@ -171,12 +211,14 @@ func _make_pack(p: Dictionary, index: int) -> Dictionary:
 	var pack := {
 		"id": id, "label": str(p.get("label", id)), "data": p, "rec": rec, "route": route, "route_i": 1 % route.size(),
 		"members": [], "state": "travel", "attack_t": 0.0, "horned": false, "adults_only": kids == 0,
-		"heading": Vector3.FORWARD, "center": route[0],
+		"heading": Vector3.FORWARD, "center": route[0], "camp": null, "camp_i": -1, "camp_t": 0.0,
+		"keepers": 0, "gesture_t": 0.0, "home_state": "travel",
 	}
 	var root := Node3D.new()
 	root.name = "Pack_" + id
 	add_child(root)
 	pack["root"] = root
+	_make_camp(pack, p, style)
 	var jobs: Array = []
 	for i in size:
 		var slot := i
@@ -187,7 +229,50 @@ func _make_pack(p: Dictionary, index: int) -> Dictionary:
 	return pack
 
 
-## Member `i` of `pack` (the leader is 0, the children last).
+## The pack's camp, when it has one and its people make camps: a stop on the route
+## (after route point "stop_after", the last by default), where the pack starts.
+func _make_camp(pack: Dictionary, p: Dictionary, style: Dictionary) -> void:
+	var pc = p.get("camp", null)
+	if not (pc is Dictionary) or _camp_cfg().is_empty():
+		return
+	var cfg: Dictionary = _camp_cfg().duplicate(true)
+	for k in pc:
+		cfg[k] = pc[k]
+	if style.has("hide"):
+		cfg["hide"] = style.hide
+	if style.has("rug"):
+		cfg["rug"] = style.rug
+	var at_m = pc.get("at", null)
+	var route: Array = pack.route
+	var at: Vector3 = _clear_surface(at_m if at_m is Vector2 else Vector2(float(at_m[0]), float(at_m[1]))) \
+		if at_m != null else route[0]
+	var camp := NativeCamp.new()
+	camp.setup(str(pack.id), cfg, self, at)
+	(pack.root as Node3D).add_child(camp)
+	camp.build()
+	camp.tent_hit.connect(_on_tent_hit.bind(pack))
+	camp.wrecked.connect(_on_camp_wrecked.bind(pack))
+	var st := WorldState.native_camp(str(pack.id))
+	if float(st.get("wrecked_h", -1.0)) >= 0.0:
+		if WorldState.game_hours - float(st.wrecked_h) >= float(cfg.get("return_hours", 4.0)):
+			st.wrecked_h = -1.0
+		else:
+			camp.show_wrecked()
+	camps.append(camp)
+	var after := clampi(int(pc.get("stop_after", route.size() - 1)), 0, route.size() - 1)
+	route.insert(after + 1, camp.center)
+	pack.camp = camp
+	pack.camp_i = after + 1
+	pack.route_i = pack.camp_i
+	pack.center = camp.center
+	pack.keepers = clampi(int(cfg.get("keepers", 3)), 0, maxi(0, int(p.get("size", 12)) - 2))
+	pack.state = "camp"
+	pack.camp_t = float(cfg.get("stop_s", 45.0))
+	_refresh_lids(pack)
+
+
+## Member `i` of `pack` (the leader is 0, the children last; the last few stay at
+## the camp).
 func _add_member(pack: Dictionary, i: int, size: int, kids: int, style: Dictionary) -> void:
 	var weapons: Dictionary = people.get("weapons", {})
 	var melee: Array = weapons.get("melee", [])
@@ -196,10 +281,19 @@ func _add_member(pack: Dictionary, i: int, size: int, kids: int, style: Dictiona
 	var child := i >= size - kids
 	var thrower := not child and i > 0 and not thrown.is_empty() and _rng.randf() < float(weapons.get("thrower_share", 0.4))
 	var w: Dictionary = (thrown[_rng.randi() % thrown.size()] if thrower else (melee[_rng.randi() % melee.size()] if not melee.is_empty() else {}))
-	var at := _on_ground(route[0] + _ring_offset(i, route[0]))
+	if i == 0 and not melee.is_empty():
+		w = melee[0]                    # the chief: melee only, the first melee weapon (the club)
+	var keeper := i > 0 and i >= size - int(pack.keepers)
+	var camp: NativeCamp = pack.camp
+	var at: Vector3
+	if camp != null:
+		at = camp.spots[i % camp.spots.size()]       # everyone starts at the camp, by the fire
+	else:
+		at = _on_ground(route[0] + _ring_offset(i, route[0]))
 	var npc := _make_member(pack, i == 0, child, thrower, w, style, at)
 	(pack.root as Node3D).add_child(npc)
-	(pack.members as Array).append({ "npc": npc, "child": child, "thrower": thrower, "weapon": w, "cd": _rng.randf_range(0.0, 1.0), "slot": i })
+	(pack.members as Array).append({ "npc": npc, "child": child, "thrower": thrower, "weapon": w, "cd": _rng.randf_range(0.0, 1.0),
+		"slot": i, "keeper": keeper })
 	npc.died.connect(_on_member_died.bind(pack, npc))
 	npc.hit_by.connect(_on_member_hit.bind(pack))
 
@@ -239,12 +333,15 @@ func _make_member(pack: Dictionary, leader: bool, child: bool, thrower: bool, w:
 	if child:
 		soldier["look_scale"] = float(body.get("child_scale", 0.6))
 		soldier["hp"] = int(round(float(soldier.get("hp", 44)) * float(body.get("child_hp", 0.5))))
-	# The body's weapon: a throw (slow, one at a time) for a thrower; melee
-	# members carry the same unused so the body has one.
+	# The body's weapon: a throw for a thrower; melee members carry the same unused
+	# so the body has one. The throws are paced by _fight (cooldown_s and the
+	# throw's wind-up), so the weapon itself never makes one wait.
 	var tw: Dictionary = w if thrower else (people.get("weapons", {}).get("thrown", [{}]) as Array)[0]
 	soldier["weapon"] = { "base": "pistol_blaster", "damage": float(tw.get("damage", 7)), "bolt_speed": float(tw.get("speed", 22.0)),
-		"rate": float(tw.get("cooldown_s", 3.0)), "range": float(tw.get("range", 16.0)), "mag": 1,
-		"reload_time": float(tw.get("cooldown_s", 3.0)), "noise_radius": 18.0, "bolt_color": str(tw.get("color", "#8a6a3a")) }
+		"rate": 0.1, "range": float(tw.get("range", 16.0)), "mag": 999,
+		"reload_time": 0.1, "noise_radius": 18.0, "bolt_color": str(tw.get("color", "#8a6a3a")),
+		"bolt_matte": bool(tw.get("matte", false)), "bolt_length": float(tw.get("length", 0.9)),
+		"bolt_radius": float(tw.get("radius", 0.035)), "sfx": str(tw.get("sfx", "")) }
 	var npc := NpcBody.new()
 	npc.post_id = "%s_%d" % [str(pack.id), (pack.members as Array).size()]
 	npc.setup(soldier, at, _rng.randf() * TAU, demo._flat_mats() if demo.use_look else null)
@@ -261,7 +358,7 @@ func _make_member(pack: Dictionary, leader: bool, child: bool, thrower: bool, w:
 	return npc
 
 
-## A stick, a spear or a knife in the right hand (look only).
+## A club, a spear, a knife or a rock in the right hand (look only).
 func _hand_weapon(npc: NpcBody, w: Dictionary, thrower: bool, child: bool) -> void:
 	var joint = npc.joints.get("r_wrist") if npc.joints is Dictionary else null
 	if not (joint is Node3D):
@@ -269,9 +366,20 @@ func _hand_weapon(npc: NpcBody, w: Dictionary, thrower: bool, child: bool) -> vo
 	var mats: LookMaterials = demo._flat_mats()
 	var wood := mats.flat(Color("#6a4a2a"), 0.95)
 	var bone := mats.flat(Color("#d8ccb0"), 0.8)
-	var look := str(w.get("look", "spear" if thrower else "club"))
+	var look := str(w.get("look", "rock" if thrower else "club"))
 	var mi := MeshInstance3D.new()
 	mi.name = "HandWeapon"
+	if look == "rock":
+		var s := SphereMesh.new()
+		s.radius = 0.07
+		s.height = 0.11
+		s.radial_segments = 6
+		s.rings = 3
+		mi.mesh = s
+		mi.material_override = mats.flat(Color(str(w.get("color", "#1a1714"))), 1.0)
+		mi.position = Vector3(0, -0.08, 0.02)
+		(joint as Node3D).add_child(mi)
+		return
 	var c := CylinderMesh.new()
 	match look:
 		"spear":
@@ -326,15 +434,49 @@ func pack(id: String) -> Dictionary:
 	return {}
 
 
+## Whoever leads now: the chief, or the first one still standing (a keeper only
+## when nobody else is left).
 func leader(pack: Dictionary) -> NpcBody:
 	var a := alive(pack)
+	for m in a:
+		if not bool(m.get("keeper", false)):
+			return m.npc
 	return a[0].npc if not a.is_empty() else null
+
+
+func _lead_entry(p: Dictionary, a: Array) -> Dictionary:
+	for m in a:
+		if not bool(m.get("keeper", false)):
+			return m
+	return a[0]
+
+
+# ------------------------------------------------------------------ time of day
+
+## The hour now (0..24) from the look's time of day; -1 with no look (headless).
+func hour_now() -> float:
+	var look = demo.get("look") if demo != null else null
+	if look == null:
+		return -1.0
+	if float(look.hour) >= 0.0:
+		return float(look.hour)
+	return float(look.hour_of(str(look.current)))
+
+
+## Night: they come into camp and stay by the fire until morning.
+func is_night() -> bool:
+	var h := hour_now()
+	if h < 0.0:
+		return false
+	var c := _camp_cfg()
+	return h >= float(c.get("night_from", 19.0)) or h < float(c.get("night_to", 6.5))
 
 
 # ------------------------------------------------------------------ frame
 
 func _physics_process(dt: float) -> void:
 	_clock += dt
+	WorldState.game_hours += dt * float(_camp_cfg().get("game_hours_per_real_min", 0.5)) / 60.0
 	var ppos := _player_pos()
 	var timer_text := ""
 	for p in packs:
@@ -346,6 +488,13 @@ func _physics_process(dt: float) -> void:
 			timer_text = _line("survive") % [int(left) / 60, int(left) % 60] if not bool(p.rec.locked) else ""
 	_timer_label.text = timer_text
 	_timer_label.visible = timer_text != ""
+	for c in camps:
+		if is_instance_valid(c):
+			(c as NativeCamp).tick(dt, ppos)
+	_camp_check -= dt
+	if _camp_check <= 0.0:
+		_camp_check = 2.0
+		_check_camps(ppos)
 	_tick_prompts()
 
 
@@ -364,27 +513,49 @@ func _tick_pack(p: Dictionary, dt: float, ppos: Vector3) -> void:
 	var a := alive(p)
 	if a.is_empty():
 		return
-	var lead: NpcBody = a[0].npc
+	var lead: NpcBody = _lead_entry(p, a).npc
 	p.center = lead.global_position
 	var d := lead.global_position.distance_to(ppos) if ppos != Vector3.INF else INF
-	var pk: Dictionary = people.get("pack", {})
-	var rec: Dictionary = p.rec
+	var near_d := INF                  # the nearest of them (a keeper by its fire counts)
 	var noticed := false
 	for m in a:
 		noticed = noticed or (m.npc as NpcBody).perception.noticed
+		if ppos != Vector3.INF:
+			near_d = minf(near_d, (m.npc as NpcBody).global_position.distance_to(ppos))
+	var pk: Dictionary = people.get("pack", {})
+	var rec: Dictionary = p.rec
+	p.gesture_t = maxf(0.0, float(p.gesture_t) - dt)
 	match str(p.state):
-		"travel", "greet":
+		"travel", "greet", "camp":
 			if not bool(rec.friendly):
-				if ppos != Vector3.INF and (noticed or d < float(pk.get("notice_range", 45.0))):
+				if ppos != Vector3.INF and (noticed or near_d < float(pk.get("notice_range", 45.0))):
 					start_attack(p)
-			elif ppos != Vector3.INF and d < float(pk.get("greet_range", 30.0)):
-				p.state = "greet"
-			elif p.state == "greet" and d > float(pk.get("greet_range", 30.0)) * 1.6:
+			elif ppos != Vector3.INF and d < float(pk.get("greet_range", 30.0)) and not resting:
+				if p.state != "greet":
+					p.home_state = p.state
+					p.state = "greet"
+					p.gesture_t = 0.0
+					lead.act("gesture_wave")
+				elif p.gesture_t <= 0.0 and d < float(pk.get("trade_reach", 4.5)) * 1.5:
+					p.gesture_t = float(pk.get("offer_every_s", 7.0))
+					lead.act("gesture_offer")
+					lead.say(str(people.get("voice", {}).get("gesture_offer", "")), 3.0)
+			elif p.state == "greet" and (d > float(pk.get("greet_range", 30.0)) * 1.6 or resting):
+				p.state = p.home_state
+			if p.state == "camp":
+				p.camp_t = float(p.camp_t) - dt
+				if p.camp_t <= 0.0 and not is_night():
+					p.state = "travel"
+					p.route_i = (int(p.camp_i) + 1) % (p.route as Array).size()
+			elif p.state == "travel" and p.camp != null and is_night():
+				p.route_i = p.camp_i      # home for the night
+		"truce":
+			if d > float(pk.get("greet_range", 30.0)) * 1.6:
 				p.state = "travel"
 		"attack":
 			if ppos == Vector3.INF:
 				_stand_down(p)               # downed (or flown off): back to their route
-			elif d > float(people.get("hostile", {}).get("chase_leash_m", 160.0)):
+			elif near_d > float(people.get("hostile", {}).get("chase_leash_m", 160.0)):
 				_stand_down(p)
 			else:
 				p.attack_t = float(p.attack_t) + dt
@@ -398,7 +569,7 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 	var npc: NpcBody = m.npc
 	var lod := float(people.get("pack", {}).get("far_lod_m", 90.0))
 	var far := ppos == Vector3.INF or npc.global_position.distance_to(ppos) > lod
-	if far and p.state != "attack":
+	if far:
 		# Out of sight of the player: slid along the ground, no physics (there may
 		# be no collider under them out here).
 		if npc.process_mode != Node.PROCESS_MODE_DISABLED:
@@ -416,6 +587,10 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 		dt = acc
 		var far_goal := _goal_for(p, m, ppos)
 		var speed := float(people.get("pack", {}).get("travel_speed", 1.6))
+		if p.state == "attack" and far_goal == ppos:
+			speed = float(people.get("pack", {}).get("charge_speed", 4.5))     # coming for you
+		if steer != null:
+			far_goal = steer.steer(npc.global_position, far_goal, up_at(npc.global_position))
 		var to := far_goal - npc.global_position
 		var step := to.normalized() * minf(speed * dt, to.length()) if to.length() > 0.5 else Vector3.ZERO
 		var at := _on_ground(npc.global_position + step)
@@ -431,30 +606,80 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 		npc.process_mode = Node.PROCESS_MODE_INHERIT
 		if demo.terrain != null and ppos != Vector3.INF:
 			demo.terrain.prefetch(npc.global_position)
+	npc.command.crouch = false
 	match str(p.state):
 		"attack":
-			_fight(p, m, dt, ppos)
+			if goal == ppos:
+				_fight(p, m, dt, ppos)
+			else:
+				_walk_to(m, goal)         # a keeper staying by its camp
 		"greet", "truce":
-			if m.slot == 0 and ppos != Vector3.INF:
+			if m.npc == leader(p) and ppos != Vector3.INF:
 				var to_p := ppos - npc.global_position
 				npc.go_to(ppos - to_p.normalized() * 2.6, false)
 				npc.face_point(ppos)
+			elif bool(m.get("keeper", false)) and p.camp != null:
+				_sit_at(p, m, goal)
 			else:
 				npc.stop()
 				if ppos != Vector3.INF:
 					npc.face_point(ppos)
+		"camp":
+			_sit_at(p, m, goal)
 		_:
-			npc.go_to(goal, false)
-			npc.clear_face()
+			if bool(m.get("keeper", false)) and p.camp != null:
+				_sit_at(p, m, goal)
+			else:
+				_walk_to(m, goal)
+				npc.clear_face()
 
 
-## Where a member walks: the leader along the route, the rest in rows behind it.
-func _goal_for(p: Dictionary, m: Dictionary, _ppos: Vector3) -> Vector3:
+## Walk to `goal` round the rocks in the way (asked again every few tenths of a second).
+func _walk_to(m: Dictionary, goal: Vector3) -> void:
+	var npc: NpcBody = m.npc
+	var to := goal
+	if steer != null and steer.count > 0:
+		if _clock - float(m.get("st", -1.0)) > 0.3 or (m.get("sgoal", Vector3.INF) as Vector3).distance_to(goal) > 3.0:
+			m["sg"] = steer.steer(npc.global_position, goal, up_at(npc.global_position))
+			m["st"] = _clock
+			m["sgoal"] = goal
+		to = m.sg
+	npc.go_to(to, false)
+
+
+## At the camp: walk to its spot by the fire, then sit (crouch) facing it.
+func _sit_at(p: Dictionary, m: Dictionary, spot: Vector3) -> void:
+	var npc: NpcBody = m.npc
+	var camp: NativeCamp = p.camp
+	if npc.global_position.distance_to(spot) > 1.2:
+		_walk_to(m, spot)
+		return
+	npc.stop()
+	npc.command.crouch = true
+	if camp != null:
+		npc.face_point(camp.center)
+
+
+## Where a member walks: the leader along the route, the rest in rows behind it;
+## at the camp each to its own spot by the fire. Fighting: at you (a keeper only
+## near its camp).
+func _goal_for(p: Dictionary, m: Dictionary, ppos: Vector3) -> Vector3:
+	var camp: NativeCamp = p.camp
+	var keeper := bool(m.get("keeper", false)) and camp != null
+	if p.state == "attack" and ppos != Vector3.INF:
+		if keeper and ppos.distance_to(camp.center) > float(_camp_cfg().get("guard_m", 60.0)):
+			return _spot(p, m)
+		return ppos
+	if keeper or (p.state == "camp" and camp != null):
+		return _spot(p, m)
 	var route: Array = p.route
-	var lead: NpcBody = alive(p)[0].npc
+	var lead: NpcBody = leader(p)
 	if m.npc == lead:
 		var target: Vector3 = route[int(p.route_i)]
-		if lead.global_position.distance_to(target) < 4.0:
+		if p.state == "travel" and lead.global_position.distance_to(target) < 4.0:
+			if int(p.route_i) == int(p.camp_i) and camp != null:
+				_arrive_at_camp(p)
+				return _spot(p, m)
 			p.route_i = (int(p.route_i) + 1) % route.size()
 			target = route[int(p.route_i)]
 		var up := up_at(lead.global_position)
@@ -473,19 +698,49 @@ func _goal_for(p: Dictionary, m: Dictionary, _ppos: Vector3) -> Vector3:
 	return lead.global_position - fwd * float(row) * sp + right * col * sp
 
 
-## Hostile: run at the player; hit within reach, throw from range.
+func _spot(p: Dictionary, m: Dictionary) -> Vector3:
+	var camp: NativeCamp = p.camp
+	return camp.spots[int(m.slot) % camp.spots.size()]
+
+
+func _arrive_at_camp(p: Dictionary) -> void:
+	p.state = "camp"
+	p.camp_t = float((p.camp as NativeCamp).cfg.get("stop_s", 45.0))
+
+
+## Hostile: run at the player; swing within reach, throw a rock from range. The
+## blow lands (or the rock leaves the hand) partway through the move.
 func _fight(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> void:
 	var npc: NpcBody = m.npc
 	var w: Dictionary = m.weapon
 	m.cd = maxf(0.0, float(m.cd) - dt)
 	var d := npc.global_position.distance_to(ppos)
 	npc.face_point(ppos)
+	var chest := ppos + up_at(ppos) * 1.2
+	if float(m.get("release", -1.0)) >= 0.0:      # a rock on its way out of the hand
+		npc.stop()
+		npc.aim_point = chest
+		m.release = float(m.release) - dt
+		if m.release <= 0.0 and npc.fire_at(chest, dt):
+			m.release = -1.0
+		elif m.release < -0.6:
+			m.release = -1.0              # the throw came to nothing
+		return
+	if float(m.get("strike", -1.0)) >= 0.0:       # a swing on its way down
+		npc.stop()
+		m.strike = float(m.strike) - dt
+		if m.strike <= 0.0:
+			m.strike = -1.0
+			if d <= float(w.get("reach", 2.0)) + 0.8:
+				_land_blow(npc, w)
+		return
 	if bool(m.thrower) and d >= float(w.get("min_range", 5.0)) and d <= float(w.get("range", 16.0)):
 		npc.stop()
-		var chest := ppos + up_at(ppos) * 1.2
 		npc.aim_point = chest
-		if m.cd <= 0.0 and npc.fire_at(chest, dt):
+		if m.cd <= 0.0:
 			m.cd = float(w.get("cooldown_s", 3.2))
+			npc.act("throw")
+			m.release = NativeMoves.length("throw") * NativeMoves.RELEASE
 		return
 	npc.aim_point = Vector3.INF
 	var reach := float(w.get("reach", 2.0))
@@ -493,15 +748,22 @@ func _fight(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> void:
 		npc.stop()
 		if m.cd <= 0.0:
 			m.cd = float(w.get("cooldown_s", 1.1))
-			if player != null and player.has_method("apply_damage_from"):
-				player.apply_damage_from(float(w.get("damage", 8)), npc)
-			elif player != null and player.has_method("apply_damage"):
-				player.apply_damage(float(w.get("damage", 8)))
-			hits += 1
+			var move := str(w.get("move", "swing"))
+			npc.act(move)
+			m.strike = NativeMoves.length(move) * float(NativeMoves.STRIKE.get(move, 0.5))
 		return
-	npc.go_to(ppos, true)
+	_walk_to(m, ppos)
+	npc.command.sprint = true
 	if _rng.randf() < dt * 0.15:
 		_yell(npc)
+
+
+func _land_blow(npc: NpcBody, w: Dictionary) -> void:
+	if player != null and player.has_method("apply_damage_from"):
+		player.apply_damage_from(float(w.get("damage", 8)), npc)
+	elif player != null and player.has_method("apply_damage"):
+		player.apply_damage(float(w.get("damage", 8)))
+	hits += 1
 
 
 var hits := 0                         ## melee blows that landed (traces)
@@ -533,6 +795,8 @@ func _stand_down(p: Dictionary) -> void:
 	for m in alive(p):
 		(m.npc as NpcBody).hostile = false
 		(m.npc as NpcBody).aim_point = Vector3.INF
+		m.erase("release")
+		m.erase("strike")
 
 
 ## Five minutes and nobody of theirs dead: they lower their weapons, and trade.
@@ -544,10 +808,15 @@ func _win_over(p: Dictionary) -> void:
 		(m.npc as NpcBody).hostile = false
 		(m.npc as NpcBody).aim_point = Vector3.INF
 		(m.npc as NpcBody).stop()
+		(m.npc as NpcBody).act("gesture_lower")
+		m.erase("release")
+		m.erase("strike")
 	var lead := leader(p)
 	var g = people.get("voice", {}).get("gesture_truce", "")
-	if lead != null and str(g) != "":
-		lead.say(str(g), 4.0)
+	if lead != null:
+		lead.act("gesture_offer")
+		if str(g) != "":
+			lead.say(str(g), 4.0)
 	_toast(_line("won") % str(p.label))
 	pack_won.emit(str(p.id))
 
@@ -574,6 +843,23 @@ func _on_member_died(p: Dictionary, npc: NpcBody) -> void:
 		_toast(_line("locked") % str(p.label))
 		pack_locked.emit(str(p.id))
 	start_attack(p)
+
+
+## A friendly pack caught you at it (stealing, or tearing its tents down): it turns
+## on you. Not for good: survive them without a kill and they come round again.
+func _provoke(p: Dictionary) -> void:
+	if bool(p.rec.friendly):
+		p.rec.friendly = false
+		p.rec.won = false
+	start_attack(p)
+
+
+## Whether any of pack `p` sees the player right now.
+func seen_by(p: Dictionary) -> bool:
+	for m in alive(p):
+		if (m.npc as NpcBody).perception.visible:
+			return true
+	return false
 
 
 func _horn(at: Node3D) -> void:
@@ -605,7 +891,7 @@ func trade_pack() -> Dictionary:
 		return {}
 	var reach := float(people.get("pack", {}).get("trade_reach", 4.5))
 	for p in packs:
-		if not bool(p.rec.friendly) or not (p.state in ["greet", "truce", "travel"]):
+		if not bool(p.rec.friendly) or not (p.state in ["greet", "truce", "travel", "camp"]):
 			continue
 		var lead := leader(p)
 		if lead != null and lead.global_position.distance_to(ppos) <= reach:
@@ -631,6 +917,7 @@ func trade(id: String) -> String:
 	var lead := leader(p)
 	if food == "":
 		if lead != null:
+			lead.act("gesture_no")
 			lead.say(str(people.get("voice", {}).get("gesture_no_food", "")), 3.5)
 		return "no_food"
 	inv.remove(food)
@@ -640,22 +927,234 @@ func trade(id: String) -> String:
 	p.rec.trades = int(p.rec.get("trades", 0)) + 1
 	trades += 1
 	if lead != null:
+		lead.act("gesture_thanks")
 		lead.say(str(people.get("voice", {}).get("gesture_thanks", "")), 3.5)
+		p.gesture_t = float(people.get("pack", {}).get("offer_every_s", 7.0))
 	_toast(_line("traded") % [n, str(p.label), int(p.rec.rep)])
 	WorldState.log_event("Traded food for quartz with the %s." % str(p.label))
 	traded.emit(id, n)
 	return "traded"
 
 
+# ------------------------------------------------------------------ camps: chests, tents, rest
+
+func _box_key(i: int) -> String:
+	return "tent_%d" % i
+
+
+## Whether tent `i`'s chest in pack `p`'s camp has something in it (it fills again
+## restock_hours after it was emptied).
+func chest_full(p: Dictionary, i: int) -> bool:
+	var st := WorldState.native_camp(str(p.id))
+	var looted: Dictionary = st.get("looted", {})
+	if not looted.has(_box_key(i)):
+		return true
+	return WorldState.game_hours - float(looted[_box_key(i)]) >= float((p.camp as NativeCamp).cfg.get("restock_hours", 4.0))
+
+
+## What is in tent `i`'s chest: { item id: count }, rolled from the people's loot
+## table (the same chest always holds the same thing until it is emptied).
+func chest_items(p: Dictionary, i: int) -> Dictionary:
+	if p.camp == null or not chest_full(p, i):
+		return {}
+	var cfg: Dictionary = (p.camp as NativeCamp).cfg
+	var table: Array = cfg.get("loot", [])
+	if table.is_empty():
+		return {}
+	var st := WorldState.native_camp(str(p.id))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s/%d/%d" % [str(p.id), i, int(st.get("fills", {}).get(_box_key(i), 0))])
+	var total := 0.0
+	for e in table:
+		total += float(e.get("weight", 1.0))
+	var out := {}
+	for k in int(cfg.get("loot_rolls", 2)):
+		var r := rng.randf() * total
+		for e in table:
+			r -= float(e.get("weight", 1.0))
+			if r <= 0.0:
+				var c: Array = e.get("count", [1, 1])
+				var item := str(e.item)
+				out[item] = int(out.get(item, 0)) + rng.randi_range(int(c[0]), int(c[1]))
+				break
+	return out
+
+
+## The camp chest within reach of the player: { pack, tent } or {}.
+func chest_near_player() -> Dictionary:
+	var ppos := _player_pos()
+	if ppos == Vector3.INF or bool(player.get("piloting")):
+		return {}
+	for p in packs:
+		if p.camp == null:
+			continue
+		var i := (p.camp as NativeCamp).chest_near(ppos)
+		if i >= 0:
+			return { "pack": p, "tent": i }
+	return {}
+
+
+## Take what is in tent `i`'s chest. If any of the pack sees it, a friendly pack
+## turns on you (a hostile one is coming anyway). Returns what was taken.
+func take_chest(p: Dictionary, i: int) -> Dictionary:
+	var items := chest_items(p, i)
+	if items.is_empty():
+		return {}
+	for k in items:
+		WorldState.inventory.add(str(k), int(items[k]))
+	var st := WorldState.native_camp(str(p.id))
+	st.looted[_box_key(i)] = WorldState.game_hours
+	if not st.has("fills"):
+		st["fills"] = {}
+	st.fills[_box_key(i)] = int(st.fills.get(_box_key(i), 0)) + 1
+	(p.camp as NativeCamp).set_lid(i, true)
+	steals += 1
+	var seen := seen_by(p)
+	var parts: Array = []
+	for k in items:
+		parts.append("%d %s" % [int(items[k]), _item_label(str(k))])
+	_toast(_line("took") % ", ".join(parts))
+	WorldState.log_event("Took %s from a tent of the %s." % [", ".join(parts), str(p.label)])
+	if seen:
+		_toast(_line("seen_stealing") % str(p.label))
+		_provoke(p)
+	looted.emit(str(p.id), items, seen)
+	return items
+
+
+func _item_label(id: String) -> String:
+	var it := WorldState._item(id)
+	return str(it.get("label", id)).to_lower() if not it.is_empty() else id
+
+
+func _refresh_lids(p: Dictionary) -> void:
+	var camp: NativeCamp = p.camp
+	if camp == null:
+		return
+	for t in camp.tents:
+		camp.set_lid(int(t.index), not chest_full(p, int(t.index)))
+
+
+func _on_tent_hit(shooter: Node, _amount: float, p: Dictionary) -> void:
+	if shooter == player and seen_by(p):
+		_provoke(p)
+
+
+func _on_camp_wrecked(p: Dictionary) -> void:
+	WorldState.native_camp(str(p.id)).wrecked_h = WorldState.game_hours
+	_toast(_line("camp_wrecked") % str(p.label))
+	WorldState.log_event("The %s's camp was torn down." % str(p.label))
+
+
+## Every couple of seconds: a wrecked camp whose hours are up is put back (only
+## while the player is not standing in it), and emptied chests fill again.
+func _check_camps(ppos: Vector3) -> void:
+	for p in packs:
+		var camp: NativeCamp = p.get("camp")
+		if camp == null:
+			continue
+		if camp.is_wrecked:
+			var st := WorldState.native_camp(str(p.id))
+			var away := ppos == Vector3.INF or ppos.distance_to(camp.center) > float(camp.cfg.get("rebuild_unseen_m", 60.0))
+			if away and WorldState.game_hours - float(st.get("wrecked_h", -1.0)) >= float(camp.cfg.get("return_hours", 4.0)):
+				st.wrecked_h = -1.0
+				camp.rebuild()
+		_refresh_lids(p)
+
+
+## The friendly pack's standing tent the player is inside: { pack, tent } or {}.
+func rest_tent() -> Dictionary:
+	var ppos := _player_pos()
+	if ppos == Vector3.INF or bool(player.get("piloting")):
+		return {}
+	for p in packs:
+		if p.camp == null or not bool(p.rec.friendly) or p.state == "attack":
+			continue
+		var i := (p.camp as NativeCamp).tent_at(ppos)
+		if i >= 0 and not bool((p.camp as NativeCamp).tents[i].down):
+			return { "pack": p, "tent": i }
+	return {}
+
+
+## Sleep in a friendly tent: the screen goes dark, you heal, it is morning, the game
+## is saved, the screen comes back. `fade_s` 0 does it all at once (traces).
+func rest(fade_s: float = -1.0) -> bool:
+	if resting or rest_tent().is_empty():
+		return false
+	resting = true
+	var rc: Dictionary = people.get("rest", {})
+	if fade_s < 0.0:
+		fade_s = float(rc.get("fade_s", 0.9))
+	if player != null and "locked" in player:
+		player.locked = true
+	_fade.visible = true
+	if fade_s > 0.0 and is_inside_tree():
+		var tw := create_tween()
+		tw.tween_property(_fade, "color:a", 1.0, fade_s)
+		await tw.finished
+		await get_tree().create_timer(float(rc.get("dark_s", 0.8))).timeout
+	_fade.color.a = 1.0
+	_wake(rc)
+	if fade_s > 0.0 and is_inside_tree():
+		var tw2 := create_tween()
+		tw2.tween_property(_fade, "color:a", 0.0, fade_s)
+		await tw2.finished
+	_fade.color.a = 0.0
+	_fade.visible = false
+	if player != null and "locked" in player:
+		player.locked = false
+	resting = false
+	_toast(_line("rested"))
+	rested.emit()
+	return true
+
+
+## In the dark: healed, the clock on to morning, saved.
+func _wake(rc: Dictionary) -> void:
+	if player != null and player.get("health") != null:
+		player.health.heal(int(player.health.max_hp))
+	var morning := float(rc.get("morning_hour", 8.0))
+	var h := hour_now()
+	var slept := fposmod(morning - h, 24.0) if h >= 0.0 else float(rc.get("hours_headless", 9.0))
+	if slept < 0.5:
+		slept += 24.0
+	WorldState.game_hours += slept
+	if demo != null and demo.has_method("set_hour") and demo.get("look") != null:
+		demo.set_hour(morning)
+	rests += 1
+	WorldState.log_event("Slept in a tent of the desert people until morning.")
+	for p in packs:
+		_refresh_lids(p)
+	var bar = demo.get("bar") if demo != null else null
+	if bar != null and is_instance_valid(bar) and bar.has_method("_save_memory"):
+		bar._save_memory()
+
+
 func _tick_prompts() -> void:
 	if gear == null or gear.hud == null or player == null or bool(player.get("locked")):
+		return
+	# [Z] rest rides along with whatever [E] does here (the leader follows you in).
+	var rest_line := _line("prompt_rest") if not rest_tent().is_empty() else ""
+	var tail := "      " + rest_line if rest_line != "" else ""
+	if rest_line != "" and _just_rest():
+		rest()
 		return
 	var tp := trade_pack()
 	if not tp.is_empty():
 		var n := WorldState.inventory.count("food")
-		gear.hud.set_prompt(_line("prompt_trade") % n if n > 0 else _line("prompt_no_food"))
+		gear.hud.set_prompt((_line("prompt_trade") % n if n > 0 else _line("prompt_no_food")) + tail)
 		if _just_interact():
 			trade(str(tp.id))
+		return
+	var ch := chest_near_player()
+	if not ch.is_empty():
+		var full := not chest_items(ch.pack, int(ch.tent)).is_empty()
+		gear.hud.set_prompt((_line("prompt_chest") if full else _line("prompt_chest_empty")) + tail)
+		if full and _just_interact():
+			take_chest(ch.pack, int(ch.tent))
+		return
+	if rest_line != "":
+		gear.hud.set_prompt(rest_line)
 		return
 	var pig := carcass_near()
 	if pig != null:
@@ -666,6 +1165,10 @@ func _tick_prompts() -> void:
 
 func _just_interact() -> bool:
 	return InputMap.has_action("interact") and Input.is_action_just_pressed("interact")
+
+
+func _just_rest() -> bool:
+	return InputMap.has_action("rest") and Input.is_action_just_pressed("rest")
 
 
 func _toast(text: String) -> void:
