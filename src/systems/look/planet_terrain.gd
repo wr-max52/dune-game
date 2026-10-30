@@ -148,6 +148,11 @@ static func droid_flat_sites(planet: Dictionary, sp: PlanetSphere) -> Array:
 ## own. Keyed by cache_key (planet and radius); one entry per planet, used once.
 var cache_key := ""
 static var _prewarmed := {}           ## cache_key -> { terrain, group, cells, results }
+## A ball drawn in another planet's sky (SpaceTravel._ball_body): its far chunks are
+## kept for the session, since the scene that shows it is built again on the way
+## home from it. By cache_key and cells.
+var keep_far := false
+static var _far_kept := {}
 
 
 static func prewarm_far(planet: Dictionary) -> bool:
@@ -345,8 +350,8 @@ func build_staged(with_mesh: bool = true) -> void:
 ## The far ball coarse now, full detail on worker threads (refine_far_step).
 func _build_far_staged() -> void:
 	var coarse := mini(far_coarse_cells, far_cells / 4)
-	if coarse < 2:
-		_build_far()
+	if coarse < 2 or (keep_far and _far_kept.has("%s/%d" % [cache_key, far_cells])):
+		_build_far()          # (kept: the full detail is already made, nothing to wait for)
 		return
 	_build_far(coarse)
 	far_refined = false
@@ -905,11 +910,16 @@ func _build_far(cells: int = -1) -> void:
 	var count := 6 * far_chunks * far_chunks
 	var wait_started := Time.get_ticks_usec()
 	var results := _take_prewarmed(cache_key, fc)
+	var kept := "%s/%d" % [cache_key, fc]
+	if results.size() != count and keep_far:
+		results = _far_kept.get(kept, [])
 	if results.size() != count:
 		results = []
 		results.resize(count)
 		var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k, fc), count, -1, true, "planet far")
 		WorkerThreadPool.wait_for_group_task_completion(g)
+	if keep_far and cache_key != "":
+		_far_kept[kept] = results
 	perf_far_worker_wait_ms += (Time.get_ticks_usec() - wait_started) / 1000.0
 	var maximum_vertex_radius := sphere.radius
 	for k in count:

@@ -25,6 +25,19 @@ Plain English, newest on top. One entry per milestone.
   space no longer counts as climbing out (no new orbital fight on arrival).
 - `scenes/handoff_trace.gd`: a rendered trace of the switch (frame times, the
   pictures either side and how different they are, the music and the engine).
+- **No black, turned frame at the switch.** The new scene's camera blended in
+  over ~0.4 s from the on-foot camera, which stands on the town's ground: one
+  frame of the town at a tilt, then a few of black sky. A handoff now puts the
+  camera straight onto the chase view it carried (`CameraRigNode.snap_override`),
+  with the flight read-out filled in on that same frame and the footer's HP,
+  stamina and fuel kept until the new scene's body and gear are built.
+- **The way home is ~40% shorter.** The port's first frame on arrival went from
+  ~335 ms to ~205 ms: its rocks (mesas, hoodoos, boulders and their colliders),
+  the moon's ball in its sky and the town's cover spots are made once a session
+  and reused, since the port was already built before you left. Four garrisons
+  each working out the same 56 ms of cover spots in one frame (a 240 ms spike a
+  second after arrival) now share one list.
+- The trace flies there and back, and keeps every frame drawn around each switch.
 
 ## Smooth orbit over the port; no "edge of space" (2026-10-29)
 

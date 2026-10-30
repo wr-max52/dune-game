@@ -272,6 +272,9 @@ func _body(n: Dictionary) -> Node3D:
 ## would otherwise spend on its first frame. prewarm_bodies() makes them on a
 ## worker thread before the switch.
 static var _body_meshes := {}          ## "id/radius" -> Mesh, or { task, out } while a worker makes it
+## A real ball's seated sphere (_ball_body), made once a session too (~14 ms of
+## craters). Read only once seated, so scenes can share it.
+static var _ball_spheres := {}         ## "id/radius" -> AsteroidSphere
 
 
 static func body_mesh(n: Dictionary) -> Mesh:
@@ -328,11 +331,17 @@ func _ball_body(n: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Planet_" + str(n.id)
 	root.position = n.get("offset", n.at)
-	var sp := AsteroidSphere.new(float(n.radius), surf)
-	var site := site_of(p.town)
-	sp.configure_site(site.floor, site.walls, site.sunken, 0.0)
+	var key := "%s/%d" % [str(n.id), int(n.radius)]
+	var sp: AsteroidSphere = _ball_spheres.get(key)
+	if sp == null:
+		sp = AsteroidSphere.new(float(n.radius), surf)
+		var site := site_of(p.town)
+		sp.configure_site(site.floor, site.walls, site.sunken, 0.0)
+		_ball_spheres[key] = sp
 	var pt := PlanetTerrain.new()
 	pt.use_sphere(sp)
+	pt.cache_key = "body/" + key
+	pt.keep_far = true
 	pt.rock_look = surf.get("look", {})
 	pt.far_chunks = 3
 	pt.far_cells = 40

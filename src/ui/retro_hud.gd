@@ -101,6 +101,7 @@ func toggle_info() -> void:
 
 
 static var _last_place := ""        ## the banner's last place, across scenes
+static var _last_vitals := ""       ## the footer's last readings, across scenes
 
 
 func _process(dt: float) -> void:
@@ -125,7 +126,12 @@ func refresh() -> void:
 		_last_place = _place.text
 	_clock.text = "%s  %s" % [clock_text(), str(WorldState.time_of_day).to_upper()]
 	_money.text = "CR %d   [F1] INFO" % WorldState.credits
-	_vitals.text = vitals_text()
+	var v := vitals_text()
+	if _readings(_last_vitals) > _readings(v) and demo != null and demo.get("staging") == true \
+			and demo.get("staged") != null and not demo.staged.done:
+		v = _last_vitals              # a handoff's scene builds the body and gear a moment later: keep the old readings till then
+	_vitals.text = v
+	_last_vitals = v
 	_mode.text = mode_text() + "   [F11] SETTINGS"
 	if info.visible:
 		_info_text.text = info_text()
@@ -159,6 +165,10 @@ func vitals_text() -> String:
 	if p != null and p.jetpack != null:
 		parts.append("FUEL %s" % RetroUI.bar(p.jetpack.fuel / maxf(0.01, p.jetpack.fuel_max()), 8))
 	return "   ".join(parts)
+
+
+static func _readings(t: String) -> int:
+	return int(t.contains("HP ")) + int(t.contains("STA ")) + int(t.contains("FUEL "))
 
 
 func mode_text() -> String:

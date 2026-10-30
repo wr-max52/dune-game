@@ -15,8 +15,14 @@ over with 0 error both ways.
 **Not done, honestly:**
 - **Still about three long frames at the switch.** The station's shell is ~75 ms
   (decor ~25, desert ~15, outside of the station ~16) and its first render ~50 ms
-  more; then the bar (~22 ms) and the player's body. The way back (moon to port)
-  gets the same reaper and prewarm but was not measured rendered.
+  more; then the bar (~22 ms) and the player's body.
+- **The way home is still the longer switch:** the port's shell is ~205 ms (town
+  decor ~95, the ship's ground and scenery ~60, boxes ~20), then three ~75 ms
+  frames. About 1.5 s later two staged steps still run long: the outposts' sites
+  (~180 ms for one piece) and the natives' bodies (~145 ms). Not looked into yet.
+- **`scenes/garrison_trace.gd` does not run with `-s`:** it compiles the town
+  before the `NpcVoice` autoload exists ("Identifier not found: NpcVoice"), so
+  `test_garrison_trace` has no trace to read. Not from this change.
 - **The ALT read-out jumps** at the switch (altitude above the moon instead of
   the home planet). It is the true number for where you are.
 - **One run had a 1.1 s navmesh step** on the moon's first staged frame; it did

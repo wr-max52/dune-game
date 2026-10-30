@@ -14,6 +14,7 @@ static var _node: SceneReaper
 var budget_ms := 2.0
 var _queue: Array[Node] = []
 var freed := 0                       ## nodes freed so far (tests, traces)
+var slowest := {}                    ## { name, class, ms, frame }: the longest single free (traces)
 
 
 ## Free `scene` (already out of the tree) over the next frames.
@@ -65,9 +66,14 @@ func _process(_dt: float) -> void:
 			n = n.get_child(n.get_child_count() - 1)
 		if n == root:
 			_queue.pop_back()
+		var t1 := Time.get_ticks_usec()
+		var what := "%s(%s)" % [n.name, n.get_class()]
 		if n.has_method("finish_jobs"):
 			n.finish_jobs()       # a worker still calling into it would lock it
 		n.free()
+		var ms := (Time.get_ticks_usec() - t1) / 1000.0
+		if ms > float(slowest.get("ms", 0.0)):
+			slowest = { "name": what, "ms": ms, "frame": Engine.get_process_frames() }
 		if is_instance_valid(n):
 			# Could not be freed now: off the tree walk, and gone at the frame's end.
 			if n.get_parent() != null:

@@ -575,7 +575,12 @@ func arrive_handoff(a: Dictionary) -> void:
 		chase._primed = true
 	else:
 		chase._primed = false
+	# Straight onto that view: no blend in from the on-foot camera, which stands on
+	# the town's ground (a dark, turned frame at the switch).
+	if demo._rig != null:
+		demo._rig.snap_override(chase.update(0.0, atmo.transform()), 72.0)
 	hud.visible = true
+	_update_hud(atmo.agl())       # its numbers on the first frame too, not one later
 	_sync_visual()
 	if demo.terrain != null:
 		demo.terrain.prefetch(at)
