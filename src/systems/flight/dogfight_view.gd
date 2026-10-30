@@ -70,6 +70,7 @@ func on_event(e: Dictionary) -> void:
 			Sound.play("ship_missile", e.at)
 		"hit":
 			flash(e.point, 1.2 if e.kind == "bolt" else 4.0, 0.15, Color("#ffd28a"))
+			ExplosionFx.small(self, e.point)
 			Sound.play("ship_hit", e.point)
 		"kill":
 			Sound.play("ship_boom", e.point)
