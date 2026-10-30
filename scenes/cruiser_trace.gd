@@ -62,6 +62,7 @@ func _run() -> void:
 	var t := (sp.center).dot(d)
 	out("HIDDEN_FROM_PORT", (sp.center - d * t).length() < sp.radius)
 	_walkways(c)
+	await _fight_by_the_hull(c)
 	await _dock(c)
 	await _aboard(c)
 	_finish()
@@ -99,6 +100,47 @@ func _walkways(c) -> void:
 			bad.append("%s:not_aboard" % name)
 	out("WALKWAYS", pts.size())
 	out("WALKWAYS_BAD", bad)
+
+
+## The escort's fight is running when you reach the cruiser (it is above the edge of
+## space): its hull is still solid, flying in through the bay's mouth breaks the
+## fight off, and C over the deck sets her down with a fight running.
+func _fight_by_the_hull(c) -> void:
+	pilot._seat_arriving()
+	pilot.atmo.reached_space = true
+	# Into the port flank at fighting speed: a crash on the hull, not through it.
+	pilot.atmo.place_flying(c.frame * Vector3(-200, 0, 0), c.frame.basis * Vector3.RIGHT, 120.0, 1.0)
+	out("FIGHT_HULL_STARTED", pilot.start_fight())
+	for f in 60 * 4:
+		pilot.set_external_command({ "throttle": 1.0 })
+		await physics_frame
+		if pilot.atmo.state != AtmoFlight.State.FLYING:
+			break
+	out("FIGHT_HULL_STATE", pilot.atmo.state_label())
+	out("FIGHT_HULL_HIT", pilot.atmo.last_hit)
+	out("FIGHT_HULL_X", int((c.inv * pilot.atmo.position()).x))
+	pilot.crash_left = -1.0
+	# In through the bay's mouth: the fight is broken off.
+	pilot.atmo.place_flying(c.frame * Vector3(200, 0, -62), c.frame.basis * Vector3.LEFT, 40.0, 0.3)
+	pilot.start_fight()
+	for f in 60 * 8:
+		pilot.set_external_command({ "throttle": 0.3 })
+		await physics_frame
+		if pilot.fight == null:
+			break
+	out("FIGHT_BAY_BROKE_OFF", pilot.fight == null and c.aboard(pilot.atmo.position()))
+	# Over the deck with a fight running: C lands her.
+	pilot.atmo.place_flying(c.frame * Vector3(30, -2, -62), c.frame.basis * Vector3.LEFT, 5.0, 0.0)
+	pilot.start_fight()
+	out("FIGHT_LAND", pilot.land())
+	var waited := 0
+	while pilot.atmo.state != AtmoFlight.State.PARKED and waited < 60 * 10:
+		pilot.set_external_command({ "throttle": 0.0 })
+		await physics_frame
+		waited += 1
+	out("FIGHT_LAND_STATE", pilot.atmo.state_label())
+	out("FIGHT_LAND_ABOARD", c.aboard(pilot.atmo.position() + Vector3(0, 1, 0)))
+	pilot.set_external_command({})
 
 
 ## Off the cruiser's bay side, Z: round the hull, in, down on the pad.

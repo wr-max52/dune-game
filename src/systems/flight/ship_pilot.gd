@@ -36,7 +36,8 @@ extends Node
 ##     fight running or not) flies her round its hull, in through its bay's mouth and
 ##     down onto its empty pad (dock()); Space lifts off again, out through the bay.
 ##     While Oda has you on the cruiser, the climb out meets its escort instead of
-##     the pad's fight.
+##     the pad's fight. Its hull is solid in a fight too, and flying in through the
+##     bay's mouth or landing on it (C) breaks the fight off.
 ##   - issue #181: the guns' hits pop the hit marker (ships, NPCs, anything that
 ##     takes damage; in space the fight's own hits and kills), being hit flashes the
 ##     screen's edge red, and the HUD is a flight-sim HUD in the chase view and a
@@ -497,8 +498,14 @@ func takeoff() -> bool:
 	return true
 
 
+## In space the only ground to land on is the cruiser's: a fight running there is
+## broken off to set her down, as Z does.
 func land() -> bool:
-	return piloting and atmo.land()
+	if not piloting or not atmo.can_land():
+		return false
+	if fight != null:
+		end_fight("left")
+	return atmo.land()
 
 
 # ------------------------------------------------------------------ Z: land in the bay (issue #75)
@@ -1000,12 +1007,15 @@ func _fight_step(dt: float) -> void:
 	else:
 		cmd["fire"] = bool(_external.get("fire", false))
 		cmd["missile"] = bool(_external.get("missile", false))
+	var before: Vector3 = atmo.flight.position
 	var events: Array = fight.step(dt, cmd)
 	var f = fight.player_flight()
 	if f != null:
 		atmo.flight.position = f.position
 		atmo.flight.basis = f.basis
 		atmo.flight.speed = f.speed
+	if _fight_meets_ground(before, dt):
+		return
 	for e in events:
 		match str(e.type):
 			"hit":
@@ -1073,6 +1083,26 @@ func end_fight(outcome: String, quiet := false) -> void:
 		var throttle := clampf(float(atmo._command.get("throttle", 0.6)), 0.0, 1.0)
 		atmo.place_flying(at, atmo.flight.forward(), atmo.flight.speed, throttle)
 	fight_ended.emit(outcome)
+
+
+## The fight's director flies her through empty space: it knows nothing of the
+## world. Up there the world is the cruiser (issue #193): in through its bay's mouth
+## the fight is broken off (you ran for it), and its hull is as solid as in normal
+## flight: the fight ends and the normal collision bumps her or crashes her.
+func _fight_meets_ground(before: Vector3, dt: float) -> bool:
+	var pos := atmo.position()
+	var c = cruiser()
+	if c != null and c.aboard(pos):
+		end_fight("left")
+		return true
+	if ground.hit(pos, atmo.body_radius) == "" and ground.height_above(pos - atmo.up() * atmo.clearance) > 0.0:
+		return false
+	end_fight("left")                  # she flies on from here at the fight's speed
+	atmo.events = []
+	atmo._collide(before, dt)
+	for e in atmo.events:
+		_on_event(e)
+	return true
 
 
 ## Back under the edge of space (and no fight running): the next climb out is a

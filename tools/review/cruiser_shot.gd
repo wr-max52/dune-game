@@ -40,6 +40,7 @@ func _shots() -> Array:
 		["from_orbit", Vector3(-3200, 900, -900), Vector3(-3200, 900, -900), Vector3(0, 0, 40), true],
 		["broadside", Vector3(24, -14, -62), Vector3(900, 120, -260), Vector3(0, 10, 0), false],
 		["stern", Vector3(24, -14, -62), Vector3(420, 220, 760), Vector3(0, 20, 200), false],
+		["engines", Vector3(24, -14, -62), Vector3(150, 45, 455), Vector3(0, 3, 372), false],
 		["bow", Vector3(24, -14, -62), Vector3(300, 60, -700), Vector3(0, 0, -100), false],
 		["bay", Vector3(-30, -14, 10), Vector3(-34, -10.5, 14), Vector3(30, -8, -90), false],
 		["bay_mouth", Vector3(-30, -14, -60), Vector3(-40, -6, -40), Vector3(60, -4, -70), false],

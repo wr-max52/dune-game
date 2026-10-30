@@ -27,7 +27,8 @@ Plain English, newest on top. One entry per milestone.
   curve of the planet: you cannot see it from the port, and you cannot miss it
   from space. It is the wreck in the desert remade whole and clean: 690 m of grey
   armour with rows of lit windows, a stepped superstructure, a tower with sensor
-  globes, and four engines glowing at the stern. Its name is generated.
+  globes, and twin engine nacelles with a small fifth engine between them, all
+  burning long blue flames. Its name is generated.
 - **Land in its bay.** The bay opens along its flank behind an energy shield you
   can fly through but not walk out of. Two Remnant interceptors and a frigate
   stand on the bay's pads; the fourth pad is empty. Press **Z** anywhere within
