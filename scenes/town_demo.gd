@@ -81,6 +81,7 @@ var town_name := ""                   ## issue #15: this town's generated name (
 var planet_name := ""                 ## and the planet it is on
 var place_card: Label                 ## "<town>  ·  <planet>", shown for a few seconds on arrival
 var retro_hud: RetroHud               ## issue #52: banner, footer and the F1 info screen (null in the CI greybox)
+var objective_hud: ObjectiveHud       ## what to do next and an arrow to it (null in the CI greybox)
 var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, player cheats
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
@@ -280,6 +281,11 @@ func build_plan(staged_build: bool) -> Array:
 			retro_hud.demo = self
 			add_child(retro_hud)
 			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
+			return true)
+		add.call("objective_hud", LATER, func():
+			objective_hud = ObjectiveHud.new()
+			objective_hud.demo = self
+			add_child(objective_hud)
 			return true)
 	if staged_build and ball_terrain:
 		add.call("terrain_far", LATER, func(left): return _terrain_far(left), true)

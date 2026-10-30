@@ -2,6 +2,25 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the objective pointer and job log (2026-10-29)
+
+**Checked:** `tests/test_objective.gut.gd` (10 tests: the pointer through every
+story step, a smuggling run and a bounty; reading never rolls a job or moves the
+story; the HUD resolves its targets; the job log on the inventory screen), the
+smoke, story, smuggling and IP-neutrality suites, and a headless boot of the town
+with no script errors.
+
+**Not done, honestly:**
+- **Rendered on foot in third person only** (1600x900, the default text scale):
+  the arrow, the diamond and the I screen look right there. Not yet looked at in
+  first person or from a ship. With a long job log the tally scrolls below the
+  fold (mouse wheel).
+- **No key to hide it.** It is always on in the full game (off in the CI greybox).
+- **Off the home planet** the pointer only knows the station's drop and fence;
+  a bounty out at the port's outposts just says to fly home.
+- **`test_inventory` has two failures that were there before this change** (the
+  food stall makes three port vendors, and the food look check).
+
 ## After the moon handoff smoothing (2026-10-29)
 
 **Checked:** rendered on this Mac, port to the moon (`scenes/handoff_trace.gd`):
