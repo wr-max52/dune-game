@@ -120,6 +120,14 @@ static func set_flames(item: Node3D, on: bool, power: float = 1.0) -> void:
 	f.visible = on
 	if on:
 		(f as Node3D).scale = Vector3(1.0, clampf(power, 0.2, 1.4), 1.0)
+		# A flicker: each flame's length wavers a little, out of step with the other.
+		var t := Time.get_ticks_msec() * 0.001
+		var i := 0
+		for fl in f.get_children():
+			if fl is Node3D:
+				var k := 1.0 + 0.09 * sin(t * 37.0 + i * 2.1) + 0.05 * sin(t * 91.0 + i * 0.7)
+				(fl as Node3D).scale = Vector3(1.0, k, 1.0)
+			i += 1
 
 
 func _load_model(path: String) -> Node3D:
@@ -275,18 +283,59 @@ func _twin_tank(body: Node3D, flames: Node3D, p: Dictionary) -> void:
 	_mi(body, _box(Vector3(spread * 1.7, 0.06, 0.05)), strap, Vector3(0, -h * 0.38, -0.01), Vector3.ZERO, "Belt")
 
 
-## Flames: an outer cone and a hot core from a nozzle at `at`, raked back away from
-## the wearer (-Z) so a long coat does not swallow them.
+## Flames from a nozzle at `at`, raked back away from the wearer (-Z) by
+## "flame_rake". Length is "flame_metres" if set, else `h` * "flame_length"; the
+## radius at the nozzle is "nozzle_radius" if set, else `r`. Layered and additive:
+## a white-hot mouth and core, a yellow-orange body, a faint red plume, shock
+## diamonds down the middle, and a small light on the legs. Every mesh is a direct
+## child of the flame node (the worn-view check in GearController relies on it).
 func _flame(flames: Node3D, at: Vector3, r: float, h: float, p: Dictionary) -> void:
 	var fl := Node3D.new()
+	fl.name = "Flame"
 	fl.position = at
 	fl.rotation.x = float(p.get("flame_rake", 0.35))
 	flames.add_child(fl)
-	var fh := h * float(p.get("flame_length", 1.3))
-	var outer := _mi(fl, _cyl(r * 0.85, 0.0, fh, 10), _glow(_c(p, "flame", "#ff8a2a"), 1.6), Vector3(0, -fh * 0.5, 0))
-	var inner := _mi(fl, _cyl(r * 0.45, 0.0, fh * 0.6, 8), _glow(_c(p, "flame_core", "#ffd9a0"), 2.6), Vector3(0, -fh * 0.3, 0))
-	for m in [outer, inner]:
+	var fh := float(p.get("flame_metres", h * float(p.get("flame_length", 1.3))))
+	var nr := float(p.get("nozzle_radius", r))
+	var hot := _c(p, "flame_core", "#ffd9a0")
+	var body := _c(p, "flame", "#ff8a2a")
+	var tail := _c(p, "flame_tail", "#ff3a14")
+	var parts: Array = [
+		_mi(fl, _cyl(nr * 0.95, nr * 0.95, 0.006, 16), _plume(hot.lerp(Color.WHITE, 0.5), 6.0, 1.0),
+			Vector3(0, -0.003, 0), Vector3.ZERO, "Mouth"),
+		_mi(fl, _cyl(nr * 0.55, 0.0, fh * 0.4, 12), _plume(hot.lerp(Color.WHITE, 0.3), 5.0, 0.9),
+			Vector3(0, -fh * 0.2, 0), Vector3.ZERO, "Core"),
+		_mi(fl, _cyl(nr * 0.85, nr * 0.1, fh * 0.75, 14), _plume(hot.lerp(body, 0.5), 3.0, 0.6),
+			Vector3(0, -fh * 0.375, 0), Vector3.ZERO, "Body"),
+		_mi(fl, _cyl(nr * 1.05, 0.0, fh, 14), _plume(body, 2.2, 0.45),
+			Vector3(0, -fh * 0.5, 0), Vector3.ZERO, "Outer"),
+		_mi(fl, _cyl(nr * 1.4, nr * 0.3, fh * 0.85, 14), _plume(tail, 1.4, 0.16),
+			Vector3(0, -fh * 0.5, 0), Vector3.ZERO, "Plume"),
+	]
+	for i in 3:
+		var d := _mi(fl, _sphere(nr * (0.32 - i * 0.07)), _plume(hot.lerp(Color.WHITE, 0.6), 6.0, 0.8),
+			Vector3(0, -fh * (0.22 + i * 0.18), 0), Vector3.ZERO, "Diamond%d" % i)
+		d.scale = Vector3(1.0, 1.8, 1.0)
+		parts.append(d)
+	for m in parts:
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var light := OmniLight3D.new()
+	light.name = "Glow"
+	light.light_color = body
+	light.light_energy = 1.2
+	light.omni_range = maxf(fh * 4.0, 0.6)
+	light.position = Vector3(0, -fh * 0.4, 0)
+	fl.add_child(light)
+
+
+## An unshaded, additive flame layer: `alpha` sets how much it adds.
+func _plume(color: Color, energy: float, alpha: float) -> StandardMaterial3D:
+	var m := _glow(color, energy)
+	m.albedo_color.a = alpha
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return m
 
 
 ## Multiply a model's colour toward `color` (k 0 = as made, 1 = fully), per instance.

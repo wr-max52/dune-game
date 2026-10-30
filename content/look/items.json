@@ -20,7 +20,10 @@
       "flame": "#ff8a2a",
       "flame_core": "#ffd9a0",
       "flame_length": 1.3,
-      "flame_rake": 0.35,
+      "flame_rake": 0.12,
+      "flame_metres": 0.2,
+      "nozzle_radius": 0.03,
+      "flame_tail": "#ff3a14",
       "on_back": {
         "pos": [
           0.0,
