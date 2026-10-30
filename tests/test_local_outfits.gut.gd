@@ -4,6 +4,7 @@ extends GutTest
 ## gets its own colour (CharacterKit._wear_outfit). Colours: tools/look/recolor_parts.gd.
 
 const PARTS := ["head", "torso", "legs"]
+const CoreScript := preload("res://src/systems/dataload/core_content.gd")
 
 var kit: CharacterKit
 
@@ -144,3 +145,45 @@ func test_cantina_dancer_renders_player_body_owner_legs_and_guard_head() -> void
 			assert_true(mi.visible and mi.mesh != null and mi.mesh.get_surface_count() > 0, want + " renders")
 			assert_not_null(mi.skin, want + " is skinned")
 	c.free()
+
+
+## Locals carry a pistol (profile "sidearm"): out of sight while the port is calm,
+## in the hand once their alarm is up (Townsfolk sets drawn), away again after.
+func test_local_pistol_comes_out_for_a_fight() -> void:
+	var cc = CoreScript.new()
+	cc.load_from()
+	for id in ["local_resident", "local_merchant", "local_fence"]:
+		assert_true(bool(cc.get_soldier(id).get("sidearm", false)), id + " has a sidearm")
+	var n := NpcBody.new()
+	n.setup(cc.get_soldier("local_resident"), Vector3.ZERO, 0.0, LookMaterials.new())
+	add_child_autofree(n)
+	assert_true(n.sidearm, "the pistol is on the body")
+	assert_true(n.look_body.has_meta("weapon"))
+	var w: Node3D = n.look_body.get_meta("weapon")
+	assert_eq(str(w.get_meta("carry", "")), "pistol")
+	assert_false(n.drawn, "calm: put away")
+	n._animate(0.016, Vector3.ZERO)
+	assert_false(w.visible, "calm: out of sight")
+	n.drawn = true
+	n._animate(0.016, Vector3.ZERO)
+	assert_true(w.visible, "the alarm is up: in the hand")
+	n.drawn = false
+	n.carry.ready = 0.5
+	n._animate(0.016, Vector3.ZERO)
+	assert_true(w.visible, "still coming down")
+	n.carry.ready = 0.0
+	n._animate(0.016, Vector3.ZERO)
+	assert_false(w.visible, "down at rest: put away")
+
+
+func test_guards_keep_their_rifles_out() -> void:
+	var cc = CoreScript.new()
+	cc.load_from()
+	var n := NpcBody.new()
+	n.setup(cc.get_soldier("gate_guard"), Vector3.ZERO, 0.0, LookMaterials.new())
+	add_child_autofree(n)
+	assert_false(n.sidearm)
+	assert_true(n.drawn)
+	if n.look_body.has_meta("weapon"):
+		n._animate(0.016, Vector3.ZERO)
+		assert_true((n.look_body.get_meta("weapon") as Node3D).visible)

@@ -20,6 +20,14 @@
         "leash": 4.0,
         "settle": 0.35
       },
+      "gun": {
+        "range": 24.0,
+        "interval": 1.4,
+        "damage": 7.0,
+        "bolt_speed": 30.0,
+        "spread_deg": 1.5,
+        "color": "#ff7a3a"
+      },
       "variants": {
         "range": {
           "body": "#3a3c40",
