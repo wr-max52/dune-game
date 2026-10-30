@@ -5,6 +5,7 @@ extends GutTest
 
 const Ads := preload("res://src/systems/look/ads.gd")
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
+const GunSights := preload("res://src/systems/look/gun_sights.gd")
 const LOOK := "res://content/look/hand_weapons.json"
 var look: Dictionary
 
@@ -141,7 +142,11 @@ func test_guns_use_the_dark_variant() -> void:
 	var a := _avatar()
 	for id in ["pistol_blaster", "rifle_blaster"]:
 		var found := 0
-		for m in PlayerAvatar._meshes_under(a.weapon_node(id).get_child(0)):
+		var model: Node3D = a.weapon_node(id).get_child(0)
+		var scope := model.find_child("Scope", false, false)
+		for m in PlayerAvatar._meshes_under(model):
+			if scope != null and scope.is_ancestor_of(m):
+				continue          # the procedural scope has its own metal (issue #229)
 			if m.material_override is ShaderMaterial:
 				found += 1
 				var mat := m.material_override as ShaderMaterial
@@ -156,3 +161,34 @@ func _count_meshes(n: Node) -> int:
 	for k in n.get_children():
 		c += _count_meshes(k)
 	return c
+
+
+func test_rifle_shows_one_optic() -> void:
+	# Issue #229: the model's own optic block is cut, so no triangle of the gun's own
+	# mesh is left inside the cut boxes; the scope's hardware hides when aimed in.
+	var a := _avatar()
+	var model: Node3D = a.weapon_node("rifle_blaster").get_child(0)
+	var boxes: Array = look.rifle_blaster.cut.boxes
+	var scope := model.find_child("Scope", false, false) as Node3D
+	var inside := 0
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		if scope.is_ancestor_of(mi):
+			continue
+		var arrays := (mi as MeshInstance3D).mesh.surface_get_arrays(0)
+		var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var xf := model.global_transform.affine_inverse() * (mi as Node3D).global_transform
+		for t in range(0, idx.size(), 3):
+			var c := xf * ((v[idx[t]] + v[idx[t + 1]] + v[idx[t + 2]]) / 3.0)
+			for b in boxes:
+				var lo := Vector3(b.min[0], b.min[1], b.min[2])
+				if AABB(lo, Vector3(b.max[0], b.max[1], b.max[2]) - lo).has_point(c):
+					inside += 1
+	assert_eq(inside, 0, "nothing of the model's own optic or front post is left")
+	GunSights.scope_view(a.weapon_node("rifle_blaster"), true)
+	assert_false((scope.get_node("Hardware") as Node3D).visible, "hardware hidden aimed in")
+	assert_true(scope.visible, "the tube stays")
+	assert_true((scope.get_node("Reticle") as Node3D).visible, "the reticle shows aimed in")
+	GunSights.scope_view(a.weapon_node("rifle_blaster"), false)
+	assert_true((scope.get_node("Hardware") as Node3D).visible)
+	assert_false((scope.get_node("Reticle") as Node3D).visible, "no crosshair through the tube's side from the hip")

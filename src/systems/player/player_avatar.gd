@@ -504,6 +504,8 @@ func _process(delta: float) -> void:
 		and Ads.has_ads(look, current) and _last_upper != BodyAnimator.UPPER_FREE
 	var t := maxf(0.01, float(Ads.spec(look, current).blend_s))
 	ads_blend = move_toward(ads_blend, 1.0 if want else 0.0, delta / t)
+	if current != "" and weapons.has(current):
+		GunSights.scope_view(weapons[current], ads_blend > 0.85)
 	if ads_blend > 0.0 and current != "" and weapons.has(current):
 		_place_weapon(_last_upper, _last_pitch)
 		if skin != null:

@@ -21,6 +21,7 @@ var _wait := 0
 var _frame := 0
 var _only: Array = []
 var _follow := Vector3.ZERO     ## third person: camera offset from the player (zero = off)
+var _detail: Array = []         ## [weapon id, eye, target] in the weapon's space: a close-up
 
 
 func _initialize() -> void:
@@ -60,6 +61,11 @@ func _initialize() -> void:
 		["fpv_sword_swing_b", _fpv_swing.bind(10)],
 		["fpv_sword_swing_c", _fpv_swing.bind(18)],
 		["fpv_sword_block", _fpv_block],
+		["detail_scope", _close.bind("rifle_blaster", Vector3(-0.2, 0.26, 0.05), Vector3(0, 0.17, 0.02))],
+		["detail_scope_rear", _close.bind("rifle_blaster", Vector3(-0.12, 0.24, -0.3), Vector3(0, 0.17, -0.02))],
+		["detail_rifle_hands", _close.bind("rifle_blaster", Vector3(-0.35, 0.12, 0.25), Vector3(0, 0.0, 0.05))],
+		["detail_pistol_hand", _close.bind("pistol_blaster", Vector3(-0.22, 0.1, 0.18), Vector3(0, 0.0, -0.04))],
+		["detail_sword_hands", _close.bind("energy_blade", Vector3(-0.3, 0.05, 0.25), Vector3(0, 0.05, 0.0))],
 		["tpv_rifle_rest_side", _tpv.bind("rifle_blaster", false, Vector3(-2.6, 0.3, 0.3))],
 		["tpv_rifle_sprint_side", _tpv.bind("rifle_blaster", true, Vector3(-2.6, 0.3, 0.3))],
 		["tpv_rifle_sprint_front", _tpv.bind("rifle_blaster", true, Vector3(-0.8, 0.3, 2.4))],
@@ -78,6 +84,11 @@ func _process(_d: float) -> bool:
 		rig_node = demo._rig
 		player = demo._player
 	_hide_ui(get_root())
+	if not _detail.is_empty():
+		var w: Node3D = kit.avatar.weapon_node(_detail[0])
+		var eye: Vector3 = w.global_transform * (_detail[1] as Vector3)
+		rig_node.set_override(Transform3D(Basis(), eye).looking_at(w.global_transform * (_detail[2] as Vector3), Vector3.UP))
+		rig_node._override_blend = 1.0
 	if _follow != Vector3.ZERO:
 		var at: Vector3 = player.global_position + Vector3(0, 1.0, 0)
 		var b := Basis(Vector3.UP, kit.avatar.facing_yaw)
@@ -123,6 +134,7 @@ func _zoom(img: Image, path: String) -> void:
 
 func _reset() -> void:
 	_follow = Vector3.ZERO
+	_detail = []
 	player.locked = false
 	player.clear_external_command()
 	player.set_command(Vector2.ZERO, false, false, false)
@@ -233,6 +245,14 @@ func _fpv_block() -> int:
 	_fpv("energy_blade", 0.0)
 	_after(20, func(): kit.weapons.set_alt(true))
 	return 45
+
+
+## First person, the camera moved to `eye` looking at `at` (both in the weapon's
+## space): a close-up of the gun and the hands on it.
+func _close(id: String, eye: Vector3, at: Vector3) -> int:
+	_fpv(id, 0.0)
+	_detail = [id, eye, at]
+	return 40
 
 
 ## Third person, the camera at `off` in the player's facing frame (+Z ahead).
