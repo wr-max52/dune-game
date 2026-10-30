@@ -2,6 +2,28 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the moon handoff smoothing (2026-10-29)
+
+**Checked:** rendered on this Mac, port to the moon (`scenes/handoff_trace.gd`):
+the switch frame ~130 ms (was ~680), then 55 and 75 ms, then normal; the first
+frame after differs from the last before by 0.017 (mean RGB: the HUD numbers and
+the ship's progress; was 0.085); the music and the engine drone carry on with the
+same players. `test_handoff_seams`, `test_staged_build`, `test_space_fight`,
+`test_sound`, `test_smoke` pass. The headless planets trace still hands the ship
+over with 0 error both ways.
+
+**Not done, honestly:**
+- **Still about three long frames at the switch.** The station's shell is ~75 ms
+  (decor ~25, desert ~15, outside of the station ~16) and its first render ~50 ms
+  more; then the bar (~22 ms) and the player's body. The way back (moon to port)
+  gets the same reaper and prewarm but was not measured rendered.
+- **The ALT read-out jumps** at the switch (altitude above the moon instead of
+  the home planet). It is the true number for where you are.
+- **One run had a 1.1 s navmesh step** on the moon's first staged frame; it did
+  not happen again in five more runs.
+- **`test_planets_trace` fails one check** (`STATION_BUILDINGS`: the station's
+  town has had gray homes since they moved there; the test still expects none).
+
 ## After the orbit stutter fix (2026-10-29)
 
 **Checked:** rendered on this Mac, pad to the moon handoff with the Remnant's

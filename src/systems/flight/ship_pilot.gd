@@ -110,7 +110,7 @@ func setup(town_scene) -> void:
 
 func _ready() -> void:
 	name = "ShipPilot"
-	_engine = Sound.loop("ship_engine", self)
+	_engine = Sound.carried_loop("ship_engine")   # one drone for every scene: a handoff never restarts it
 	content = CoreContent.new()
 	content.load_from()
 	world = demo.world if "world" in demo and not demo.world.is_empty() else content.world_for_town("port_town")
@@ -564,8 +564,17 @@ func arrive_handoff(a: Dictionary) -> void:
 	atmo.place_flying(at, -b.z, float(h.get("speed", 0.0)), thr)
 	atmo.flight.basis = b
 	_throttle = thr
+	# Already up there when the scene began: not a climb out (no sortie, no fight).
+	atmo.reached_space = atmo.altitude() >= atmo.space_altitude
+	ascending = atmo.reached_space
 	_set_hull(true)
-	chase._primed = false
+	# The camera where it was behind the ship, in the same view, still lagging.
+	chase.mode = int(h.get("camera_mode", chase.mode))
+	if h.has("camera"):
+		chase.xform = atmo.transform() * (h.camera as Transform3D)
+		chase._primed = true
+	else:
+		chase._primed = false
 	hud.visible = true
 	_sync_visual()
 	if demo.terrain != null:
@@ -667,7 +676,16 @@ func _exit_tree() -> void:
 		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
 	_set_flight_terrain_quality(false)
 	_motion_basis_valid = false
+	if handing_off():
+		return                     # the next planet's ship carries on: the drone and the music too
+	if _engine != null:
+		_engine.stop()
 	Sound.set_space(false)
+
+
+## Leaving for another planet's scene with no fade (SpaceTravel.handoff).
+func handing_off() -> bool:
+	return travel != null and is_instance_valid(travel) and travel.traveling != "" and travel.handoffs > 0
 
 
 func _set_flight_terrain_quality(active: bool) -> void:
@@ -679,8 +697,8 @@ func _set_flight_terrain_quality(active: bool) -> void:
 
 ## Issue #16: the engine drones while the ship is in the air; pitch follows the throttle.
 func _engine_step() -> void:
-	if _engine == null:
-		return
+	if _engine == null or not _engine.is_inside_tree():
+		return        # Sound (its parent) joins the tree a frame after the first call
 	var st := atmo.state
 	var on := piloting and (st == AtmoFlight.State.LIFTOFF or st == AtmoFlight.State.FLYING \
 		or st == AtmoFlight.State.LANDING)
@@ -882,14 +900,15 @@ func _fight_step(dt: float) -> void:
 ## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash
 ## does), "left" (dived out early) just ends it. Normal flight picks up where the
 ## fight left the ship.
-func end_fight(outcome: String) -> void:
+func end_fight(outcome: String, quiet := false) -> void:
 	if fight == null:
 		return
 	var pay := fight.payout() if outcome == "complete" else 0
 	var at := atmo.position()
 	fight.queue_free()
 	fight = null
-	Sound.set_space(false)
+	if not quiet:
+		Sound.set_space(false)
 	fight_log.append({ "outcome": outcome, "payout": pay, "at": at })
 	if outcome != "left":
 		WorldState.on_flight_returned({ "pad": str(pad.get("id", "")), "encounter": str(pad.get("encounter", "")),
@@ -899,7 +918,8 @@ func end_fight(outcome: String) -> void:
 			var t := GameFlow.label("orbit_complete")
 			hud.toast(t % pay if t.contains("%d") else t, 6.0)
 		"left":
-			hud.toast(GameFlow.label("orbit_broke_off"), 3.0)
+			if not quiet:
+				hud.toast(GameFlow.label("orbit_broke_off"), 3.0)
 	if outcome == "failed":
 		atmo._crash(at, "space")
 		_on_event({ "type": "crashed", "at": at, "what": "space" })
@@ -916,6 +936,7 @@ func _rearm_space() -> void:
 	if atmo.reached_space and atmo.altitude() < atmo.space_altitude - space_exit_margin:
 		atmo.reached_space = false
 		ascending = false
+		Sound.set_space(false)     # a fight's music carried over a handoff ends coming down
 
 
 func _tow_home() -> void:

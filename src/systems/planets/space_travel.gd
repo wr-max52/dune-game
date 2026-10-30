@@ -19,6 +19,7 @@ signal travel_started(to: String)
 
 const CAPTURE := 400.0               ## metres outside a body's radius that count as "arrived"
 const HYSTERESIS := 300.0            ## issue #99: leaving needs this much more than arriving
+const PREWARM := 1500.0              ## this far before a handoff, its scene's far mesh starts on worker threads
 
 var pilot                            ## ShipPilot
 var bodies: Array = []               ## { id, name, at, radius, node }
@@ -32,6 +33,7 @@ var self_handoff := 0.0
 var handoffs := 0                    ## seamless switches started (traces, tests)
 var staged := false                  ## issue #121: built during a staged handoff (balls refine over frames)
 var _prechecks: Array = []           ## issue #121: worker tasks checking the neighbours' towns
+var prewarmed: Array = []            ## planets whose handoff scene was prewarmed (PlanetTerrain.prewarm_far)
 
 
 func setup(ship_pilot, neighbours: Array, with_looks: bool) -> void:
@@ -67,6 +69,7 @@ func _ready() -> void:
 	if look != null:
 		for m in _sand_bodies:
 			look.track_material(m)     # the sun, so the ball's night side is dusk
+		_share_parent_sky(look)
 	_layer = CanvasLayer.new()
 	_layer.layer = 4
 	add_child(_layer)
@@ -107,12 +110,18 @@ func _physics_process(_dt: float) -> void:
 	for b in bodies:
 		if b.child and float(b.handoff) > 0.0:
 			# Issue #99: close enough to its ball: its scene, seamlessly.
-			if pos.distance_to(b.at) <= float(b.radius) + float(b.handoff):
+			var gap := pos.distance_to(b.at) - float(b.radius) - float(b.handoff)
+			if gap <= PREWARM:
+				_prewarm(b.id)
+			if gap <= 0.0:
 				handoff(b.id)
 				return
 		elif not b.child and self_handoff > 0.0:
 			# Issue #99: far enough off this ball: the parent's scene, seamlessly.
-			if pos.distance_to(Vector3(0, -self_radius, 0)) >= self_radius + self_handoff + HYSTERESIS:
+			var out := self_radius + self_handoff + HYSTERESIS - pos.distance_to(Vector3(0, -self_radius, 0))
+			if out <= PREWARM:
+				_prewarm(b.id)
+			if out <= 0.0:
 				handoff(b.id)
 				return
 		elif distance_to(b.id) <= 0.0:
@@ -132,12 +141,14 @@ func handoff(id: String) -> void:
 	traveling = id
 	handoffs += 1
 	if pilot.fight != null:
-		pilot.end_fight("left")
+		pilot.end_fight("left", true)    # broken off without a word: the music plays on
 	travel_started.emit(id)
 	var look = pilot.demo.get("look")
+	var xf: Transform3D = pilot.atmo.transform()
 	var extra := {
 		"handoff": { "position": pilot.atmo.position() - (b.offset as Vector3), "basis": pilot.atmo.flight.basis,
-			"speed": pilot.atmo.speed(), "throttle": pilot._throttle },
+			"speed": pilot.atmo.speed(), "throttle": pilot._throttle,
+			"camera": xf.affine_inverse() * pilot.chase.xform, "camera_mode": pilot.chase.mode },
 		"hour": float(look.hour) if look != null else -1.0,
 		"preset": str(look.current) if look != null else "",
 	}
@@ -148,6 +159,16 @@ func handoff(id: String) -> void:
 
 
 var last_handoff: Dictionary = {}     ## what the last handoff carried (tests, with change = false)
+
+
+## A handoff to `id` is close: start its scene's slow first-frame work now.
+func _prewarm(id: String) -> void:
+	if prewarmed.has(id):
+		return
+	prewarmed.append(id)
+	if pilot != null and bool(pilot.demo.get("use_look")):
+		PlanetTerrain.prewarm_far(PlanetGen.build(id))
+		prewarm_bodies(id)
 
 
 ## Leave for planet `id` now (a running space fight is broken off first).
@@ -189,6 +210,23 @@ func _update_labels(flying: bool) -> void:
 		l.visible = true
 
 
+## Moon handoff: a planet that hands off to its parent (the moon) draws its sky in
+## space the way its parent's scene does there (the parent's ball's up), so the
+## sky is the same on both sides of the switch.
+func _share_parent_sky(look) -> void:
+	for b in bodies:
+		if b.child or float(self_handoff) <= 0.0:
+			continue
+		var pt := PlanetTerrain.for_planet(PlanetGen.build(str(b.id)))
+		if pt == null:
+			continue
+		var parent_ball: PlanetSphere = pt.sphere
+		pt.free()
+		var offset: Vector3 = b.offset
+		look.space_frame = func(p: Vector3) -> Basis: return parent_ball.tilt_at(p - offset)
+		return
+
+
 ## A neighbour as seen from here: a rock for a small body, a planet for a big one.
 ## Issue #99: a ball type with a handoff (the asteroid) is its real ball and
 ## station, coarse, so arriving changes only the detail.
@@ -200,6 +238,57 @@ func _body(n: Dictionary) -> Node3D:
 	var r := float(n.radius)
 	var mi := MeshInstance3D.new()
 	mi.name = "Planet_" + str(n.id)
+	var rocky := str(n.type) == "asteroid"
+	mi.mesh = body_mesh(n)
+	if bool(n.get("ball", false)) and str(n.type) == "sand":
+		# Issue #77: the home planet seen from space is the same sand you walk on:
+		# its dunes' colours and the dusk side of one real sun (and its noise, which
+		# that scene already made: nothing new on a handoff's first frame).
+		var sand := ShaderMaterial.new()
+		sand.shader = DesertTerrain.SAND_SHADER
+		sand.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 3, 0.01))
+		sand.set_shader_parameter("planet_center", n.at)
+		sand.set_shader_parameter("planet_radius", r)
+		sand.set_shader_parameter("glitter", 0.0)
+		mi.material_override = sand
+		_sand_bodies.append(sand)
+	else:
+		var m := StandardMaterial3D.new()
+		m.albedo_color = n.color
+		m.albedo_texture = LookEnvironment.make_noise_texture(256, 3, 0.02)
+		m.roughness = 0.95
+		m.rim_enabled = not rocky
+		m.rim = 0.6
+		m.rim_tint = 0.4
+		mi.material_override = m
+	mi.position = n.at
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = r
+	return mi
+
+
+## A neighbour's ball mesh (a noisy rock for a small body, a plain sphere for a
+## big one), made once a session: ~25 ms of noise per ball, which a handoff's scene
+## would otherwise spend on its first frame. prewarm_bodies() makes them on a
+## worker thread before the switch.
+static var _body_meshes := {}          ## "id/radius" -> Mesh, or { task, out } while a worker makes it
+
+
+static func body_mesh(n: Dictionary) -> Mesh:
+	var key := "%s/%d" % [str(n.id), int(n.radius)]
+	var got = _body_meshes.get(key)
+	if got is Dictionary:
+		WorkerThreadPool.wait_for_task_completion(int(got.task))
+		got = (got.out as Array)[0]
+		_body_meshes[key] = got
+	if got == null:
+		got = _make_body_mesh(n)
+		_body_meshes[key] = got
+	return got
+
+
+static func _make_body_mesh(n: Dictionary) -> Mesh:
+	var r := float(n.radius)
 	var noise := FastNoiseLite.new()
 	noise.seed = NameEngine.fnv(str(n.id)) % 1000
 	noise.frequency = 1.4 / r
@@ -210,30 +299,21 @@ func _body(n: Dictionary) -> Node3D:
 	sphere.radial_segments = 64
 	sphere.rings = 32
 	var rocky := str(n.type) == "asteroid"
-	mi.mesh = LookMeshKit.rock(sphere, noise, 0.3 if rocky else 0.012, 0.0, 3.0, 0.85 if rocky else 1.0) if rocky or r < 20000.0 else sphere
-	var m := StandardMaterial3D.new()
-	m.albedo_color = n.color
-	m.albedo_texture = LookEnvironment.make_noise_texture(256, 3, 0.02)
-	m.roughness = 0.95
-	m.rim_enabled = not rocky
-	m.rim = 0.6
-	m.rim_tint = 0.4
-	mi.material_override = m
-	if bool(n.get("ball", false)) and str(n.type) == "sand":
-		# Issue #77: the home planet seen from space is the same sand you walk on:
-		# its dunes' colours and the dusk side of one real sun.
-		var sand := ShaderMaterial.new()
-		sand.shader = DesertTerrain.SAND_SHADER
-		sand.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(256, 3, 0.01))
-		sand.set_shader_parameter("planet_center", n.at)
-		sand.set_shader_parameter("planet_radius", r)
-		sand.set_shader_parameter("glitter", 0.0)
-		mi.material_override = sand
-		_sand_bodies.append(sand)
-	mi.position = n.at
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.extra_cull_margin = r
-	return mi
+	return LookMeshKit.rock(sphere, noise, 0.3 if rocky else 0.012, 0.0, 3.0, 0.85 if rocky else 1.0) if rocky or r < 20000.0 else sphere
+
+
+## The ball meshes planet `id`'s scene will draw in its sky, made on worker threads.
+static func prewarm_bodies(id: String) -> void:
+	for n in PlanetGen.build(id).get("neighbours", []):
+		if bool(n.get("ball", false)) and bool(n.get("child", false)) and PlanetGen.handoff_altitude(str(n.type)) > 0.0:
+			continue          # drawn as its real ball (_ball_body), not a mesh
+		var key := "%s/%d" % [str(n.id), int(n.radius)]
+		if _body_meshes.has(key):
+			continue
+		var out := [null]
+		var nn: Dictionary = n
+		var task := WorkerThreadPool.add_task(func(): out[0] = _make_body_mesh(nn), false, "planet body prewarm")
+		_body_meshes[key] = { "task": task, "out": out }
 
 
 ## Issue #99: the neighbour's own ball (its AsteroidSphere, seated on its own

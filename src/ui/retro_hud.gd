@@ -100,6 +100,9 @@ func toggle_info() -> void:
 	refresh()
 
 
+static var _last_place := ""        ## the banner's last place, across scenes
+
+
 func _process(dt: float) -> void:
 	_left -= dt
 	if _left <= 0.0:
@@ -114,8 +117,12 @@ func refresh() -> void:
 	footer.visible = not talking          # the chat box sits there
 	var planet := str(demo.planet_name) if demo != null else ""
 	var town := str(demo.town_name) if demo != null else ""
-	_place.text = "> %s // %s" % [(planet if planet != "" else "UNCHARTED").to_upper(),
-		(town if town != "" else "OUTPOST").to_upper()]
+	if planet == "" and town == "" and _last_place != "":
+		_place.text = _last_place     # a handoff's scene names its places a moment later: keep the old ones till then
+	else:
+		_place.text = "> %s // %s" % [(planet if planet != "" else "UNCHARTED").to_upper(),
+			(town if town != "" else "OUTPOST").to_upper()]
+		_last_place = _place.text
 	_clock.text = "%s  %s" % [clock_text(), str(WorldState.time_of_day).to_upper()]
 	_money.text = "CR %d   [F1] INFO" % WorldState.credits
 	_vitals.text = vitals_text()

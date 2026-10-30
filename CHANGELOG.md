@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Flying to the moon without a seam (2026-10-29)
+
+- **The switch to the moon's scene is ~4x shorter.** The frame it happened on
+  took ~680 ms; it is now ~130 ms, then 55-75 ms for two frames. The port's scene
+  is freed a little each frame after it leaves (`SceneReaper`) instead of all at
+  once (330 ms). The moon's coarse ball and the home planet's ball in its sky are
+  built on worker threads ~1.5 km before the switch (`PlanetTerrain.prewarm_far`,
+  `SpaceTravel.prewarm_bodies`). The station's walls and dome are built first and
+  its floors, inner panels and lamps a few frames later.
+- **The last frame before and the first after look the same.** In space the sky
+  takes the parent planet's up in every scene (it had turned to the moon's, which
+  put a dark brown "ground" behind it), and every planet's ambient light eases to
+  the plain time of day (the station's 1.6x fill had made the moon brighter). The
+  moon drawn in the port's sky uses the same noise as its own scene. The HUD's top
+  and bottom bars are there on the first frame and keep the old place names until
+  the new ones are known; no "Approaching..." toast and no stamina bar in the
+  cockpit. The chase camera keeps its view and lag.
+- **Nothing you hear stops.** The engine drone is one player that outlives the
+  scene, the music plays on (a fight broken off by the switch ends quietly, its
+  space track playing until you come down), and arriving above the moon's edge of
+  space no longer counts as climbing out (no new orbital fight on arrival).
+- `scenes/handoff_trace.gd`: a rendered trace of the switch (frame times, the
+  pictures either side and how different they are, the music and the engine).
+
 ## Smooth orbit over the port; no "edge of space" (2026-10-29)
 
 - **No more stutter flying high.** Climbing past ~2 km and on toward the moon

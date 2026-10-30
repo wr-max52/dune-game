@@ -297,6 +297,14 @@ func _process(_dt: float) -> void:
 # ------------------------------------------------------------------ looks
 
 func dress(env: LookEnvironment, mats: LookMaterials) -> void:
+	dress_outside(env, mats)
+	dress_inside()
+
+
+## What shows from space: the walls' outsides, the dome, the pit's liner, the
+## hallway and the shields. A handoff builds this on its first frame (it is what
+## the parent's sky was already drawing) and dress_inside() a few frames later.
+func dress_outside(env: LookEnvironment, mats: LookMaterials) -> void:
 	if st.is_empty():
 		return
 	var metal := mats.hull(-50.0, 3.0)
@@ -306,10 +314,9 @@ func dress(env: LookEnvironment, mats: LookMaterials) -> void:
 	var status := mats.glow(Color("#f0c77c"))
 	status.emission_energy_multiplier = 1.8
 	var glass := _glass()
-	_floors(mats)
+	_dressing = { "env": env, "mats": mats, "panel": panel, "trim": trim, "dark": dark, "status": status }
 	_mesh("RingWall", _cylinder(rc, rw, 0.0, wall_h, RING_SEG, 4, _ring_gap), metal, true)
 	_mesh("RingCap", _cylinder(rc, rw + 0.01, wall_h - 0.25, wall_h + 0.15, RING_SEG, 1, Callable()), metal, true)
-	_panelled_wall("RingWallPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, -1)
 	_panelled_wall("RingWallExteriorPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, 1)
 	var dome := _mesh("Dome", _dome_triangles(), glass, true)
 	dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -317,14 +324,28 @@ func dress(env: LookEnvironment, mats: LookMaterials) -> void:
 	_shield("GateShield", Vector3(rc.x + rw, float(hall.get("height", 5.0)) * 0.5, rc.z), Vector3(0.08, float(hall.get("height", 5.0)), gate_half * 2.0))
 	_mesh("Liner", _cylinder(pit_c, pit_r, 0.0, liner_h, LINER_SEG, 6, _liner_gap), metal, true)
 	_mesh("LinerCap", _cylinder(pit_c, pit_r + 0.02, liner_h - 0.3, liner_h + 0.2, LINER_SEG, 1, Callable()), metal, true)
-	_panelled_wall("LinerPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, -1)
 	_panelled_wall("LinerExteriorPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, panel, trim, dark, status, 1)
 	_pit_shield()
 	_dress_hall(metal, glass, env, mats)
-	_station_lighting(env, status, trim)
+
+
+## Inside the dome and the pit: floors, the walls' inner panels, the lamps and the
+## boulders round the station, and the extra fill light a sealed dome needs.
+func dress_inside() -> void:
+	if st.is_empty() or _dressing.is_empty():
+		return
+	var d := _dressing
+	_dressing = {}
+	_floors(d.mats)
+	_panelled_wall("RingWallPanels", rc, rw, wall_h, RING_SEG / 2, 1, d.panel, d.trim, d.dark, d.status, -1)
+	_panelled_wall("LinerPanels", pit_c, pit_r, liner_h, LINER_SEG / 2, -1, d.panel, d.trim, d.dark, d.status, -1)
+	_station_lighting(d.env, d.status, d.trim)
 	_dress_boulders()
-	if env != null:
-		env.set_ambient_energy_scale(1.6)
+	if d.env != null:
+		(d.env as LookEnvironment).set_ambient_energy_scale(1.6)
+
+
+var _dressing: Dictionary = {}       ## dress_outside()'s materials, for dress_inside()
 
 
 ## Repeated hull plates, seams, and service lights give the station walls the
