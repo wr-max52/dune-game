@@ -78,7 +78,7 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["id"] = sid
 					out["name"] = str(ships[sid].name)
 					out["price"] = int(ships[sid].price)          # the game's price, never the model's
-			"refuse_topic", "end_conversation":
+			"refuse_topic", "end_conversation", "comrade":
 				pass
 			"call_guards":
 				if int(ctx.get("trust", 0)) >= GUARDS_MAX_TRUST:

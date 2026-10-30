@@ -247,6 +247,30 @@ func add_outpost_berth(v: Node3D, id: String, outpost_id: String) -> int:
 	return i
 
 
+## May the player board berth `i`? (berth_open: the rule.)
+func berth_flies(i: int) -> bool:
+	return berth_open(berths[i], i)
+
+
+## Issue #64: the port's ships fly once Oda tells you about the fleet. Issue #206:
+## a story save has no free keys in the pit: only a ship you own flies (berth 0,
+## the pit pad's, once T-89 rebuilt your wreck or when you flew in on it; one he
+## sold you, "owned"). An outpost's ship is still there to steal once ships fly.
+static func berth_open(b: Dictionary, i: int) -> bool:
+	if not WorldState.story_mode() or b.has("outpost"):
+		return Story.ships_unlocked()
+	if bool(b.get("owned", false)):
+		return true
+	return i == 0 and (WorldState.has_flag(WorldState.SHIP_REBUILT) or GameFlow.flown_ship != "")
+
+
+## Why berth `i` will not fly, as a Story line key.
+func locked_line(i: int) -> String:
+	if not WorldState.story_mode() or berths[i].has("outpost"):
+		return "ship_locked"
+	return "ship_wreck" if i == 0 else "ship_not_yours"
+
+
 ## Flying a ship taken from an outpost (the barracks interceptor hunts it).
 func flying_stolen() -> bool:
 	return piloting and bool(berths[berth].get("stolen", false))
@@ -379,7 +403,7 @@ func nearest_berth() -> int:
 
 func board() -> bool:
 	var i := nearest_berth()
-	if i < 0 or not Story.ships_unlocked():
+	if i < 0 or not berth_flies(i):
 		return false
 	if i != berth:
 		_use_berth(i)
@@ -818,9 +842,8 @@ func _on_foot() -> void:
 		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
 		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
 			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
-		if not Story.ships_unlocked():
-			# Issue #64: the port's ships fly once Oda tells you about the fleet.
-			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line("ship_locked")]
+		if not berth_flies(i):
+			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line(locked_line(i))]
 	_foot_prompt.visible = near
 	if near and _just("interact"):
 		board()

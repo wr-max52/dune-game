@@ -20,6 +20,8 @@ const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20
 const STORY := "story"
 const FREEPLAY := "freeplay"
 const STORY_WEAPON := "pistol_blaster"     ## issue #200: the one hand weapon a story save starts with
+const SHIP_REBUILT := "ship_rebuilt"        ## issue #206: T-89 rebuilt the wreck on the pit pad (a story save's own ship)
+const COMRADE := "t89_comrade"              ## issue #206: the player told T-89 they can't stand the Remnant
 
 static var standing: Dictionary = DEFAULT_STANDING.duplicate()
 static var flags: Dictionary = {}          ## name -> true
@@ -97,6 +99,11 @@ static func new_game(m: String) -> void:
 
 static func story_mode() -> bool:
 	return mode == STORY
+
+
+## Issue #206: the player owns a ship: the wreck T-89 rebuilt, or one bought from him.
+static func owns_ship() -> bool:
+	return has_flag(SHIP_REBUILT) or hangar != ""
 
 
 ## Issue #200: may the player draw hand weapon `id`? Freeplay: all of them. Story:

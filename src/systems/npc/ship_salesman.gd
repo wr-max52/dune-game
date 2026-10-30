@@ -16,6 +16,10 @@ extends Node3D
 ##     content/core/npcs/t89_card.json): "Talk" in his shop opens the chat box. His
 ##     prompt carries every ship's price and numbers, so he can recommend one, and
 ##     his offer_ship puts its price card in front of you; Buy is the shop's buy().
+##   - issue #206: in a story save the ship you landed in is a wreck on the pit pad.
+##     He quotes the rebuild whenever you talk (the "Rebuild your ship" quest) and
+##     rebuild() makes it yours to fly. Tell him you can't stand the Remnant (his
+##     menu, or his comrade action in the chat) and it costs 1 credit.
 ## Words, prices and his spot: content/core/npcs/t89.json. Looks: DroidKit.
 ##
 ## The headless test calls greet(), talk(), buy(), sell() and the menu's choose()
@@ -212,7 +216,7 @@ func greet() -> void:
 		_say(returning_line())
 		return
 	WorldState.set_flag(MET_FLAG)
-	_open(str(cfg.get("greeting", "")) + _story_line() + "\n\n" + str(cfg.get("offer_tutorial", "")),
+	_open(str(cfg.get("greeting", "")) + _repair_line() + _story_line() + "\n\n" + str(cfg.get("offer_tutorial", "")),
 		[{ "id": "yes", "text": _l("yes_tutorial") }, { "id": "no", "text": _l("no_tutorial") }], _on_offer)
 
 
@@ -235,13 +239,22 @@ func talk() -> void:
 	if spot != null:
 		opts.push_front({ "id": "chat", "text": _l("chat") })
 	opts.append({ "id": "tutorial", "text": _l("tutorial") })
-	_open(_line("hello_again") + _story_line(), opts, _on_shop)
+	_open(_line("hello_again") + _repair_line() + _story_line(), opts, _on_shop)
 
 
 ## Issue #64: while the story starts with him, he sends you to Oda.
 func _story_line() -> String:
 	var b := Story.beat("t89")
 	return " " + str(b.say) if not b.is_empty() else ""
+
+
+## Issue #206: the rebuild's price, while your wreck waits (the quest goes in the log).
+func _repair_line() -> String:
+	if not needs_rebuild():
+		return ""
+	Story.event("repair_quoted")
+	var comrade := WorldState.has_flag(WorldState.COMRADE)
+	return " " + _line("repair_quote_comrade" if comrade else "repair_quote") % rebuild_price()
 
 
 func _open(text: String, opts: Array, pick: Callable) -> void:
@@ -327,6 +340,10 @@ func ship_label(ship_id: String) -> String:
 
 func shop_options() -> Array:
 	var out := []
+	if needs_rebuild():
+		out.append({ "id": "rebuild", "text": _l("rebuild") % [ship_label(wreck_id()), rebuild_price()] })
+		if not WorldState.has_flag(WorldState.COMRADE):
+			out.append({ "id": "comrade", "text": _l("comrade") })
 	var taken := WorldState.hangar != ""
 	for id in stock():
 		out.append({ "id": "buy:" + id, "text": _l("buy_taken" if taken else "buy") % [ship_label(id), price(id)] })
@@ -340,6 +357,10 @@ func _on_shop(id: String) -> void:
 		buy(id.substr(4))
 	elif id == "sell":
 		sell()
+	elif id == "rebuild":
+		rebuild()
+	elif id == "comrade":
+		comrade()
 	elif id == "tutorial":
 		start_tutorial()
 	elif id == "chat":
@@ -392,6 +413,55 @@ func sell() -> int:
 	return paid
 
 
+# ------------------------------------------------------------------ the wreck (issue #206)
+
+## A story save's own ship still waits on the pit pad as a wreck.
+static func needs_rebuild() -> bool:
+	return WorldState.story_mode() and not WorldState.has_flag(WorldState.SHIP_REBUILT)
+
+
+func rebuild_price() -> int:
+	var r: Dictionary = cfg.get("rebuild", {})
+	return int(r.get("comrade_price", 1)) if WorldState.has_flag(WorldState.COMRADE) else int(r.get("price", 500))
+
+
+## The ship on the pit pad (the one you landed in).
+func wreck_id() -> String:
+	var pilot = demo.pilot if demo != null and "pilot" in demo else null
+	return str(pilot.berths[0].ship_id) if pilot != null and not pilot.berths.is_empty() else "interceptor"
+
+
+## Rebuild the wreck: it is yours to fly from the pit pad. Returns "rebuilt",
+## "cant_afford" or "" (nothing to rebuild).
+func rebuild() -> String:
+	if not needs_rebuild():
+		return ""
+	var cost := rebuild_price()
+	if WorldState.credits < cost:
+		_say(_line("cant_afford_rebuild") % [cost, WorldState.credits])
+		return "cant_afford"
+	WorldState.credits -= cost
+	WorldState.set_flag(WorldState.SHIP_REBUILT)
+	WorldState.log_event(_l("event_rebuilt") % ship_label(wreck_id()))
+	Story.event("ship_rebuilt")
+	_beep()
+	_say(_line("rebuilt") % ship_label(wreck_id()))
+	return "rebuilt"
+
+
+## The player can't stand the Remnant: neither can he. The comrade discount, once.
+## Returns true the first time.
+func comrade() -> bool:
+	if WorldState.has_flag(WorldState.COMRADE):
+		_say(_line("comrade_again") % rebuild_price())
+		return false
+	WorldState.set_flag(WorldState.COMRADE)
+	WorldState.log_event("T-89 and the player found they agree about the Remnant.")
+	if needs_rebuild():
+		_say(_line("comrade") % rebuild_price())
+	return true
+
+
 ## Put WorldState.hangar's ship on the spare pad (bought now, or loaded from a
 ## save) and make it boardable.
 func park_owned() -> void:
@@ -412,7 +482,8 @@ func park_owned() -> void:
 			(float(box.min[2]) + float(box.max[2])) * 0.5)
 		bought_ship.rotation.y = deg_to_rad(float(box.get("parked_yaw_deg", 0.0)))
 	if demo.pilot != null:
-		demo.pilot.add_berth(bought_ship, WorldState.hangar, str(box.id))
+		var i: int = demo.pilot.add_berth(bought_ship, WorldState.hangar, str(box.id))
+		demo.pilot.berths[i]["owned"] = true      # issue #206: yours to fly in a story save
 
 
 # ------------------------------------------------------------------ AI
@@ -431,6 +502,7 @@ func attach_host(h: ConversationHost) -> void:
 	spot.face_height = height() - 0.25
 	host.add_spot(spot)
 	brain.sale_offered.connect(_on_ship_offered)
+	brain.comrade_declared.connect(func(): comrade())
 	host.panel.sale_answered.connect(_on_ship_answer)
 
 
@@ -487,8 +559,16 @@ func ship_text(ship_id: String, card: Dictionary = {}) -> String:
 	return " ".join(PackedStringArray(parts))
 
 
-## His briefing each turn: what is on their pad (only one ship fits).
+## His briefing each turn: what is on their pad (only one ship fits), and the
+## wreck they landed in while it waits (issue #206).
 func pad_brief() -> Array:
+	if needs_rebuild():
+		return ["THEIR WRECK: the %s they landed in, on the pit pad. You rebuild it for %d credits (they rebuild it from your shop with E)."
+			% [ship_label(wreck_id()), rebuild_price()]] + _pad_line()
+	return _pad_line()
+
+
+func _pad_line() -> Array:
 	if WorldState.hangar == "":
 		return ["THEIR PAD: empty, ready for a ship."]
 	return ["THEIR PAD: holds the %s you sold them (you would buy it back for %d). Nothing else fits until they sell it."

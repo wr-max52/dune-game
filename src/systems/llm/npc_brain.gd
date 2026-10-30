@@ -22,6 +22,7 @@ signal line_done(turn: Dictionary)            ## final { say, mood, kept, droppe
 signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
+signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
 signal ended(reason: String)
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
@@ -300,6 +301,8 @@ func _apply(kept: Array) -> Array:
 				rel.banned_until = WorldState.clock + 90.0
 				rel.add_trust(-5, "threatened you in your own bar")
 				WorldState.change_standing("locals", -2, "Someone got thrown out of the cantina.")
+			"comrade":
+				comrade_declared.emit()
 			"end_conversation", "refuse_topic":
 				pass
 		applied.append(t)

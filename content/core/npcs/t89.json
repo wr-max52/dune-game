@@ -1,6 +1,6 @@
 {
   "id": "t89",
-  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Read by src/systems/npc/ship_salesman.gd.",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Read by src/systems/npc/ship_salesman.gd.",
   "name": "T-89",
   "marker": "t89",
   "pad": "spare_pad",
@@ -12,6 +12,7 @@
     "trim": "#3b3530",
     "eye": "#7affd8"
   },
+  "rebuild": { "price": 500, "comrade_price": 1 },
   "default_price": 1500,
   "resale_rate": 0.6,
   "prices": {
@@ -46,7 +47,13 @@
     "sold": "Pleasure doing business. %d credits are yours.",
     "cant_afford": "The %s is %d credits. You have %d. Come back richer!",
     "flying_it": "You are flying your %s right now. Land it before you sell it.",
-    "skipped": "Suit yourself. I am right here if you need me."
+    "skipped": "Suit yourself. I am right here if you need me.",
+    "repair_quote": "That wreck you came down in is yours, pilot, and I can rebuild it: %d credits.",
+    "repair_quote_comrade": "Your wreck is still waiting, comrade. %d credit, as promised.",
+    "comrade": "Between us, pilot? I cannot stand them either. For a comrade, I will rebuild your ship for %d credit.",
+    "comrade_again": "We understand each other, comrade. The rebuild is still %d credit.",
+    "rebuilt": "Good as new! Your %s is on the pit pad, and she is all yours.",
+    "cant_afford_rebuild": "The rebuild is %d credits. You have %d. Oda at the cantina has work."
   },
   "labels": {
     "talk": "[E] Talk to %s",
@@ -61,6 +68,9 @@
     "buy_taken": "Buy a %s  (%d cr)  - pad taken",
     "sell": "Sell back your %s  (+%d cr)",
     "tutorial": "Run me through the basics again",
-    "event_bought": "Someone bought a %s from the droid in the pit."
+    "event_bought": "Someone bought a %s from the droid in the pit.",
+    "rebuild": "Rebuild your %s  (%d cr)",
+    "comrade": "Tell him what you think of the Remnant",
+    "event_rebuilt": "The droid in the pit rebuilt a wrecked %s."
   }
 }

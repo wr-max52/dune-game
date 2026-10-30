@@ -124,6 +124,8 @@
   ],
   "fleet_reward": 5000,
   "ship_locked": "Locked. The keys aren't yours to take yet.",
+  "ship_wreck": "Your ship. A wreck: T-89 in the pit can rebuild it.",
+  "ship_not_yours": "Not yours. No keys, no flight.",
   "jetpack_toast": "Oda gave you her old jetpack.",
   "bounty": {
     "first_pay": 600,

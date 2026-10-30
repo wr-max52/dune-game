@@ -24,6 +24,7 @@ const ACTION_DOCS := {
 	"offer_speeder": '{"type": "offer_speeder"}  when they want to buy (the game shows them the price and asks them to confirm; you never take money yourself)',
 	"offer_ship": '{"type": "offer_ship", "id": "<ship id from YOUR SHIPS>"}  when you recommend a ship or they want to buy one (the game shows them its price and asks them to confirm; you never take money yourself)',
 	"trust": '{"type": "trust", "delta": -3..2, "why": "<short reason>"}  how this exchange changed your trust in them',
+	"comrade": '{"type": "comrade"}  when they say plainly that they hate the Remnant or want them gone (you quietly agree; the game gives them your comrade discount)',
 	"refuse_topic": '{"type": "refuse_topic"}  when you will not talk about something',
 	"end_conversation": '{"type": "end_conversation"}  when you are done with them',
 	"call_guards": '{"type": "call_guards"}  only if they threaten you or keep insulting you',
