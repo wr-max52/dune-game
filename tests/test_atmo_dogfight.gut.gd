@@ -275,9 +275,9 @@ func test_it_pulls_up_near_the_ground() -> void:
 	assert_false(f._keep_clear(cmd), "high enough: the pilot flies")
 
 
-## After the fleet the garrison leaves, but the pad's interceptor stays: the Remnant
-## shoot on sight now, so it comes after any flight out past the town.
-func test_after_the_fleet_it_hunts_any_flight_out_of_town() -> void:
+## Issue #180: after the fleet the Remnant is defeated. The pad's interceptor stays
+## put, even for a flight out past the town or a stolen outpost ship.
+func test_after_the_fleet_it_does_not_chase() -> void:
 	Story.skip_to("free")
 	var t = _town()
 	await wait_physics_frames(2)
@@ -288,7 +288,37 @@ func test_after_the_fleet_it_hunts_any_flight_out_of_town() -> void:
 	assert_true(t.pilot.board())
 	assert_true(t.pilot.takeoff())
 	_fly(t, 4.0)
-	assert_eq(f.mode, AtmoFighter.Mode.PARKED, "not while you are over the town")
 	t.pilot.atmo.place_flying(Vector3(900, 300, 0), Vector3(1, 0, 0), 120.0, 0.6)
-	_fly(t, 0.5, { "throttle": 0.6 })
-	assert_eq(f.launches, 1, "out past the town: it takes off")
+	_fly(t, 3.0, { "throttle": 0.6 })
+	assert_eq(f.launches, 0, "out past the town: it stays on its pad")
+	t.pilot.berths[t.pilot.berth].stolen = true
+	_fly(t, 1.0, { "throttle": 0.6 })
+	assert_eq(f.launches, 0, "not even for a stolen ship")
+
+
+## Issue #180: one already up when the fleet falls gives up and heads home.
+func test_beating_the_fleet_sends_it_home() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	_steal(t)
+	t.pilot.takeoff()
+	_fly(t, 8.0, { "throttle": 0.4 })
+	var f: AtmoFighter = t.interceptor
+	assert_eq(f.mode, AtmoFighter.Mode.HUNTING)
+	WorldState.set_flag("remnant_fleet_beaten")
+	_fly(t, 12.0, { "throttle": 0.4 })
+	assert_true(f.mode in [AtmoFighter.Mode.RETURNING, AtmoFighter.Mode.PARKED], "the Remnant is beaten: it stops chasing")
+	assert_eq(f.launches, 1, "and does not take off again")
+
+
+## Issue #180: wider loops around you at the same speed. The pilot breaks off
+## further out and extends further before turning back; the ship's speeds match
+## the port's interceptor.
+func test_it_loops_wide_at_the_same_speed() -> void:
+	var hunter: Dictionary = content.get_pilot("remnant_hunter")
+	assert_gte(float(hunter.break_distance), 140.0, "breaks off further out")
+	assert_gte(float(hunter.extend_distance), 600.0, "extends further before turning back")
+	var dark: Dictionary = content.get_ship("remnant_interceptor").atmosphere
+	var port: Dictionary = content.get_ship("interceptor").atmosphere
+	for k in ["max_speed", "boost_speed", "accel"]:
+		assert_eq(float(dark[k]), float(port[k]), "same %s as the port's interceptor" % k)

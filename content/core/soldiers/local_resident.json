@@ -5,7 +5,8 @@
   "faction": "locals",
   "role": "local",
   "radio_voice": false,
-  "note": "A port local on foot: strolls a loop through the houses or the market, minds their business, and fights back with a holdout pistol once anyone hurts a local (Townsfolk, src/systems/npc/townsfolk.gd). Weaker and sloppier than a trooper. The look is a placeholder: 'archetype' is the one field the character art pass changes.",
+  "sidearm": true,
+  "note": "A port local on foot: strolls a loop through the houses or the market, minds their business, and fights back with a holdout pistol once anyone hurts a local (Townsfolk, src/systems/npc/townsfolk.gd). \"sidearm\": the pistol is out of sight until then, drawn when the locals' alarm goes up. Weaker and sloppier than a trooper. The look is a placeholder: 'archetype' is the one field the character art pass changes.",
   "naming": {
     "kind": "person_dune",
     "nameplate_range": 6.0

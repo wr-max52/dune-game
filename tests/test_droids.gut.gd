@@ -176,7 +176,7 @@ class FakePlayer extends CharacterBody3D:
 	var locked := false
 
 
-func _scene() -> Array:
+func _scene(demo = null) -> Array:
 	var root := Node3D.new()
 	add_child_autofree(root)
 	var floor_body := StaticBody3D.new()
@@ -189,8 +189,10 @@ func _scene() -> Array:
 	root.add_child(floor_body)
 	var p := FakePlayer.new()
 	root.add_child(p)
+	if demo != null:
+		root.add_child(demo)
 	var ctl := DroidController.new()
-	ctl.setup(null, p, null)
+	ctl.setup(demo, p, null)
 	root.add_child(ctl)
 	return [ctl, p]
 
@@ -388,3 +390,110 @@ func test_outpost_cargo_droid_flees_and_becomes_a_wreck() -> void:
 	assert_gt(at.x, 0.0, "away from the player")
 	assert_true(ctl.wreck_nodes.has(int(w.uid)), "lying there to be fixed")
 	assert_gt(u.respawn_left, 0.0, "the outpost gets another")
+
+
+## The scene parts the droids look through for a fight: the Remnant (npcs), the
+## port's locals and their director, and a native pack.
+class FakeDemo extends Node3D:
+	var npcs: Array = []
+	var locals: Array = []
+	var townsfolk: FakeFolk
+	var natives: FakeNatives
+
+
+class FakeFolk extends Node:
+	var alarm := TownAlarm.new()
+
+
+class FakeNatives extends Node:
+	var packs: Array = []
+
+	func alive(p: Dictionary) -> Array:
+		return (p.members as Array).filter(func(m): return not m.npc.dead)
+
+
+## Someone to shoot at: a body the bolts and the sight line both find.
+class FakeFighter extends StaticBody3D:
+	var dead := false
+	var hostile := false
+	var hits := 0
+
+	func _init() -> void:
+		var c := CollisionShape3D.new()
+		var b := BoxShape3D.new()
+		b.size = Vector3(0.6, 2.0, 0.6)
+		c.shape = b
+		c.position.y = 1.0
+		add_child(c)
+
+	func apply_damage_from(_amount: float, _shooter: Node) -> void:
+		hits += 1
+
+
+func _fighter(demo: FakeDemo, at: Vector3) -> FakeFighter:
+	var f := FakeFighter.new()
+	demo.add_child(f)
+	f.global_position = at
+	return f
+
+
+## Your assassin and floating droids shoot whoever you are fighting: the locals
+## only once their alarm is up, a native pack only while it is on the attack, and
+## never anyone calm.
+func test_your_droids_join_your_fights() -> void:
+	var demo := FakeDemo.new()
+	demo.townsfolk = FakeFolk.new()
+	demo.add_child(demo.townsfolk)
+	demo.natives = FakeNatives.new()
+	demo.add_child(demo.natives)
+	var s := _scene(demo)
+	var ctl: DroidController = s[0]
+	WorldState.credits = 200
+	assert_eq(ctl.buy("assassin"), "bought")
+	assert_eq(ctl.buy("floating"), "bought")
+	var local := _fighter(demo, Vector3(0, 0, -9))
+	demo.locals.append(local)
+	var native := _fighter(demo, Vector3(9, 0, 0))
+	demo.natives.packs.append({ "id": "p", "state": "travel", "members": [{ "npc": native }] })
+	for i in 30:
+		await wait_physics_frames(1)
+	assert_eq(ctl.enemies(), [], "nobody is fighting you")
+	assert_eq(ctl.shots_fired, 0, "so nobody gets shot")
+
+	demo.townsfolk.alarm.raise("attacked", Vector3.ZERO)
+	assert_true(demo.townsfolk.alarm.active())
+	assert_eq(ctl.enemies(), [local], "the locals are up in arms")
+	for i in 120:
+		await wait_physics_frames(1)
+	for u in ctl.companions.values():
+		assert_eq(u.target, local, u.kind + " droid aims at the local")
+	assert_gt(ctl.shots_fired, 1, "both droids open fire")
+	assert_gt(local.hits, 0, "and hit")
+	assert_eq(native.hits, 0, "a calm pack is left alone")
+
+	demo.townsfolk.alarm.stand_down()
+	demo.natives.packs[0].state = "attack"
+	assert_eq(ctl.enemies(), [native], "a pack on the attack")
+	local.dead = true
+	native.dead = true
+	assert_eq(ctl.enemies(), [], "the dead are no one's target")
+
+
+func test_floating_droid_has_a_gun_cargo_none() -> void:
+	assert_false(DroidRoster.kind_cfg("floating").get("gun", {}).is_empty())
+	assert_lt(float(DroidRoster.kind_cfg("floating").gun.damage), float(DroidRoster.kind_cfg("assassin").gun.damage),
+		"smaller than the assassin's")
+	assert_true(DroidRoster.kind_cfg("cargo").get("gun", {}).is_empty())
+
+
+## What your droid hits counts as yours (the natives and locals hold it against you).
+func test_your_droids_shots_are_yours() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	WorldState.credits = 200
+	ctl.buy("assassin")
+	assert_true(DroidController.by_player(p, p))
+	assert_true(DroidController.by_player(ctl.companions.values()[0], p))
+	assert_false(DroidController.by_player(ctl.remnant[0], p), "the Remnant's are not yours")
+	assert_false(DroidController.by_player(null, p))

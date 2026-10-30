@@ -39,6 +39,30 @@ Plain English, newest on top. One entry per milestone.
 - **Follow-ups filed:** planet-wide sandstorms (#175) and packs stealing
   vehicles (#176).
 
+
+## Villagers draw pistols; your droids fight beside you (2026-10-29)
+
+- **Villagers carry pistols.** The port's locals (walkers, stall merchants and the
+  fence) now hold the same blaster pistol the player uses when they fight back. It
+  stays out of sight while the port is calm, comes out the moment their alarm goes
+  up, and is put away once they calm down. They used to shoot from empty hands.
+- **Your droids help in any fight.** Your assassin droid and now your floating
+  droid (a smaller, slower gun) shoot whoever you are fighting: the Remnant as
+  before, the port's locals once their alarm is up, and a native pack on the
+  attack. A Remnant droid is a target once you shot one, it shot at you, or its
+  alarm is up. They never start a fight: nobody calm is shot. Cargo droids still
+  carry no gun.
+- **What your droids hit counts as yours.** A native your droid kills locks that
+  pack hostile, and a local your droid kills costs you standing, as if you had
+  fired.
+## Remnant interceptor stands down after the fleet, flies wider loops (2026-10-30, issue #180)
+
+- **No chase once the Remnant is beaten.** After the fleet in orbit falls, the
+  barracks pad's dark interceptor stays on its pad, even for a stolen outpost ship.
+  One already in the air gives up and flies home.
+- **Bigger loops at the same speed.** Its pilot (`remnant_hunter.json`) breaks off
+  at 140 m instead of 70 m and extends to 650 m instead of 300 m before turning
+  back in, so it swings much wider around you. The ship's speeds are unchanged.
 ## Objective pointer and job log (2026-10-29)
 
 - **Always know what to do next.** A line under the banner says the next thing

@@ -9,7 +9,8 @@ extends Node
 ##   alarm     raised when the player hurts or kills any local. Every local in town
 ##             fights: walkers take cover and close in on their leash, merchants
 ##             (profile combat.hold_ground) duck behind the counter and shoot over
-##             it, never leaving the stall
+##             it, never leaving the stall. Everyone's pistol (profile "sidearm")
+##             comes out when the alarm goes up and is put away after
 ##   after     calm again when the player flees or is downed; the locals remember
 ##             the face for memory_s and start again on sight
 ##
@@ -94,6 +95,7 @@ func _physics_process(dt: float) -> void:
 	_handle(alarm.drain())
 	for g in alive:
 		var b: GuardBrain = brains[g]
+		g.drawn = alarm.active()       # pistols out while the port is up in arms
 		if alarm.active():
 			b.engage()
 			b.alarm_pos = alarm.last_known
@@ -208,14 +210,14 @@ func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
 
 func _on_local_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
 	brains[g].notify_hit()
-	if shooter == player:
+	if DroidController.by_player(shooter, player):
 		_attacked = true
 
 
 func _on_local_died(g: NpcBody) -> void:
 	kills += 1
 	claimed.erase(g)
-	if g.last_hit_by == player:
+	if DroidController.by_player(g.last_hit_by, player):
 		WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),
 			"A local was killed in the street.")
 		_attacked = true
