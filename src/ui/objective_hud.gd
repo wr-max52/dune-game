@@ -156,6 +156,16 @@ func where(target: String) -> Vector3:
 			# Issue #193: its bay from outside, its general (or the bridge) once aboard.
 			if demo.get("cruiser") != null:
 				return demo.cruiser.objective_point(_player_pos())
+		"droid_post":
+			# Issue #212: the nearest desert droid merchant's post.
+			var posts = demo.get("droid_merchant_outposts")
+			var best := Vector3.INF
+			if posts != null and is_instance_valid(posts):
+				var p := _player_pos()
+				for site in posts.sites:
+					if best == Vector3.INF or p.distance_to(site.pos) < p.distance_to(best):
+						best = site.pos
+			return best
 		"outpost":
 			if demo.outposts != null:
 				for o in demo.outposts.outposts:

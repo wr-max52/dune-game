@@ -23,6 +23,7 @@ signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
+signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search")
 
 var last_hints: Array = []                     ## the hint lines the last line set off (tests)
 signal ended(reason: String)
@@ -343,6 +344,8 @@ func _apply(kept: Array) -> Array:
 				WorldState.change_standing("locals", -2, "Someone got thrown out of the cantina.")
 			"comrade":
 				comrade_declared.emit()
+			"let_go", "search":
+				verdict.emit(t)
 			"end_conversation", "refuse_topic":
 				pass
 		applied.append(t)
