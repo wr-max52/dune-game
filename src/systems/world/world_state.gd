@@ -42,6 +42,7 @@ static var game_hours := 0.0               ## issue #96: in-game hours played (c
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 static var mode := FREEPLAY                ## issue #200: STORY or FREEPLAY, picked on New Game, kept in the save
+static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -74,6 +75,8 @@ static func reset() -> void:
 	native_camps = {}
 	game_hours = 0.0
 	mode = FREEPLAY
+	quests = {}
+	Quests.news.clear()
 
 
 ## Issue #200: a new save in STORY or FREEPLAY mode. Story starts at the first
@@ -663,6 +666,7 @@ static func to_save() -> Dictionary:
 		"native_camps": native_camps.duplicate(true),
 		"game_hours": game_hours,
 		"mode": mode,
+		"quests": quests.duplicate(true),
 	}
 
 
@@ -696,6 +700,7 @@ static func from_save(d: Dictionary) -> void:
 	native_camps = d.get("native_camps", {}).duplicate(true)
 	game_hours = float(d.get("game_hours", 0.0))
 	mode = STORY if str(d.get("mode", FREEPLAY)) == STORY else FREEPLAY    # issue #200: older saves are freeplay
+	quests = d.get("quests", {}).duplicate(true)
 
 
 static func _read_json(path: String) -> Variant:

@@ -31,7 +31,11 @@ static func home() -> bool:
 
 
 ## { text, target } for the pointer, or {} when there is nothing to point at.
+## Issue #201: an optional quest whose waypoint the player switched on comes first.
 static func current() -> Dictionary:
+	var quest := Quests.waypoint()
+	if not quest.is_empty():
+		return quest
 	var b := WorldState.bounty
 	if WorldState.bounty_collectable() and home():
 		var fence := fence_marker(true)

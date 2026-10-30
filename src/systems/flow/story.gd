@@ -86,8 +86,9 @@ static func skip_to(id: String) -> void:
 # ------------------------------------------------------------------ events
 
 ## Something happened. Moves the story on when it is what this chapter waits for.
-## Returns true if it did.
+## Returns true if it did. Issue #201: every event reaches the optional quests too.
 static func event(name: String) -> bool:
+	Quests.event(name)
 	var c := chapter_cfg()
 	if c.is_empty() or str(c.get("done_on", "")) != name or name == "":
 		return false
