@@ -1,0 +1,44 @@
+{
+ "title": "Sand nomad heads close up: the old goggle head (sand recolour), the new pack head and its three variations",
+ "crops": "res://test_results/parts/crops",
+ "cells": [
+  {
+   "name": "cu_goggles",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head"
+   ],
+   "textures": {
+    "goggles_head": "res://assets/characters/kit/colors/goggles_sand.png"
+   }
+  },
+  {
+   "name": "cu_nomad",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_head"
+   ]
+  },
+  {
+   "name": "cu_nomad_crest",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_crest_head"
+   ]
+  },
+  {
+   "name": "cu_nomad_maw",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_maw_head"
+   ]
+  },
+  {
+   "name": "cu_nomad_horn",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_horn_head"
+   ]
+  }
+ ]
+}

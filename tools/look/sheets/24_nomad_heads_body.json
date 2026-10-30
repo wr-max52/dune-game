@@ -1,0 +1,72 @@
+{
+ "title": "Sand nomad heads on a dune nomad's body (cantina owner torso and player legs in sand)",
+ "out": "res://docs/kit/nomad_heads_body.png",
+ "cells": [
+  {
+   "label": "Before: goggles (pack head)",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "goggles_head",
+    "cantina_owner_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "cantina_owner_torso": "res://assets/characters/kit/colors/cantina_owner_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png",
+    "goggles_head": "res://assets/characters/kit/colors/goggles_sand.png"
+   }
+  },
+  {
+   "label": "nomad (new pack head)",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_head",
+    "cantina_owner_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "cantina_owner_torso": "res://assets/characters/kit/colors/cantina_owner_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png"
+   }
+  },
+  {
+   "label": "nomad_crest",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_crest_head",
+    "cantina_owner_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "cantina_owner_torso": "res://assets/characters/kit/colors/cantina_owner_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png"
+   }
+  },
+  {
+   "label": "nomad_maw",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_maw_head",
+    "cantina_owner_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "cantina_owner_torso": "res://assets/characters/kit/colors/cantina_owner_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png"
+   }
+  },
+  {
+   "label": "nomad_horn",
+   "model": "res://assets/characters/kit/parts.glb",
+   "show": [
+    "nomad_horn_head",
+    "cantina_owner_torso",
+    "player_legs"
+   ],
+   "textures": {
+    "cantina_owner_torso": "res://assets/characters/kit/colors/cantina_owner_sand.png",
+    "player_legs": "res://assets/characters/kit/colors/player_sand.png"
+   }
+  }
+ ]
+}

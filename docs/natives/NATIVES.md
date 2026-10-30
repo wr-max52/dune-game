@@ -33,7 +33,10 @@ a planet gets its town, its style and its sky.
     leader's helmet and pole;
   - `styles`: per-pack colours of the kit pieces already in the game (head
     Goggles, upper body Cantina Owner, lower body Player; the leader wears the
-    Cantina Owner head);
+    Cantina Owner head). The dune nomads' head is the sand Nomad head, a
+    remake of the goggle mask in sand and bone (`docs/kit/HYPER3D_PROMPTS.md`,
+    sand nomad heads); its variations `nomad_crest`, `nomad_maw` and `nomad_horn`
+    are spares for later;
   - `soldier`: hit points, speeds and senses, as for a guard;
   - `weapons`: melee and thrown only;
   - `pack`, `trade` (food in, quartz out), `hostile` (the horn, the 5-minute
