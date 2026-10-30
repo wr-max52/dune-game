@@ -12,10 +12,10 @@ extends RefCounted
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 
 var hold_s := 0.4           ## how long a press must last to count as a hold
-var tap_steps := 4
+var tap_steps := 2
 var walk_speed := 4.0
 ## One step is half the walk animation's stride, so the steps you see are the
-## steps you get: 4 x 1.05 m = 4.2 m, which takes 1.05 s at 4 m/s.
+## steps you get: 2 x 1.05 m = 2.1 m, which takes 0.525 s at 4 m/s.
 var step_length := BodyAnimator.WALK_STRIDE * 0.5
 
 var _was_pressed := false
