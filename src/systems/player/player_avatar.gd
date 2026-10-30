@@ -19,6 +19,7 @@ extends Node3D
 
 const BodyAnimator := preload("res://src/systems/anim/body_animator.gd")
 const SwordCombo := preload("res://src/systems/combat/sword_combo.gd")
+const SwordTrail := preload("res://src/systems/anim/sword_trail.gd")
 const RETINT := preload("res://src/systems/look/shaders/weapon_retint.gdshader")
 const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 const Ads := preload("res://src/systems/look/ads.gd")
@@ -40,6 +41,7 @@ var blade_hilt := ""  ## the sword's hilt model when not the default ("" = defau
 var current := ""                  ## weapon in hand (or being drawn/holstered)
 var drawn := 0.0                   ## 0 = holstered, 1 = ready
 var sword_pose: Dictionary = {}    ## from SwordCombo.pose() while the sword is out
+var sword_trail_on := false        ## the swing is cutting: the blade leaves a SwordTrail
 var first_person := false
 var facing_yaw := 0.0              ## world yaw the body faces
 var turn_rate := 10.0              ## rad/s
@@ -71,6 +73,10 @@ var _facing_prev := 0.0
 var _facing_curr := 0.0
 var _last_tilt := Basis.IDENTITY
 var _rest_position := Vector3.ZERO
+## The sword's pose at the last two physics ticks: drawn between them (_draw_sword).
+var _sword_prev: Dictionary = {}
+var _sword_curr: Dictionary = {}
+var _trail: SwordTrail
 
 var skin: SkinnedBody              ## the rigged model over the joints (null = primitives)
 
@@ -481,6 +487,8 @@ func animate(dt: float, inp: Dictionary) -> void:
 				(w.get_node("Muzzle/Flash") as Node3D).visible = false
 	_last_upper = upper
 	_last_pitch = pitch
+	_sword_prev = _sword_curr if not _sword_curr.is_empty() else sword_pose
+	_sword_curr = sword_pose
 	_place_weapon(upper, pitch)
 	_fpv_grips(upper, dt)
 	if skin != null:
@@ -500,6 +508,37 @@ func _process(delta: float) -> void:
 		_place_weapon(_last_upper, _last_pitch)
 		if skin != null:
 			skin.sync(body)
+	_draw_sword(delta)
+
+
+## A swipe turns the blade 15-20 degrees per 60 Hz tick, which strobes on a faster
+## display: draw the sword (and the arms on it) between the last two ticks' poses,
+## as the body's position already is. Then feed the swing trail.
+func _draw_sword(delta: float) -> void:
+	if current != "energy_blade":
+		if _trail != null and not _trail.is_empty():
+			_trail.clear()
+		return
+	if CharBody.smoothing_active() and not _sword_prev.is_empty() and not _sword_curr.is_empty() \
+			and _sword_prev != _sword_curr:
+		var tick_pose := sword_pose
+		sword_pose = SwordCombo.mix(_sword_prev, _sword_curr, Engine.get_physics_interpolation_fraction())
+		_place_weapon(_last_upper, _last_pitch)
+		sword_pose = tick_pose
+		if skin != null:
+			skin.sync(body)
+	if sword_trail_on:
+		if _trail == null:
+			_trail = SwordTrail.new()
+			add_child(_trail)
+		var w := weapon_node("energy_blade")
+		if w != null:
+			_trail.color = (w.get_meta("sword") as Node3D).get_meta("color", _trail.color)
+		var p := blade_points([0.45, 1.0])
+		if p.size() == 2:
+			_trail.add(p[0], p[1])
+	if _trail != null:
+		_trail.tick(delta)
 
 
 ## Every render frame (120 Hz on a 120 Hz display; physics is 60): keep the body where

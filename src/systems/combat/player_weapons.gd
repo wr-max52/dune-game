@@ -7,7 +7,8 @@ extends Node
 ## Controls (project.godot actions):
 ##   1 / 2 / 3     blaster / energy sword / rifle   (same key again holsters)
 ##   Q             last weapon        mouse wheel   cycle        H   holster
-##   LMB (fire)    shoot / swing (press again mid-swing to chain 1-2-3)
+##   LMB (fire)    shoot / swing: a click swipes left, the next right, and so on;
+##                 a double click is the combo, left-right-centre
 ##   RMB (alt)     right-click TOGGLES: blaster aim/zoom in-out, sword block on-off
 ##                 (re-click to undo; with the sword, block just before a bolt lands
 ##                 to deflect it back)
@@ -210,6 +211,7 @@ func _physics_process(dt: float) -> void:
 	if cur == "energy_blade" and blade_extent > 0.5:
 		_intercept_bolts()
 	avatar.sword_pose = combo.pose(avatar.first_person) if cur == "energy_blade" else {}
+	avatar.sword_trail_on = cur == "energy_blade" and combo.cutting()
 	avatar.current = cur
 	avatar.drawn = holder.drawn()
 	_update_hud(dt)
@@ -366,10 +368,11 @@ func _sword_hits() -> void:
 			else:
 				target.apply_damage(dmg)
 			sword_hits += 1
-			_hitstop = 0.06
+			var heavy: bool = combo.swing_def().heavy
+			_hitstop = 0.09 if heavy else 0.06          # the combo's centre chop lands harder
 			_play("blade_clash")
 			if rig_node != null:
-				rig_node.shake(0.35)
+				rig_node.shake(0.6 if heavy else 0.35)
 			hit_something.emit(target, dmg)
 
 

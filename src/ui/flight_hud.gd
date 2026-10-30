@@ -127,6 +127,12 @@ func confirm_hit(kill: bool) -> void:
 		feedback.confirm(kill)
 
 
+## A seeker of yours hit at `at` (world space): a marker pinned there too.
+func mark_hit_at(at: Vector3, kill: bool) -> void:
+	if feedback != null:
+		feedback.mark_at(at, kill)
+
+
 ## Issue #181: you were hit.
 func flash_damage() -> void:
 	if damage_flash != null:
