@@ -1,0 +1,8 @@
+{
+  "id": "rifle_blaster",
+  "label": "Rifle blaster",
+  "kind": "weapon",
+  "value": 300,
+  "look": "rifle_case",
+  "note": "Issue #210: the rifle as something you own. In a story save the rifle can only be drawn once you have it (WorldState.weapon_allowed); one lies on the barracks roof (pickups/port_town.json)."
+}

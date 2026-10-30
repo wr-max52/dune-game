@@ -20,6 +20,9 @@ const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20
 const STORY := "story"
 const FREEPLAY := "freeplay"
 const STORY_WEAPON := "pistol_blaster"     ## issue #200: the one hand weapon a story save starts with
+const GENERAL_CARD := "res://content/core/npcs/general_card.json"
+const SHIP_REBUILT := "ship_rebuilt"        ## issue #206: T-89 rebuilt the wreck on the pit pad (a story save's own ship)
+const COMRADE := "t89_comrade"              ## issue #206: the player told T-89 they can't stand the Remnant
 
 static var standing: Dictionary = DEFAULT_STANDING.duplicate()
 static var flags: Dictionary = {}          ## name -> true
@@ -42,6 +45,10 @@ static var game_hours := 0.0               ## issue #96: in-game hours played (c
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 static var mode := FREEPLAY                ## issue #200: STORY or FREEPLAY, picked on New Game, kept in the save
+static var ship_fits: Dictionary = {}      ## issue #207: ship id -> [upgrade id] T-89 fitted (ShipUpgrades)
+static var gear_fits: Array = []           ## issues #208, #209: fence offers bought (GearUpgrades)
+static var wreck_ship := ""                ## issue #207: the ship id of the wreck T-89 rebuilt ("" = none)
+static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -74,6 +81,11 @@ static func reset() -> void:
 	native_camps = {}
 	game_hours = 0.0
 	mode = FREEPLAY
+	quests = {}
+	Quests.news.clear()
+	ship_fits = {}
+	wreck_ship = ""
+	gear_fits = []
 
 
 ## Issue #200: a new save in STORY or FREEPLAY mode. Story starts at the first
@@ -96,10 +108,31 @@ static func story_mode() -> bool:
 	return mode == STORY
 
 
+## Issue #206: the player owns a ship: the wreck T-89 rebuilt, or one bought from him.
+static func owns_ship() -> bool:
+	return has_flag(SHIP_REBUILT) or hangar != ""
+
+
 ## Issue #200: may the player draw hand weapon `id`? Freeplay: all of them. Story:
-## the pistol, and any other once something sets its "weapon_<id>" flag.
+## the pistol, and any other once you own it (issue #210: the rifle on the barracks
+## roof, the blade on the cantina tower) or something sets its "weapon_<id>" flag.
 static func weapon_allowed(id: String) -> bool:
-	return not story_mode() or id == STORY_WEAPON or has_flag("weapon_" + id)
+	return not story_mode() or id == STORY_WEAPON or inventory.has(id) or has_flag("weapon_" + id)
+
+
+## Issue #203: searched on the spot (the general's guards): the gate's rules, so
+## whatever contraband is in your pockets is taken (a droid's hold is not
+## searched). Returns the item ids taken.
+static func search_player() -> Array:
+	var taken: Array = []
+	for id in inventory.item_ids():
+		if bool(_item(str(id)).get("contraband", false)):
+			while inventory.has(str(id)):
+				inventory.remove(str(id))
+			taken.append(str(id))
+	bump("searches")
+	log_event("Searched by the Remnant%s." % (": they took %s" % ", ".join(PackedStringArray(taken)) if not taken.is_empty() else ""))
+	return taken
 
 
 # ------------------------------------------------------------------ writes
@@ -489,6 +522,8 @@ static func on_bounty_killed() -> void:
 		return
 	bounty.state = "dead"
 	bump("bounties_killed")
+	if bool(bounty.get("general", false)):
+		set_flag("general_dead")          # issue #213: the general is gone for good
 	change_standing("imperial_remnant", -5)
 	change_standing("locals", 3)
 	log_event(str(Story.bounty_cfg().get("event_killed", "%s was found dead.")) % str(bounty.name))
@@ -512,6 +547,13 @@ static func on_cruiser_taken(general: String, reward: Dictionary, line: String =
 	log_event(line % general if line.contains("%s") else ("%s was killed aboard the Remnant cruiser." % general))
 	Story.event("cruiser_taken")
 	return pay
+
+
+## Issue #213: Oda's first bounty in a story save goes on the general himself
+## when your Remnant standing is -15 or lower (unfriendly or worse) and he lives.
+static func general_target() -> bool:
+	return story_mode() and Story.chapter() == "bounty" and not has_flag("general_dead") \
+		and int(standing.get("imperial_remnant", 0)) <= int(Story.bounty_cfg().get("general_standing", -15))
 
 
 ## Paid at the fence. Returns the credits, or 0 when nothing is owed.
@@ -550,6 +592,14 @@ static func _roll_bounty() -> void:
 	var first := count("bounties_paid") == 0
 	var last := str(bounty.get("outpost", ""))
 	var choices := Story.OUTPOSTS.filter(func(o): return o != last)
+	if first and general_target():
+		# Issue #213: the man who's been giving you jobs is your first assassination.
+		bounty = {
+			"run": run, "key": "npc:general", "name": str(NpcBrain._read(GENERAL_CARD).get("name", "the general")),
+			"crime": str(cfg.get("general_crime", "He runs this port for the Remnant.")),
+			"outpost": Story.OUTPOSTS[0], "pay": int(cfg.get("first_pay", 600)), "state": "rolled", "general": true,
+		}
+		return
 	var who := NameHooks.person(Story.target_naming(), key)
 	bounty = {
 		"run": run, "key": key, "name": who if who != "" else "the officer",
@@ -663,6 +713,10 @@ static func to_save() -> Dictionary:
 		"native_camps": native_camps.duplicate(true),
 		"game_hours": game_hours,
 		"mode": mode,
+		"quests": quests.duplicate(true),
+		"ship_fits": ship_fits.duplicate(true),
+		"wreck_ship": wreck_ship,
+		"gear_fits": gear_fits.duplicate(),
 	}
 
 
@@ -687,6 +741,8 @@ static func from_save(d: Dictionary) -> void:
 	droids.from_save(d.get("droids", {}))
 	hangar = str(d.get("hangar", ""))
 	story = d.get("story", {}).duplicate()
+	if story.has("chapter"):
+		story.chapter = Story.renamed(str(story.chapter))     # issue #215: chapters renamed since
 	if not d.has("story"):
 		smuggle = {}           # issue #64: a save from before the story; its old drop goes with it
 	bounty = d.get("bounty", {}).duplicate()
@@ -696,6 +752,10 @@ static func from_save(d: Dictionary) -> void:
 	native_camps = d.get("native_camps", {}).duplicate(true)
 	game_hours = float(d.get("game_hours", 0.0))
 	mode = STORY if str(d.get("mode", FREEPLAY)) == STORY else FREEPLAY    # issue #200: older saves are freeplay
+	quests = d.get("quests", {}).duplicate(true)
+	ship_fits = d.get("ship_fits", {}).duplicate(true)
+	wreck_ship = str(d.get("wreck_ship", ""))
+	gear_fits = d.get("gear_fits", []).duplicate()
 
 
 static func _read_json(path: String) -> Variant:

@@ -95,18 +95,18 @@ func test_docking_from_the_far_side_goes_over_the_hull_and_ends_over_the_pad() -
 	assert_between(last.y - pad.y, 5.0, 40.0, "low enough to set down, under the bay's ceiling")
 
 
-func test_oda_sends_you_to_the_cruiser_after_the_fleet() -> void:
+func test_the_fleet_ends_the_story_and_the_cruiser_is_optional() -> void:
 	var ids := Story.chapter_ids()
-	assert_eq(ids.find("cruiser"), ids.find("fleet") + 1)
-	assert_eq(ids.find("free"), ids.find("cruiser") + 1)
+	assert_eq(ids.find("cruiser"), -1, "issue #215: no cruiser chapter; it waits in orbit")
 	Story.skip_to("fleet")
 	assert_true(Story.event("fleet_beaten"))
-	assert_eq(Story.chapter(), "cruiser")
-	assert_true(Story.cruiser_mission(), "the climb out meets the escort")
+	assert_eq(Story.chapter(), "end")
+	assert_false(Story.cruiser_mission())
 
 
-func test_the_generals_death_pays_once_and_ends_the_story() -> void:
-	Story.skip_to("cruiser")
+func test_the_generals_death_pays_once() -> void:
+	Story.skip_to("free")
+	WorldState.set_flag("cruiser_taken", false)
 	var reward: Dictionary = CruiserHull.data().get("reward", {})
 	var credits := WorldState.credits
 	var locals := int(WorldState.standing.get("locals", 0))
@@ -115,7 +115,6 @@ func test_the_generals_death_pays_once_and_ends_the_story() -> void:
 	assert_eq(WorldState.credits, credits + int(reward.credits))
 	assert_gt(int(WorldState.standing.get("locals", 0)), locals + 40, "the locals love you for it")
 	assert_true(Story.cruiser_taken())
-	assert_eq(Story.chapter(), "free")
 	assert_false(Story.cruiser_mission())
 	assert_eq(WorldState.on_cruiser_taken("General Test", reward), 0, "never paid twice")
 
@@ -124,4 +123,4 @@ func test_taken_before_oda_asked_skips_her_chapter() -> void:
 	Story.skip_to("fleet")
 	WorldState.set_flag("cruiser_taken")
 	Story.event("fleet_beaten")
-	assert_eq(Story.chapter(), "free")
+	assert_eq(Story.chapter(), "end")

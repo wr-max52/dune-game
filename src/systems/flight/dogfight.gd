@@ -100,6 +100,8 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 	if cfg.is_empty():
 		push_warning("Dogfight: unknown ship id: ", ship_id)
 		return -1
+	if is_player:
+		cfg = ShipUpgrades.apply(cfg, ship_id)      # issue #207: what T-89 fitted
 	var id := _next_id
 	_next_id += 1
 	var flight = FlightModel.new(cfg.get("flight", {}))

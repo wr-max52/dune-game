@@ -6,7 +6,11 @@ extends CanvasLayer
 ## centred: the middle of the top is where arrival titles and toasts go.
 ##
 ## It only reads. `demo` (town_demo.gd) turns the objective's target word into a
-## place: live bodies, town markers, the range, the pit, the desert outposts.
+## place: live bodies, town markers, the range, the pit, the desert outposts, the
+## crashed cruiser ("wreck", issue #205).
+##
+## Issue #201: a new optional quest (Quests.take_news) shows a toast in the top
+## right for TOAST_TIME seconds.
 
 const REFRESH := 0.25                 ## seconds between re-reading the objective
 const AMBER := Color("#e0a050")
@@ -14,13 +18,16 @@ const INK := Color(0.95, 0.92, 0.85, 0.95)
 const TOP := 48.0                     ## below RetroHud's 40 px banner
 const EDGE := 36.0                    ## the diamond stays this far inside the screen
 const LEFT := 26.0                    ## the arrow's centre from the left edge; the text starts after it
+const TOAST_TIME := 5.0
 
 var demo                              ## town_demo.gd
 var label: Label
 var marks: Control                    ## draws the arrow and the diamond
 var objective: Dictionary = {}        ## the last Objective.current()
 var target_pos := Vector3.INF         ## where it points, INF = nowhere (text only)
+var quest_toast: Label                ## issue #201: "Press "I" to see new quest"
 var _left := 0.0
+var _toast_left := 0.0
 
 
 func _init() -> void:
@@ -47,10 +54,27 @@ func _ready() -> void:
 	label.add_theme_constant_override("outline_size", 5)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(label)
+	quest_toast = Label.new()
+	quest_toast.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	quest_toast.offset_left = -460.0
+	quest_toast.offset_right = -24.0
+	quest_toast.offset_top = TOP
+	quest_toast.offset_bottom = TOP + 28
+	quest_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	quest_toast.add_theme_font_size_override("font_size", 18)
+	quest_toast.add_theme_color_override("font_color", AMBER)
+	quest_toast.add_theme_color_override("font_outline_color", Color.BLACK)
+	quest_toast.add_theme_constant_override("outline_size", 5)
+	quest_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	quest_toast.visible = false
+	add_child(quest_toast)
 	refresh()
 
 
 func _process(dt: float) -> void:
+	if _toast_left > 0.0:
+		_toast_left -= dt
+		quest_toast.visible = _toast_left > 0.0
 	_left -= dt
 	if _left <= 0.0:
 		_left = REFRESH
@@ -66,6 +90,10 @@ func refresh() -> void:
 	target_pos = where(str(objective.get("target", "")))
 	label.text = text_line()
 	label.visible = not objective.is_empty()
+	if not Quests.take_news().is_empty():
+		quest_toast.text = Objective.line("quest_toast")
+		quest_toast.visible = true
+		_toast_left = TOAST_TIME
 
 
 ## "Find Oda Vell at the cantina   84 m"
@@ -102,7 +130,15 @@ func where(target: String) -> Vector3:
 		"npc":
 			if id == "cantina_owner" and demo.cantina_owner != null and is_instance_valid(demo.cantina_owner):
 				return demo.cantina_owner.global_position
+			var g = demo.get("general_post")
+			if id == "general" and g != null and is_instance_valid(g) and g.body != null and g.body.visible:
+				return g.body.global_position          # issue #203: wherever he stands now
 			return _marker(id)
+		"wreck":
+			# Issue #205: the crashed cruiser on the horizon.
+			var pl = demo.get("pilot")
+			if pl != null and pl.ground != null and StarcruiserWreck.has_wreck(pl.ground):
+				return StarcruiserWreck.frame(pl.ground).origin
 		"marker":
 			return _marker(id)
 		"range":

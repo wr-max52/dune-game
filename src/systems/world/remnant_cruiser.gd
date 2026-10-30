@@ -56,6 +56,7 @@ var _label: Label
 var _was_aboard := false
 var _last_aboard := Vector3.INF
 var _mats: Dictionary = {}
+var _flames: Array = []                ## the engines' flame nodes (Node3D), to flicker
 
 static var _meshes: Dictionary = {}    ## finish -> ArrayMesh, built once a session
 
@@ -432,6 +433,8 @@ func _build_look() -> void:
 	var groups := {}
 	for p in CruiserHull.parts():
 		var f := str(p.finish)
+		if f == "hidden":
+			continue                       # solid only (the bells' boxes): drawn round
 		if f == "pad":
 			_pad(p, noise)
 			continue
@@ -503,46 +506,116 @@ static func _emissive(c: Color, energy: float) -> StandardMaterial3D:
 	return m
 
 
-## The four engine bells on the stern, their glowing mouths and a soft plume each.
+## The engines on the stern (CruiserHull.engines; their housings are hull parts).
+## Each bell flares from a throat deep in its housing out to its mouth: plated
+## outside with a rim and stiffening rings, a liner inside glowing blue toward a
+## white-hot throat, and its flame out of the mouth.
 func _engines() -> void:
-	var bell_mat: Material = _mats["trim"]
-	var glow := _emissive(Color("#bfe6ff"), 7.0)
-	var plume := StandardMaterial3D.new()
-	plume.albedo_color = Color(0.45, 0.75, 1.0, 0.22)
-	plume.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	plume.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	plume.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	plume.cull_mode = BaseMaterial3D.CULL_DISABLED
-	var along := Basis(Vector3.RIGHT, PI * 0.5)       # a cylinder's axis (y) down the keel (z)
+	var trim: Material = _mats["trim"]
+	var liner := _emissive(Color("#1a4f9c"), 1.6)
+	liner.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var throat := _emissive(Color("#eefaff"), 9.0)
+	var ring_glow := _emissive(Color("#4aa8ff"), 2.4)
+	var aft := Basis(Vector3.RIGHT, PI * 0.5)         # a cylinder's +y turned aft (+z)
 	for e in CruiserHull.engines():
-		var c: Vector3 = e.at
+		var c: Vector3 = e.at                        # the mouth
 		var r := float(e.radius)
-		var bell := CylinderMesh.new()
-		bell.top_radius = r * 0.8
-		bell.bottom_radius = r
-		bell.height = 12.0
-		bell.radial_segments = 24
-		_mesh(bell, bell_mat, Transform3D(along, c + Vector3(0, 0, -4.0)))
-		var mouth := CylinderMesh.new()
-		mouth.top_radius = r * 0.82
-		mouth.bottom_radius = r * 0.82
-		mouth.height = 0.4
-		mouth.radial_segments = 24
-		_mesh(mouth, glow, Transform3D(along, c + Vector3(0, 0, 2.0)))
-		var cone := CylinderMesh.new()
-		cone.top_radius = r * 0.75
-		cone.bottom_radius = r * 0.15
-		cone.height = 46.0
-		cone.radial_segments = 16
-		cone.cap_top = false
-		cone.cap_bottom = false
-		_mesh(cone, plume, Transform3D(along, c + Vector3(0, 0, 25.0)))
+		var aux := bool(e.aux)
+		var length := CruiserHull.BELL_LENGTH * (0.5 if aux else 1.0)
+		var tr := r * 0.55                           # the throat
+		var mid := c - Vector3(0, 0, length * 0.5)
+		_mesh(_cyl(r, tr, length, 40, false), trim, Transform3D(aft, mid))
+		_mesh(_cyl(r * 0.94, tr * 0.92, length, 40, false), liner, Transform3D(aft, mid))
+		_mesh(_cyl(tr * 0.92, tr * 0.92, 0.3, 32), throat, Transform3D(aft, c - Vector3(0, 0, length - 0.4)))
+		# The rim round the mouth, and rings round the bell (the last one glowing).
+		_mesh(_ring(r, r * 0.1), trim, Transform3D(aft, c))
+		for k in 3:
+			var d := length * (0.22 + k * 0.2)
+			var rr := lerpf(r, tr, d / length) + 0.15
+			_mesh(_ring(rr, r * (0.05 if k < 2 else 0.035)), trim if k < 2 else ring_glow, Transform3D(aft, c - Vector3(0, 0, d)))
+		_flame(c, r * 0.95, r * (5.0 if aux else 6.5))
 		var light := OmniLight3D.new()
-		light.light_color = Color("#9fd6ff")
-		light.light_energy = 3.0
-		light.omni_range = 70.0
+		light.light_color = Color("#7cc4ff")
+		light.light_energy = 2.5 if aux else 4.0
+		light.omni_range = r * 8.0
 		_hull.add_child(light)
-		light.position = c + Vector3(0, 0, 12.0)
+		light.position = c + Vector3(0, 0, r * 1.5)
+
+
+## A flame out of a bell's mouth at `at`, aft: the jetpack's flame (ItemKit._flame)
+## grown to the cruiser's size and burning blue. `nr` is its radius at the mouth,
+## `fh` its length. Layered and additive: a white-hot mouth and core, a pale blue
+## body, a blue outer cone, a faint violet plume, and shock diamonds down the
+## middle. Its -y runs aft; _flicker() makes its length waver.
+func _flame(at: Vector3, nr: float, fh: float) -> void:
+	var fl := Node3D.new()
+	fl.name = "Flame"
+	_hull.add_child(fl)
+	fl.transform = Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), at)
+	_flames.append(fl)
+	var hot := Color("#d9f3ff")
+	var body := Color("#5cb6ff")
+	var outer := Color("#2b6cff")
+	var tail := Color("#5b3dff")
+	var parts := [
+		[_cyl(nr * 0.95, nr * 0.95, 0.3, 32), _plume(hot.lerp(Color.WHITE, 0.5), 6.0, 1.0), -0.15],
+		[_cyl(nr * 0.55, 0.0, fh * 0.4, 24), _plume(hot.lerp(Color.WHITE, 0.3), 5.0, 0.9), -fh * 0.2],
+		[_cyl(nr * 0.85, nr * 0.1, fh * 0.75, 24), _plume(hot.lerp(body, 0.5), 3.0, 0.6), -fh * 0.375],
+		[_cyl(nr * 1.05, 0.0, fh, 24), _plume(body.lerp(outer, 0.5), 2.2, 0.45), -fh * 0.5],
+		[_cyl(nr * 1.4, nr * 0.3, fh * 0.85, 24), _plume(tail, 1.4, 0.16), -fh * 0.5],
+	]
+	for i in 4:
+		var s := SphereMesh.new()
+		s.radius = nr * (0.32 - i * 0.06)
+		s.height = s.radius * 2.0
+		s.radial_segments = 16
+		s.rings = 8
+		parts.append([s, _plume(hot.lerp(Color.WHITE, 0.6), 6.0, 0.8), -fh * (0.16 + i * 0.15)])
+	for p in parts:
+		var mi := _mesh(p[0], p[1], Transform3D(Basis.IDENTITY, Vector3(0, float(p[2]), 0)), fl)
+		if p[0] is SphereMesh:
+			mi.scale = Vector3(1.0, 1.8, 1.0)
+
+
+## The flames waver, each out of step with the others (as the jetpack's do).
+func _flicker() -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	for i in _flames.size():
+		var k := 1.0 + 0.07 * sin(t * 17.0 + i * 2.1) + 0.04 * sin(t * 43.0 + i * 0.7)
+		var w := 1.0 + 0.025 * sin(t * 29.0 + i * 1.3)
+		(_flames[i] as Node3D).scale = Vector3(w, k, w)
+
+
+## An unshaded, additive flame layer: `alpha` sets how much it adds.
+static func _plume(color: Color, energy: float, alpha: float) -> StandardMaterial3D:
+	var m := _emissive(color, energy)
+	m.albedo_color.a = alpha
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return m
+
+
+static func _cyl(top: float, bottom: float, h: float, seg: int, caps := true) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = top
+	c.bottom_radius = bottom
+	c.height = h
+	c.radial_segments = seg
+	c.rings = 1
+	c.cap_top = caps
+	c.cap_bottom = caps
+	return c
+
+
+## A ring of radius `r` (to its tube's middle), `tube` thick, round its own y.
+static func _ring(r: float, tube: float) -> TorusMesh:
+	var t := TorusMesh.new()
+	t.inner_radius = r - tube
+	t.outer_radius = r + tube
+	t.rings = 48
+	t.ring_segments = 8
+	return t
 
 
 ## The sensor globes on the tower's roof, in the hull's own grey.
@@ -557,13 +630,13 @@ func _globes() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 
 
-func _mesh(mesh: Mesh, mat: Material, xf: Transform3D) -> MeshInstance3D:
+func _mesh(mesh: Mesh, mat: Material, xf: Transform3D, parent: Node3D = null) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.transform = xf
-	_hull.add_child(mi)
+	(parent if parent != null else _hull).add_child(mi)
 	return mi
 
 
@@ -618,6 +691,7 @@ func _build_label() -> void:
 
 
 func _process(_dt: float) -> void:
+	_flicker()
 	if _label == null:
 		return
 	var pilot = demo.pilot

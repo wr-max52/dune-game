@@ -5,7 +5,9 @@ extends CanvasLayer
 ## the Remnant would confiscate at the gate. Beside it, the job log: the story's
 ## chapter, the drop or goods you are running, the bounty out, and any job taken
 ## (Objective.log_entries). No game logic: GearController hands it the inventory
-## and the item data; it only reads.
+## and the item data; it only reads. Issue #201: under the jobs, the optional
+## quests (Quests.entries) with a waypoint toggle each; the mouse is free while
+## the panel is open so the toggles can be clicked.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
@@ -16,6 +18,8 @@ const MARGIN := Vector2(16, 48)   ## kept clear on each side: the HUD's banner a
 var inventory: Inventory          ## null = WorldState.inventory, read fresh (a load replaces it)
 var content                       ## CoreContent (item labels, values, contraband)
 var name_of: Callable             ## id -> shown name (GearController._shown); optional
+var toggle_item: Callable         ## issue #209: id -> put a worn item on or off (GearController.toggle_item); optional
+var wear_buttons: Dictionary = {}  ## item id -> its Wear / Take off button (tests)
 var panel: PanelContainer
 var title: Label
 var credits_label: Label
@@ -23,6 +27,8 @@ var list: VBoxContainer
 var jobs: VBoxContainer
 var rows: Array = []              ## the text of each row, for tests
 var job_rows: Array = []          ## the job log's text, title then line, for tests
+var quest_buttons: Dictionary = {}  ## quest id -> its waypoint toggle (tests)
+var _mouse_before := Input.MOUSE_MODE_VISIBLE
 
 
 func _init() -> void:
@@ -104,7 +110,11 @@ func toggle() -> void:
 func open() -> void:
 	_fit()
 	refresh()
+	if not panel.visible:
+		_mouse_before = Input.mouse_mode
 	panel.visible = true
+	if DisplayServer.get_name() != "headless":
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 ## Centre the panel at SIZE, or smaller when the screen (after the text scale)
@@ -119,13 +129,18 @@ func _fit() -> void:
 
 
 func close() -> void:
+	if not panel.visible:
+		return
 	panel.visible = false
+	if DisplayServer.get_name() != "headless":
+		Input.mouse_mode = _mouse_before
 
 
 ## Rebuild the rows from the inventory as it is now.
 func refresh() -> void:
 	_job_log()
 	rows.clear()
+	wear_buttons.clear()
 	for c in list.get_children():
 		c.queue_free()
 	credits_label.text = "Credits:  %d cr" % WorldState.credits
@@ -150,6 +165,8 @@ func refresh() -> void:
 			row += "   CONTRABAND"
 		rows.append(row)
 		_wrap(_text(list, row, 16, RED if illegal else INK))
+		if toggle_item.is_valid() and str(it.get("slot", "")) != "":
+			_wear_button(str(id), inv.is_attached(str(id)))
 
 
 ## The job log, from Objective: a title over each entry's line, then the tally.
@@ -163,8 +180,53 @@ func _job_log() -> void:
 			_text(jobs, str(e.title), 13, AMBER)
 		job_rows.append(str(e.text))
 		_wrap(_text(jobs, str(e.text), 14, INK))
+	_quest_log()
 	job_rows.append(Objective.tally())
 	_text(jobs, job_rows[-1], 13, Color(INK, 0.6))
+
+
+## Issue #201: the optional quests under their own heading: title and status,
+## the text, and a waypoint toggle while it is open and has somewhere to point.
+func _quest_log() -> void:
+	quest_buttons.clear()
+	var qs := Quests.entries()
+	if qs.is_empty():
+		return
+	job_rows.append(Objective.line("log_quests"))
+	_text(jobs, job_rows[-1], 15, AMBER)
+	for q in qs:
+		var head := "%s   (%s)" % [str(q.title).to_upper(), Objective.line("quest_done" if q.done else "quest_open")]
+		job_rows.append(head)
+		_text(jobs, head, 13, Color(AMBER, 0.6) if q.done else AMBER)
+		job_rows.append(str(q.text))
+		_wrap(_text(jobs, str(q.text), 14, Color(INK, 0.6) if q.done else INK))
+		if not q.can_point:
+			continue
+		var b := Button.new()
+		b.text = Objective.line("quest_point_on" if q.waypoint else "quest_point_off")
+		b.toggle_mode = true
+		b.button_pressed = q.waypoint
+		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		var id := str(q.id)
+		b.pressed.connect(func():
+			Quests.toggle_waypoint(id)
+			refresh())
+		jobs.add_child(b)
+		quest_buttons[id] = b
+
+
+## Issue #209: a worn item's toggle (the jetpack, the armour).
+func _wear_button(id: String, on: bool) -> void:
+	var b := Button.new()
+	b.text = "Take off" if on else "Wear"
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.pressed.connect(func():
+		toggle_item.call(id)
+		refresh())
+	list.add_child(b)
+	wear_buttons[id] = b
 
 
 func _wrap(l: Label) -> void:

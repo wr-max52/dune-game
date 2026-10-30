@@ -68,6 +68,10 @@ const WALK_HALF := 7.0
 const TOWER_X := 30.0
 const TOWER_Z := Vector2(212.0, 330.0)
 const TOWER_TOP := 76.0
+## The engines on the stern: their housings' fore and aft faces, and how far each
+## main bell runs (an aux bell half that) back to its mouth, out past its housing.
+const HOUSING_Z := Vector2(333.0, 347.0)
+const BELL_LENGTH := 20.0
 ## Where the cruiser's own gravity holds (its frame): the hull and a margin round it.
 const GRAVITY_BOX := AABB(Vector3(-80, -60, -380), Vector3(160, 160, 760))
 
@@ -563,7 +567,7 @@ static func _tower(out: Array) -> void:
 
 ## Turrets along the dorsal deck, a long armoured spine, the superstructure
 ## stepping up toward the tower, a keel fin, the sensor globes' mounts and the
-## engines' housings. The bells and the globes themselves are drawn by
+## engines (_engine_block). The bells and the globes themselves are drawn by
 ## RemnantCruiser.
 static func _dorsal(out: Array) -> void:
 	var top: float = (HULL[2] as Vector2).y
@@ -587,10 +591,43 @@ static func _dorsal(out: Array) -> void:
 			for bx: float in [-1.4, 1.4]:
 				_box(out, "turret_%d_%s_gun_%d" % [i, "s" if side > 0 else "p", int(bx * 10)], Vector3(0.7, 0.7, 9),
 					c + Vector3(bx, 4.8, -7.5), "trim")
-	# Engine housings: four armoured blocks on the stern the bells sit in.
+	_engine_block(out)
+
+
+## The engines' housings on the stern: an armoured block round each bell, a frame
+## round its mouth and cooling fins down the outer side; the two on each side are
+## braced into one nacelle. The bells stand out past the housings: each has a box
+## round it that a ship hits and that is not drawn (RemnantCruiser draws the bell).
+static func _engine_block(out: Array) -> void:
+	var hz := HOUSING_Z
+	var mid := (hz.x + hz.y) * 0.5
+	var deep := hz.y - hz.x
 	for e in engines():
 		var c: Vector3 = e.at
-		_box(out, "engine_housing_%d" % int(e.i), Vector3(30, 26, 14), Vector3(c.x, c.y, 333.0 + 7.0), "hull")
+		var r: float = e.radius
+		var i := int(e.i)
+		var w := r * 2.7
+		var h := r * 2.36
+		_box(out, "engine_housing_%d" % i, Vector3(w, h, deep), Vector3(c.x, c.y, mid), "hull")
+		# The frame round the mouth, on the housing's aft face.
+		var fz := hz.y + 0.8
+		_box(out, "engine_frame_%d_top" % i, Vector3(w + 2.0, 2.0, 1.6), Vector3(c.x, c.y + h * 0.5, fz), "trim")
+		_box(out, "engine_frame_%d_bottom" % i, Vector3(w + 2.0, 2.0, 1.6), Vector3(c.x, c.y - h * 0.5, fz), "trim")
+		for sx: float in [-1.0, 1.0]:
+			_box(out, "engine_frame_%d_%d" % [i, int(sx)], Vector3(2.0, h, 1.6), Vector3(c.x + sx * w * 0.5, c.y, fz), "trim")
+		var bell_len := BELL_LENGTH * (0.5 if bool(e.aux) else 1.0)
+		var stand := c.z - hz.y
+		_box(out, "engine_bell_%d" % i, Vector3(r * 2.0, r * 2.0, stand), Vector3(c.x, c.y, hz.y + stand * 0.5), "hidden")
+		if bool(e.aux):
+			continue
+		# Cooling fins down the outer side.
+		var side := signf(c.x)
+		for k in 5:
+			_box(out, "engine_fin_%d_%d" % [i, k], Vector3(3.0, 0.5, deep - 3.0),
+				Vector3(c.x + side * (w * 0.5 + 1.5), c.y - h * 0.5 + 3.0 + k * (h - 6.0) / 4.0, mid), "trim")
+	# Braces between the upper and lower housing on each side: one nacelle.
+	for sx: float in [-1.0, 1.0]:
+		_box(out, "engine_brace_%d" % int(sx), Vector3(28.0, 6.0, deep - 2.0), Vector3(sx * 25.0, 3.0, mid), "trim")
 
 
 ## The two sensor globes on the tower's roof: centre and radius.
@@ -599,14 +636,16 @@ static func globes() -> Array:
 		{ "i": 1, "at": Vector3(17, TOWER_TOP + 13.0, 296), "radius": 7.0 }]
 
 
-## The four engines on the stern: where each bell's mouth is and how big.
+## The engines on the stern: four mains in two nacelles and a small aux between
+## them. Where each bell's mouth is, how big, and whether it is the aux.
 static func engines() -> Array:
 	var out: Array = []
 	var i := 0
 	for y: float in [-12.0, 18.0]:
 		for x: float in [-25.0, 25.0]:
-			out.append({ "i": i, "at": Vector3(x, y, 347.0), "radius": 11.0 })
+			out.append({ "i": i, "at": Vector3(x, y, HOUSING_Z.y + BELL_LENGTH * 0.45), "radius": 11.0, "aux": false })
 			i += 1
+	out.append({ "i": i, "at": Vector3(0, 3, HOUSING_Z.y + BELL_LENGTH * 0.25), "radius": 5.5, "aux": true })
 	return out
 
 

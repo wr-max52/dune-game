@@ -100,6 +100,7 @@ var droid_merchant_outposts: DroidMerchantOutposts
 @export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
 var salesman: ShipSalesman
 @export var with_beast := true        ## issue #220: the planet's beast that rolls about the desert (touch = death)
+var general_post: GeneralPost         ## issue #203: the Remnant general (story saves)
 @export var with_natives := true      ## issue #96: native packs and wild animals (when the planet has any)
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
 var outposts: RemnantOutposts
@@ -259,6 +260,13 @@ func build_plan(staged_build: bool) -> Array:
 	add.call("salesman", LATER, func():
 		if with_salesman and gear != null:
 			_build_salesman()
+		return true)
+	add.call("end_card", LATER, func():
+		add_child(EndCard.new())          # issue #214: shows itself when the story ends
+		return true)
+	add.call("general", LATER, func():
+		if gear != null and str(planet.get("id", PlanetGen.home_id())) == PlanetGen.home_id():
+			_build_general()
 		return true)
 	add.call("mechanic", LATER, func():
 		if speeder_post != null and gear != null:
@@ -878,6 +886,16 @@ func _build_salesman() -> void:
 		salesman.attach_host(bar)
 
 
+## Issue #203: the Remnant general (story saves; GeneralPost stands him wherever
+## the story has him). He joins the bar's host as an AI character.
+func _build_general() -> void:
+	general_post = GeneralPost.new()
+	general_post.setup(self, _player, gear)
+	add_child(general_post)
+	if bar != null:
+		general_post.attach_host(bar)
+
+
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the
 ## people (bodies, the cantina owner, and the brains that run them) and the small
 ## props (lamps, banners, boulders). ShipPilot feeds it the viewer's altitude.
@@ -959,6 +977,9 @@ func _build_gear() -> void:
 		gear.ground_at = platform.ground_at      # the void: the deck's own fall handles it
 	if pilot != null:
 		gear.ground = pilot.ground      # issue #121: a staged handoff builds the ship first
+	gear.on_refit = func():             # issue #208: the fence's gun upgrades
+		if player_kit != null and player_kit.weapons != null:
+			player_kit.weapons.refit()
 	add_child(gear)
 
 

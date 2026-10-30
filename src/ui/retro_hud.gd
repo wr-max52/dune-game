@@ -198,6 +198,10 @@ func info_text() -> String:
 	t.append("TIME      %s  %s" % [clock_text(), str(WorldState.time_of_day).to_upper()])
 	t.append("CREDITS   %d" % WorldState.credits)
 	t.append("SPEEDERS  %d" % WorldState.count("speeders_owned"))
+	for s in ShipUpgrades.owned_lines():                # issue #207: your ships and their upgrades
+		t.append("SHIP      " + str(s).left(52))
+	if GearUpgrades.owned_line() != "":                 # issue #208: the fence's upgrades
+		t.append("GEAR      " + GearUpgrades.owned_line().left(52))
 	t.append("")
 	t.append("==[ STANDING ]=================")
 	for f in WorldState.FACTIONS:

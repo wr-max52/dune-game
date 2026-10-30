@@ -36,7 +36,8 @@ extends Node
 ##     fight running or not) flies her round its hull, in through its bay's mouth and
 ##     down onto its empty pad (dock()); Space lifts off again, out through the bay.
 ##     While Oda has you on the cruiser, the climb out meets its escort instead of
-##     the pad's fight.
+##     the pad's fight. Its hull is solid in a fight too, and flying in through the
+##     bay's mouth or landing on it (C) breaks the fight off.
 ##   - issue #181: the guns' hits pop the hit marker (ships, NPCs, anything that
 ##     takes damage; in space the fight's own hits and kills), being hit flashes the
 ##     screen's edge red, and the HUD is a flight-sim HUD in the chase view and a
@@ -114,6 +115,7 @@ var docking := false              ## issue #193: Z by the cruiser: she is flying
 var dockings := 0                 ## times that brought her down there (traces, tests)
 var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
+var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
 
 
 func setup(town_scene) -> void:
@@ -182,7 +184,9 @@ func _ready() -> void:
 		travel.staged = "staging" in demo and bool(demo.staging)    # issue #121: a handoff's first frame
 		travel.setup(self, demo.planet.get("neighbours", []), demo.use_look)
 		demo.add_child(travel)
-	if str(demo._arrival.get("mode", "")) == "reentry":
+	if str(demo._arrival.get("mode", "")) == "" and WorldState.story_mode() and Story.chapter() == "land":
+		opening_landing.call_deferred()      # issue #202: the story opens with the landing
+	elif str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
 	elif str(demo._arrival.get("mode", "")) == "travel":
 		arrive_from_space(demo._arrival)
@@ -247,6 +251,30 @@ func add_outpost_berth(v: Node3D, id: String, outpost_id: String) -> int:
 	return i
 
 
+## May the player board berth `i`? (berth_open: the rule.)
+func berth_flies(i: int) -> bool:
+	return berth_open(berths[i], i)
+
+
+## Issue #64: the port's ships fly once Oda tells you about the fleet. Issue #206:
+## a story save has no free keys in the pit: only a ship you own flies (berth 0,
+## the pit pad's, once T-89 rebuilt your wreck or when you flew in on it; one he
+## sold you, "owned"). An outpost's ship is still there to steal once ships fly.
+static func berth_open(b: Dictionary, i: int) -> bool:
+	if not WorldState.story_mode() or b.has("outpost"):
+		return Story.ships_unlocked()
+	if bool(b.get("owned", false)):
+		return true
+	return i == 0 and (WorldState.has_flag(WorldState.SHIP_REBUILT) or GameFlow.flown_ship != "")
+
+
+## Why berth `i` will not fly, as a Story line key.
+func locked_line(i: int) -> String:
+	if not WorldState.story_mode() or berths[i].has("outpost"):
+		return "ship_locked"
+	return "ship_wreck" if i == 0 else "ship_not_yours"
+
+
 ## Flying a ship taken from an outpost (the barracks interceptor hunts it).
 func flying_stolen() -> bool:
 	return piloting and bool(berths[berth].get("stolen", false))
@@ -269,13 +297,20 @@ func remove_last_berth() -> bool:
 	return true
 
 
+## Issue #207: T-89 fitted an upgrade: the parked ship you fly takes it now
+## (in the air it waits for the next landing).
+func refit() -> void:
+	if not piloting and not berths.is_empty():
+		_use_berth(berth)
+
+
 ## Fly berth `i` from now on: its data, model, hull and home bay. It is parked
 ## wherever its model stands.
 func _use_berth(i: int) -> void:
 	var b: Dictionary = berths[i]
 	berth = i
 	ship_id = b.ship_id
-	ship_cfg = b.cfg
+	ship_cfg = ShipUpgrades.apply(b.cfg, ship_id)      # issue #207: what T-89 fitted
 	visual = b.visual
 	hull = b.hull
 	home = b.home
@@ -379,7 +414,7 @@ func nearest_berth() -> int:
 
 func board() -> bool:
 	var i := nearest_berth()
-	if i < 0 or not Story.ships_unlocked():
+	if i < 0 or not berth_flies(i):
 		return false
 	if i != berth:
 		_use_berth(i)
@@ -455,6 +490,10 @@ func exit_ship() -> bool:
 	hud.visible = false
 	if sky != null:
 		sky.update_for(0.0, spot)
+	if opening:
+		opening = false
+		chase.fit_to(_look_length())
+		Story.event("landed")          # issue #202: out of the ship; the general is waiting
 	exited.emit()
 	return true
 
@@ -466,8 +505,14 @@ func takeoff() -> bool:
 	return true
 
 
+## In space the only ground to land on is the cruiser's: a fight running there is
+## broken off to set her down, as Z does.
 func land() -> bool:
-	return piloting and atmo.land()
+	if not piloting or not atmo.can_land():
+		return false
+	if fight != null:
+		end_fight("left")
+	return atmo.land()
 
 
 # ------------------------------------------------------------------ Z: land in the bay (issue #75)
@@ -692,26 +737,33 @@ func _seat_arriving() -> void:
 		cam.far = 160000.0
 
 
+## Issue #202: a story save opens with your ship coming down into the pit as if
+## the autopilot were bringing it in, the camera far back. Nothing but V (change
+## view) does anything until she is down; then E gets you out (exit_ship), and
+## the story moves on ("landed"). The pad's "opening" sets where she starts.
+func opening_landing() -> void:
+	_seat_arriving()
+	var o: Dictionary = pad.get("opening", {})
+	var bearing := deg_to_rad(float(o.get("bearing_deg", pad.get("reentry_bearing_deg", 200.0))))
+	var dist := float(o.get("distance", 700.0))
+	var at := Vector3(home.x + sin(bearing) * dist, home.y + float(o.get("altitude", 220.0)), home.z + cos(bearing) * dist)
+	var to := Vector3(home.x - at.x, 0.0, home.z - at.z).normalized()
+	atmo.place_flying(at, to, 0.0, 0.4)
+	_throttle = 0.0
+	opening = true
+	bay_landing = true
+	chase._primed = false
+	chase.fit_to(_look_length() * float(o.get("camera_scale", 3.5)))
+	hud.visible = true
+	_sync_visual()
+
+
+func _look_length() -> float:
+	return float(kit.looks.get(str(ship_cfg.get("look", "")), {}).get("length", 9.0)) if kit != null else 9.0
+
+
 func reenter() -> void:
-	var p := player()
-	if p != null and not piloting:
-		# Seat the player without the reach check: they arrive in the cockpit.
-		piloting = true
-		p.piloting = true
-		p.vehicle = self
-		_ground_follow(null)
-		p.locked = true
-		p.visible = false
-		p.process_mode = Node.PROCESS_MODE_DISABLED
-		_set_player_collision(false)
-		var rig = demo._rig
-		if rig != null:
-			_rig_was_fp = rig.rig.is_first_person()
-			var cam: Camera3D = rig.camera()
-			_cam_near = cam.near
-			_cam_far = cam.far
-			cam.near = 0.3
-			cam.far = 160000.0
+	_seat_arriving()
 	var c: Vector3 = pad.get("center", Vector3.ZERO)
 	var bearing := deg_to_rad(float(pad.get("reentry_bearing_deg", 200.0)))
 	var dist := float(pad.get("reentry_distance", 6500.0))
@@ -817,10 +869,9 @@ func _on_foot() -> void:
 		var cfg: Dictionary = berths[i].cfg
 		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
 		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
-			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
-		if not Story.ships_unlocked():
-			# Issue #64: the port's ships fly once Oda tells you about the fleet.
-			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line("ship_locked")]
+			[vname, str(cfg.get("label", "")), ShipUpgrades.short(str(berths[i].ship_id))].filter(func(x): return x != ""))]
+		if not berth_flies(i):
+			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line(locked_line(i))]
 	_foot_prompt.visible = near
 	if near and _just("interact"):
 		board()
@@ -881,6 +932,11 @@ func _seated(dt: float) -> void:
 
 func _read_keys(dt: float) -> void:
 	var st := atmo.state
+	if opening:
+		# Issue #202: the autopilot has her; only E, once she is down.
+		if st == AtmoFlight.State.PARKED and _just("interact"):
+			exit_ship()
+		return
 	if st == AtmoFlight.State.PARKED:
 		if _just("interact"):
 			exit_ship()
@@ -970,12 +1026,15 @@ func _fight_step(dt: float) -> void:
 	else:
 		cmd["fire"] = bool(_external.get("fire", false))
 		cmd["missile"] = bool(_external.get("missile", false))
+	var before: Vector3 = atmo.flight.position
 	var events: Array = fight.step(dt, cmd)
 	var f = fight.player_flight()
 	if f != null:
 		atmo.flight.position = f.position
 		atmo.flight.basis = f.basis
 		atmo.flight.speed = f.speed
+	if _fight_meets_ground(before, dt):
+		return
 	for e in events:
 		match str(e.type):
 			"hit":
@@ -997,7 +1056,8 @@ func _fight_step(dt: float) -> void:
 
 
 ## Issue #181: a hit in the fight. Theirs on you flashes the screen's edge; yours on
-## them pops the hit marker (a kill's marker comes with its own event).
+## them pops the hit marker (a kill's marker comes with its own event), and a seeker's
+## also pins one where it struck.
 func _fight_hit(e: Dictionary) -> void:
 	if fight == null:
 		return
@@ -1005,6 +1065,10 @@ func _fight_hit(e: Dictionary) -> void:
 		hud.flash_damage()
 	elif int(e.get("by", -1)) == fight.df.player_id:
 		hud.confirm_hit(false)
+		if str(e.get("kind", "")) == "missile":
+			# A seeker lands far off the nose: mark where (red if it was the kill).
+			var victim: Dictionary = fight.df.get_ship(int(e.get("id", -1)))
+			hud.mark_hit_at(e.point, not victim.is_empty() and not victim.alive)
 
 
 ## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash
@@ -1038,6 +1102,26 @@ func end_fight(outcome: String, quiet := false) -> void:
 		var throttle := clampf(float(atmo._command.get("throttle", 0.6)), 0.0, 1.0)
 		atmo.place_flying(at, atmo.flight.forward(), atmo.flight.speed, throttle)
 	fight_ended.emit(outcome)
+
+
+## The fight's director flies her through empty space: it knows nothing of the
+## world. Up there the world is the cruiser (issue #193): in through its bay's mouth
+## the fight is broken off (you ran for it), and its hull is as solid as in normal
+## flight: the fight ends and the normal collision bumps her or crashes her.
+func _fight_meets_ground(before: Vector3, dt: float) -> bool:
+	var pos := atmo.position()
+	var c = cruiser()
+	if c != null and c.aboard(pos):
+		end_fight("left")
+		return true
+	if ground.hit(pos, atmo.body_radius) == "" and ground.height_above(pos - atmo.up() * atmo.clearance) > 0.0:
+		return false
+	end_fight("left")                  # she flies on from here at the fight's speed
+	atmo.events = []
+	atmo._collide(before, dt)
+	for e in atmo.events:
+		_on_event(e)
+	return true
 
 
 ## Back under the edge of space (and no fight running): the next climb out is a
@@ -1103,6 +1187,9 @@ func _update_hud(agl_now: float) -> void:
 		"stick_roll": float(cmd.get("roll", 0.0)),
 	})
 	var tip := ""
+	if opening:
+		hud.set_prompt(Story.line("opening_exit" if atmo.state == AtmoFlight.State.PARKED else "opening_view"))
+		return
 	match atmo.state:
 		AtmoFlight.State.PARKED:
 			tip = GameFlow.label("seated")

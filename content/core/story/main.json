@@ -1,7 +1,29 @@
 {
   "id": "main",
-  "note": "Issue #64: the main story line. Issue #193: 'done_flag': a chapter whose flag is already set when it starts is over at once (the cruiser taken before Oda asked). 'pays': credits the teller hands over with the intro. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
+  "note": "Issue #215: chapters land -> general -> t89 -> meet_oda -> range -> remote -> smuggle_1 -> droid_merchant -> bounty -> fleet -> end -> free. 'modes': the save modes a chapter is in (default all; land, general and t89 are story only, so a freeplay story starts at meet_oda). 'chapter_renames': old chapter ids a save may hold. Issue #64: the main story line. Issue #193: 'done_flag': a chapter whose flag is already set when it starts is over at once (the cruiser taken before Oda asked). 'pays': credits the teller hands over with the intro. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
   "chapters": [
+    {
+      "id": "land",
+      "modes": ["story"],
+      "teller": "",
+      "done_on": "landed",
+      "note": "Issue #202: the opening. The autopilot brings your ship down into the pit; E gets you out (ShipPilot.opening_landing)."
+    },
+    {
+      "id": "general",
+      "modes": ["story"],
+      "teller": "general",
+      "done_on": "general_done",
+      "intro": "Halt! You are trespassing on the Hegemony. State your business.",
+      "remind": "Still here? State your business, or get out of my sight."
+    },
+    {
+      "id": "t89",
+      "modes": ["story"],
+      "teller": "t89",
+      "done_on": "told:t89",
+      "intro": "Do not mind the general, pilot. I was fixing ships in this pit before there was a war to lose. Before you go anywhere, let me show you how things work here, and then go and see Oda Vell at the cantina: she has work."
+    },
     {
       "id": "meet_oda",
       "teller": "t89",
@@ -29,62 +51,67 @@
       "teller": "cantina_owner",
       "done_on": "smuggle_sold",
       "job": "j_smuggle_run",
-      "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it.",
-      "remind": "The drop's still out there, or still in your pockets. Get it to the fence.",
-      "jetpack_line": "You know what, I like you. Take my old jetpack. It'll get you over a wall the gate can't see past. Space in the air, G to take it off.",
-      "jetpack_hint": "You are warming to the player. If they make you laugh or you like them, you lend them your old jetpack for this run: say so in a few words."
+      "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it. And a tip: that old cargo droid rolling round the pit has a jetpack inside it. Open it up. Nobody's going to miss it.",
+      "remind": "The drop's still out there, or still in your pockets. Get it to the fence. And open that cargo droid in the pit, if you haven't: there's a jetpack in it.",
+      "jetpack_hint": "If the player asks about getting over walls or about gear, remind them the old cargo droid in the pit has a jetpack inside it."
     },
     {
-      "id": "smuggle_2",
+      "id": "droid_merchant",
       "teller": "cantina_owner",
-      "done_on": "smuggle_sold",
-      "job": "j_smuggle_run",
-      "intro": "The fence says you're quick. There's another drop. Same deal: find it, sell it, don't get searched.",
-      "remind": "One more drop for the fence. Then I'll have something bigger."
+      "done_on": "droids_delivered",
+      "deliver": { "kind": "cargo", "count": 3 },
+      "intro": "A friend of mine is in need of three cargo droids. You could buy them, or fix some up in the desert. Take them to any of the droid merchants' posts out there. Get that done and I'll tell you about an incredible weapon.",
+      "remind": "My friend still needs %d more cargo droids. Any droid merchant's post in the desert will take them."
     },
     {
       "id": "bounty",
       "teller": "cantina_owner",
       "done_on": "bounty_paid",
       "job": "j_bounty",
-      "intro": "Two things. If you need to cross the desert, Skrugs sells speeders outside the back gate; he's loud, but they run. And there's a bounty on a Remnant officer holed up at one of their outposts out the front gate. Kill them and the fence pays.",
+      "intro": "My friend's happy, so here's the weapon: somebody stashed an energy blade up on top of this cantina's tower, and it's still there. Climb up and take it. Now, two things. If you need to cross the desert, Skrugs sells speeders outside the back gate. And there's a bounty.",
       "remind": "The bounty's still open. Do it, then collect from the fence in the market."
     },
     {
       "id": "fleet",
       "teller": "cantina_owner",
       "done_on": "fleet_beaten",
-      "intro": "That made noise. The Remnant has a fleet up in orbit now, and the locals will pay five thousand to see it gone. The pilots in this port always leave their keys in their ships. Take one up.",
-      "remind": "The fleet's still up there. Any ship in the pit will fly: the keys are in them."
+      "intro": "That made noise. The Remnant has a fleet up in orbit now, and the locals will pay five thousand to see it gone. Take your own ship up there. If you haven't got one, T-89 in the pit will see you right.",
+      "remind": "The fleet's still up there. Take your own ship up."
     },
     {
-      "id": "cruiser",
-      "teller": "cantina_owner",
-      "done_on": "cruiser_taken",
-      "done_flag": "cruiser_taken",
-      "intro": "That fleet was the small stuff. The real thing is a star cruiser holding orbit way out east, where you can't see it from here, and the general who runs every Remnant on this rock never leaves its bridge. Fly a ship to the cruiser and kill the general there. You'll have some company on the way up. Do it and this port will never let you pay for a drink again.",
-      "remind": "The cruiser's still up there, far out east past the curve. Climb out, find it, land in its bay and kill the general on the bridge. Expect company on the way up."
+      "id": "end",
+      "teller": "",
+      "done_on": "end_closed",
+      "note": "Issue #214: the end card (EndCard); closing it ends the chapter."
     },
     {
       "id": "free",
       "teller": "cantina_owner",
       "done_on": "",
-      "intro": "You did it. The general's dead, that cruiser's an empty hulk up there, and the garrison's gone; what's left of them hides in the desert outposts. Half the port wants to buy you a drink. There's always another drop for the fence, and now and then somebody wants a Remnant dead.",
+      "intro": "So that's it: the Remnant's gone from this moon. Go find one of the native tribes and trade, upgrade your gear, and explore the moon base. There's always another drop for the fence, and now and then somebody wants a Remnant dead.",
       "remind": ""
     }
   ],
+  "chapter_renames": { "smuggle_2": "droid_merchant", "cruiser": "free" },
+  "end_card": {
+    "title": "THE REMNANT LEAVE THE MOON",
+    "general_dead": "Their fleet broken and their general dead, the last of the Remnant pack up the barracks and lift off at dawn. Nobody waves. The port has its gate back, and you have a ship of your own.",
+    "general_alive": "Their fleet broken, the Remnant lift off at dawn. All but one: the general stays, out of uniform in the desert armour, still haunting the barracks and still buying droids. The port has its gate back, and you have a ship of your own.",
+    "button": "Carry on"
+  },
   "objectives": {
     "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard). The jobs' lines take the job's own words (%s).",
     "teller": { "text": "Talk to Oda at the cantina", "target": "npc:cantina_owner" },
     "chapters": {
+      "general": { "text": "Answer the Remnant general", "target": "npc:general" },
+      "t89": { "text": "Talk to T-89, the droid in the pit", "target": "npc:t89" },
       "meet_oda": { "text": "Find Oda Vell at the cantina, far end of town", "target": "npc:cantina_owner" },
       "range": { "text": "Shoot the targets at the range in the landing pit", "target": "range" },
       "remote": { "text": "Try the sparring droid in the pit, then go back to Oda", "target": "remote" },
       "smuggle_1": { "text": "Ask Oda about the drop", "target": "npc:cantina_owner" },
-      "smuggle_2": { "text": "Ask Oda about the next drop", "target": "npc:cantina_owner" },
+      "droid_merchant": { "text": "Take cargo droids to a droid merchant's post in the desert", "target": "" },
       "bounty": { "text": "Ask Oda about the bounty", "target": "npc:cantina_owner" },
-      "fleet": { "text": "Take a ship from the pit up to the Remnant fleet", "target": "pad" },
-      "cruiser": { "text": "Fly to the Remnant cruiser, far east in orbit, and kill its general on the bridge", "target": "cruiser" },
+      "fleet": { "text": "Take your own ship up to the Remnant fleet", "target": "pad" },
       "free": { "text": "Ask Oda for work", "target": "npc:cantina_owner" }
     },
     "drop": "Find the drop %s",
@@ -101,13 +128,39 @@
     "log_hunt": "%s, at %s. %d cr from the fence. %s",
     "log_collect": "%s is dead. Collect %d cr from the fence.",
     "log_none": "Nothing on. Oda always has something.",
-    "log_tally": "Runs sold: %d    Bounties paid: %d"
+    "log_tally": "Runs sold: %d    Bounties paid: %d",
+    "log_quests": "OPTIONAL",
+    "log_ships": "YOUR SHIPS",
+    "log_gear": "YOUR GEAR UPGRADES",
+    "quest_open": "Open",
+    "quest_done": "Done",
+    "quest_point_on": "Waypoint on",
+    "quest_point_off": "Waypoint off",
+    "quest_toast": "Press \"I\" to see new quest"
   },
+  "quests_note": "Issue #201: optional quests (src/systems/flow/quests.gd), in the job log under 'log_quests'. Each is offered on its 'unlocked_by' event and done on its 'done_on' (any Story.event name), with a 5 s toast ('quest_toast') when it is new. 'target' is a pointer target word as in objectives (\"\" = nowhere to point yet). No waypoint until the player switches it on in the log.",
+  "quests": [
+    { "id": "rebuild_ship", "title": "Rebuild your ship", "target": "npc:t89", "unlocked_by": "repair_quoted", "done_on": "ship_rebuilt",
+      "text": "T-89 can rebuild your wreck in the pit for 500 cr. Less, if he likes you." },
+    { "id": "barracks_rifle", "title": "Steal a rifle", "target": "marker:trooper_roof_c", "unlocked_by": "heard_of_rifle", "done_on": "rifle_taken",
+      "text": "The guards keep guns lying around on top of the barracks. Nobody would miss one." },
+    { "id": "nomad_trade", "title": "Trade with the nomads", "target": "", "unlocked_by": "heard_of_nomads", "done_on": "nomad_traded",
+      "text": "The nomad packs out in the desert trade anything for meat. Keep your gun down for a minute and they warm up." },
+    { "id": "tower_blade", "title": "The blade on the cantina tower", "target": "marker:cantina_owner", "unlocked_by": "told:bounty", "done_on": "blade_taken",
+      "text": "Oda says there's an energy blade stashed up on the cantina tower." },
+    { "id": "crashed_cruiser", "title": "The crashed cruiser", "target": "wreck", "unlocked_by": "heard_of_wreck", "done_on": "red_saber_taken",
+      "text": "The general says the old cruiser in the sand is worth a look. Something red is still aboard." }
+  ],
   "fleet_reward": 5000,
   "ship_locked": "Locked. The keys aren't yours to take yet.",
-  "jetpack_toast": "Oda gave you her old jetpack.",
+  "opening_view": "V: change view",
+  "opening_exit": "E: get out",
+  "ship_wreck": "Your ship. A wreck: T-89 in the pit can rebuild it.",
+  "ship_not_yours": "Not yours. No keys, no flight.",
   "bounty": {
     "first_pay": 600,
+    "general_standing": -15,
+    "general_crime": "He's run this port for the Remnant since the day the Hegemony fell, and half the graves outside the gate are his doing. He's out at the outpost inspecting the troops.",
     "pay": [900, 1600],
     "collect": "[E] Collect the bounty on %s  (+%d cr)",
     "collected": "The fence pays %d cr for %s.",

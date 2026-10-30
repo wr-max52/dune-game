@@ -282,7 +282,21 @@ func trade_options() -> Array:
 		out.append({ "id": "buy:" + str(kind), "text": _l("buy") % [DroidRoster.label(str(kind)), DroidRoster.price(str(kind))] })
 	for d in roster().owned:
 		out.append({ "id": "sell:%d" % int(d.uid), "text": _l("sell") % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))] })
+	# Issue #212: at a desert post, Oda's friend takes the droids she asked for.
+	var want := Story.droid_wanted_kind()
+	if want != "" and _at_post():
+		for d in roster().owned:
+			if str(d.kind) == want:
+				out.append({ "id": "deliver:%d" % int(d.uid), "text": _l("deliver") % [DroidRoster.label(want), Story.droids_wanted()] })
 	return out
+
+
+## The menu is open at one of the desert droid posts (not the market stall).
+func _at_post() -> bool:
+	for s in vendor_sites:
+		if str(s.get("id", "")).begins_with("droid_post_") and s.pos == vendor_pos:
+			return true
+	return false
 
 
 func _on_trade(id: String) -> void:
@@ -290,6 +304,22 @@ func _on_trade(id: String) -> void:
 		buy(id.substr(4))
 	elif id.begins_with("sell:"):
 		sell(int(id.substr(5)))
+	elif id.begins_with("deliver:"):
+		deliver(int(id.substr(8)))
+
+
+## Issue #212: hand a droid over for Oda's friend (no pay: it is a favour to
+## her). Its cargo comes back to your pockets. Returns true when it went.
+func deliver(uid: int) -> bool:
+	var d := roster().find(uid)
+	if d.is_empty() or str(d.kind) != Story.droid_wanted_kind():
+		return false
+	roster().unload(uid, WorldState.inventory)
+	roster().remove(uid)
+	_free_companion(uid)
+	Story.on_droid_delivered()
+	_toast(_l("delivered") % [DroidRoster.label(str(d.kind)), Story.droids_wanted()])
+	return true
 
 
 ## Buy a droid from the merchant. Returns "bought", "full", "cant_afford" or "".
@@ -515,6 +545,35 @@ func _lay_down(u: DroidUnit) -> void:
 			model.rotation.z = 0.35
 	if u.hum != null:
 		u.hum.stop()
+
+
+## Cut down by the energy sword: like a guard (NpcBody._go_limp), the droid goes
+## flying along the blade's sweep and lifted (ragdoll.json blade_fling, blade_fling_up),
+## tumbling end over end, and lands where physics puts it. Its look rides a rigid
+## body the shape of its outline (Ragdoll.drop), kept under the unit so a respawn
+## clears both.
+func _bat(u: DroidUnit, sweep: Vector3) -> void:
+	DroidKit.set_awake(u.look, false)
+	if u.hum != null:
+		u.hum.stop()
+	u.falling = true
+	if u.kind == "assassin":
+		DroidKit.play_anim(u.look, "die")
+	var rc := Ragdoll.load_config()
+	var up := _up(u.global_position)
+	var side := _flat(sweep, up).normalized()
+	var fling := side * float(rc.get("blade_fling", 8.0)) + up * float(rc.get("blade_fling_up", 5.5))
+	var rb := Ragdoll.drop(u.look, u, fling / maxf(1.0, u.size_scale), rc)
+	if rb == null:
+		_lay_down(u)
+		return
+	rb.name = "Batted"
+	rb.mass = float(rc.get("droid_mass", 40.0)) * u.size_scale
+	rb.gravity_scale = float(rc.get("gravity", 20.0)) / 9.8
+	rb.angular_velocity += up.cross(side) * float(rc.get("droid_tumble", 7.0))
+	rb.physics_material_override = PhysicsMaterial.new()
+	rb.physics_material_override.friction = float(rc.get("friction", 0.6))
+	rb.physics_material_override.bounce = float(rc.get("bounce", 0.15))
 
 
 # ------------------------------------------------------------------ taming
@@ -1041,8 +1100,9 @@ func _strand(u: DroidUnit) -> void:
 
 
 ## A bolt hit a droid. Yours and wrecks shrug it off; the Remnant's take damage
-## from anyone outside the Remnant, turn on you, and call it in.
-func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
+## from anyone outside the Remnant, turn on you, and call it in. `sweep` is the way
+## the player's energy sword was moving (zero for a bolt): a killing cut bats it.
+func on_unit_hit(u: DroidUnit, amount: float, shooter: Node, sweep := Vector3.ZERO) -> void:
 	_beep(u)
 	if u.faction == "" or u.dead:
 		return
@@ -1059,8 +1119,11 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		u.dead = true
 		ExplosionFx.small(u.get_parent(), u.center())
 		Sound.play("droid_pop", u.center())
-		_lay_down(u)
 		u.collision_layer = 0
+		if sweep != Vector3.ZERO:
+			_bat(u, sweep)
+		else:
+			_lay_down(u)
 		var rsc := Story.remnant_cfg()
 		u.respawn_left = float(rsc.get("outpost_respawn_s" if u.spec.has("outpost") else "town_respawn_s", 60.0))
 		if u.spec.has("site"):
@@ -1364,3 +1427,8 @@ class DroidUnit extends StaticBody3D:
 
 	func apply_damage(amount: float) -> void:
 		apply_damage_from(amount, null)
+
+	## The player's energy sword calls this instead: a killing cut bats it along `sweep`.
+	func apply_blade_hit(amount: float, sweep: Vector3) -> void:
+		if ctl != null:
+			ctl.on_unit_hit(self, amount, null, sweep)
