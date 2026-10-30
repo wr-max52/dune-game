@@ -27,7 +27,7 @@ func _init() -> void:
 	v.add_theme_constant_override("separation", 8)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(v)
-	var cat := PlayerOutfit.catalog()
+	var cat := PlayerOutfit.pickable()
 	for part in PlayerOutfit.PARTS:
 		var title := Label.new()
 		title.text = LABELS[part]
@@ -86,7 +86,7 @@ func show_outfit(o: Dictionary) -> void:
 func randomize_outfit() -> void:
 	var o := {}
 	for part in PlayerOutfit.PARTS:
-		var pieces: Dictionary = PlayerOutfit.catalog().get(part, {})
+		var pieces: Dictionary = PlayerOutfit.pickable().get(part, {})
 		if pieces.is_empty():
 			continue
 		var piece: String = pieces.keys().pick_random()
@@ -117,7 +117,7 @@ func _fill_colours(part: String, piece: String) -> void:
 	colour.clear()
 	colour.add_item("Original")
 	colour.set_item_metadata(0, "")
-	for c in PlayerOutfit.catalog().get(part, {}).get(piece, []):
+	for c in PlayerOutfit.pickable().get(part, {}).get(piece, []):
 		colour.add_item(str(c).capitalize())
 		colour.set_item_metadata(colour.item_count - 1, c)
 	colour.select(0)

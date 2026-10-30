@@ -11,6 +11,9 @@ extends RefCounted
 ## is a piece of that part, and every texture beside the "colors" pattern is a
 ## colour of it: "<piece>_<part>_<colour>" when the part has its own texture (the
 ## player's head), else "<piece>_<colour>". No colour is the piece's own texture.
+##
+## Issue #200: a story save is locked to the smuggler. Only the archetype's own
+## pieces (its model's "parts") can be worn there; the colours stay free.
 
 const ARCHETYPE := "player_smuggler"
 const PARTS := ["head", "torso", "legs"]
@@ -49,6 +52,24 @@ static func catalog() -> Dictionary:
 	return _catalog
 
 
+## What can be picked in this save: the whole catalog, or in a story save only
+## the archetype's own pieces.
+static func pickable() -> Dictionary:
+	if not WorldState.story_mode():
+		return catalog()
+	var own: Dictionary = CharacterKit._read_json(CharacterKit.PALETTES_PATH) \
+		.get("archetypes", {}).get(ARCHETYPE, {}).get("model", {}).get("parts", {})
+	var out := {}
+	for part in catalog():
+		var names: Array = (own.get(part, []) as Array).map(func(c): return split(str(c))[0])
+		var pieces := {}
+		for piece in catalog()[part]:
+			if names.has(piece):
+				pieces[piece] = catalog()[part][piece]
+		out[part] = pieces
+	return out
+
+
 ## The colours of a piece's part, from the texture file names (as _wear_outfit
 ## looks them up: the part's own texture first, else the piece's).
 static func _colors(files: PackedStringArray, file_pattern: String, piece: String, part: String) -> Array:
@@ -79,10 +100,10 @@ static func choice(piece: String, colour: String) -> String:
 	return piece if colour == "" else "%s:%s" % [piece, colour]
 
 
-## Only the parts whose piece and colour the kit has; the rest are left out, so
-## the kit gives them the archetype's default.
+## Only the parts whose piece and colour can be picked (pickable); the rest are
+## left out, so the kit gives them the archetype's default.
 static func sanitize(outfit: Dictionary) -> Dictionary:
-	var cat := catalog()
+	var cat := pickable()
 	var out := {}
 	for part in PARTS:
 		if not outfit.has(part):

@@ -17,6 +17,9 @@ const PICKUP_DIR := "res://content/core/pickups"
 const ITEM_DIR := "res://content/core/items"
 const FACTIONS := ["imperial_remnant", "locals", "smuggler"]
 const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20 }
+const STORY := "story"
+const FREEPLAY := "freeplay"
+const STORY_WEAPON := "pistol_blaster"     ## issue #200: the one hand weapon a story save starts with
 
 static var standing: Dictionary = DEFAULT_STANDING.duplicate()
 static var flags: Dictionary = {}          ## name -> true
@@ -38,6 +41,7 @@ static var native_camps: Dictionary = {}       ## issue #96: camp id -> { wrecke
 static var game_hours := 0.0               ## issue #96: in-game hours played (camps come back, boxes refill, rest)
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
+static var mode := FREEPLAY                ## issue #200: STORY or FREEPLAY, picked on New Game, kept in the save
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -69,6 +73,33 @@ static func reset() -> void:
 	native_packs = {}
 	native_camps = {}
 	game_hours = 0.0
+	mode = FREEPLAY
+
+
+## Issue #200: a new save in STORY or FREEPLAY mode. Story starts at the first
+## chapter with every faction neutral and the pistol only (weapon_allowed).
+## Freeplay goes straight to the free chapter (drops and bounties on repeat), the
+## port's ships flying, the world otherwise as today.
+static func new_game(m: String) -> void:
+	reset()
+	mode = STORY if m == STORY else FREEPLAY
+	if mode == STORY:
+		for f in FACTIONS:
+			standing[f] = 0
+		story = Story.fresh()
+	else:
+		story = { "chapter": "free", "told": true }
+		set_flag("ships_unlocked")
+
+
+static func story_mode() -> bool:
+	return mode == STORY
+
+
+## Issue #200: may the player draw hand weapon `id`? Freeplay: all of them. Story:
+## the pistol, and any other once something sets its "weapon_<id>" flag.
+static func weapon_allowed(id: String) -> bool:
+	return not story_mode() or id == STORY_WEAPON or has_flag("weapon_" + id)
 
 
 # ------------------------------------------------------------------ writes
@@ -631,6 +662,7 @@ static func to_save() -> Dictionary:
 		"native_packs": native_packs.duplicate(true),
 		"native_camps": native_camps.duplicate(true),
 		"game_hours": game_hours,
+		"mode": mode,
 	}
 
 
@@ -663,6 +695,7 @@ static func from_save(d: Dictionary) -> void:
 	native_packs = d.get("native_packs", {}).duplicate(true)
 	native_camps = d.get("native_camps", {}).duplicate(true)
 	game_hours = float(d.get("game_hours", 0.0))
+	mode = STORY if str(d.get("mode", FREEPLAY)) == STORY else FREEPLAY    # issue #200: older saves are freeplay
 
 
 static func _read_json(path: String) -> Variant:

@@ -1123,9 +1123,10 @@ func _update_hud(agl_now: float) -> void:
 # ------------------------------------------------------------------ guns and hull (issue #55)
 
 ## Issue #55: in town the garrison treats your ship as hostile from the moment it
-## lifts off until it is back on the ground (or gone to space).
+## lifts off until it is back on the ground (or gone to space). Issue #200: not in
+## a story save, where flying out of port raises no alarm.
 func hostile_in_town() -> bool:
-	return piloting and fight == null and atmo.state != AtmoFlight.State.PARKED \
+	return piloting and fight == null and not WorldState.story_mode() and atmo.state != AtmoFlight.State.PARKED \
 		and atmo.state != AtmoFlight.State.CRASHED and TownNav.in_town(demo.town, atmo.position())
 
 

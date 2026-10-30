@@ -19,6 +19,7 @@ var slots: Array = []          ## weapon ids in slot order (1, 2, 3 ...)
 var current := ""              ## "" = hands free
 var pending := ""              ## where a swap is headed
 var previous := ""             ## for "last weapon" (Q)
+var can_draw := func(_id: String) -> bool: return true   ## issue #200: false = that weapon stays holstered
 var phase := Phase.IDLE
 var _t := 0.0                  ## seconds into the phase
 
@@ -48,7 +49,10 @@ func drawn() -> float:
 
 
 ## Ask for a weapon. "" holsters. Asking for the weapon already out holsters it.
+## One the player may not draw (can_draw) is ignored.
 func request(id: String) -> void:
+	if id != "" and not can_draw.call(id):
+		return
 	if phase == Phase.IDLE and id == current:
 		id = ""
 	if phase == Phase.IDLE:
@@ -87,8 +91,13 @@ func cycle(step: int) -> void:
 		return
 	var target := pending if is_swapping() else current
 	var i := slots.find(target)
-	i = (i + step + slots.size()) % slots.size() if i >= 0 else (0 if step > 0 else slots.size() - 1)
-	request(str(slots[i]))
+	for _n in slots.size():
+		i = (i + step + slots.size()) % slots.size() if i >= 0 else (0 if step > 0 else slots.size() - 1)
+		if str(slots[i]) == target:
+			return          # the only one it may draw is already out
+		if can_draw.call(str(slots[i])):
+			request(str(slots[i]))
+			return
 
 
 func update(dt: float) -> Array:
