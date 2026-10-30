@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Remnant interceptor stands down after the fleet, flies wider loops (2026-10-30, issue #180)
+
+- **No chase once the Remnant is beaten.** After the fleet in orbit falls, the
+  barracks pad's dark interceptor stays on its pad, even for a stolen outpost ship.
+  One already in the air gives up and flies home.
+- **Bigger loops at the same speed.** Its pilot (`remnant_hunter.json`) breaks off
+  at 140 m instead of 70 m and extends to 650 m instead of 300 m before turning
+  back in, so it swings much wider around you. The ship's speeds are unchanged.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina
