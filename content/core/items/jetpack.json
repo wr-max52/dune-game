@@ -10,11 +10,13 @@
     "thrust": 36.0,
     "max_rise": 9.0,
     "kick_in": 0.18,
+    "push": 7.0,
+    "push_fade": 5.0,
     "min_fuel_to_start": 0.2,
     "recharge_delay": 0.8,
     "recharge_ground": 0.6,
     "recharge_air": 0.0
   },
-  "note": "IP-neutral. Worn on the back. Hold jump in the air to fly while fuel lasts; fuel (seconds of thrust) refills after recharge_delay, on the ground. thrust and max_rise are m/s^2 and m/s; gravity is 20.",
+  "note": "IP-neutral. Worn on the back. Hold jump in the air to fly while fuel lasts; fuel (seconds of thrust) refills after recharge_delay, on the ground. thrust and max_rise are m/s^2 and m/s; gravity is 20. Lighting the pack shoves you forward at push m/s, fading by push_fade m/s per second.",
   "naming": { "kind": "equipment", "class": "jetpack" }
 }

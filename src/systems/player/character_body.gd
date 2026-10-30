@@ -362,6 +362,10 @@ func _step_jetpack(delta: float, grounded: bool) -> void:
 	controller.lift = jetpack.step(delta, held, grounded)
 	controller.max_rise = jetpack.max_rise()
 	if jetpack.thrusting and not was:
+		# The kick as it lights: a shove the way the body faces.
+		var yaw := -rotation.y
+		controller.push = Vector3(-sin(yaw), 0.0, cos(yaw)) * jetpack.push()
+		controller.push_fade = jetpack.push_fade()
 		jet_started.emit()
 	elif was and not jetpack.thrusting:
 		jet_stopped.emit()

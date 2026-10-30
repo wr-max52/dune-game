@@ -14,6 +14,9 @@ extends RefCounted
 ##     the air (0 by default, so you cannot feather a hover forever).
 ##   - An empty pack needs `min_fuel_to_start` before it will light again, so it
 ##     does not stutter on the last drops.
+##   - Lighting it shoves you forward at `push` m/s on top of your own movement,
+##     fading by `push_fade` m/s per second (the body applies it, see
+##     character_body.gd).
 ##
 ## Every number comes from the item's "jetpack" block in content/core/items/*.json.
 
@@ -66,6 +69,15 @@ func recharge_ground() -> float:
 
 func recharge_air() -> float:
 	return float(cfg.get("recharge_air", 0.0))
+
+
+## The shove forward as the pack lights (m/s), and how fast it fades (m/s per second).
+func push() -> float:
+	return float(cfg.get("push", 0.0))
+
+
+func push_fade() -> float:
+	return float(cfg.get("push_fade", 5.0))
 
 
 ## 0..1, for the HUD meter.
