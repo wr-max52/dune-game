@@ -880,6 +880,22 @@ func _spawn_remnant(spec: Dictionary, start: int, at := Vector3.INF) -> DroidUni
 	return u
 
 
+## Issue #193: a Remnant droid at a site of its own (the cruiser), from its spec:
+## { kind, variant, hp, gun?, patrol: [Vector3], site, hostile, respawn, garrison? }.
+func spawn_site_unit(spec: Dictionary) -> DroidUnit:
+	var route: Array = spec.get("patrol", [])
+	if route.is_empty():
+		return null
+	return _spawn_remnant(spec, int(spec.get("start", 0)) % route.size())
+
+
+## And gone again (the cruiser's crew took the pods).
+func remove_site_unit(u: DroidUnit) -> void:
+	remnant.erase(u)
+	if is_instance_valid(u):
+		u.queue_free()
+
+
 ## Issue #64: the fleet is beaten; the town's droids leave with the garrison.
 func withdraw_town_remnant() -> void:
 	for u in remnant.duplicate():
@@ -911,6 +927,8 @@ func _tick_remnant_respawns(dt: float) -> void:
 
 
 func _garrison(u: DroidUnit = null):
+	if u != null and u.spec.get("garrison") is Garrison and is_instance_valid(u.spec.garrison):
+		return u.spec.garrison         # issue #193: the cruiser's droids answer to its crew's alarm
 	if u != null and u.spec.has("site"):
 		return null                    # issue #148: out at the wreck nobody calls the town
 	if demo == null or not "garrison" in demo:
@@ -1047,6 +1065,8 @@ func on_unit_hit(u: DroidUnit, amount: float, shooter: Node) -> void:
 		u.respawn_left = float(rsc.get("outpost_respawn_s" if u.spec.has("outpost") else "town_respawn_s", 60.0))
 		if u.spec.has("site"):
 			u.respawn_left = float(cfg.get("wreck", {}).get("respawn_s", 180.0))
+		if not bool(u.spec.get("respawn", true)):
+			u.respawn_left = -1.0          # issue #193: the cruiser's crew never come back
 		WorldState.change_standing(u.faction, int(cfg.get("remnant", {}).get("kill_standing", -6)), "A Remnant patrol droid was destroyed.")
 		WorldState.log_event(_l("event_remnant_droid"))
 

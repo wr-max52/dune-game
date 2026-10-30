@@ -8,7 +8,7 @@ extends RefCounted
 ## a drop to find, then what the story's chapter wants (home planet only).
 ##
 ## A target is a word the town scene turns into a place (ObjectiveHud.where):
-## npc:<marker>, marker:<marker>, range, remote, pad, outpost:<location id>.
+## npc:<marker>, marker:<marker>, range, remote, pad, outpost:<location id>, cruiser.
 ## The drop's target is its area's marker, not the exact spot: finding it is the job.
 ##
 ## Every line: content/core/story/main.json "objectives".

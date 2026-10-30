@@ -8,8 +8,9 @@ extends RefCounted
 ##   come back, on your honour) -> two smuggling runs
 ##   (the first with her old jetpack if she is amused or warm) -> Skrugs and a
 ##   bounty at a Remnant outpost -> the Remnant fleet in orbit (the port's ships
-##   unlock; winning pays 5000) -> free play: smuggling runs and bounty
-##   contracts on repeat.
+##   unlock; winning pays 5000) -> issue #193: the Remnant's star cruiser far out
+##   east in orbit (company on the way up; kill its general on the bridge) -> free
+##   play: smuggling runs and bounty contracts on repeat.
 ##
 ## Chapters and every line: content/core/story/main.json. Systems report what
 ## happened with event() (WorldState does most of it); a teller asks beat() when
@@ -79,6 +80,7 @@ static func skip_to(id: String) -> void:
 	if id == "free":
 		WorldState.story.told = true
 		WorldState.set_flag("remnant_fleet_beaten")
+		WorldState.set_flag("cruiser_taken")
 
 
 # ------------------------------------------------------------------ events
@@ -93,6 +95,10 @@ static func event(name: String) -> bool:
 	var next := str(ids[mini(index(chapter()) + 1, ids.size() - 1)])
 	WorldState.story = { "chapter": next, "told": false }
 	WorldState.log_event("Story: " + next.replace("_", " ") + ".")
+	# Issue #193: done before it was asked (the cruiser taken before Oda sent you).
+	var flag := str(chapter_cfg(next).get("done_flag", ""))
+	if flag != "" and WorldState.has_flag(flag):
+		event(str(chapter_cfg(next).get("done_on", "")))
 	return true
 
 
@@ -181,6 +187,16 @@ static func remnant_hostile() -> bool:
 
 static func town_garrison() -> bool:
 	return not remnant_hostile()
+
+
+## Issue #193: the cruiser's general is dead; nobody is left aboard.
+static func cruiser_taken() -> bool:
+	return WorldState.has_flag("cruiser_taken")
+
+
+## Oda has sent you to the cruiser and it is not taken yet: climbing out meets its escort.
+static func cruiser_mission() -> bool:
+	return chapter() == "cruiser" and not cruiser_taken()
 
 
 static func remnant_cfg() -> Dictionary:

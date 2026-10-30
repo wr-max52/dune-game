@@ -1,6 +1,6 @@
 {
   "id": "main",
-  "note": "Issue #64: the main story line. 'pays': credits the teller hands over with the intro. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
+  "note": "Issue #64: the main story line. Issue #193: 'done_flag': a chapter whose flag is already set when it starts is over at once (the cruiser taken before Oda asked). 'pays': credits the teller hands over with the intro. Read by src/systems/flow/story.gd. Chapters run in order; each one ends on a game event ('done_on', reported to Story.event()). 'intro' is what the teller says the first time you talk to them in that chapter (it replaces their greeting), 'remind' what they say on later visits while it is still open. 'job' puts that job's card in front of the player with the line. T-89 (the droid in the pit) points you at Oda; Oda tells every other chapter. The last chapter ('free') never ends: smuggling runs and bounty contracts on repeat.",
   "chapters": [
     {
       "id": "meet_oda",
@@ -58,15 +58,23 @@
       "remind": "The fleet's still up there. Any ship in the pit will fly: the keys are in them."
     },
     {
+      "id": "cruiser",
+      "teller": "cantina_owner",
+      "done_on": "cruiser_taken",
+      "done_flag": "cruiser_taken",
+      "intro": "That fleet was the small stuff. The real thing is a star cruiser holding orbit way out east, where you can't see it from here, and the general who runs every Remnant on this rock never leaves its bridge. Fly a ship to the cruiser and kill the general there. You'll have some company on the way up. Do it and this port will never let you pay for a drink again.",
+      "remind": "The cruiser's still up there, far out east past the curve. Climb out, find it, land in its bay and kill the general on the bridge. Expect company on the way up."
+    },
+    {
       "id": "free",
       "teller": "cantina_owner",
       "done_on": "",
-      "intro": "You did it. The garrison's gone; what's left of them hides in the desert outposts. There's always another drop for the fence, and now and then somebody wants a Remnant dead.",
+      "intro": "You did it. The general's dead, that cruiser's an empty hulk up there, and the garrison's gone; what's left of them hides in the desert outposts. Half the port wants to buy you a drink. There's always another drop for the fence, and now and then somebody wants a Remnant dead.",
       "remind": ""
     }
   ],
   "objectives": {
-    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer). The jobs' lines take the job's own words (%s).",
+    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard). The jobs' lines take the job's own words (%s).",
     "teller": { "text": "Talk to Oda at the cantina", "target": "npc:cantina_owner" },
     "chapters": {
       "meet_oda": { "text": "Find Oda Vell at the cantina, far end of town", "target": "npc:cantina_owner" },
@@ -76,6 +84,7 @@
       "smuggle_2": { "text": "Ask Oda about the next drop", "target": "npc:cantina_owner" },
       "bounty": { "text": "Ask Oda about the bounty", "target": "npc:cantina_owner" },
       "fleet": { "text": "Take a ship from the pit up to the Remnant fleet", "target": "pad" },
+      "cruiser": { "text": "Fly to the Remnant cruiser, far east in orbit, and kill its general on the bridge", "target": "cruiser" },
       "free": { "text": "Ask Oda for work", "target": "npc:cantina_owner" }
     },
     "drop": "Find the drop %s",

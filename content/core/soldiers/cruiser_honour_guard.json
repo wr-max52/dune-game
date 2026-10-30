@@ -1,0 +1,19 @@
+{
+  "id": "cruiser_honour_guard",
+  "base": "outpost_trooper",
+  "label": "Honour guard",
+  "archetype": "remnant_marked",
+  "note": "Issue #193: the general's guard on the cruiser's bridge, in red. Tougher and steadier than the crew, and they stay on the bridge (hold_ground). Only the blocks below differ from outpost_trooper.json.",
+  "hp": 140,
+  "perception": {
+    "sight_range": 60.0,
+    "fov_deg": 170.0,
+    "reaction_s": 0.5
+  },
+  "combat": {
+    "aim_error_deg": 1.4,
+    "burst_min": 5,
+    "burst_max": 8,
+    "alert_radius": 70.0
+  }
+}

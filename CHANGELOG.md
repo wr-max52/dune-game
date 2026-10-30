@@ -21,6 +21,36 @@ Plain English, newest on top. One entry per milestone.
 - **Solid all round.** His collider is a cylinder his full height (2.3 m) and wide
   enough for his shoulders and hanging arm, so you cannot clip into him from any
   side.
+## The Remnant cruiser in orbit, and Oda's last job (2026-10-30, issue #193)
+
+- **A Remnant star cruiser holds orbit far to the east**, 4.6 km up and round the
+  curve of the planet: you cannot see it from the port, and you cannot miss it
+  from space. It is the wreck in the desert remade whole and clean: 690 m of grey
+  armour with rows of lit windows, a stepped superstructure, a tower with sensor
+  globes, and four engines glowing at the stern. Its name is generated.
+- **Land in its bay.** The bay opens along its flank behind an energy shield you
+  can fly through but not walk out of. Two Remnant interceptors and a frigate
+  stand on the bay's pads; the fourth pad is empty. Press **Z** anywhere within
+  3 km and your ship flies itself round the hull, in through the bay's mouth and
+  down onto the empty pad (Z again takes the stick back). The interceptors are
+  flyable, and taking one sounds the alarm.
+- **Walk it.** From the bay a long corridor (an armoury and a crew room off it)
+  runs aft to a tall shaft by the engines, where six ramps switch back up past
+  the reactor's glow to the bridge: a long room with a window wall over the bow,
+  crew pits with rows of consoles, a holo table, and the general at the glass.
+- **It is held.** Twenty Remnant aboard (troopers walking the bay and the
+  corridor, sentries on the gantry and the landings, an honour guard on the
+  bridge) and their droids. They shoot on sight, and come aboard as your ship
+  closes in.
+- **Oda's last job.** After the fleet she sends you up: "Fly a ship to the
+  cruiser and kill the general there. You'll have some company on the way up."
+  Climbing out, the cruiser's interceptors and fighters meet you (two of the
+  port's pilots fly with you); Z by the cruiser breaks the fight off and runs
+  for the bay. Kill the general on the bridge: **20,000 cr**, the locals love you
+  for it (+60), and Oda's story is done.
+- **Then it is yours to visit.** Whoever is left aboard is gone the next time
+  you come back, and from then on the cruiser is empty, still there to fly to,
+  land in and walk round. Fall out of it and you are pulled back aboard.
 
 ## Desert packs: camps, tents, chests, rest, clubs and rocks (2026-10-29, issue #96)
 
