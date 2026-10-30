@@ -88,7 +88,16 @@ camera behind the ship.
 | Get out (once landed) | E |
 | Chase / cockpit view | V |
 
-The HUD shows speed, throttle, boost, altitude, height above ground and climb rate.
+In the chase view the HUD is drawn like a flight sim's (issue #181): a pitch
+ladder round the reticle that rolls with the ship, a heading tape along the top, a
+speed tape on the left, an altitude tape on the right with height above ground and
+climb rate under it, and throttle, boost, hull and shield bars in the bottom left.
+**V** puts you in the cockpit: the same cockpit in every ship, mostly glass, two
+struts, and a dash whose instruments work (airspeed, altimeter, attitude ball,
+climb, compass, throttle, hull, shield, boost, the edge-of-space bar) plus a lamp
+that lights while the Shift ability runs. Your hits pop the hit marker (white, red
+for a kill) on ships and on people on the ground; when you are hit the edge of the
+screen glows red for a second and fades.
 The bar on the right fills toward the **edge of space (4,000 m)**: pull the nose up
 to about 80 degrees, full throttle, boost, and you are there in roughly 18 seconds.
 The sky goes black on the way. There is no loading and no fade: space is the

@@ -2,6 +2,25 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Ship fights feel like a shooter (2026-10-30, issue #181)
+
+- **Hit markers for the ship's guns.** The same white X as on foot pops when your
+  cannons hurt something: another ship, a trooper or local on the ground (a bolt's
+  burst counts too), a parked ship. It turns red and bigger for a kill. In space the
+  fight's own hits and kills drive it. Shots a target shrugs off (a parked
+  interceptor, a wall) show nothing.
+- **A red flash when you are hit.** The edge of the screen glows red, holds for a
+  second and fades slowly, in the air and in space. Each new hit lights it again.
+- **A flight-sim HUD in the chase view.** The block of numbers in the top left is
+  gone. In its place: a pitch ladder round the reticle that rolls with the ship, a
+  heading tape, speed and altitude tapes either side, and bars for throttle, the
+  Shift ability, hull and shield. It uses your HUD colour.
+- **A cockpit in the cockpit view.** V now puts you behind a canopy (two struts,
+  the rest faint glass) with a dashboard whose instruments move: airspeed,
+  altimeter, an attitude ball, climb, compass, throttle, hull, shield, boost and
+  the edge of space. The Shift ability is one lamp, lit while it runs. Every ship
+  shares the one cockpit.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina

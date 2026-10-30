@@ -30,6 +30,10 @@ extends Node
 ##     data, model, hull and home bay); E beside any parked one boards it, and that
 ##     ship's own stats, guns and Shift ability fly from then on. The one you left
 ##     stays where you landed it.
+##   - issue #181: the guns' hits pop the hit marker (ships, NPCs, anything that
+##     takes damage; in space the fight's own hits and kills), being hit flashes the
+##     screen's edge red, and the HUD is a flight-sim HUD in the chase view and a
+##     cockpit with working instruments in the cockpit view (FlightHud).
 ##
 ## The headless trace drives it with board(), takeoff(), land(), exit_ship() and
 ## set_external_command(): the same code paths the keys use.
@@ -865,10 +869,13 @@ func _fight_step(dt: float) -> void:
 		atmo.flight.speed = f.speed
 	for e in events:
 		match str(e.type):
+			"hit":
+				_fight_hit(e)
 			"wave":
 				hud.toast("Wave %d" % int(e.index), 2.5)
 			"kill":
 				if fight != null and e.by == fight.df.player_id:
+					hud.confirm_hit(true)
 					hud.toast("Kill  ·  " + str(e.who) if str(e.get("who", "")) != "" else "Kill", 2.0)
 			"complete":
 				end_fight("complete")
@@ -878,6 +885,17 @@ func _fight_step(dt: float) -> void:
 				return
 	if atmo.altitude() < atmo.space_altitude - space_exit_margin:
 		end_fight("left")
+
+
+## Issue #181: a hit in the fight. Theirs on you flashes the screen's edge; yours on
+## them pops the hit marker (a kill's marker comes with its own event).
+func _fight_hit(e: Dictionary) -> void:
+	if fight == null:
+		return
+	if int(e.get("id", -1)) == fight.df.player_id:
+		hud.flash_damage()
+	elif int(e.get("by", -1)) == fight.df.player_id:
+		hud.confirm_hit(false)
 
 
 ## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash
@@ -947,12 +965,26 @@ func _sync_visual() -> void:
 func _update_hud(agl_now: float) -> void:
 	var f = atmo.flight
 	var v: Vector3 = f.velocity()
+	# Issue #181: in a fight the director's model and defense are the live ones (its
+	# boost meter, its Shift ability, the shield and hull its bolts hit).
+	var live = f
+	var d = defense
+	if fight != null and fight.df != null:
+		var me: Dictionary = fight.df.get_ship(fight.df.player_id)
+		if not me.is_empty():
+			live = me.flight
+			d = me.defense
+	var up := atmo.up()
+	var att := FlightHud.attitude(PlanetSphere.tilt_to(up).inverse() * f.basis)
+	hud.set_cockpit(chase.is_cockpit())
 	hud.show_values({
-		"speed": f.speed, "throttle": _throttle,
-		"boost": f.boost_left / maxf(f.boost_time(), 0.001),
-		"agl": agl_now, "altitude": atmo.altitude(), "climb": v.y,
+		"speed": f.speed, "throttle": _throttle, "max_speed": live.max_speed(),
+		"boost": live.boost_left / maxf(live.boost_time(), 0.001),
+		"agl": agl_now, "altitude": atmo.altitude(), "climb": v.dot(up),
 		"space_fraction": atmo.space_fraction(), "state": atmo.state_label(),
-		"hull": defense.hull_hp(), "hull_max": defense.hull_max(), "shield": int(defense.shield),
+		"hull": d.hull_hp(), "hull_max": d.hull_max(), "shield": int(d.shield), "shield_max": d.shield_max,
+		"pitch": att.pitch, "roll": att.roll, "heading": att.heading,
+		"ability": live.ability(), "ability_on": live.boosting,
 	})
 	var tip := ""
 	match atmo.state:
@@ -1002,6 +1034,8 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 		if str(s.kind) != "bolt":
 			continue
 		var b := ship_bolt(s, hull, content, ground, Color("#ff6a3a"))
+		b.connect("on_hit", hud.on_gun_hit)          # issue #181: hit markers
+		b.connect("on_splash", hud.on_gun_hit)
 		demo.add_child(b)
 		b.global_position = s.origin
 		shots += 1
@@ -1048,6 +1082,7 @@ func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
 	if i != berth or not piloting or fight != null or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	defense.apply_damage(amount)
+	hud.flash_damage()                            # issue #181
 	if defense.is_alive():
 		return
 	var at := atmo.position()
@@ -1071,6 +1106,8 @@ func _hit_parked(i: int, amount: float) -> void:
 	if not b.has("defense"):
 		b.defense = ShipDefense.new(b.cfg)
 	(b.defense as ShipDefense).apply_damage(amount)
+	if b.hull != null and is_instance_valid(b.hull):
+		b.hull.took_damage()                      # issue #181: a hit marker for the shooter
 	if not (b.defense as ShipDefense).is_alive():
 		_wreck_berth(i, true)
 
@@ -1092,6 +1129,7 @@ func _wreck_berth(i: int, boom: bool) -> void:
 	if is_instance_valid(v):
 		v.visible = false
 	if b.hull != null and is_instance_valid(b.hull):
+		b.hull.dead = true
 		b.hull.collision_layer = 0
 		b.hull.collision_mask = 0
 	var key := str(b.get("box_id", ""))
