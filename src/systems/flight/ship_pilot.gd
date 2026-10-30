@@ -178,6 +178,7 @@ func _ready() -> void:
 	kit = ShipKit.new(demo._flat_mats())
 	_gather_berths()
 	_use_berth(0)
+	refresh_wreck_look()
 	if "planet" in demo and not demo.planet.is_empty():
 		travel = SpaceTravel.new()
 		travel.staged = "staging" in demo and bool(demo.staging)    # issue #121: a handoff's first frame
@@ -248,6 +249,17 @@ func add_outpost_berth(v: Node3D, id: String, outpost_id: String) -> int:
 	berths[i]["outpost"] = outpost_id
 	berths[i]["stolen"] = false
 	return i
+
+
+## Issue #206: the pit pad's ship looks wrecked (WreckLook) while a story save's
+## ship waits for T-89, and like new once he has rebuilt it.
+func refresh_wreck_look() -> void:
+	if berths.is_empty() or not is_instance_valid(berths[0].visual):
+		return
+	if ShipSalesman.needs_rebuild() and GameFlow.flown_ship == "":
+		WreckLook.apply(berths[0].visual)
+	else:
+		WreckLook.remove(berths[0].visual)
 
 
 ## May the player board berth `i`? (berth_open: the rule.)
