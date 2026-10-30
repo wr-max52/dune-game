@@ -1,9 +1,9 @@
 {
-  "note": "First person arms (issue #65 D). Black sleeves and gloves for every outfit for now. Metres. The hand hangs along -Y from the wrist joint, palm toward the body's centre, thumb up (+Z), as the IK leaves it. Curl angles are degrees at grip 0 (open) and 1 (closed).",
-  "sleeve": "#171717",
-  "cuff": "#0f0f0f",
-  "glove": "#0d0d0d",
-  "seg": 12,
+  "note": "First person arms (issue #65 D, rebuilt in #229). Dark sleeves and gloves for every outfit for now. Metres. The hand hangs along -Y from the wrist joint, palm toward the body's centre, thumb up (+Z), as the IK leaves it. Curl angles are degrees at grip 0 (open) and 1 (closed). Poses weight each finger's curl [index, middle, ring, little] and the thumb's.",
+  "sleeve": "#22201d",
+  "cuff": "#161412",
+  "glove": "#1c1915",
+  "seg": 20,
   "forearm": {
     "length": 0.27,
     "rings": [[0.03, 0.043], [-0.05, 0.044], [-0.14, 0.036], [-0.235, 0.029]],
@@ -18,9 +18,16 @@
     "finger_z": [0.032, 0.011, -0.011, -0.030],
     "finger_scale": [0.92, 1.0, 0.98, 0.84],
     "thumb_len": [0.038, 0.032],
-    "relaxed": 0.3,
+    "relaxed": 0.35,
     "curl1": [8, 80],
     "curl2": [14, 96],
     "thumb_curl": [12, 40]
+  },
+  "stance": { "l": [-0.06, -0.07, 0.15], "r": [0.02, -0.05, 0.02] },
+  "poses": {
+    "relaxed": { "fingers": [0.95, 1.2, 1.45, 1.7], "thumb": 0.6 },
+    "trigger": { "fingers": [0.3, 1.0, 1.0, 1.0], "thumb": 0.9 },
+    "support": { "fingers": [0.72, 0.8, 0.86, 0.92], "thumb": 0.45 },
+    "hilt": { "fingers": [1.0, 1.0, 1.0, 1.0], "thumb": 0.95 }
   }
 }

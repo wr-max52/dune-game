@@ -594,7 +594,9 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		ready = ready.interpolate_with(to_chest, ads_blend * ads_blend * (3.0 - 2.0 * ads_blend))
 	w.transform = holster.interpolate_with(ready, f)
 	if upper == BodyAnimator.UPPER_FREE:
+		_fpv_stance(false)
 		return
+	_fpv_stance(first_person)
 	# The right hand always rides the grip; the left joins once the weapon is up.
 	# In first person a one-handed weapon (aim_fpv "one_hand") leaves the left arm
 	# alone: reaching across to a grip right of centre lays the forearm sideways
@@ -609,6 +611,19 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
 
 
+## Issue #229: in first person the shoulders cheat into a bladed stance (the left
+## one forward and in, both a little low; fpv_arms.json "stance") so the support
+## arm rises from the bottom corner instead of crossing the view flat, fully
+## stretched. The body is shadow-only there; third person keeps the real shoulders.
+func _fpv_stance(on: bool) -> void:
+	var stance: Dictionary = _fpv.spec.get("stance", {}) if _fpv != null else {}
+	for side in ["l", "r"]:
+		var sh: Node3D = joints[side + "_shoulder"]
+		if not sh.has_meta("rest"):
+			sh.set_meta("rest", sh.position)
+		sh.position = (sh.get_meta("rest") as Vector3) + (_v3(stance.get(side, [])) if on else Vector3.ZERO)
+
+
 ## Fingers close on a grip: the right hand whenever a weapon is out, the left while it
 ## rides a grip (same test as _place_weapon); otherwise they hang relaxed.
 func _fpv_grips(upper: String, dt: float) -> void:
@@ -619,6 +634,10 @@ func _fpv_grips(upper: String, dt: float) -> void:
 	var left: bool = armed and (weapons[current] as Node3D).get_meta("grips", {}).has("l") and drawn > 0.6
 	if left and first_person and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
 		left = false
+	# Issue #229: each weapon names how each hand holds it (hand_weapons "fpv_pose").
+	var poses: Dictionary = (look.get(current, {}) as Dictionary).get("fpv_pose", {}) if armed else {}
+	_fpv.set_pose("r", str(poses.get("r", "trigger")) if armed else "relaxed")
+	_fpv.set_pose("l", str(poses.get("l", "support")) if left else "relaxed")
 	_fpv.ease_grip("r", 1.0 if armed else relaxed, dt)
 	_fpv.ease_grip("l", 1.0 if left else relaxed, dt)
 

@@ -6,18 +6,25 @@ extends RefCounted
 ## - The kit's own forearm and hand are heroic primitives, and a skinned body is one
 ##   mesh, so neither reads well from the eye. These replace both in first person
 ##   for every outfit; third person never sees them.
-## - Forearm: a few stacked cylinders (slight muscle belly, taper to the wrist) and
-##   a folded cuff. Hand: palm block, knuckle ridge, four two-segment fingers and
-##   a thumb. Real proportions (hand ~0.19 m, palm ~0.086 m wide).
+## - Forearm: one lathed mesh through the profile rings (smooth muscle belly, taper
+##   to the wrist, a rounded cap at the elbow so its end never shows as a disc) and
+##   a folded cuff. Hand: one mesh for the gauntlet, a rounded palm, the thumb's
+##   pad and the knuckle ridge; four two-segment tapered fingers and a thumb. Real
+##   proportions (hand ~0.19 m, palm ~0.086 m wide). Issue #229.
+## - Materials: fpv_glove.gdshader (leather grain, knit sleeve, stitched seams,
+##   scuffs, a rim). UVs are metres, so the patterns keep one size on every piece.
 ## - The hand hangs along -Y from the wrist joint with the palm facing the body's
 ##   centre and the thumb up (+Z), which is where the IK leaves it. The palm sits a
 ##   little off the joint axis (the IK aims the axis at the grip centre), so the
 ##   glove wraps the grip instead of clipping through it.
 ## - set_grip(side, 0..1) curls the finger segments; ease_grip() glides there.
-##   Colours and sizes live in content/look/fpv_arms.json.
+##   set_pose(side, name) weights each finger (a pistol's trigger finger stays
+##   straighter, a relaxed hand curls more toward the little finger).
+##   Colours, sizes and poses live in content/look/fpv_arms.json.
 
 const PATH := "res://content/look/fpv_arms.json"
 const META := "fpv_arm"
+const GLOVE := preload("res://src/systems/look/shaders/fpv_glove.gdshader")
 
 var spec: Dictionary = {}
 var joints: Dictionary = {}
@@ -25,6 +32,8 @@ var roots: Dictionary = {}       ## side -> forearm node (child of the elbow)
 var hands: Dictionary = {}       ## side -> hand node (child of the wrist)
 var fingers: Dictionary = {}     ## side -> [{seg1, seg2, k, thumb}]
 var grip: Dictionary = { "l": 0.0, "r": 0.0 }
+var pose: Dictionary = { "l": "relaxed", "r": "relaxed" }
+var weights: Dictionary = {}     ## side -> [index, middle, ring, little, thumb] curl weights (eased)
 var visible := false
 
 var _kit: CharacterKit
@@ -38,6 +47,7 @@ static func attach(joints_in: Dictionary, kit: CharacterKit) -> FpvArms:
 	a.spec = CharacterKit._read_json(PATH)
 	for side in ["l", "r"]:
 		a._build_side(side)
+		a.weights[side] = a._pose_weights("relaxed")
 		a.set_grip(side, float(a._hand().get("relaxed", 0.3)))
 	a.set_visible(false)
 	return a
@@ -81,7 +91,11 @@ func set_grip(side: String, amount: float) -> void:
 	var c2: Array = h.get("curl2", [14, 88])
 	var ct: Array = h.get("thumb_curl", [12, 40])
 	var s_in := _s_in(side)
+	var w: Array = weights.get(side, [1.0, 1.0, 1.0, 1.0, 1.0])
+	var i := 0
 	for f in fingers.get(side, []):
+		var gi := clampf(g * float(w[mini(i, w.size() - 1)]), 0.0, 1.0)
+		i += 1
 		var lo1 := float(c1[0])
 		var hi1 := float(c1[1])
 		var lo2 := float(c2[0])
@@ -92,13 +106,36 @@ func set_grip(side: String, amount: float) -> void:
 			lo2 = lo1 * 0.8
 			hi2 = hi1 * 1.2
 		var k: float = f.k
-		(f.seg1 as Node3D).rotation.z = s_in * deg_to_rad(lerpf(lo1, hi1, g) * k)
-		(f.seg2 as Node3D).rotation.z = s_in * deg_to_rad(lerpf(lo2, hi2, g) * k)
+		(f.seg1 as Node3D).rotation.z = s_in * deg_to_rad(lerpf(lo1, hi1, gi) * k)
+		(f.seg2 as Node3D).rotation.z = s_in * deg_to_rad(lerpf(lo2, hi2, gi) * k)
 
 
 ## Move the grip toward `target` at about 6 per second, so closing is a quick clench.
+## The finger weights glide to the current pose's at the same rate.
 func ease_grip(side: String, target: float, dt: float) -> void:
+	var want := _pose_weights(str(pose.get(side, "relaxed")))
+	var w: Array = weights.get(side, want)
+	for i in w.size():
+		w[i] = move_toward(float(w[i]), float(want[i]), dt * 6.0)
+	weights[side] = w
 	set_grip(side, move_toward(float(grip[side]), target, dt * 6.0))
+
+
+## Pick the finger weighting ("relaxed", "trigger", "support", "hilt", ...); ease_grip
+## glides there, set_pose(..., true) snaps.
+func set_pose(side: String, name: String, snap := false) -> void:
+	pose[side] = name if (spec.get("poses", {}) as Dictionary).has(name) else "relaxed"
+	if snap:
+		weights[side] = _pose_weights(pose[side])
+		set_grip(side, float(grip[side]))
+
+
+## [index, middle, ring, little, thumb] for a named pose (1 = the plain curl).
+func _pose_weights(name: String) -> Array:
+	var p = (spec.get("poses", {}) as Dictionary).get(name, {})
+	var f: Array = p.get("fingers", [1.0, 1.0, 1.0, 1.0]) if p is Dictionary else [1.0, 1.0, 1.0, 1.0]
+	var t := float(p.get("thumb", 1.0)) if p is Dictionary else 1.0
+	return [float(f[0]), float(f[1]), float(f[2]), float(f[3]), t]
 
 
 # ------------------------------------------------------------------ build
@@ -117,6 +154,22 @@ func _col(key: String, fallback: String) -> Color:
 	return Color.html(str(spec.get(key, fallback)))
 
 
+## A glove-shader material; `params` are its uniforms. Shared per key.
+func _mat(key: String, color: Color, params: Dictionary) -> ShaderMaterial:
+	if _mats.has(key):
+		return _mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = GLOVE
+	m.set_shader_parameter("base", color)
+	m.set_shader_parameter("noise_tex", _kit.mats.noise)
+	for k in params:
+		m.set_shader_parameter(k, params[k])
+	_mats[key] = m
+	return m
+
+var _mats: Dictionary = {}
+
+
 func _build_side(side: String) -> void:
 	var elbow: Node3D = joints[side + "_elbow"]
 	var wrist: Node3D = joints[side + "_wrist"]
@@ -124,32 +177,46 @@ func _build_side(side: String) -> void:
 		if old != null:
 			old.get_parent().remove_child(old)
 			old.free()
-	var sleeve := _kit._m(_col("sleeve", "#171717"), "cloth", 0.7)
-	var cuff := _kit._m(_col("cuff", "#0f0f0f"), "cloth", 0.7)
-	var glove := _kit._m(_col("glove", "#0d0d0d"), "leather", 0.4)
-	var seg := int(spec.get("seg", 12))
+	var seg := int(spec.get("seg", 20))
+	var fa: Dictionary = spec.get("forearm", {})
+	var rings: Array = fa.get("rings", [])
+	var length := float(fa.get("length", 0.27))
+	var cuff_len := float(fa.get("cuff_len", 0.04))
+	var cuff_r := float(fa.get("cuff_r", 0.0385))
+	var s_in := _s_in(side)
+	var sleeve := _mat("sleeve", _col("sleeve", "#22201d"),
+			{ "roughness": 0.92, "sheen": 0.35, "weave": 1.0, "stitch": 0.6, "wear": 0.1,
+			"stitch_u": _seam_u(rings, 0.25 if side == "r" else 0.75) })
+	var cuff := _mat("cuff", _col("cuff", "#161412"),
+			{ "roughness": 0.85, "sheen": 0.3, "weave": 0.7, "stitch": 0.9, "stitch_u": -1.0,
+			"stitch_rings": 0.008, "length_v": cuff_len + 0.018, "wear": 0.2 })
+	var glove := _mat("glove", _col("glove", "#1c1915"),
+			{ "roughness": 0.5, "sheen": 0.4, "grain": 1.0, "wear": 0.3 })
 
-	# Forearm and cuff, from the elbow (y = 0) down to the wrist joint.
+	# Forearm: one lathe from a rounded elbow cap down the rings to the wrist.
 	var arm := Node3D.new()
 	arm.name = "FpvArm"
 	arm.set_meta(META, true)
 	elbow.add_child(arm)
 	roots[side] = arm
-	var fa: Dictionary = spec.get("forearm", {})
-	var rings: Array = fa.get("rings", [])
-	for i in range(rings.size() - 1):
-		var y0 := float(rings[i][0])
-		var y1 := float(rings[i + 1][0])
-		var piece := _cyl(float(rings[i][1]), float(rings[i + 1][1]), y0 - y1, seg)
-		_mi(arm, piece, sleeve, Vector3(0, (y0 + y1) * 0.5, 0))
-	var length := float(fa.get("length", 0.27))
-	var cuff_len := float(fa.get("cuff_len", 0.04))
-	var cuff_r := float(fa.get("cuff_r", 0.0385))
-	# A folded cuff: a band slightly proud of the sleeve, a fold ring above it.
-	_mi(arm, _cyl(cuff_r, cuff_r, cuff_len, seg), cuff, Vector3(0, -length + cuff_len * 0.5 - 0.004, 0))
-	_mi(arm, _cyl(cuff_r + 0.004, cuff_r + 0.004, 0.012, seg), cuff, Vector3(0, -length + cuff_len + 0.002, 0))
+	var prof: Array = []
+	var r0 := float(rings[0][1])
+	var y0 := float(rings[0][0])
+	for c in range(5, 0, -1):          # the elbow cap: a squashed quarter circle
+		var a := PI * 0.5 * float(c) / 5.0
+		prof.append(Vector2(r0 * cos(a), y0 + r0 * 0.7 * sin(a)))
+	prof.append_array(_smooth(rings, 4))
+	_mi(arm, _lathe(prof, seg, true), sleeve, Vector3.ZERO)
+	# The cuff: a fold ring proud of the band, the band, a slight flare at the hem.
+	var top := -length + cuff_len + 0.012
+	var cuff_prof := [
+		Vector2(cuff_r - 0.003, top + 0.004), Vector2(cuff_r + 0.0035, top),
+		Vector2(cuff_r + 0.004, top - 0.008), Vector2(cuff_r, top - 0.012),
+		Vector2(cuff_r, -length + 0.004), Vector2(cuff_r + 0.0015, -length - 0.002),
+		Vector2(cuff_r - 0.002, -length - 0.006)]
+	_mi(arm, _lathe(cuff_prof, seg, false), cuff, Vector3.ZERO)
 
-	# The hand: palm block (N thick, Y long, T wide), N toward the body centre.
+	# The hand: gauntlet, palm, thumb pad and knuckles as one mesh.
 	var hn := Node3D.new()
 	hn.name = "FpvHand"
 	hn.set_meta(META, true)
@@ -157,17 +224,25 @@ func _build_side(side: String) -> void:
 	hands[side] = hn
 	var h := _hand()
 	var palm: Array = h.get("palm", [0.032, 0.098, 0.086])
-	var s_in := _s_in(side)
 	var px := -s_in * float(h.get("offset", 0.03))     # shifted away from the grip centre
 	var pt := float(palm[0])
 	var pl := float(palm[1])
 	var pw := float(palm[2])
-	# Gloved wrist continues the cuff, then the palm, a heel pad and a knuckle ridge.
-	_mi(hn, _cyl(0.03, 0.03, 0.03, seg), glove, Vector3(px * 0.5, 0.005, 0))
-	_mi(hn, _box(Vector3(pt, pl, pw)), glove, Vector3(px, -pl * 0.5, 0))
-	_mi(hn, _sphere(pt * 0.62, seg), glove, Vector3(px, -0.012, 0), Vector3.ZERO, Vector3(0.9, 0.8, 2.3))
-	_mi(hn, _cyl(pt * 0.42, pt * 0.42, pw * 0.96, 8), glove,
-			Vector3(px - s_in * pt * 0.42, -pl + 0.004, 0), Vector3(90, 0, 0))
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Gauntlet: up into the cuff, narrowing at the wrist, flaring into the palm.
+	var gl := _lathe([Vector2(cuff_r - 0.004, 0.035), Vector2(0.03, 0.02), Vector2(0.0265, 0.0),
+			Vector2(0.028, -0.012)], seg, false)
+	st.append_from(gl, 0, Transform3D(Basis(), Vector3(px * 0.35, 0, 0)))
+	st.append_from(_rounded_box(Vector3(pt, pl, pw), 0.35, 16), 0,
+			Transform3D(Basis(), Vector3(px, -pl * 0.5, 0)))
+	# Heel of the hand and the thumb's pad: soft lumps on the palm side.
+	st.append_from(_rounded_box(Vector3(pt * 0.9, pl * 0.42, pw * 0.5), 0.8, 12), 0,
+			Transform3D(Basis(), Vector3(px + s_in * pt * 0.22, -pl * 0.3, pw * 0.22)))
+	# Knuckle ridge: a capsule across the back of the hand where the fingers start.
+	st.append_from(_rounded_box(Vector3(pt * 0.95, pt * 0.62, pw * 1.0), 0.6, 12), 0,
+			Transform3D(Basis(), Vector3(px - s_in * pt * 0.12, -pl + 0.006, 0)))
+	_mi(hn, st.commit(), glove, Vector3.ZERO)
 
 	var list: Array = []
 	var flen: Array = h.get("finger_len", [0.043, 0.036])
@@ -177,79 +252,165 @@ func _build_side(side: String) -> void:
 	for i in fz.size():
 		var base := Node3D.new()
 		base.name = "Finger%d" % i
-		base.position = Vector3(px + s_in * pt * 0.4, -pl, float(fz[i]))
+		base.position = Vector3(px + s_in * pt * 0.25, -pl + 0.004, float(fz[i]))
 		hn.add_child(base)
-		list.append(_finger(base, flen, fr * (1.0 if i < 3 else 0.9), glove, float(fk[i]), false))
-	# Thumb: from the top edge of the palm, near the wrist, its tip toward the palm.
+		var k := float(fk[i])
+		list.append(_finger(base, [float(flen[0]) * k, float(flen[1]) * k], fr * (1.0 if i < 3 else 0.88), glove, k, false))
+	# Thumb: from the palm's top edge near the wrist, its tip toward the palm.
 	var tl: Array = h.get("thumb_len", [0.038, 0.032])
 	var tb := Node3D.new()
 	tb.name = "Thumb"
-	tb.position = Vector3(px + s_in * pt * 0.45, -pl * 0.36, pw * 0.5)
+	tb.position = Vector3(px + s_in * pt * 0.35, -pl * 0.32, pw * 0.42)
 	tb.rotation = Vector3(deg_to_rad(-35.0), 0, 0)       # splay out along +T
 	hn.add_child(tb)
-	list.append(_finger(tb, tl, fr * 1.25, glove, 1.0, true))
+	list.append(_finger(tb, tl, fr * 1.22, glove, 1.0, true))
 	fingers[side] = list
 
 
-## Two segments hanging along -Y from `base`; the pivots are what set_grip turns.
+## Two tapered segments hanging along -Y from `base`; the pivots are what set_grip
+## turns. Each overlaps the next joint so a bent finger shows no gap.
 func _finger(base: Node3D, lens: Array, r: float, mat: Material, k: float, thumb: bool) -> Dictionary:
 	var l1 := float(lens[0])
 	var l2 := float(lens[1])
 	var s1 := Node3D.new()
 	s1.name = "Seg1"
 	base.add_child(s1)
-	_mi(s1, _capsule(r, l1), mat, Vector3(0, -l1 * 0.5, 0))
+	_mi(s1, _digit(r, r * 0.9, l1), mat, Vector3.ZERO)
 	var s2 := Node3D.new()
 	s2.name = "Seg2"
 	s2.position = Vector3(0, -l1, 0)
 	s1.add_child(s2)
-	_mi(s2, _capsule(r * 0.92, l2), mat, Vector3(0, -l2 * 0.5, 0))
+	_mi(s2, _digit(r * 0.9, r * 0.74, l2), mat, Vector3.ZERO)
 	return { "seg1": s1, "seg2": s2, "k": k, "thumb": thumb }
 
 
-func _mi(parent: Node3D, mesh: Mesh, mat: Material, pos: Vector3,
-		rot: Vector3 = Vector3.ZERO, scl: Vector3 = Vector3.ONE) -> MeshInstance3D:
+func _mi(parent: Node3D, mesh: Mesh, mat: Material, pos: Vector3) -> MeshInstance3D:
 	var m := MeshInstance3D.new()
 	m.mesh = mesh
 	m.material_override = mat
 	m.position = pos
-	m.rotation_degrees = rot
-	m.scale = scl
 	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # the body already casts
 	parent.add_child(m)
 	return m
 
 
-func _cyl(top: float, bottom: float, h: float, seg: int) -> CylinderMesh:
-	var c := CylinderMesh.new()
-	c.top_radius = top
-	c.bottom_radius = bottom
-	c.height = h
-	c.radial_segments = seg
-	c.rings = 1
-	return c
+## Where on the sleeve's UV (metres round) a seam at fraction `f` of the way round sits.
+func _seam_u(rings: Array, f: float) -> float:
+	var r := 0.0
+	for ring in rings:
+		r = maxf(r, float(ring[1]))
+	return TAU * r * f
 
 
-func _box(size: Vector3) -> BoxMesh:
-	var b := BoxMesh.new()
-	b.size = size
-	return b
+## Catmull-Rom through the [y, r] rings, `steps` points per span: a smooth profile.
+static func _smooth(rings: Array, steps: int) -> Array:
+	var pts: Array = []
+	for ring in rings:
+		pts.append(Vector2(float(ring[1]), float(ring[0])))
+	var out: Array = []
+	for i in pts.size() - 1:
+		var p0: Vector2 = pts[maxi(i - 1, 0)]
+		var p1: Vector2 = pts[i]
+		var p2: Vector2 = pts[i + 1]
+		var p3: Vector2 = pts[mini(i + 2, pts.size() - 1)]
+		for s in steps:
+			var t := float(s) / float(steps)
+			out.append(0.5 * ((2.0 * p1) + (-p0 + p2) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t
+					+ (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t * t * t))
+	out.append(pts[pts.size() - 1])
+	return out
 
 
-func _sphere(r: float, seg: int) -> SphereMesh:
-	var s := SphereMesh.new()
-	s.radius = r
-	s.height = r * 2.0
-	s.radial_segments = seg
-	s.rings = maxi(seg / 2, 4)
-	return s
+## A surface of revolution round Y through `prof` (x = radius, y = height, top to
+## bottom). Smooth normals from the profile's slope; UVs in metres (u round the
+## widest ring, v down the profile) with tangents for the shader's bumps.
+## `cap_end` closes the bottom with a rounded tip.
+static func _lathe(prof: Array, seg: int, cap_end: bool) -> ArrayMesh:
+	var pr: Array = prof.duplicate()
+	if cap_end:
+		var last: Vector2 = pr[pr.size() - 1]
+		for k in range(1, 4):
+			var a := PI * 0.5 * float(k) / 3.0
+			pr.append(Vector2(last.x * cos(a), last.y - last.x * 0.6 * sin(a)))
+	var rmax := 0.0
+	for p in pr:
+		rmax = maxf(rmax, (p as Vector2).x)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var v := 0.0
+	for j in pr.size():
+		var p: Vector2 = pr[j]
+		if j > 0:
+			v += (p - (pr[j - 1] as Vector2)).length()
+		var tan_dir: Vector2 = (pr[mini(j + 1, pr.size() - 1)] as Vector2) - (pr[maxi(j - 1, 0)] as Vector2)
+		var n2 := Vector2(-tan_dir.y, tan_dir.x).normalized()      # outward in (radius, y)
+		for i in seg + 1:
+			var a := TAU * float(i) / float(seg)
+			var dir := Vector3(cos(a), 0, sin(a))
+			st.set_normal((dir * n2.x + Vector3.UP * n2.y).normalized())
+			st.set_uv(Vector2(TAU * rmax * float(i) / float(seg), v))
+			st.add_vertex(dir * p.x + Vector3.UP * p.y)
+	var row := seg + 1
+	for j in pr.size() - 1:
+		for i in seg:
+			var a := j * row + i
+			var b := a + 1
+			var c := a + row
+			var d := c + 1
+			st.add_index(a)
+			st.add_index(b)
+			st.add_index(c)
+			st.add_index(b)
+			st.add_index(d)
+			st.add_index(c)
+	st.generate_tangents()
+	return st.commit()
 
 
-## A finger segment: `len` is its length, a little extra for the rounded ends.
-func _capsule(r: float, len: float) -> CapsuleMesh:
-	var c := CapsuleMesh.new()
-	c.radius = r
-	c.height = maxf(len + r * 0.6, r * 2.0)
-	c.radial_segments = 8
-	c.rings = 2
-	return c
+## A finger segment from y = 0 down to y = -len, radius r0 tapering to r1, both
+## ends rounded (the top one reaches above 0 to fill the joint).
+static func _digit(r0: float, r1: float, len: float) -> ArrayMesh:
+	var prof: Array = []
+	for k in range(4, -1, -1):
+		var a := PI * 0.5 * float(k) / 4.0
+		prof.append(Vector2(r0 * cos(a), r0 * 0.8 * sin(a)))
+	prof.append(Vector2(lerpf(r0, r1, 0.5), -len * 0.5))
+	prof.append(Vector2(r1, -len))
+	return _lathe(prof, 10, true)
+
+
+## A superellipsoid: a box of `size` with its edges rounded (e = 0 boxy, 1 an
+## ellipsoid). Smooth analytic normals; UVs in metres for the grain.
+static func _rounded_box(size: Vector3, e: float, n: int) -> ArrayMesh:
+	var h := size * 0.5
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for j in n + 1:
+		var phi := PI * (float(j) / float(n) - 0.5)
+		for i in n * 2 + 1:
+			var th := TAU * float(i) / float(n * 2)
+			var c := Vector3(cos(phi) * cos(th), sin(phi), cos(phi) * sin(th))
+			var p := Vector3(_sp(c.x, e) * h.x, _sp(c.y, e) * h.y, _sp(c.z, e) * h.z)
+			var nn := Vector3(_sp(c.x, 2.0 - e) / h.x, _sp(c.y, 2.0 - e) / h.y, _sp(c.z, 2.0 - e) / h.z)
+			st.set_normal(nn.normalized() if nn.length() > 0.0 else Vector3.UP)
+			st.set_uv(Vector2(th * maxf(h.x, h.z), (phi + PI * 0.5) * h.y))
+			st.add_vertex(p)
+	var row := n * 2 + 1
+	for j in n:
+		for i in n * 2:
+			var a := j * row + i
+			var b := a + 1
+			var c := a + row
+			var d := c + 1
+			st.add_index(a)
+			st.add_index(c)
+			st.add_index(b)
+			st.add_index(b)
+			st.add_index(c)
+			st.add_index(d)
+	st.generate_tangents()
+	return st.commit()
+
+
+static func _sp(x: float, e: float) -> float:
+	return signf(x) * pow(absf(x), e)
