@@ -859,11 +859,14 @@ func _native_bodies(budget_left: float) -> bool:
 
 
 ## Issue #58: T-89 in the pit. After the ship (a bought ship becomes a berth) and
-## the bar (the save says which ship is on the spare pad).
+## the bar (the save says which ship is on the spare pad, and whether he has met
+## the player). He joins the bar's host as an AI character when there is one.
 func _build_salesman() -> void:
 	salesman = ShipSalesman.new()
 	salesman.setup(self, _player, gear)
 	add_child(salesman)
+	if bar != null:
+		salesman.attach_host(bar)
 
 
 ## Issue #46: the world's "detail" tiers, and what they may switch off: the

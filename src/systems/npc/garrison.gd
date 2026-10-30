@@ -667,6 +667,17 @@ func _tick_locks(dt: float) -> void:
 
 func _wake_in_pit() -> void:
 	var taken := WorldState.on_player_downed()
+	# Downed by the Remnant: they let it go, just. Their standing comes up to the
+	# lowest they do not shoot on sight (never down: it only ever helps), and they
+	# forget the fight (below).
+	var by = player.get("last_shooter")
+	var by_remnant: bool = is_instance_valid(by) and by is NpcBody and (by as NpcBody).faction == "imperial_remnant"
+	player.set("last_shooter", null)
+	if by_remnant:
+		var now := int(WorldState.standing.get("imperial_remnant", 0))
+		var floor_ok := checkpoint.lowest_tolerated()
+		if now < floor_ok:
+			WorldState.change_standing("imperial_remnant", floor_ok - now, "The Remnant dragged you to the pit and let it go.")
 	player.global_position = town.spawn_pos() + Vector3(0, 0.05, 0)
 	if player.has_method("align_to_ground"):
 		player.call("align_to_ground", true)
@@ -677,6 +688,9 @@ func _wake_in_pit() -> void:
 	player.locked = false
 	alarm.stand_down()
 	checkpoint.on_player_downed()
+	if by_remnant:
+		alarm.memory_left = 0.0
+		checkpoint.memory_left = 0.0
 	_handle(checkpoint.drain())
 	_handle(alarm.drain())
 	for g in _alive():

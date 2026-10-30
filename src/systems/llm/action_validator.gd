@@ -12,7 +12,8 @@ const TRUST_MAX := 2
 const TRUST_PER_VISIT := 6
 const GUARDS_MAX_TRUST := 15
 
-## briefing: the ids she was shown { rumors: [..], jobs: [..], secrets: [..], drinks: {id: {name, price}} }
+## briefing: the ids she was shown { rumors: [..], jobs: [..], secrets: [..], drinks: {id: {name, price}},
+##   ships: {id: {name, price}} }
 ## ctx: { trust, trust_this_visit, hostile (bool), insults (int) }
 ## -> { kept: [..], dropped: [{action, why}] }
 static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> Dictionary:
@@ -68,6 +69,15 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["id"] = str(sale.get("id", ""))
 					out["name"] = str(sale.get("name", ""))
 					out["price"] = int(sale.get("price", 0))      # the game's price, never the model's
+			"offer_ship":
+				var ships: Dictionary = briefing.get("ships", {})
+				var sid := str(a.get("id", ""))
+				if not ships.has(sid):
+					why = "ship not for sale here"
+				else:
+					out["id"] = sid
+					out["name"] = str(ships[sid].name)
+					out["price"] = int(ships[sid].price)          # the game's price, never the model's
 			"refuse_topic", "end_conversation":
 				pass
 			"call_guards":

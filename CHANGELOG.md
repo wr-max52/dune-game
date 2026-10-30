@@ -2,6 +2,25 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## T-89 talks: returning hello, ship advice, and he is solid (2026-10-29)
+
+- **A returning line instead of the tutorial.** The first game, T-89 says hello
+  and offers the tutorial as before. Every game after that (the save remembers
+  he has met you) he just calls out one line across the pit, like "I have
+  multiple ships for sale, ready for all kinds of things!". The lines are under
+  "returning" in content/core/npcs/t89.json. The tutorial is still in his shop.
+- **He is an AI character now**, like Oda and Skrugs. [E] still opens his shop;
+  its first option, **Talk**, opens the chat box. His prompt holds every ship he
+  sells with its price and its real numbers (hull, shields, top and boost speed,
+  guns, what Shift does), what is on your pad, and your credits. Ask what to buy
+  and he recommends one ship and says why; the price card comes up and **Buy**
+  puts it on the pad. The price is always the game's, never the model's.
+- **With no model he still recommends a real ship.** He matches what you asked
+  for (speed, a fight, hauling) and says so when you cannot afford it, offering
+  the best one you can.
+- **Solid all round.** His collider is a cylinder his full height (2.3 m) and wide
+  enough for his shoulders and hanging arm, so you cannot clip into him from any
+  side.
 ## The Remnant cruiser in orbit, and Oda's last job (2026-10-30, issue #193)
 
 - **A Remnant star cruiser holds orbit far to the east**, 4.6 km up and round the

@@ -4,6 +4,9 @@ extends GutTest
 ## and offers the tutorial (it explains the weapons the player already carries),
 ## nothing hurts him, and a ship bought from him lands on the empty pad, can be
 ## boarded like any parked ship, is kept in the save, and sells back at resale.
+## A player he has met before only gets a returning line. With the town's
+## conversation host he is an AI character who reads every ship's numbers and
+## recommends one. He is solid.
 
 const TownDemo := preload("res://scenes/town_demo.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
@@ -61,6 +64,7 @@ func test_greets_once_and_runs_the_tutorial() -> void:
 	assert_false(s.menu.is_open(), "a headless run never greets on its own")
 	s.greet()
 	assert_true(ShipSalesman.greeted, "once per run")
+	assert_true(WorldState.has_flag(ShipSalesman.MET_FLAG), "the save remembers he has met you")
 	assert_true(s.menu.is_open())
 	assert_true(s.said.begins_with(str(s.cfg.greeting)), "hello first")
 	assert_eq(s.menu.options.size(), 2, "then the tutorial offer: yes or no")
@@ -77,6 +81,18 @@ func test_greets_once_and_runs_the_tutorial() -> void:
 	assert_false(s.menu.is_open())
 	await wait_physics_frames(2)
 	assert_false(t._player.locked, "free to walk again")
+
+
+func test_a_player_he_has_met_gets_a_returning_line() -> void:
+	WorldState.set_flag(ShipSalesman.MET_FLAG)      # as loaded from an earlier game's save
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	s.greet()
+	assert_true(ShipSalesman.greeted)
+	assert_false(s.menu.is_open(), "no hello, no tutorial offer")
+	assert_false(t._player.locked, "nothing in the player's way")
+	assert_has(s.cfg.returning, s.said, "one of his returning lines")
+	assert_true(" ".join(s.cfg.returning).contains("multiple ships for sale"))
 
 
 func test_skip_the_tutorial() -> void:
@@ -193,3 +209,98 @@ func test_decor_parks_a_bought_ship_on_the_pad() -> void:
 	var a: AABB = TownDecor.visual_aabb(ship)
 	assert_almost_eq(a.get_center().x, (float(pad.min[0]) + float(pad.max[0])) * 0.5, 0.3)
 	assert_almost_eq(a.get_center().z, (float(pad.min[2]) + float(pad.max[2])) * 0.5, 0.3)
+
+
+# ---- the AI salesman --------------------------------------------------------------
+
+func _town_with_bar() -> Node:
+	var t = _town()
+	t._build_bar([ScriptedProvider.new("scripted_test")], "")
+	t.salesman.attach_host(t.bar)
+	return t
+
+
+func test_his_card_has_every_ship_with_its_numbers() -> void:
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	var card := s.persona_card()
+	assert_eq(card.ships.map(func(sh): return sh.id), s.stock(), "every ship he stocks, in order")
+	var b := NpcBrain.new(null, card)
+	var persona := str(b.builder.persona_message().content)
+	for id in s.stock():
+		assert_string_contains(persona, "%s: %d credits" % [s.ship_label(id), s.price(id)])
+	var ship: Dictionary = s.content.get_ship("courier")
+	assert_string_contains(persona, "Hull %d" % int(ship.hull), "real numbers from the ship file")
+	assert_string_contains(persona, "Top speed %d" % int(ship.atmosphere.max_speed))
+	var rules := str(b.builder.rules_message().content)
+	assert_string_contains(rules, "offer_ship")
+	assert_false(rules.contains("offer_job") or rules.contains("pour_drink"), "no jobs, no drinks")
+	WorldState.hangar = "gunship"
+	assert_string_contains(" ".join(s.pad_brief()), s.ship_label("gunship"), "he knows what is on your pad")
+
+
+func test_offer_ship_takes_the_games_price() -> void:
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	var b := NpcBrain.new(null, s.persona_card())
+	var ids: Dictionary = b.builder.briefing({}, b.rel, [], []).ids
+	var v := ActionValidator.validate([{ "type": "offer_ship", "id": "courier", "price": 1 },
+		{ "type": "offer_ship", "id": "remnant_fighter" }], ids, {})
+	assert_eq(v.kept.size(), 1)
+	assert_eq(int(v.kept[0].price), s.price("courier"), "never the model's price")
+	assert_eq(str(v.dropped[0].why), "ship not for sale here")
+
+
+func test_offline_he_still_recommends_a_real_ship() -> void:
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	var b := NpcBrain.new(null, s.persona_card())
+	WorldState.credits = 5000
+	var fight := b.canned_reply("Which ship should I get for fighting raiders?")
+	assert_eq(str(fight.actions[0].type), "offer_ship")
+	assert_eq(str(fight.actions[0].id), "gunship", "the fighter's ship")
+	assert_string_contains(str(fight.say), s.ship_label("gunship"))
+	var haul := b.canned_reply("I want to buy something to haul cargo")
+	assert_eq(str(haul.actions[0].id), "freighter")
+	WorldState.credits = s.price("courier")
+	var short := b.canned_reply("Which ship should I get for fighting raiders?")
+	assert_eq(str(short.actions[0].id), "courier", "the best one they can afford")
+	assert_string_contains(str(short.say), s.ship_label("gunship"), "and what they should save up for")
+
+
+func test_talk_from_his_shop_and_buy_on_the_price_card() -> void:
+	var t = _town_with_bar()
+	var s: ShipSalesman = t.salesman
+	assert_true(t.bar.spots.has(s.spot), "one of the town's AI characters")
+	t._player.global_position = s.pos + Vector3(1.5, 0, 0)
+	assert_null(t.bar.spot_in_range(), "his own [E] (the shop) starts the talk, not the host's")
+	WorldState.credits = 5000
+	s.talk()
+	assert_eq(str(s.menu.options[0].id), "chat", "Talk comes first")
+	s.menu.choose("chat")
+	assert_true(t.bar.is_talking())
+	assert_eq(t.bar.active, s.spot)
+	s.spot.brain.sale_offered.emit({ "id": "interceptor", "name": s.ship_label("interceptor"), "price": s.price("interceptor") })
+	assert_true(t.bar.panel.job_open(), "the price card is up")
+	t.bar.panel.answer_card(true)
+	assert_eq(WorldState.hangar, "interceptor", "bought, onto the pad")
+	assert_eq(WorldState.credits, 5000 - s.price("interceptor"))
+	t.bar.end_talk()
+	await wait_physics_frames(2)
+	assert_false(t._player.locked, "free to walk again")
+
+
+func test_he_is_solid_all_round() -> void:
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	var cs := s.body.get_child(0) as CollisionShape3D
+	assert_true(cs.shape is CylinderShape3D, "the same whichever way he turns")
+	assert_almost_eq((cs.shape as CylinderShape3D).height, 2.3, 0.01, "his full height")
+	assert_true((s.body.collision_layer & 1) != 0, "on the layer the player collides with")
+	await wait_physics_frames(2)
+	var space := s.body.get_world_3d().direct_space_state
+	for off in [Vector3(0.4, 0.3, 0), Vector3(-0.4, 1.8, 0), Vector3(0, 2.2, 0.4)]:
+		var q := PhysicsPointQueryParameters3D.new()
+		q.position = s.pos + off
+		var hits := space.intersect_point(q)
+		assert_true(hits.any(func(h): return h.collider == s.body), "solid at %s" % [off])

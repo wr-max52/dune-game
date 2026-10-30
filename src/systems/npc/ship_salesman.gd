@@ -4,19 +4,26 @@ extends Node3D
 ## frame that never fights:
 ##   - nothing hurts him: his body is solid (you walk round him, bolts stop on
 ##     him) but nothing on him takes damage,
-##   - once every time the game starts he says hello and offers the tutorial: the
+##   - the first time you play he says hello and offers the tutorial: the
 ##     controls and how things work, a page at a time. The player already spawns
-##     armed; he only explains the weapons,
+##     armed; he only explains the weapons. Every game after that (the save says he
+##     has met you) he only calls out one of his "returning" lines,
 ##   - [E] beside him opens his shop: every ship in content/core/ships that flies
 ##     in the atmosphere. A bought ship lands on the spare pad and is yours to fly
 ##     like any other parked ship (ShipPilot.add_berth); one at a time, and he buys
 ##     it back at resale_rate. WorldState.hangar keeps it across saves.
+##   - when the town has a conversation host, he is an AI character too (his card,
+##     content/core/npcs/t89_card.json): "Talk" in his shop opens the chat box. His
+##     prompt carries every ship's price and numbers, so he can recommend one, and
+##     his offer_ship puts its price card in front of you; Buy is the shop's buy().
 ## Words, prices and his spot: content/core/npcs/t89.json. Looks: DroidKit.
 ##
 ## The headless test calls greet(), talk(), buy(), sell() and the menu's choose()
 ## directly: the same code paths as the keys. A headless run never greets on its own.
 
 const CFG_PATH := "res://content/core/npcs/t89.json"
+const CARD_PATH := "res://content/core/npcs/t89_card.json"
+const MET_FLAG := "met_t89"          ## saved: he has said his first hello to this player
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 
 static var greeted := false          ## the hello happens once per run of the game
@@ -35,6 +42,9 @@ var in_reach := false
 var page := -1                       ## the tutorial page showing, -1 = none
 var bought_ship: Node3D              ## your ship on the spare pad (model, or a stand-in in the greybox)
 var said := ""                       ## his last line, for tests
+var host: ConversationHost           ## the town's AI characters' host (null: shop only)
+var spot: TalkSpot                   ## him, as one of them
+var _offered: Dictionary = {}        ## the ship on the chat box's price card
 var _greet_left := -1.0
 var _was_locked := false
 
@@ -78,8 +88,9 @@ func _line(key: String) -> String:
 # ------------------------------------------------------------------ body
 
 ## Where the marker says, facing its "face" point. The look is the assassin
-## droid's, in his own colours; the collision box is on the default layer, so the
-## player walks round him.
+## droid's, in his own colours; the collider is a cylinder round all of him (his
+## height, wide enough for his shoulders and hanging arm, whichever way he turns)
+## on the default layer, so the player walks round him and bolts stop on him.
 func _build_body() -> void:
 	var town = demo.town if demo != null and "town" in demo else null
 	var mk := str(cfg.get("marker", "t89"))
@@ -90,10 +101,11 @@ func _build_body() -> void:
 	body = StaticBody3D.new()
 	body.name = "T89"
 	var cs := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(0.6, 2.2, 0.45)
-	cs.shape = box
-	cs.position = Vector3(0, 1.1, 0)
+	var cyl := CylinderShape3D.new()
+	cyl.height = height()
+	cyl.radius = 0.5
+	cs.shape = cyl
+	cs.position = Vector3(0, cyl.height * 0.5, 0)
 	body.add_child(cs)
 	var look_cfg: Dictionary = cfg.get("look", {})
 	var mats: LookMaterials = demo._flat_mats() if demo.has_method("_flat_mats") else LookMaterials.new()
@@ -106,6 +118,11 @@ func _build_body() -> void:
 	var m: Dictionary = town.get_marker(mk)
 	if m.has("face"):
 		_face(Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2])) - pos)
+
+
+## How tall he stands: his kind's height (the assassin frame's 2.3 m).
+func height() -> float:
+	return float(DroidRoster.kind_cfg(str(cfg.get("look", {}).get("kind", "assassin"))).get("height", 2.3))
 
 
 ## Issue #25: his kind's model (the rigged assassin), with nothing in his hand and
@@ -166,7 +183,7 @@ func _busy() -> bool:
 
 
 func _tick_focus() -> void:
-	if menu.is_open():
+	if menu.is_open() or (host != null and host.is_talking()):
 		return
 	if _was_locked:
 		player.locked = false
@@ -184,13 +201,24 @@ func _tick_focus() -> void:
 
 # ------------------------------------------------------------------ talk
 
-## The hello at startup, and the offer of the tutorial.
+## The hello at startup, and the offer of the tutorial. A player he has met
+## before (the save's MET_FLAG) gets one of his returning lines instead, called
+## out across the pit: no menu, nothing in their way.
 func greet() -> void:
 	greeted = true
 	_greet_left = -1.0
 	_beep()
+	if WorldState.has_flag(MET_FLAG):
+		_say(returning_line())
+		return
+	WorldState.set_flag(MET_FLAG)
 	_open(str(cfg.get("greeting", "")) + _story_line() + "\n\n" + str(cfg.get("offer_tutorial", "")),
 		[{ "id": "yes", "text": _l("yes_tutorial") }, { "id": "no", "text": _l("no_tutorial") }], _on_offer)
+
+
+func returning_line() -> String:
+	var all: Array = cfg.get("returning", [])
+	return str(all[randi() % all.size()]) if not all.is_empty() else _line("hello_again")
 
 
 func _on_offer(id: String) -> void:
@@ -200,10 +228,12 @@ func _on_offer(id: String) -> void:
 		_say(_line("skipped"))
 
 
-## [E] beside him: the shop, and the tutorial again.
+## [E] beside him: a chat (when he has a brain), the shop, and the tutorial again.
 func talk() -> void:
 	_beep()
 	var opts := shop_options()
+	if spot != null:
+		opts.push_front({ "id": "chat", "text": _l("chat") })
 	opts.append({ "id": "tutorial", "text": _l("tutorial") })
 	_open(_line("hello_again") + _story_line(), opts, _on_shop)
 
@@ -312,6 +342,8 @@ func _on_shop(id: String) -> void:
 		sell()
 	elif id == "tutorial":
 		start_tutorial()
+	elif id == "chat":
+		chat()
 
 
 ## Buy a ship: it lands on the spare pad. Returns "bought", "taken",
@@ -381,6 +413,106 @@ func park_owned() -> void:
 		bought_ship.rotation.y = deg_to_rad(float(box.get("parked_yaw_deg", 0.0)))
 	if demo.pilot != null:
 		demo.pilot.add_berth(bought_ship, WorldState.hangar, str(box.id))
+
+
+# ------------------------------------------------------------------ AI
+
+## Join the town's conversation host as one of its AI characters. Safe to call
+## twice. His [E] stays his shop's; "Talk" there starts the chat (chat()).
+func attach_host(h: ConversationHost) -> void:
+	if h == null or host == h or body == null:
+		return
+	host = h
+	var brain := NpcBrain.new(null, persona_card())
+	brain.extra_brief = pad_brief
+	spot = TalkSpot.new(brain, body, pos)
+	spot.manual = true
+	spot.radius = float(cfg.get("reach", 3.2))
+	spot.face_height = height() - 0.25
+	host.add_spot(spot)
+	brain.sale_offered.connect(_on_ship_offered)
+	host.panel.sale_answered.connect(_on_ship_answer)
+
+
+## Open the chat box with him (from his shop's "Talk").
+func chat() -> bool:
+	if host == null or spot == null or host.is_talking():
+		return false
+	_was_locked = false               # the host locks the player now, and frees them after
+	host.start_talk(spot)
+	return host.active == spot
+
+
+## His card, with what he sells filled in: each ship in stock with its price and
+## its numbers from the ship file, so the model can compare them and recommend one.
+func persona_card() -> Dictionary:
+	var card := NpcBrain._read(CARD_PATH)
+	var notes: Dictionary = card.get("ship_notes", {})
+	var ships := []
+	for id in stock():
+		var n: Dictionary = notes.get(id, {})
+		ships.append({ "id": id, "name": ship_label(id), "price": price(id), "text": ship_text(id, card),
+			"good_for": n.get("good_for", []) })
+	card["ships"] = ships
+	return card
+
+
+## One ship's numbers in plain words (and his pitch for it):
+## "Hull 80, shields 60. Top speed 210, 380 on boost. 2 cannons at 70% power. ..."
+func ship_text(ship_id: String, card: Dictionary = {}) -> String:
+	var s: Dictionary = content.get_ship(ship_id)
+	var air: Dictionary = s.get("atmosphere", {})
+	var cannons := 0
+	var seekers := 0
+	for h in s.get("hardpoints", []):
+		if str(h.get("weapon", "")) == "ship_missile":
+			seekers += 1
+		else:
+			cannons += 1
+	var guns := "%d cannons at %d%% power" % [cannons, int(round(float(s.get("blaster_power", 1.0)) * 100.0))]
+	if seekers > 0:
+		guns += " and a seeker rack"
+	var parts := [
+		"Hull %d, shields %d." % [int(s.get("hull", 0)), int(s.get("shield", {}).get("max", 0))],
+		"Top speed %d, %d on boost." % [int(air.get("max_speed", 0)), int(air.get("boost_speed", 0))],
+		guns + ".",
+	]
+	var ability := str(s.get("flight", {}).get("ability", {}).get("kind", ""))
+	var ab: Dictionary = card.get("abilities", {})
+	if ab.has(ability):
+		parts.append(str(ab[ability]) + ".")
+	var pitch := str(card.get("ship_notes", {}).get(ship_id, {}).get("pitch", ""))
+	if pitch != "":
+		parts.append(pitch)
+	return " ".join(PackedStringArray(parts))
+
+
+## His briefing each turn: what is on their pad (only one ship fits).
+func pad_brief() -> Array:
+	if WorldState.hangar == "":
+		return ["THEIR PAD: empty, ready for a ship."]
+	return ["THEIR PAD: holds the %s you sold them (you would buy it back for %d). Nothing else fits until they sell it."
+		% [ship_label(WorldState.hangar), resale(WorldState.hangar)]]
+
+
+func _on_ship_offered(item: Dictionary) -> void:
+	if host == null or host.active != spot:
+		return
+	_offered = item.duplicate()
+	_offered["text"] = ship_text(str(item.id), spot.brain.card)
+	if WorldState.hangar != "":
+		_offered["text"] += "\n\n" + _line("pad_taken") % ship_label(WorldState.hangar)
+	host.panel.show_sale(_offered, WorldState.credits)
+
+
+## Buy on the price card: the shop's buy(), and his answer in the chat box.
+func _on_ship_answer(id: String, accepted: bool) -> void:
+	if not accepted or host == null or host.active != spot or id != str(_offered.get("id", "")):
+		return
+	_offered = {}
+	if buy(id) != "":
+		host.panel.set_line(said)
+		host.panel.set_money(WorldState.credits, spot.brain.rel.tab)
 
 
 # ------------------------------------------------------------------ helpers

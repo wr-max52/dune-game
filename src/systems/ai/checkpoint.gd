@@ -109,12 +109,24 @@ func state_name() -> String:
 
 ## The band for a standing, before night: the first band whose min it meets.
 func base_band(standing: int) -> String:
-	var bands: Array = cfg.get("bands", [{ "id": "wave", "min": 40 }, { "id": "papers", "min": 0 },
-		{ "id": "search", "min": -39 }, { "id": "hostile", "min": -100 }])
-	for b in bands:
+	for b in _bands():
 		if standing >= int(b.min):
 			return str(b.id)
 	return "hostile"
+
+
+## The lowest standing they do not shoot on sight: the bottom of the band above "hostile".
+func lowest_tolerated() -> int:
+	var lo := 0
+	for b in _bands():
+		if str(b.id) != "hostile":
+			lo = mini(lo, int(b.min))
+	return lo
+
+
+func _bands() -> Array:
+	return cfg.get("bands", [{ "id": "wave", "min": 40 }, { "id": "papers", "min": 0 },
+		{ "id": "search", "min": -39 }, { "id": "hostile", "min": -100 }])
 
 
 ## The band with the modifiers: armed close or a recent shot each make it one worse;

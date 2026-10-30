@@ -42,6 +42,7 @@ var invulnerable_left := 0.0
 ## Issue #25: where the last hit came from (INF = unknown) and how hard, so a
 ## ragdoll falls away from it.
 var last_hit_from := Vector3.INF
+var last_shooter: Node                  ## who fired the last bolt that knew its shooter (the garrison reads it when you go down)
 var last_hit_amount := 0.0
 var _since_hit := 999.0
 var _regen_carry := 0.0
@@ -391,6 +392,7 @@ func apply_damage(amount: float) -> void:
 func apply_damage_from(amount: float, shooter: Node) -> void:
 	if shooter is Node3D and is_instance_valid(shooter):
 		last_hit_from = (shooter as Node3D).global_position
+		last_shooter = shooter
 	apply_damage(amount)
 
 

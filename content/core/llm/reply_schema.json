@@ -23,7 +23,8 @@
               "refuse_topic",
               "end_conversation",
               "call_guards",
-              "offer_speeder"
+              "offer_speeder",
+              "offer_ship"
             ]
           },
           "id": {
