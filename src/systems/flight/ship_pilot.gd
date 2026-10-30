@@ -13,12 +13,14 @@ extends Node
 ##     (a ship at 300 m/s would rebuild it every frame); coming in to land it is
 ##     built under the ship in the background (DesertTerrain.prefetch), so getting
 ##     out finds ground there,
-##   - issue #46: crossing the edge of space keeps you in this scene, over the same
-##     ground. With GameFlow.space_dogfight() on, the pad's encounter starts right
-##     there (SpaceFight) and flies your ship until it is won, lost, or you dive
-##     `space_exit_margin` back below the edge; then normal flight takes over where
-##     the fight left you. A lost fighter is towed home like a crash. Climbing out
-##     again starts another sortie.
+##   - issue #46: space is this scene's own sky, over the same ground, and nothing
+##     marks where it starts (no read-out, toast or change of music: the sky just
+##     darkens as you climb). With GameFlow.space_dogfight() on, climbing past the
+##     world's space_altitude starts the pad's encounter right there (SpaceFight),
+##     which flies your ship until it is won, lost, or you dive `space_exit_margin`
+##     back below it; then normal flight takes over where the fight left you. A
+##     lost fighter is towed home like a crash. Climbing out again starts another
+##     sortie.
 ##   - (an arrival "reentry" from the stand-alone flight scene still starts you in
 ##     the sky above the port, still flying),
 ##   - a crash tows the ship back to its pad and puts you beside it,
@@ -145,8 +147,6 @@ func _ready() -> void:
 	atmo.setup(ship_cfg, ground)
 	space_exit_margin = GameFlow.setting("space_exit_margin", space_exit_margin)
 	hud = FlightHud.new()
-	hud.space_label = GameFlow.label("space_edge")
-	hud.space_altitude = atmo.space_altitude
 	add_child(hud)
 	var layer := CanvasLayer.new()
 	layer.layer = 4
@@ -817,19 +817,17 @@ func _on_event(e: Dictionary) -> void:
 		"reached_space":
 			if space_time < 0.0:
 				space_time = flight_time
-			Sound.set_space(true)
 			_leave_atmosphere()
 
 
 ## Issue #46: out of the atmosphere, still in this scene, over the same ground.
-## No fade and no scene change: the sky is already black up here.
+## No fade, no scene change and nothing said: the sky is already black up here.
+## Only the pad's fight (when it starts) is news.
 func _leave_atmosphere() -> void:
 	ascending = true
 	left_atmosphere.emit()
 	if GameFlow.space_dogfight() and start_fight():
 		hud.toast(GameFlow.label("contact"), 6.0)
-	else:
-		hud.toast(GameFlow.label("in_orbit"), 5.0)
 
 
 ## Start the pad's encounter around the ship as it flies now. False if there is
@@ -843,6 +841,7 @@ func start_fight() -> bool:
 		f.queue_free()
 		return false
 	fight = f
+	Sound.set_space(true)          # the space track is the orbital fight's music
 	fight_started.emit()
 	return true
 
@@ -890,6 +889,7 @@ func end_fight(outcome: String) -> void:
 	var at := atmo.position()
 	fight.queue_free()
 	fight = null
+	Sound.set_space(false)
 	fight_log.append({ "outcome": outcome, "payout": pay, "at": at })
 	if outcome != "left":
 		WorldState.on_flight_returned({ "pad": str(pad.get("id", "")), "encounter": str(pad.get("encounter", "")),
@@ -916,7 +916,6 @@ func _rearm_space() -> void:
 	if atmo.reached_space and atmo.altitude() < atmo.space_altitude - space_exit_margin:
 		atmo.reached_space = false
 		ascending = false
-		Sound.set_space(false)
 
 
 func _tow_home() -> void:
@@ -924,7 +923,6 @@ func _tow_home() -> void:
 		visual.visible = true
 	atmo.reached_space = false
 	ascending = false
-	Sound.set_space(false)
 	atmo.park(home, home_yaw)
 	_set_hull(true)
 	_sync_visual()
@@ -951,7 +949,7 @@ func _update_hud(agl_now: float) -> void:
 		"speed": f.speed, "throttle": _throttle,
 		"boost": f.boost_left / maxf(f.boost_time(), 0.001),
 		"agl": agl_now, "altitude": atmo.altitude(), "climb": v.y,
-		"space_fraction": atmo.space_fraction(), "state": atmo.state_label(),
+		"state": atmo.state_label(),
 		"hull": defense.hull_hp(), "hull_max": defense.hull_max(), "shield": int(defense.shield),
 	})
 	var tip := ""

@@ -7,11 +7,12 @@ extends Node
 ##   Sound.loop("jet_loop", self)       a looping player on `self`; the caller
 ##                                      plays, stops and pitches it
 ##   Sound.battle()                     an NPC just fired at the player
-##   Sound.set_space(true)              the player crossed into space
+##   Sound.set_space(true)              a fight in orbit started
 ##
 ## The music is three ambient tracks that cycle with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
-## after, and a space track while you are up there. Space beats battle beats
+## after, and a space track during a fight in orbit (not for being up there:
+## nothing marks where space starts). Space beats battle beats
 ## ambient. Credits going up or down make a coin sound wherever they changed.
 ##
 ## Static and lazy, like GameFlow and WorldState (no autoload): the first call

@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Smooth orbit over the port; no "edge of space" (2026-10-29)
+
+- **No more stutter flying high.** Climbing past ~2 km and on toward the moon
+  ran at ~150 ms a frame whenever the Remnant's interceptor was up hunting you.
+  Its ground checks (and your ship's) scanned every box, mesa and boulder in the
+  desert from that high, and 60 Hz physics fell behind. The ground lookup now
+  also skips anything not under the line it measures along, with the same
+  answers as before. Orbit runs at ~10 ms a frame, none over 25 ms.
+- **Space is just the sky.** The HUD's "EDGE OF SPACE" bar, the "In orbit"
+  toast and the music switching to the space track at 4,000 m are gone; the sky
+  darkens as you climb and that is all. The space track now plays during a fight
+  in orbit. Climbing out still starts the pad's orbital fight.
+- `scenes/orbit_trace.gd`: a rendered trace from the pad to the moon handoff,
+  frame times by altitude.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina

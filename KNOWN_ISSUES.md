@@ -2,6 +2,22 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the orbit stutter fix (2026-10-29)
+
+**Checked:** rendered on this Mac, pad to the moon handoff with the Remnant's
+interceptor up (`scenes/orbit_trace.gd`): every altitude band p50 ~10 ms, p95
+~12 ms, nothing over 25 ms (5-7 km was ~145 ms a frame). The ground index tests
+pass, including high queries straight over every item (exactly the plain scan).
+
+**Not done, honestly:**
+- **`scenes/m14_flight_trace.gd` stops at its crash step:** it looks up
+  `mesa_1500_1700`, which the desert's landforms no longer place (the code that
+  places them was not touched here). Its GUT test fails for that reason.
+- **The interceptor still circles under its ceiling while you are in orbit** (it
+  cannot follow you up and keeps hunting until you come down or leave).
+- **The pad's orbital fight still starts at the old edge** (space_altitude), with
+  its "Contact!" toast: the board's orbital jobs need it.
+
 ## After issue #76 part 3, dogfights in the port's sky (2026-10-29)
 
 **Checked:** headless tests drive the real town with the ship and the

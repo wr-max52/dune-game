@@ -89,12 +89,12 @@ camera behind the ship.
 | Chase / cockpit view | V |
 
 The HUD shows speed, throttle, boost, altitude, height above ground and climb rate.
-The bar on the right fills toward the **edge of space (4,000 m)**: pull the nose up
-to about 80 degrees, full throttle, boost, and you are there in roughly 18 seconds.
-The sky goes black on the way. There is no loading and no fade: space is the
+Nothing marks where space starts: the sky just goes black as you climb. Pull the
+nose up to about 80 degrees, full throttle, boost, and in roughly 18 seconds
+(about 4,000 m) you are in orbit. There is no loading and no fade: space is the
 port's own sky (issue #46).
 
-At the edge, raiders arrive and the pad's fight starts right where you are, your
+Up there, raiders arrive and the pad's fight starts right where you are, your
 wingman beside you:
 
 | Action | Key |
