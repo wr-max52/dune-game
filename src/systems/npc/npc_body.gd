@@ -112,6 +112,7 @@ var _was_noticed := false
 var _flinch := 0.0
 var _fall_t := 0.0
 var _last_damage := 0.0
+var _blade_sweep := Vector3.ZERO   ## set only while a sword hit lands: which way to fling the body
 ## Issue #25: the body falls as a ragdoll (null in the greybox, which still tips over).
 var ragdoll: Ragdoll
 var dropped_weapon: RigidBody3D
@@ -717,6 +718,17 @@ func apply_damage(amount: float) -> void:
 		play_sfx("hurt")
 
 
+## The player's energy sword calls this instead of apply_damage. `sweep` is the way
+## the blade was moving (flat); a killing cut flings the body that way.
+func apply_blade_hit(amount: float, sweep: Vector3) -> void:
+	if dead:
+		return
+	_blade_sweep = Vector3(sweep.x, 0.0, sweep.z).normalized()
+	last_hit_from = global_position - _blade_sweep     # the kick follows the blade too
+	apply_damage(amount)
+	_blade_sweep = Vector3.ZERO
+
+
 func _on_death() -> void:
 	dead = true
 	stop()
@@ -742,6 +754,10 @@ func _go_limp(was_moving: Vector3) -> void:
 		return
 	var cfg := Ragdoll.load_config()
 	var kick := Ragdoll.kick_for(global_position, last_hit_from, _last_damage, cfg)
+	if _blade_sweep != Vector3.ZERO:
+		# Cut down by the sword: the whole body goes flying sideways along the blade.
+		was_moving += _blade_sweep * float(cfg.get("blade_fling", 8.0)) \
+			+ Vector3.UP * float(cfg.get("blade_fling_up", 5.5))
 	ragdoll = Ragdoll.new(joints, cfg)
 	ragdoll.start(was_moving, kick, get_world_3d().direct_space_state, [get_rid()])
 	if look_body.has_meta("weapon"):

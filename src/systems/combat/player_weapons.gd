@@ -51,6 +51,7 @@ var sword_hits := 0
 var _fire_held := false
 var _alt_on := false
 var _hitstop := 0.0
+var _tip_was := Vector3.INF         ## the blade tip last frame of a swing (INF = not swinging)
 var _sfx: Dictionary = {}
 var _hum: AudioStreamPlayer
 var _hud: CanvasLayer
@@ -202,6 +203,8 @@ func _physics_process(dt: float) -> void:
 			_on_swing_started()
 	if cur == "energy_blade" and combo.is_active():
 		_sword_hits()
+	else:
+		_tip_was = Vector3.INF
 	if cur == "energy_blade" and blade_extent > 0.5:
 		_intercept_bolts()
 	avatar.sword_pose = combo.pose(avatar.first_person) if cur == "energy_blade" else {}
@@ -333,7 +336,14 @@ func _sword_hits() -> void:
 	var space := player.get_world_3d().direct_space_state
 	var shape := SphereShape3D.new()
 	shape.radius = 0.2
-	for p in avatar.blade_points([0.35, 0.7, 1.0]):
+	var pts := avatar.blade_points([0.35, 0.7, 1.0])
+	# Which way the blade is sweeping: a sword kill flings the body that way.
+	var sweep := Vector3.ZERO
+	if not pts.is_empty():
+		if _tip_was != Vector3.INF:
+			sweep = pts[-1] - _tip_was
+		_tip_was = pts[-1]
+	for p in pts:
 		var q := PhysicsShapeQueryParameters3D.new()
 		q.shape = shape
 		q.transform = Transform3D(Basis(), p)
@@ -349,13 +359,29 @@ func _sword_hits() -> void:
 				continue
 			combo.hits_this_swing[key] = true
 			var dmg := float(combo.damage())
-			target.apply_damage(dmg)
+			if target.has_method("apply_blade_hit"):
+				target.apply_blade_hit(dmg, _fling_dir(sweep, target))
+			else:
+				target.apply_damage(dmg)
 			sword_hits += 1
 			_hitstop = 0.06
 			_play("blade_clash")
 			if rig_node != null:
 				rig_node.shake(0.35)
 			hit_something.emit(target, dmg)
+
+
+## Mostly along the blade's sweep, a little away from the player so nobody is
+## flung back into you; straight away when the blade was not moving sideways.
+func _fling_dir(sweep: Vector3, target: Object) -> Vector3:
+	var away := Vector3.ZERO
+	if target is Node3D:
+		away = (target as Node3D).global_position - player.global_position
+	away = Vector3(away.x, 0.0, away.z).normalized()
+	var side := Vector3(sweep.x, 0.0, sweep.z)
+	if side.length() < 0.001:
+		return away
+	return (side.normalized() + away * 0.35).normalized()
 
 
 static func _damage_receiver(o: Object) -> Object:

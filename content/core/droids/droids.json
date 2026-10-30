@@ -326,7 +326,7 @@
       {
         "kind": "assassin",
         "variant": "remnant",
-        "hp": 60,
+        "hp": 120,
         "start": 0
       },
       {
@@ -345,7 +345,7 @@
       }
     ],
     "outpost_units": [
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "patrol" },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "patrol" },
       { "kind": "floating", "variant": "remnant", "hp": 30, "route": "floater", "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
       { "kind": "cargo", "variant": "remnant", "hp": 40, "route": "cargo", "walk_speed": 0.8,
         "flee": { "speed": 5.5, "distance": 150.0, "max_s": 45.0 } }
@@ -371,11 +371,11 @@
       "deep_hold": { "frame": "level", "points": [[26, 136, 196], [33, 136, 196], [33, 136, 224], [26, 136, 224]] }
     },
     "units": [
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "bridge", "start": 0 },
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "bridge", "start": 2 },
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "pad", "start": 0 },
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "pad", "start": 2 },
-      { "kind": "assassin", "variant": "remnant", "hp": 60, "route": "interior", "start": 0 },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "bridge", "start": 0 },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "bridge", "start": 2 },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "pad", "start": 0 },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "pad", "start": 2 },
+      { "kind": "assassin", "variant": "remnant", "hp": 120, "route": "interior", "start": 0 },
       { "kind": "floating", "variant": "remnant", "hp": 30, "route": "interior", "start": 1,
         "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
       { "kind": "floating", "variant": "remnant", "hp": 30, "route": "starboard", "start": 2,
