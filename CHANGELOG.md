@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The desert blob (issue #220, 2026-10-30)
+
+- **A big purple blob rolls about the desert.** Out in the home planet's desert
+  (about 900 m from town) there is a glossy purple ball about 7 m across. It
+  rolls along the ground at a slow, changing pace and jiggles as it goes.
+- **It has nowhere to be.** Its heading drifts at random. It is not drawn toward
+  the town and does not avoid it. A loose leash, about 1.4 km round its own home
+  spot out in the desert, turns it back only if it strays very far.
+- **Touch it and you die.** On foot, or riding a speeder into it, you die on the
+  spot, whatever your health. You wake as from any other death (the garrison's
+  pit). If nothing else wakes you within a few seconds, the blob's own fallback
+  does, in the same pit.
+- **It farts.** Every 9 to 26 seconds it farts: a wet, flapping noise
+  (assets/audio/npc/blob_fart.wav, made by tools/audio/make_npc_sfx.py), a
+  yellowish puff behind it, and a squash.
+- **Data:** content/core/hazards/desert_blob.json (size, speeds, leash, fart
+  timing, colours, which planets have one). Code: src/systems/world/desert_blob.gd.
+  The town scene adds it as a late build stage (`with_blob`).
+- **Trace:** scenes/blob_trace.gd (in CI), read by tests/test_blob_trace.gut.gd.
+  Still: docs/lookdev/hazards/desert_blob.jpg.
+
 ## T-89 talks: returning hello, ship advice, and he is solid (2026-10-29)
 
 - **A returning line instead of the tutorial.** The first game, T-89 says hello

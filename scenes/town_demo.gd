@@ -86,6 +86,7 @@ var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, play
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
 var mechanic: MechanicYard            ## issue #95: Dorrin's speeder yard out in the desert
+var blob: DesertBlob                  ## issue #220: the desert's deadly purple blob
 var natives: NativesDirector          ## issue #96: the planet's native packs and wild animals
 var gate_speeders: Array = []         ## issue #82: the Remnant's Sand-boxers parked outside the front gate
 var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
@@ -98,6 +99,7 @@ var droids: DroidController
 var droid_merchant_outposts: DroidMerchantOutposts
 @export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
 var salesman: ShipSalesman
+@export var with_blob := true         ## issue #220: the purple blob that rolls about the desert (touch = death)
 @export var with_natives := true      ## issue #96: native packs and wild animals (when the planet has any)
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
 var outposts: RemnantOutposts
@@ -261,6 +263,12 @@ func build_plan(staged_build: bool) -> Array:
 	add.call("mechanic", LATER, func():
 		if speeder_post != null and gear != null:
 			_build_mechanic()
+		return true)
+	add.call("blob", LATER, func():
+		if with_blob and pilot != null and terrain != null and DesertBlob.lives_on(str(planet.get("id", ""))):
+			blob = DesertBlob.new()
+			blob.setup(self, pilot.ground)
+			add_child(blob)
 		return true)
 	add.call("natives", LATER, func():
 		if with_natives and pilot != null and gear != null and terrain != null:

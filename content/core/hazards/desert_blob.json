@@ -1,0 +1,20 @@
+{
+  "id": "desert_blob",
+  "label": "the blob",
+  "note": "IP-neutral. Issue #220: a big purple blob that rolls about the home planet's desert. Touch it (on foot, or ride a speeder into it) and you die on the spot, then wake as from any other death. It wanders with no pull toward or away from the town: its heading drifts at random, and only a loose leash round its home spot (out in the desert, not the town) turns it back if it strays too far. Now and then it farts. Read by src/systems/world/desert_blob.gd.",
+  "planets": ["port_desert"],
+  "home": [520, 720],
+  "leash_m": 1400.0,
+  "radius": 3.6,
+  "speed": [1.2, 3.4],
+  "turn_jitter_deg": 70.0,
+  "speed_change_s": [3.0, 8.0],
+  "kill_margin": 0.35,
+  "speeder_margin": 1.4,
+  "fart_every_s": [9.0, 26.0],
+  "fart_sound": "res://assets/audio/npc/blob_fart.wav",
+  "color": "#8a3fc8",
+  "glow": "#c07aff",
+  "puff": "#9a8a4a",
+  "lines": { "killed": "The blob rolled right over you.", "woke": "You wake up in the pit, smelling faintly of blob." }
+}

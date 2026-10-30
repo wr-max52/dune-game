@@ -308,6 +308,15 @@ if [ ! -f test_results/natives_trace.txt ]; then
 fi
 echo "CI: natives trace present ($(wc -l < test_results/natives_trace.txt) lines)"
 
+# Issue #220: the desert blob: built out in the desert, rolls, farts, kills on touch.
+echo "CI: generating blob trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/blob_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/blob_trace.txt ]; then
+  echo "CI: ERROR -- blob trace was not generated" >&2
+  exit 1
+fi
+echo "CI: blob trace present ($(wc -l < test_results/blob_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
