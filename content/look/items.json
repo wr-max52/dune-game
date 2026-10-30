@@ -4,6 +4,11 @@
     "jetpack": {
       "frame": "twin_tank",
       "scene": "res://assets/gear/jetpack.glb",
+      "model_scale": [
+        0.5,
+        1.0,
+        1.0
+      ],
       "height": 0.52,
       "tank_radius": 0.085,
       "spread": 0.2,
@@ -20,7 +25,7 @@
         "pos": [
           0.0,
           0.06,
-          -0.19
+          -0.09
         ],
         "rot": [
           0.0,
@@ -30,12 +35,12 @@
       },
       "flames_at": [
         [
-          0.08,
+          0.04,
           -0.3,
           -0.2
         ],
         [
-          -0.08,
+          -0.04,
           -0.3,
           -0.2
         ]

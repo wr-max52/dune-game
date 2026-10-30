@@ -75,6 +75,10 @@ func build(look_id: String) -> Node3D:
 			model.scale = size
 			_mi(root, _box(Vector3(size.x * 0.5, 0.02, 0.01)), _glow(_c(p, "glow", "#59d6ff"), 2.5),
 				Vector3(0, size.y * 0.22, -size.z * 0.5 - 0.004), Vector3.ZERO, "Status")
+		# "model_scale" [x, y, z] squeezes a model along its own axes (a slimmer jetpack).
+		elif p.has("model_scale"):
+			var s: Array = p.model_scale
+			model.scale = Vector3(float(s[0]), float(s[1]), float(s[2]))
 		if p.has("tint"):
 			_tint(model, _c(p, "shell", "#ffffff"), float(p.tint))
 		if model.get_node_or_null("Flames") == null:
