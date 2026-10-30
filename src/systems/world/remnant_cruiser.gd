@@ -384,13 +384,15 @@ func _solid_ship(root: Node3D, ship: Node3D, a: AABB, s: float, pad_id: String) 
 
 # ------------------------------------------------------------------ the bay's shield
 
-## Across the bay's mouth: you cannot walk out into space, a ship flies straight through.
+## Across the bay's mouth: you cannot walk out into space, a ship flies straight
+## through, and so do bolts both ways (your ship's guns into the bay, theirs out).
 func _build_shield() -> void:
 	var z := CruiserHull.BAY_Z
 	var size := Vector3(0.4, 28.0, z.y - z.x)
 	var at := Vector3(CruiserHull.BAY_X.y + 0.5, 0.0, (z.x + z.y) * 0.5)
 	var body := StaticBody3D.new()
 	body.name = "BayShield"
+	body.set_meta("bolts_pass", true)
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = size + Vector3(1.6, 0, 0)

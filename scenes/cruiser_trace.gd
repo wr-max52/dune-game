@@ -190,6 +190,7 @@ func _aboard(c) -> void:
 		if is_instance_valid(g) and not c.aboard(g.global_position):
 			fallen += 1
 	out("CREW_FALLEN", fallen)
+	await _ship_guns(c)
 	await _shot_asleep(c)
 	await _downed_aboard(c)
 	var credits: int = WorldState.credits
@@ -208,10 +209,42 @@ func _aboard(c) -> void:
 	out("CREW_AFTER_LEAVING", c.crew.size())
 
 
+## Your ship's guns at troopers in the bay: from outside its mouth (through the
+## shield) and parked on the pad. The guns cross on what is under the nose.
+func _ship_guns(c) -> void:
+	pilot._seat_arriving()
+	pilot.atmo.reached_space = true
+	out("GUNS_FROM_OUTSIDE", await _guns_at(c, c.crew[2], Vector3(140, -8, -30), false))
+	out("GUNS_PARKED", await _guns_at(c, c.crew[3], CruiserHull.dock_pad().at, true))
+	pilot.exit_ship()
+	await frames(10)
+
+
+## The nose on g's chest from `local` (cruiser frame), the trigger held up to 2 s:
+## whether he died.
+func _guns_at(c, g, local: Vector3, parked: bool) -> bool:
+	for f in 120:
+		if g.dead:
+			break
+		var chest: Vector3 = g.global_position + Vector3(0, 1.2, 0)
+		var at: Vector3 = c.frame * local
+		if parked:
+			if f == 0:
+				var flat := chest - at
+				pilot.atmo.park(at, atan2(-flat.x, -flat.z))
+		else:
+			pilot.atmo.place_flying(at, (chest - at).normalized(), 0.0, 0.0)
+			pilot.atmo.flight.basis = Basis.looking_at(chest - at, Vector3.UP)
+		pilot.set_external_command({ "fire": true, "throttle": 0.0 })
+		await physics_frame
+	pilot.set_external_command({})
+	return g.dead
+
+
 ## A trooper asleep (you far off, as in your ship) is still solid to a bolt, and
 ## wakes to fall when it kills him.
 func _shot_asleep(c) -> void:
-	var g = c.crew[2]
+	var g = c.crew[5]
 	c._was_aboard = false
 	player.global_position = g.global_position + Vector3(0, 0, 700)
 	player.process_mode = Node.PROCESS_MODE_DISABLED
