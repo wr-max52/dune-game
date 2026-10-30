@@ -2,6 +2,16 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Sand nomad heads for the native packs (2026-10-29)
+
+- **The dune nomads wear a new sand head.** It is the same freaky beaked goggle mask
+  as before, remade with Hyper3D: a sand cloth hood and a matte bone mask instead
+  of the teal hood and brass. Every pack uses it; leaders still wear the helmet.
+- **Three variations for later NPCs:** `nomad_crest`, `nomad_maw` and `nomad_horn`,
+  each in its own sand and bone tones. No pack uses them yet.
+- **All four are in the character builder** (F11, Character, Head).
+- The snow planets' frost folk keep the goggle head in their cold colours.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina
