@@ -62,3 +62,39 @@ func test_aiming_all_but_removes_it() -> void:
 	var aimed := m.offset(1.0)
 	assert_lt(aimed.origin.length(), hip.origin.length() * 0.2 + 0.0001)
 	assert_lt(aimed.basis.get_euler().length(), hip.basis.get_euler().length() * 0.2 + 0.0001)
+
+
+func test_reload_hand_goes_to_the_cell_out_and_back() -> void:
+	var g := Vector3(0, -0.03, 0.1)
+	var mag := Vector3(0, -0.14, 0.06)
+	var out := Vector3(0.2, -0.3, 0.0)
+	assert_eq(WeaponMotion.reload_hand(0.0, g, mag, out), g, "starts on its grip")
+	assert_almost_eq(WeaponMotion.reload_hand(0.15, g, mag, out).distance_to(mag), 0.0, 0.0001, "reaches the cell")
+	assert_almost_eq(WeaponMotion.reload_hand(0.45, g, mag, out).distance_to(out), 0.0, 0.0001, "swaps it out of view")
+	assert_almost_eq(WeaponMotion.reload_hand(0.8, g, mag, out).distance_to(mag), 0.0, 0.0001, "seats the new one")
+	assert_almost_eq(WeaponMotion.reload_hand(1.0, g, mag, out).distance_to(g), 0.0, 0.0001, "back on its grip")
+	var prev := g
+	for k in range(1, 101):
+		var p := WeaponMotion.reload_hand(k / 100.0, g, mag, out)
+		assert_lt(p.distance_to(prev), 0.05, "no jump at %d%%" % k)
+		prev = p
+	assert_true(WeaponMotion.reload_cell_in_hand(0.4))
+	assert_false(WeaponMotion.reload_cell_in_hand(0.05))
+	assert_false(WeaponMotion.reload_cell_in_hand(0.9))
+
+
+func test_reload_tips_the_gun_about_its_grip_and_back() -> void:
+	var grip := Vector3(0, -0.08, -0.11)
+	assert_eq(WeaponMotion.reload_local(-1.0, grip), Transform3D.IDENTITY, "no reload")
+	assert_eq(WeaponMotion.reload_local(0.0, grip), Transform3D.IDENTITY)
+	var mid := WeaponMotion.reload_local(0.5, grip)
+	assert_gt(absf(mid.basis.get_euler().z), deg_to_rad(30.0), "rolled toward the body")
+	assert_eq(WeaponMotion.reload_local(1.0, grip), Transform3D.IDENTITY, "upright again")
+
+
+func test_first_person_draw_starts_below_the_view() -> void:
+	var ready := Transform3D(Basis(), Vector3(-0.19, 0.1, 0.47))
+	var low := WeaponMotion.fpv_low(ready)
+	assert_lt(low.origin.y, ready.origin.y - 0.3, "well below where it ends")
+	assert_lt(low.origin.z, ready.origin.z, "and back toward the body, not through the head")
+	assert_gt((low.basis * Vector3(0, 0, 1)).y, -0.95, "muzzle dipped, not straight down")

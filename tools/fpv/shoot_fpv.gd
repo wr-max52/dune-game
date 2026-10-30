@@ -87,6 +87,15 @@ func _initialize() -> void:
 	# (the combo: double click), for judging the whole arc.
 	for f in range(4, 61, 5):
 		_shots.append(["strip_jump_%02d" % f, _fpv_jump.bind("rifle_blaster", f)])
+	for i in 12:
+		_shots.append(["strip_rreload_%02d" % i, _fpv_reload.bind("rifle_blaster", 4 + i * 11)])
+		_shots.append(["strip_preload_%02d" % i, _fpv_reload.bind("pistol_blaster", 3 + i * 7)])
+	for f in range(1, 13):
+		_shots.append(["strip_draw_%02d" % f, _fpv_swap.bind("", "rifle_blaster", f / 10.0)])
+		_shots.append(["strip_holster_%02d" % f, _fpv_swap.bind("rifle_blaster", "", f / 11.0)])
+		_shots.append(["strip_pdraw_%02d" % f, _fpv_swap.bind("", "pistol_blaster", f / 10.0)])
+	for f in range(0, 24, 2):
+		_shots.append(["strip_unarmed_sprint_%02d" % f, _fpv_move.bind("", true, 30 + f)])
 	for f in range(2, 27, 2):
 		_shots.append(["strip_left_%02d" % f, _fpv_swing.bind(f)])
 	for f in range(2, 27, 2):
@@ -264,10 +273,14 @@ func _fpv_wall(id: String) -> int:
 	return 40
 
 
-func _fpv_reload(id: String) -> int:
+func _fpv_reload(id: String, frames := 30) -> int:
 	_fpv(id, 0.0)
-	_after(20, func(): (kit.weapons.guns[id]).start_reloading())
-	return 20 + 30
+	_after(20, func():
+		var g = kit.weapons.guns[id]
+		g._reloading = false                  # one left running from an earlier shot
+		g.ammo = maxi(0, g.ammo - 5)          # a full gun will not reload
+		g.start_reloading())
+	return 20 + frames
 
 
 ## `from` in hand, then ask for `to`; shot `frac` of the way through the swap.

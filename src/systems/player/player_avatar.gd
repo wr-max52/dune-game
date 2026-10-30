@@ -60,6 +60,8 @@ var sprint_lowered := false
 var _sprint_raise := false         ## first person: easing back up after a sprint
 var _sprint_carry := 0.0           ## 0..1: a rested rifle moving to port arms (sprinting)
 var motion := WeaponMotion.new()   ## issue #229: first person sway, bob, landing, wall
+var reload := -1.0                 ## 0..1 through the gun's reload (weapons sets it), -1 none
+var _cell: Node3D                  ## the energy cell the left hand swaps on a reload
 var _look_prev := Vector2(INF, 0.0)
 var _flash_left := 0.0
 
@@ -246,7 +248,7 @@ static func _darken(n: Node3D, d: Dictionary) -> void:
 			if b.roughness_texture != null:
 				mat.set_shader_parameter("orm_tex", b.roughness_texture)
 				mat.set_shader_parameter("use_orm", true)
-		for k in ["body_mul", "accent_mul", "glow"]:
+		for k in ["body_mul", "accent_mul", "glow", "rim", "fill"]:
 			if d.has(k):
 				mat.set_shader_parameter(k, float(d[k]))
 		mi.material_override = mat
@@ -532,6 +534,8 @@ func animate(dt: float, inp: Dictionary) -> void:
 	_sword_prev = _sword_curr if not _sword_curr.is_empty() else sword_pose
 	_sword_curr = sword_pose
 	_place_weapon(upper, pitch)
+	if first_person and upper == BodyAnimator.UPPER_FREE:
+		_fpv_unarmed()
 	_fpv_grips(upper, dt)
 	if skin != null:
 		skin.sync(body)
@@ -635,6 +639,8 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	if first_person and current != "energy_blade":
 		var ae := ads_blend * ads_blend * (3.0 - 2.0 * ads_blend)
 		ready = motion.offset(ae) * ready * motion.wall_local(grips.get("r", Vector3.ZERO), ae)
+	if reload >= 0.0 and current != "energy_blade":
+		ready = ready * WeaponMotion.reload_local(reload, grips.get("r", Vector3.ZERO))
 	if ads_blend > 0.0 and first_person and ads_camera != null and is_inside_tree() and current != "energy_blade":
 		var a := Ads.spec(look, current)
 		var sc := float((look.get(current, {}) as Dictionary).get("scale", 1.0))
@@ -646,7 +652,11 @@ func _place_weapon(upper: String, pitch: float) -> void:
 				Vector3(0, 0.005, -float(rc2.get("back", 0.05))) * k2)
 		var to_chest := (joints.chest as Node3D).global_transform.affine_inverse() * aimed
 		ready = ready.interpolate_with(to_chest, ads_blend * ads_blend * (3.0 - 2.0 * ads_blend))
+	# Issue #229: first person draws a gun up from below the view, not the holster.
+	if first_person and current != "energy_blade":
+		holster = WeaponMotion.fpv_low(ready)
 	w.transform = holster.interpolate_with(ready, f)
+	_show_cell()
 	if upper == BodyAnimator.UPPER_FREE:
 		_fpv_stance(false)
 		return
@@ -663,8 +673,77 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	# A pistol at rest hangs from the right hand alone; the left arm swings free.
 	if carry_kind(current) == "pistol" and up < 0.5:
 		one_hand = true
-	if grips.has("l") and drawn > 0.6 and not one_hand:
+	if reload >= 0.0 and drawn > 0.6 and current != "energy_blade":
+		# The left hand swaps the cell: grip, cell, out of view below and back.
+		var spec: Dictionary = look.get(current, {})
+		var sc := float(spec.get("scale", 1.0))
+		var mag := _v3(spec.get("mag", [0, -0.12, 0])) * sc
+		var g_l: Vector3 = grips.get("l", mag) if not one_hand else mag + Vector3(0.06, -0.08, 0.0)
+		var out := mag + _v3(spec.get("reload_out", [0.15, -0.15, -0.03])) * sc
+		var at := WeaponMotion.reload_hand(reload, g_l, mag, out)
+		kit.reach(body, "l", w.transform * at, POLE_L)
+	elif grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+
+
+## Issue #229: the energy cell in the left hand during a reload (from when it
+## reaches the gun till it seats the new one). Built once on the left wrist.
+func _show_cell() -> void:
+	var on := reload >= 0.0 and current != "energy_blade" and WeaponMotion.reload_cell_in_hand(reload)
+	if _cell == null or not is_instance_valid(_cell) or _cell.get_parent() != joints.l_wrist:
+		if not on:
+			return
+		_cell = Node3D.new()
+		_cell.name = "ReloadCell"
+		var shell := MeshInstance3D.new()
+		var c := CylinderMesh.new()
+		c.top_radius = 0.016
+		c.bottom_radius = 0.016
+		c.height = 0.075
+		c.radial_segments = 16
+		shell.mesh = c
+		var sm := StandardMaterial3D.new()
+		sm.albedo_color = Color(0.06, 0.06, 0.07)
+		sm.metallic = 0.6
+		sm.roughness = 0.4
+		shell.material_override = sm
+		_cell.add_child(shell)
+		var band := MeshInstance3D.new()
+		var bm := CylinderMesh.new()
+		bm.top_radius = 0.0168
+		bm.bottom_radius = 0.0168
+		bm.height = 0.018
+		bm.radial_segments = 16
+		band.mesh = bm
+		var tint: Dictionary = (look.get(current, {}) as Dictionary).get("tint", {})
+		band.material_override = _emissive(Color.html(str(tint.get("glow", "#ff7a3a"))), 3.0)
+		_cell.add_child(band)
+		for m in [shell, band]:
+			(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_cell.position = Vector3(0.012, -0.085, 0.0)
+		_cell.rotation_degrees = Vector3(90, 0, 0)
+		(joints.l_wrist as Node3D).add_child(_cell)
+	_cell.visible = on
+
+
+## Issue #229: unarmed and sprinting in first person, the hands pump up into the
+## bottom of the view in turn. Blended over the animator's own arms by how far
+## into the sprint, so it never pops.
+func _fpv_unarmed() -> void:
+	var s := _sprint_carry * _sprint_carry * (3.0 - 2.0 * _sprint_carry)
+	if s <= 0.0:
+		return
+	for side in ["r", "l"]:
+		var sg := -1.0 if side == "r" else 1.0            # +X is the character's left
+		var pump := 0.5 + 0.5 * sin(motion.phase + (0.0 if side == "r" else PI))
+		var at := Vector3(sg * 0.15, -0.22 + 0.44 * pump, 0.2 + 0.24 * pump)
+		var sh: Node3D = joints[side + "_shoulder"]
+		var el: Node3D = joints[side + "_elbow"]
+		var b0 := sh.transform.basis
+		var e0 := el.rotation
+		kit.reach(body, side, at, POLE_R if side == "r" else POLE_L)
+		sh.transform.basis = b0.slerp(sh.transform.basis, s)
+		el.rotation = e0.lerp(el.rotation, s)
 
 
 ## Feed WeaponMotion: how fast the view turns, the walk, the fall, and how far
@@ -708,15 +787,18 @@ func _fpv_grips(upper: String, dt: float) -> void:
 	var relaxed := float(_fpv._hand().get("relaxed", 0.3))
 	var armed := upper != BodyAnimator.UPPER_FREE and current != "" and weapons.has(current)
 	var left: bool = armed and (weapons[current] as Node3D).get_meta("grips", {}).has("l") and drawn > 0.6
+	var swapping := armed and reload >= 0.0 and current != "energy_blade"
 	if left and first_person and ads_blend < 0.4 \
 			and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false)):
 		left = false
 	# Issue #229: each weapon names how each hand holds it (hand_weapons "fpv_pose").
 	var poses: Dictionary = (look.get(current, {}) as Dictionary).get("fpv_pose", {}) if armed else {}
 	_fpv.set_pose("r", str(poses.get("r", "trigger")) if armed else "relaxed")
-	_fpv.set_pose("l", str(poses.get("l", "support")) if left else "relaxed")
-	_fpv.ease_grip("r", 1.0 if armed else relaxed, dt)
-	_fpv.ease_grip("l", 1.0 if left else relaxed, dt)
+	_fpv.set_pose("l", "hilt" if swapping else (str(poses.get("l", "support")) if left else "relaxed"))
+	# Unarmed and sprinting (the hands pump in view): loose fists, not open hands.
+	var unarmed_fist := 0.8 if first_person and not armed and _sprint_carry > 0.3 else relaxed
+	_fpv.ease_grip("r", 1.0 if armed else unarmed_fist, dt)
+	_fpv.ease_grip("l", 0.85 if swapping else (1.0 if left else unarmed_fist), dt)
 
 
 ## True once the gun is up far enough to shoot (weapons holds the trigger until then).

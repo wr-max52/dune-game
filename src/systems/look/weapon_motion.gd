@@ -8,6 +8,10 @@ extends RefCounted
 ## - Jump and land: it lifts on take-off and dips on landing, harder from higher.
 ## - Breathing: a slow rise and fall when still.
 ## - Wall: a gun pushed into a wall pulls back and tips its muzzle up.
+## - Reload (static, from the gun's 0..1 progress): the gun tips toward you while
+##   the left hand drops to the cell, pulls it down out of view, brings a new one
+##   back and seats it.
+## - Draw (static): in first person a gun rises from below the view.
 ## offset(ads) is a chest-space transform to put before the weapon's own; aiming
 ## scales it all down, and the ADS pose replaces it entirely once fully aimed, so
 ## the sight still lands on the screen centre.
@@ -91,3 +95,53 @@ func wall_local(grip: Vector3, ads: float = 0.0) -> Transform3D:
 ## The gun is pulled back from a wall too far to shoot straight.
 func blocked() -> bool:
 	return wall > 0.6
+
+
+## Reload keys: [t, where the left hand is] with 0 = its grip, 1 = the cell (mag),
+## 2 = out of view below (the old cell gone, the new one in hand).
+const RELOAD_KEYS := [[0.0, 0], [0.15, 1], [0.38, 2], [0.55, 2], [0.72, 1], [0.86, 1], [1.0, 0]]
+
+
+## How far the gun is tipped for a reload at `t` (0..1; < 0 none): eases in, holds,
+## eases out.
+static func reload_tip(t: float) -> float:
+	if t < 0.0:
+		return 0.0
+	return smoothstep(0.0, 0.18, t) * (1.0 - smoothstep(0.82, 1.0, t))
+
+
+## The tipped gun: rolled toward the body, the muzzle up a little and lifted in
+## toward the middle of the view so the cell well shows; about the grip, put after
+## the weapon's transform.
+static func reload_local(t: float, grip: Vector3) -> Transform3D:
+	var k := reload_tip(t)
+	if k <= 0.0:
+		return Transform3D.IDENTITY
+	var r := Basis.from_euler(Vector3(-deg_to_rad(14.0) * k, deg_to_rad(12.0) * k, -deg_to_rad(38.0) * k))
+	return Transform3D(Basis(), grip) * Transform3D(r, Vector3(0.07 * k, 0.1 * k, -0.05 * k)) * Transform3D(Basis(), -grip)
+
+
+## Where the left hand is at `t`, in the gun's space: from its grip to the cell,
+## down out of view and back. `out` is the out-of-view point.
+static func reload_hand(t: float, grip_l: Vector3, mag: Vector3, out: Vector3) -> Vector3:
+	var pts := [grip_l, mag, out]
+	for i in range(1, RELOAD_KEYS.size()):
+		var t1: float = RELOAD_KEYS[i][0]
+		if t <= t1:
+			var t0: float = RELOAD_KEYS[i - 1][0]
+			var f := smoothstep(0.0, 1.0, (t - t0) / maxf(t1 - t0, 0.0001))
+			return (pts[RELOAD_KEYS[i - 1][1]] as Vector3).lerp(pts[RELOAD_KEYS[i][1]], f)
+	return grip_l
+
+
+## The cell shows in the left hand from when it reaches the gun till it seats one.
+static func reload_cell_in_hand(t: float) -> bool:
+	return t > 0.15 and t < 0.72
+
+
+## First person draw: where a gun starts, relative to where it ends (`ready`):
+## below the view, muzzle dipped, rolled in. Replaces the holster, which in first
+## person swung the gun through the camera (a rifle off the back came over the head).
+static func fpv_low(ready: Transform3D) -> Transform3D:
+	var b := ready.basis * Basis.from_euler(Vector3(deg_to_rad(50.0), deg_to_rad(-10.0), deg_to_rad(-28.0)))
+	return Transform3D(b, ready.origin + Vector3(-0.04, -0.36, -0.14))
