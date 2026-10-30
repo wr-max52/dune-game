@@ -84,6 +84,22 @@ func heavy_attack() -> bool:
 	return true
 
 
+## A follow-up in a chain (SwordCombo): the swing before flows straight into it, so
+## it skips the recovery. It still needs the stamina.
+func chain_attack(heavy: bool) -> bool:
+	if state == State.BLOCK or state == State.BLOCKED_OUT:
+		return false
+	var cost := heavy_cost if heavy else light_cost
+	if stamina < cost:
+		return false
+	stamina -= cost
+	state = State.HEAVY if heavy else State.LIGHT
+	_state_time = 0.0
+	_recovering = false
+	_recover_time = 0.0
+	return true
+
+
 func start_block() -> void:
 	## Start (or continue) blocking. The deflect window opens from this moment.
 	if state == State.BLOCK:
