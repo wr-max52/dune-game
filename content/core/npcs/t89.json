@@ -1,6 +1,6 @@
 {
   "id": "t89",
-  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Read by src/systems/npc/ship_salesman.gd.",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Issue #207: 'upgrades' he fits to any ship you own, each one-time per ship: its price and 'mult', factors on paths in the ship's data (src/systems/flight/ship_upgrades.gd). Read by src/systems/npc/ship_salesman.gd.",
   "name": "T-89",
   "marker": "t89",
   "pad": "spare_pad",
@@ -13,6 +13,11 @@
     "eye": "#7affd8"
   },
   "rebuild": { "price": 500, "comrade_price": 1 },
+  "upgrades": {
+    "shields": { "label": "Boosted shields", "short": "Shields+", "price": 1200, "mult": { "shield.max": 1.5, "shield.regen": 1.5 } },
+    "hull": { "label": "Reinforced hull", "short": "Hull+", "price": 1200, "mult": { "hull": 1.5 } },
+    "boost": { "label": "Booster speed", "short": "Boost+", "price": 1500, "mult": { "atmosphere.boost_speed": 1.25, "flight.boost_speed": 1.25 } }
+  },
   "default_price": 1500,
   "resale_rate": 0.6,
   "prices": {
@@ -53,7 +58,9 @@
     "comrade": "Between us, pilot? I cannot stand them either. For a comrade, I will rebuild your ship for %d credit.",
     "comrade_again": "We understand each other, comrade. The rebuild is still %d credit.",
     "rebuilt": "Good as new! Your %s is on the pit pad, and she is all yours.",
-    "cant_afford_rebuild": "The rebuild is %d credits. You have %d. Oda at the cantina has work."
+    "cant_afford_rebuild": "The rebuild is %d credits. You have %d. Oda at the cantina has work.",
+    "fitted": "%s, fitted to your %s. Fly her gently for the first hour. Or do not!",
+    "cant_afford_fit": "%s is %d credits. You have %d."
   },
   "labels": {
     "talk": "[E] Talk to %s",
@@ -71,6 +78,8 @@
     "event_bought": "Someone bought a %s from the droid in the pit.",
     "rebuild": "Rebuild your %s  (%d cr)",
     "comrade": "Tell him what you think of the Remnant",
-    "event_rebuilt": "The droid in the pit rebuilt a wrecked %s."
+    "event_rebuilt": "The droid in the pit rebuilt a wrecked %s.",
+    "fit": "Fit %s to your %s  (%d cr)",
+    "event_fitted": "The droid in the pit fitted %s to a %s."
   }
 }

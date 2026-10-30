@@ -349,6 +349,11 @@ func shop_options() -> Array:
 		out.append({ "id": "buy:" + id, "text": _l("buy_taken" if taken else "buy") % [ship_label(id), price(id)] })
 	if taken:
 		out.append({ "id": "sell", "text": _l("sell") % [ship_label(WorldState.hangar), resale(WorldState.hangar)] })
+	for sid in ShipUpgrades.owned():
+		for up in ShipUpgrades.ids():
+			if not ShipUpgrades.has(sid, up):
+				out.append({ "id": "fit:%s:%s" % [sid, up],
+					"text": _l("fit") % [ShipUpgrades.label(up).to_lower(), ship_label(sid), ShipUpgrades.price(up)] })
 	return out
 
 
@@ -359,6 +364,8 @@ func _on_shop(id: String) -> void:
 		sell()
 	elif id == "rebuild":
 		rebuild()
+	elif id.begins_with("fit:"):
+		fit(id.get_slice(":", 1), id.get_slice(":", 2))
 	elif id == "comrade":
 		comrade()
 	elif id == "tutorial":
@@ -409,6 +416,8 @@ func sell() -> int:
 	var paid := resale(id)
 	WorldState.credits += paid
 	WorldState.hangar = ""
+	if not ShipUpgrades.owned().has(id):
+		WorldState.ship_fits.erase(id)        # issue #207: its upgrades go with it
 	_say(_line("sold") % paid)
 	return paid
 
@@ -442,6 +451,7 @@ func rebuild() -> String:
 		return "cant_afford"
 	WorldState.credits -= cost
 	WorldState.set_flag(WorldState.SHIP_REBUILT)
+	WorldState.wreck_ship = wreck_id()
 	WorldState.log_event(_l("event_rebuilt") % ship_label(wreck_id()))
 	Story.event("ship_rebuilt")
 	_beep()
@@ -460,6 +470,28 @@ func comrade() -> bool:
 	if needs_rebuild():
 		_say(_line("comrade") % rebuild_price())
 	return true
+
+
+# ------------------------------------------------------------------ upgrades (issue #207)
+
+## Fit upgrade `up` to ship `ship_id` (one you own). Returns "fitted",
+## "cant_afford" or "" (not yours, unknown, or on already).
+func fit(ship_id: String, up: String) -> String:
+	if not ShipUpgrades.owned().has(ship_id) or not ShipUpgrades.ids().has(up) or ShipUpgrades.has(ship_id, up):
+		return ""
+	var cost := ShipUpgrades.price(up)
+	if WorldState.credits < cost:
+		_say(_line("cant_afford_fit") % [ShipUpgrades.label(up), cost, WorldState.credits])
+		return "cant_afford"
+	WorldState.credits -= cost
+	ShipUpgrades.fit(ship_id, up)
+	WorldState.log_event(_l("event_fitted") % [ShipUpgrades.label(up).to_lower(), ship_label(ship_id)])
+	var pilot = demo.pilot if demo != null and "pilot" in demo else null
+	if pilot != null:
+		pilot.refit()
+	_beep()
+	_say(_line("fitted") % [ShipUpgrades.label(up), ship_label(ship_id)])
+	return "fitted"
 
 
 ## Put WorldState.hangar's ship on the spare pad (bought now, or loaded from a

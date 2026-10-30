@@ -293,13 +293,20 @@ func remove_last_berth() -> bool:
 	return true
 
 
+## Issue #207: T-89 fitted an upgrade: the parked ship you fly takes it now
+## (in the air it waits for the next landing).
+func refit() -> void:
+	if not piloting and not berths.is_empty():
+		_use_berth(berth)
+
+
 ## Fly berth `i` from now on: its data, model, hull and home bay. It is parked
 ## wherever its model stands.
 func _use_berth(i: int) -> void:
 	var b: Dictionary = berths[i]
 	berth = i
 	ship_id = b.ship_id
-	ship_cfg = b.cfg
+	ship_cfg = ShipUpgrades.apply(b.cfg, ship_id)      # issue #207: what T-89 fitted
 	visual = b.visual
 	hull = b.hull
 	home = b.home
@@ -841,7 +848,7 @@ func _on_foot() -> void:
 		var cfg: Dictionary = berths[i].cfg
 		var vname := NameHooks.vessel(cfg, "vessel:player/" + str(berths[i].ship_id))
 		_foot_prompt.text = "%s  %s" % [GameFlow.label("board"), "  ·  ".join(
-			[vname, str(cfg.get("label", ""))].filter(func(x): return x != ""))]
+			[vname, str(cfg.get("label", "")), ShipUpgrades.short(str(berths[i].ship_id))].filter(func(x): return x != ""))]
 		if not berth_flies(i):
 			_foot_prompt.text = "%s  ·  %s" % [vname, Story.line(locked_line(i))]
 	_foot_prompt.visible = near

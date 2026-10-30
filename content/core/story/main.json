@@ -103,6 +103,7 @@
     "log_none": "Nothing on. Oda always has something.",
     "log_tally": "Runs sold: %d    Bounties paid: %d",
     "log_quests": "OPTIONAL",
+    "log_ships": "YOUR SHIPS",
     "quest_open": "Open",
     "quest_done": "Done",
     "quest_point_on": "Waypoint on",
