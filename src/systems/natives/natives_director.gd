@@ -28,7 +28,7 @@ extends Node3D
 ##             quartz (a little more from an adults-only pack), reputation up.
 ##   hostile   a battle horn, then they come at you on sight with clubs, and throw
 ##             rocks from further off (the leader never throws). They fight to the
-##             last; nobody flees. Survive survive_s (5 minutes) without killing
+##             last; nobody flees. Survive survive_s (1 minute) without killing
 ##             one of them and without being downed, and they stop, offer trade and
 ##             are friendly from then on. Kill one and that pack is hostile for
 ##             good. Downed, you wake as from any other death and they go back to
@@ -56,7 +56,8 @@ var packs: Array = []                 ## see _make_pack
 var pigs: Array = []                  ## SandPig
 var camps: Array = []                 ## NativeCamp
 var steer: NativeSteer                ## the rocks they walk round
-var survive_s := 300.0
+var survive_s := 60.0                 ## issue #211: was 300 (the data's hostile.survive_s wins)
+var menu: DroidMenu                   ## issue #211: what a friendly pack will trade
 ## Members far from the player (slid along the ground) step once in this many ticks.
 var far_stride := 4
 var trades := 0
@@ -79,7 +80,7 @@ func setup(town_demo, n: Dictionary, world_ground: WorldGround, p_gear: GearCont
 	gear = p_gear
 	player = demo._player
 	people = n.get("people", {}).get("data", {})
-	survive_s = float(people.get("hostile", {}).get("survive_s", 300.0))
+	survive_s = float(people.get("hostile", {}).get("survive_s", 60.0))
 	name = "Natives"
 	_rng.seed = 96
 
@@ -919,6 +920,70 @@ func trade_pack() -> Dictionary:
 	return {}
 
 
+## Issue #211: E at a friendly pack's leader: food for quartz as ever, or any of
+## their goods (whatever the town's vendors sell) for meat.
+func open_trade(p: Dictionary) -> void:
+	if menu == null:
+		menu = DroidMenu.new()
+		add_child(menu)
+	var opts: Array = [{ "id": "quartz", "text": _line("trade_quartz") }]
+	var cc = gear.content if gear != null else null
+	for g in goods():
+		var label: String = str(cc.get_item(str(g.item)).get("label", g.item)) if cc != null else str(g.item)
+		opts.append({ "id": str(g.item), "text": _line("trade_goods") % [int(g.food), label] })
+	var lock: bool = player != null and not bool(player.get("locked"))
+	if lock:
+		player.locked = true
+	menu.open(_line("trade_menu") % [str(p.label), WorldState.inventory.count("food")], opts, func(id):
+		if lock:
+			player.locked = false
+		if id == "quartz":
+			trade(str(p.id))
+		elif id != "":
+			trade_goods(str(p.id), id))
+
+
+## The goods a pack trades for meat: [{ item, food }].
+func goods() -> Array:
+	return people.get("trade", {}).get("goods", [])
+
+
+## Pack `id` trades `item` for its price in food. "traded", "no_food", "hostile",
+## "none" or "" (not something they trade).
+func trade_goods(id: String, item: String) -> String:
+	var p := pack(id)
+	if p.is_empty():
+		return "none"
+	if not bool(p.rec.friendly):
+		return "hostile"
+	var price := -1
+	for g in goods():
+		if str(g.item) == item:
+			price = int(g.food)
+	if price < 0:
+		return ""
+	if not swap_food(item, price):
+		_toast(_line("prompt_no_food"))
+		return "no_food"
+	p.rec.trades = int(p.rec.get("trades", 0)) + 1
+	trades += 1
+	var cc = gear.content if gear != null else null
+	var label: String = str(cc.get_item(item).get("label", item)) if cc != null else item
+	_toast(_line("traded_goods") % [price, label, str(p.label)])
+	WorldState.log_event("Traded %d food for a %s with the %s." % [price, label.to_lower(), str(p.label)])
+	Story.event("nomad_traded")
+	return "traded"
+
+
+## Pay `price` food for one `item`. False (nothing taken) without enough food.
+static func swap_food(item: String, price: int) -> bool:
+	if WorldState.inventory.count("food") < price:
+		return false
+	WorldState.inventory.remove("food", price)
+	WorldState.inventory.add(item)
+	return true
+
+
 ## Gesture back at pack `id`: one food for its quartz. "traded", "no_food",
 ## "hostile" or "none".
 func trade(id: String) -> String:
@@ -941,6 +1006,7 @@ func trade(id: String) -> String:
 			lead.say(str(people.get("voice", {}).get("gesture_no_food", "")), 3.5)
 		return "no_food"
 	inv.remove(food)
+	Story.event("nomad_traded")          # issue #211: the quest is any trade
 	var n := int(tcfg.get("per_food", 1)) + (int(tcfg.get("adults_only_bonus", 1)) if bool(p.adults_only) else 0)
 	inv.add(str(tcfg.get("gives", "quartz")), n)
 	p.rec.rep = int(p.rec.get("rep", 0)) + int(tcfg.get("reputation_per_trade", 1))
@@ -1164,7 +1230,7 @@ func _tick_prompts() -> void:
 		var n := WorldState.inventory.count("food")
 		gear.hud.set_prompt((_line("prompt_trade") % n if n > 0 else _line("prompt_no_food")) + tail)
 		if _just_interact():
-			trade(str(tp.id))
+			open_trade(tp)
 		return
 	var ch := chest_near_player()
 	if not ch.is_empty():

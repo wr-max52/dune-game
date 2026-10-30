@@ -63,5 +63,34 @@
   "mood_rules": [
     { "if_flags": ["bought_speeder"], "mood": "warm" },
     { "if_flags": ["shots_in_street"], "mood": "wary" }
+  ],
+  "hints": [
+    {
+      "words": [
+        "remnant",
+        "guard",
+        "garrison",
+        "barracks",
+        "trooper",
+        "soldier",
+        "gun",
+        "rifle"
+      ],
+      "event": "heard_of_rifle",
+      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof."
+    },
+    {
+      "words": [
+        "nomad",
+        "pack",
+        "tribe",
+        "native",
+        "desert",
+        "meat",
+        "trade"
+      ],
+      "event": "heard_of_nomads",
+      "say": "the nomad packs out in the desert will trade you anything anyone in town sells, but only for meat. If a pack turns on you, keep your gun down for a minute and they come round."
+    }
   ]
 }

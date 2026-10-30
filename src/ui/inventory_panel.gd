@@ -18,6 +18,8 @@ const MARGIN := Vector2(16, 48)   ## kept clear on each side: the HUD's banner a
 var inventory: Inventory          ## null = WorldState.inventory, read fresh (a load replaces it)
 var content                       ## CoreContent (item labels, values, contraband)
 var name_of: Callable             ## id -> shown name (GearController._shown); optional
+var toggle_item: Callable         ## issue #209: id -> put a worn item on or off (GearController.toggle_item); optional
+var wear_buttons: Dictionary = {}  ## item id -> its Wear / Take off button (tests)
 var panel: PanelContainer
 var title: Label
 var credits_label: Label
@@ -138,6 +140,7 @@ func close() -> void:
 func refresh() -> void:
 	_job_log()
 	rows.clear()
+	wear_buttons.clear()
 	for c in list.get_children():
 		c.queue_free()
 	credits_label.text = "Credits:  %d cr" % WorldState.credits
@@ -162,6 +165,8 @@ func refresh() -> void:
 			row += "   CONTRABAND"
 		rows.append(row)
 		_wrap(_text(list, row, 16, RED if illegal else INK))
+		if toggle_item.is_valid() and str(it.get("slot", "")) != "":
+			_wear_button(str(id), inv.is_attached(str(id)))
 
 
 ## The job log, from Objective: a title over each entry's line, then the tally.
@@ -209,6 +214,19 @@ func _quest_log() -> void:
 			refresh())
 		jobs.add_child(b)
 		quest_buttons[id] = b
+
+
+## Issue #209: a worn item's toggle (the jetpack, the armour).
+func _wear_button(id: String, on: bool) -> void:
+	var b := Button.new()
+	b.text = "Take off" if on else "Wear"
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.pressed.connect(func():
+		toggle_item.call(id)
+		refresh())
+	list.add_child(b)
+	wear_buttons[id] = b
 
 
 func _wrap(l: Label) -> void:

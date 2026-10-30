@@ -114,6 +114,7 @@ var docking := false              ## issue #193: Z by the cruiser: she is flying
 var dockings := 0                 ## times that brought her down there (traces, tests)
 var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
+var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
 
 
 func setup(town_scene) -> void:
@@ -182,7 +183,9 @@ func _ready() -> void:
 		travel.staged = "staging" in demo and bool(demo.staging)    # issue #121: a handoff's first frame
 		travel.setup(self, demo.planet.get("neighbours", []), demo.use_look)
 		demo.add_child(travel)
-	if str(demo._arrival.get("mode", "")) == "reentry":
+	if str(demo._arrival.get("mode", "")) == "" and WorldState.story_mode() and Story.chapter() == "land":
+		opening_landing.call_deferred()      # issue #202: the story opens with the landing
+	elif str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
 	elif str(demo._arrival.get("mode", "")) == "travel":
 		arrive_from_space(demo._arrival)
@@ -486,6 +489,10 @@ func exit_ship() -> bool:
 	hud.visible = false
 	if sky != null:
 		sky.update_for(0.0, spot)
+	if opening:
+		opening = false
+		chase.fit_to(_look_length())
+		Story.event("landed")          # issue #202: out of the ship; the general is waiting
 	exited.emit()
 	return true
 
@@ -723,26 +730,33 @@ func _seat_arriving() -> void:
 		cam.far = 160000.0
 
 
+## Issue #202: a story save opens with your ship coming down into the pit as if
+## the autopilot were bringing it in, the camera far back. Nothing but V (change
+## view) does anything until she is down; then E gets you out (exit_ship), and
+## the story moves on ("landed"). The pad's "opening" sets where she starts.
+func opening_landing() -> void:
+	_seat_arriving()
+	var o: Dictionary = pad.get("opening", {})
+	var bearing := deg_to_rad(float(o.get("bearing_deg", pad.get("reentry_bearing_deg", 200.0))))
+	var dist := float(o.get("distance", 700.0))
+	var at := Vector3(home.x + sin(bearing) * dist, home.y + float(o.get("altitude", 220.0)), home.z + cos(bearing) * dist)
+	var to := Vector3(home.x - at.x, 0.0, home.z - at.z).normalized()
+	atmo.place_flying(at, to, 0.0, 0.4)
+	_throttle = 0.0
+	opening = true
+	bay_landing = true
+	chase._primed = false
+	chase.fit_to(_look_length() * float(o.get("camera_scale", 3.5)))
+	hud.visible = true
+	_sync_visual()
+
+
+func _look_length() -> float:
+	return float(kit.looks.get(str(ship_cfg.get("look", "")), {}).get("length", 9.0)) if kit != null else 9.0
+
+
 func reenter() -> void:
-	var p := player()
-	if p != null and not piloting:
-		# Seat the player without the reach check: they arrive in the cockpit.
-		piloting = true
-		p.piloting = true
-		p.vehicle = self
-		_ground_follow(null)
-		p.locked = true
-		p.visible = false
-		p.process_mode = Node.PROCESS_MODE_DISABLED
-		_set_player_collision(false)
-		var rig = demo._rig
-		if rig != null:
-			_rig_was_fp = rig.rig.is_first_person()
-			var cam: Camera3D = rig.camera()
-			_cam_near = cam.near
-			_cam_far = cam.far
-			cam.near = 0.3
-			cam.far = 160000.0
+	_seat_arriving()
 	var c: Vector3 = pad.get("center", Vector3.ZERO)
 	var bearing := deg_to_rad(float(pad.get("reentry_bearing_deg", 200.0)))
 	var dist := float(pad.get("reentry_distance", 6500.0))
@@ -911,6 +925,11 @@ func _seated(dt: float) -> void:
 
 func _read_keys(dt: float) -> void:
 	var st := atmo.state
+	if opening:
+		# Issue #202: the autopilot has her; only E, once she is down.
+		if st == AtmoFlight.State.PARKED and _just("interact"):
+			exit_ship()
+		return
 	if st == AtmoFlight.State.PARKED:
 		if _just("interact"):
 			exit_ship()
@@ -1133,6 +1152,9 @@ func _update_hud(agl_now: float) -> void:
 		"stick_roll": float(cmd.get("roll", 0.0)),
 	})
 	var tip := ""
+	if opening:
+		hud.set_prompt(Story.line("opening_exit" if atmo.state == AtmoFlight.State.PARKED else "opening_view"))
+		return
 	match atmo.state:
 		AtmoFlight.State.PARKED:
 			tip = GameFlow.label("seated")

@@ -13,7 +13,8 @@
       ],
       "reach": 2.6,
       "taken_flag": "pit_jetpack_taken",
-      "note": "Issue #64: rides on the pit hauler, the old cargo droid that roams the pit (droids/droids.json, pit_hauler); its position here is only where it starts. taken_flag: set when someone takes it (Oda's rumor r_pit_hauler stops)."
+      "inside": "pit_hauler",
+      "note": "Issue #64: rides on the pit hauler, the old cargo droid that roams the pit (droids/droids.json, pit_hauler); its position here is only where it starts. taken_flag: set when someone takes it (Oda's rumor r_pit_hauler stops). Issue #210: 'inside': it is hidden inside the droid, not on it: no look, no glow, '[E] Open the cargo droid' when you reach it."
     },
     {
       "id": "wreck_red_saber",
@@ -22,8 +23,31 @@
       "offset": [0.0, 0.0, 0.0],
       "reach": 2.6,
       "taken_flag": "wreck_red_saber_taken",
+      "event": "red_saber_taken",
       "carried": true,
       "note": "Issue #148: rides on the old cargo droid in the crashed starcruiser's deep hold (droids/droids.json, wreck.hauler); its position here is only where it starts."
+    },
+    {
+      "id": "barracks_rifle",
+      "item": "rifle_blaster",
+      "marker": "trooper_roof_c",
+      "offset": [-4.5, 0.0, 1.0],
+      "reach": 2.2,
+      "story_only": true,
+      "event": "rifle_taken",
+      "taken_flag": "barracks_rifle_taken",
+      "note": "Issue #210: a rifle the guards left lying on top of the barracks. Story saves only (freeplay has every gun). Taking it finishes the 'Steal a rifle' quest; the roof's riflemen see whoever comes up."
+    },
+    {
+      "id": "tower_blade",
+      "item": "energy_blade",
+      "marker": "cantina_owner",
+      "offset": [-2.0, 15.0, 10.3],
+      "reach": 2.2,
+      "story_only": true,
+      "event": "blade_taken",
+      "taken_flag": "tower_blade_taken",
+      "note": "Issue #210: an energy blade somebody stashed on top of the cantina's stair tower (its top is 15 m up). Story saves only. Oda tells you about it after the droid merchant chapter."
     },
     {
       "id": "desert_cache",

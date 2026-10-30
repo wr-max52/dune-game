@@ -6,7 +6,8 @@ extends CanvasLayer
 ## centred: the middle of the top is where arrival titles and toasts go.
 ##
 ## It only reads. `demo` (town_demo.gd) turns the objective's target word into a
-## place: live bodies, town markers, the range, the pit, the desert outposts.
+## place: live bodies, town markers, the range, the pit, the desert outposts, the
+## crashed cruiser ("wreck", issue #205).
 ##
 ## Issue #201: a new optional quest (Quests.take_news) shows a toast in the top
 ## right for TOAST_TIME seconds.
@@ -129,7 +130,15 @@ func where(target: String) -> Vector3:
 		"npc":
 			if id == "cantina_owner" and demo.cantina_owner != null and is_instance_valid(demo.cantina_owner):
 				return demo.cantina_owner.global_position
+			var g = demo.get("general_post")
+			if id == "general" and g != null and is_instance_valid(g) and g.body != null and g.body.visible:
+				return g.body.global_position          # issue #203: wherever he stands now
 			return _marker(id)
+		"wreck":
+			# Issue #205: the crashed cruiser on the horizon.
+			var pl = demo.get("pilot")
+			if pl != null and pl.ground != null and StarcruiserWreck.has_wreck(pl.ground):
+				return StarcruiserWreck.frame(pl.ground).origin
 		"marker":
 			return _marker(id)
 		"range":

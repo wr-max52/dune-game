@@ -168,8 +168,8 @@ func _physics_process(dt: float) -> void:
 	if _greet_left >= 0.0:
 		_greet_left -= dt
 		if _greet_left < 0.0:
-			if _busy():
-				_greet_left = 0.25        # wait until nothing else has the player
+			if _busy() or (WorldState.story_mode() and not Story.reached("t89")):
+				_greet_left = 0.25        # wait until nothing else has the player (issue #203: the general first)
 			else:
 				greet()
 	if _flat_dist(player.global_position, pos) < 10.0:

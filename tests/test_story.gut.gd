@@ -96,10 +96,10 @@ func test_the_whole_story_in_order() -> void:
 	oda = Story.beat("cantina_owner")
 	assert_eq(str(oda.job), "j_smuggle_run", "the first run comes with its job card")
 	_smuggle_run()
-	assert_eq(Story.chapter(), "smuggle_2", "selling the drop ends the first run")
-	oda = Story.beat("cantina_owner")
-	assert_eq(str(oda.job), "j_smuggle_run", "a second, normal run")
-	_smuggle_run()
+	assert_eq(Story.chapter(), "droid_merchant", "selling the drop ends the first run")
+	# Issue #212: three cargo droids for Oda's friend instead of a second run.
+	for i in 3:
+		Story.on_droid_delivered()
 	assert_eq(Story.chapter(), "bounty")
 
 	oda = Story.beat("cantina_owner")
@@ -111,7 +111,7 @@ func test_the_whole_story_in_order() -> void:
 	assert_false(Story.ships_unlocked(), "not until she tells you")
 
 	oda = Story.beat("cantina_owner")
-	assert_true(str(oda.say).contains("keys"), "the pilots leave their keys in the ships")
+	assert_true(str(oda.say).contains("own ship"), "issue #214: take your own ship up")
 	assert_true(Story.ships_unlocked())
 	assert_true(_offers("j_patrol_bounty"), "the patrol job opens with the ships")
 
@@ -120,6 +120,8 @@ func test_the_whole_story_in_order() -> void:
 	assert_eq(WorldState.credits, c0 + 5000, "the fleet pays 5000")
 	assert_true(Story.remnant_hostile(), "the Remnant turn hostile")
 	assert_false(Story.town_garrison(), "and leave town")
+	assert_eq(Story.chapter(), "end", "issue #214: the end card")
+	EndCard.close()
 	assert_eq(Story.chapter(), "free")
 
 	# Free play: bounties and smuggling on repeat.
@@ -146,20 +148,15 @@ func test_a_later_flight_pays_as_before() -> void:
 	assert_false(Story.remnant_hostile())
 
 
-func test_jetpack_only_when_amused_or_warm_and_once() -> void:
+func test_oda_tells_you_about_the_jetpack_in_the_cargo_droid() -> void:
 	Story.skip_to("smuggle_1")
-	assert_eq(Story.on_owner_mood("wary"), "")
-	assert_eq(Story.on_owner_mood("irritated"), "")
+	assert_true(Story.brief("cantina_owner").contains("cargo droid"), "issue #210: her briefing points at the droid")
+	assert_eq(Story.on_owner_mood("amused"), "", "she no longer lends hers")
 	assert_false(WorldState.inventory.has("jetpack"))
-	assert_true(Story.brief("cantina_owner").contains("jetpack"), "her briefing says she might lend it")
-	assert_ne(Story.on_owner_mood("amused"), "", "amused: she lends it")
-	assert_true(WorldState.inventory.has("jetpack"))
-	assert_eq(Story.on_owner_mood("warm"), "", "once")
-	assert_eq(WorldState.inventory.count("jetpack"), 1)
 
 
 func test_jetpack_not_outside_the_first_run() -> void:
-	Story.skip_to("smuggle_2")
+	Story.skip_to("droid_merchant")
 	assert_eq(Story.on_owner_mood("warm"), "")
 	assert_false(WorldState.inventory.has("jetpack"))
 
@@ -425,7 +422,7 @@ func test_new_story_game_starts_over() -> void:
 	var panel := DevSettingsPanel.new()
 	add_child_autofree(panel)
 	panel.new_game(WorldState.STORY, false)
-	assert_eq(Story.chapter(), "meet_oda")
+	assert_eq(Story.chapter(), "land", "issue #202: a story opens with the landing")
 	assert_eq(WorldState.credits, 60)
 	assert_false(WorldState.inventory.has("jetpack"), "equipment gone")
 	assert_eq(WorldState.hangar, "")

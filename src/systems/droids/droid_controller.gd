@@ -282,7 +282,21 @@ func trade_options() -> Array:
 		out.append({ "id": "buy:" + str(kind), "text": _l("buy") % [DroidRoster.label(str(kind)), DroidRoster.price(str(kind))] })
 	for d in roster().owned:
 		out.append({ "id": "sell:%d" % int(d.uid), "text": _l("sell") % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))] })
+	# Issue #212: at a desert post, Oda's friend takes the droids she asked for.
+	var want := Story.droid_wanted_kind()
+	if want != "" and _at_post():
+		for d in roster().owned:
+			if str(d.kind) == want:
+				out.append({ "id": "deliver:%d" % int(d.uid), "text": _l("deliver") % [DroidRoster.label(want), Story.droids_wanted()] })
 	return out
+
+
+## The menu is open at one of the desert droid posts (not the market stall).
+func _at_post() -> bool:
+	for s in vendor_sites:
+		if str(s.get("id", "")).begins_with("droid_post_") and s.pos == vendor_pos:
+			return true
+	return false
 
 
 func _on_trade(id: String) -> void:
@@ -290,6 +304,22 @@ func _on_trade(id: String) -> void:
 		buy(id.substr(4))
 	elif id.begins_with("sell:"):
 		sell(int(id.substr(5)))
+	elif id.begins_with("deliver:"):
+		deliver(int(id.substr(8)))
+
+
+## Issue #212: hand a droid over for Oda's friend (no pay: it is a favour to
+## her). Its cargo comes back to your pockets. Returns true when it went.
+func deliver(uid: int) -> bool:
+	var d := roster().find(uid)
+	if d.is_empty() or str(d.kind) != Story.droid_wanted_kind():
+		return false
+	roster().unload(uid, WorldState.inventory)
+	roster().remove(uid)
+	_free_companion(uid)
+	Story.on_droid_delivered()
+	_toast(_l("delivered") % [DroidRoster.label(str(d.kind)), Story.droids_wanted()])
+	return true
 
 
 ## Buy a droid from the merchant. Returns "bought", "full", "cant_afford" or "".
