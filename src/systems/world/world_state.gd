@@ -20,6 +20,8 @@ const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20
 const STORY := "story"
 const FREEPLAY := "freeplay"
 const STORY_WEAPON := "pistol_blaster"     ## issue #200: the one hand weapon a story save starts with
+const SHIP_REBUILT := "ship_rebuilt"        ## issue #206: T-89 rebuilt the wreck on the pit pad (a story save's own ship)
+const COMRADE := "t89_comrade"              ## issue #206: the player told T-89 they can't stand the Remnant
 
 static var standing: Dictionary = DEFAULT_STANDING.duplicate()
 static var flags: Dictionary = {}          ## name -> true
@@ -42,6 +44,9 @@ static var game_hours := 0.0               ## issue #96: in-game hours played (c
 static var speeder_fits: Array = []        ## issue #95: one SpeederUpgrades fit per owned speeder, by parking slot
 static var bounty: Dictionary = {}         ## issue #64: { run, key, name, crime, outpost, pay, state: "rolled"|"out"|"dead" }
 static var mode := FREEPLAY                ## issue #200: STORY or FREEPLAY, picked on New Game, kept in the save
+static var ship_fits: Dictionary = {}      ## issue #207: ship id -> [upgrade id] T-89 fitted (ShipUpgrades)
+static var wreck_ship := ""                ## issue #207: the ship id of the wreck T-89 rebuilt ("" = none)
+static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 
 static var _rumors: Array = []
 static var _board: Array = []
@@ -74,6 +79,10 @@ static func reset() -> void:
 	native_camps = {}
 	game_hours = 0.0
 	mode = FREEPLAY
+	quests = {}
+	Quests.news.clear()
+	ship_fits = {}
+	wreck_ship = ""
 
 
 ## Issue #200: a new save in STORY or FREEPLAY mode. Story starts at the first
@@ -94,6 +103,11 @@ static func new_game(m: String) -> void:
 
 static func story_mode() -> bool:
 	return mode == STORY
+
+
+## Issue #206: the player owns a ship: the wreck T-89 rebuilt, or one bought from him.
+static func owns_ship() -> bool:
+	return has_flag(SHIP_REBUILT) or hangar != ""
 
 
 ## Issue #200: may the player draw hand weapon `id`? Freeplay: all of them. Story:
@@ -663,6 +677,9 @@ static func to_save() -> Dictionary:
 		"native_camps": native_camps.duplicate(true),
 		"game_hours": game_hours,
 		"mode": mode,
+		"quests": quests.duplicate(true),
+		"ship_fits": ship_fits.duplicate(true),
+		"wreck_ship": wreck_ship,
 	}
 
 
@@ -696,6 +713,9 @@ static func from_save(d: Dictionary) -> void:
 	native_camps = d.get("native_camps", {}).duplicate(true)
 	game_hours = float(d.get("game_hours", 0.0))
 	mode = STORY if str(d.get("mode", FREEPLAY)) == STORY else FREEPLAY    # issue #200: older saves are freeplay
+	quests = d.get("quests", {}).duplicate(true)
+	ship_fits = d.get("ship_fits", {}).duplicate(true)
+	wreck_ship = str(d.get("wreck_ship", ""))
 
 
 static func _read_json(path: String) -> Variant:

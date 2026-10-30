@@ -31,7 +31,11 @@ static func home() -> bool:
 
 
 ## { text, target } for the pointer, or {} when there is nothing to point at.
+## Issue #201: an optional quest whose waypoint the player switched on comes first.
 static func current() -> Dictionary:
+	var quest := Quests.waypoint()
+	if not quest.is_empty():
+		return quest
 	var b := WorldState.bounty
 	if WorldState.bounty_collectable() and home():
 		var fence := fence_marker(true)
@@ -117,6 +121,9 @@ static func log_entries() -> Array:
 			"text": line("log_hunt") % [str(b.name), Story.outpost_label(str(b.outpost)), int(b.pay), str(b.crime)] })
 	elif WorldState.bounty_collectable():
 		out.append({ "title": line("log_bounty"), "text": line("log_collect") % [str(b.name), int(b.pay)] })
+	var ships := ShipUpgrades.owned_lines()
+	if not ships.is_empty():
+		out.append({ "title": line("log_ships"), "text": "\n".join(PackedStringArray(ships)) })    # issue #207
 	for id in WorldState.jobs_taken:
 		if WorldState.jobs_taken[id] == "active":
 			var j := WorldState.job(str(id))
