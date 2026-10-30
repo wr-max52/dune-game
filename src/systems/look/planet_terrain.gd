@@ -115,7 +115,7 @@ static func for_planet(planet: Dictionary) -> PlanetTerrain:
 	pt.cache_key = "%s/%d" % [str(planet.get("id", "")), int(r)]
 	var site := SpaceTravel.site_of(planet.get("town", {}))
 	pt.configure_site(site.floor, site.walls, site.sunken, 0.0)
-	pt.configure_flat_sites(droid_flat_sites(planet, pt.sphere))
+	pt.configure_flat_sites(droid_flat_sites(planet, pt.sphere) + camp_flat_sites(planet, pt.sphere))
 	return pt
 
 
@@ -135,6 +135,37 @@ static func droid_flat_sites(planet: Dictionary, sp: PlanetSphere) -> Array:
 			"rect": Rect2(at.x - 10.0, at.z - 10.0, 20.0, 20.0),
 			"y": sp.elevation(sp.map_dir(at.x, at.z)),
 			"blend": 8.0,
+		})
+	return sites
+
+
+## Issue #96: level ground under each native pack's camp, so the tents, the fire
+## and the people sitting round it stand on the sand you see (not on mounds over a
+## dune's slope). Sized from the people's camp block; the pad is the plane square to
+## "up" there, through the mean height of the ground across it before levelling.
+static func camp_flat_sites(planet: Dictionary, sp: PlanetSphere) -> Array:
+	var nat: Dictionary = planet.get("natives", {})
+	var cfg: Dictionary = nat.get("people", {}).get("data", {}).get("camp", {})
+	if cfg.is_empty():
+		return []
+	var half := float(cfg.get("ring_m", 9.0)) + float(cfg.get("tent_radius", 3.0)) + float(cfg.get("pad_margin_m", 5.0))
+	var sites: Array = []
+	for pk in nat.get("packs", []):
+		var c = pk.get("camp", null)
+		if not (c is Dictionary) or not (c.get("at") is Vector2):
+			continue
+		var at: Vector2 = c.at
+		var sum := 0.0
+		for i in 3:
+			for j in 3:
+				sum += sp.elevation(sp.map_dir(at.x + (i - 1) * half, at.y + (j - 1) * half))
+		var mid := sp.center + sp.map_dir(at.x, at.y) * (sp.radius + sum / 9.0)
+		sites.append({
+			"rect": Rect2(at.x - half, at.y - half, half * 2.0, half * 2.0),
+			"y": sum / 9.0,
+			"plane_c": mid,
+			"plane_u": sp.up_at(mid),
+			"blend": float(cfg.get("pad_blend_m", 22.0)),
 		})
 	return sites
 

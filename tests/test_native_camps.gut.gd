@@ -218,3 +218,33 @@ func test_rest_in_a_friendly_tent_until_morning() -> void:
 	assert_gt(WorldState.game_hours - h0, 4.0, "the night went by")
 	assert_eq(nat.rests, 1)
 	assert_false(t._player.locked, "on your feet again")
+
+
+func test_camps_stand_on_level_ground() -> void:
+	var t = _town()
+	await wait_physics_frames(3)
+	var nat = t.natives
+	for p in nat.packs:
+		var camp: NativeCamp = p.camp
+		assert_lt(camp._unevenness(camp.center), 0.05, "%s: the sand under the tents and the fire is levelled" % p.id)
+		for t2 in camp.tents:
+			assert_true(camp.director.steer.blocked((t2.xf as Transform3D).origin, camp.up), "packs steer round the tents")
+
+
+func test_no_physics_where_the_sand_has_no_collider() -> void:
+	var t = _town()
+	await wait_physics_frames(3)
+	var nat = t.natives
+	nat.set_physics_process(false)
+	var p: Dictionary = nat.packs[0]
+	var npc: NpcBody = nat.leader(p)
+	# The player beside the pack, but the collider still back in town (as on a run
+	# out to it, before the collider catches up): the pack keeps sliding.
+	var ppos: Vector3 = npc.global_position + NativeSteer._side(nat.up_at(npc.global_position)) * 10.0
+	assert_false(nat._has_floor(npc.global_position), "no collider out at the camp yet")
+	nat._tick_pack(p, DT, ppos)
+	assert_eq(npc.process_mode, Node.PROCESS_MODE_DISABLED, "slid, not dropped through the sand")
+	t.terrain.snap_to(ppos)
+	assert_true(nat._has_floor(npc.global_position), "the collider has come")
+	nat._tick_pack(p, DT, ppos)
+	assert_ne(npc.process_mode, Node.PROCESS_MODE_DISABLED, "then it walks with physics")

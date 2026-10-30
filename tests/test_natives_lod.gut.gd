@@ -96,8 +96,12 @@ func test_near_members_are_not_throttled() -> void:
 	var p: Dictionary = nat.packs[0]
 	for m in p.members:
 		m.erase("far_n")
-	# The player stands at the leader: no member is far, so none takes the LOD path.
+	# The player stands at the leader, with the ground's collider under them: no
+	# member is far, so none takes the LOD path.
 	var ppos: Vector3 = (nat.leader(p) as Node3D).global_position
+	t._player.global_position = ppos
+	if t.terrain != null and t.terrain.has_method("snap_to"):
+		t.terrain.snap_to(ppos)
 	nat._tick_pack(p, DT, ppos)
 	for m in p.members:
 		assert_false(m.has("far_n"), "near members never count far ticks")

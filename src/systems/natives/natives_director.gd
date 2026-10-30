@@ -568,7 +568,10 @@ func _tick_pack(p: Dictionary, dt: float, ppos: Vector3) -> void:
 func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> void:
 	var npc: NpcBody = m.npc
 	var lod := float(people.get("pack", {}).get("far_lod_m", 90.0))
-	var far := ppos == Vector3.INF or npc.global_position.distance_to(ppos) > lod
+	# Physics only where the sand's collider is under them: it follows the player
+	# and can lag tens of metres behind on the way in (they fell through it).
+	var far := ppos == Vector3.INF or npc.global_position.distance_to(ppos) > lod \
+			or not _has_floor(npc.global_position)
 	if far:
 		# Out of sight of the player: slid along the ground, no physics (there may
 		# be no collider under them out here).
@@ -604,8 +607,7 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 	var goal := _goal_for(p, m, ppos)
 	if npc.process_mode == Node.PROCESS_MODE_DISABLED:
 		npc.process_mode = Node.PROCESS_MODE_INHERIT
-		if demo.terrain != null and ppos != Vector3.INF:
-			demo.terrain.prefetch(npc.global_position)
+	_keep_up(npc)
 	npc.command.crouch = false
 	match str(p.state):
 		"attack":
@@ -632,6 +634,24 @@ func _tick_member(p: Dictionary, m: Dictionary, dt: float, ppos: Vector3) -> voi
 			else:
 				_walk_to(m, goal)
 				npc.clear_face()
+
+
+## Whether the ground under `p` has a collider to stand on (always, with no
+## streaming terrain).
+func _has_floor(p: Vector3) -> bool:
+	var t = demo.terrain if demo != null else null
+	if t == null or not t.has_method("collider_covers"):
+		return true
+	return t.collider_covers(p.x, p.z, 3.0)
+
+
+## A member found under the sand (a collider swapped out beneath it) is put back
+## on top, not left falling.
+func _keep_up(npc: NpcBody) -> void:
+	var g := _on_ground(npc.global_position)
+	if (npc.global_position - g).dot(up_at(g)) < -0.4:
+		npc.global_position = g + up_at(g) * 0.05
+		npc.velocity = Vector3.ZERO
 
 
 ## Walk to `goal` round the rocks in the way (asked again every few tenths of a second).

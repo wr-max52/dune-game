@@ -3,7 +3,9 @@
 ![The friendly Red Wind pack, and the Bone Teeth on the attack](packs.jpg)
 
 ![The Red Wind camp: three hide tents round the fire](camp.jpg)
+![By the fire: the spit and pot, the stone ring, logs to sit on](camp_fire.jpg)
 ![Inside a tent: the rug, a rock table and seats, the chest and a bedroll](tent.jpg)
+![Between the tents: the woodpile, water jars and the drying rack](camp_props.jpg)
 
 Every planet with breathable ground can have its own native people, who travel in
 packs, and its own wild animals. They come from the planet generator, the same way
@@ -65,8 +67,9 @@ scene when the planet has natives.
 - **Packs:**
   - Each member is an `NpcBody`, the guards' body, senses and health. It walks
     open ground without a navmesh (`free_walk`).
-  - Far from the player, members are slid along the ground with no physics, so a
-    pack can cross the desert where there is no collider under it.
+  - Far from the player, or anywhere the sand's collider (which follows the
+    player) has not reached yet, members are slid along the ground with no
+    physics, so nobody falls through sand that has no collider under it.
   - The leader walks the route and the rest follow in rows. The leader's pole
     shows where a pack is from far off.
   - They walk round the boulders and mesas the ground knows about
@@ -74,8 +77,14 @@ scene when the planet has natives.
     outpost landmarks.
 - **Camps** (`NativeCamp`, `src/systems/natives/native_camp.gd`):
   - A ring of hide tents round a firepit that is always lit. Each tent is a room:
-    a doorway facing the fire, a rug, a rock table and rock seats, a bedroll and
-    a chest.
+    a doorway facing the fire, a woven rug, a rock table and rock seats, a
+    bedroll, a hanging lantern and a chest. Between the tents: stacks of
+    scavenged canisters, a woodpile, a drying rack. Their textures are drawn in
+    code (`CampTextures`, `src/systems/natives/camp_textures.gd`).
+  - The ground under a camp is levelled (`PlanetTerrain.camp_flat_sites`): one
+    pad that the sand you see, the collider and the camp all share, square to
+    "up" there.
+  - Packs walk round the tents and the clutter between them.
   - A pack starts at its camp. The camp is a stop on its route: the pack sits by
     the fire a while each loop, then walks on. At night (the time-of-day hour)
     it comes in and stays until morning.

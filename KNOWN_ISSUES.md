@@ -10,19 +10,27 @@ rocks and club swings, and a camp shot down that comes back, as well as the
 first milestone. Unit tests cover the steering, the moves and the camps
 (`tests/test_native_steer.gut.gd`, `test_native_moves.gut.gd`,
 `test_native_camps.gut.gd`). The town boots with the look on and builds both
-camps.
+camps. A probe walking the player into each camp found members dropping up to
+90 m through the sand (7,600 of 39,000 samples); after the fix, none.
 
 **Not done, honestly:**
 - **Looked at in stills only, never played by hand.** The camps, tents (outside
-  and in) and the firepit were rendered on the Mac (`docs/natives/camp.jpg`,
-  `tent.jpg`, `tent_door.jpg`); a swing and a throw were seen once in a still.
+  and in), the fire and the clutter were rendered on the Mac
+  (`docs/natives/camp.jpg`, `tent.jpg`, `tent_door.jpg`, `camp_fire.jpg`,
+  `camp_props.jpg`); a swing and a throw were seen once in a still.
   The gesture poses (`NativeMoves`) and the rocks in flight were not watched
   moving. The poses are first guesses at joint angles and may look wrong (an
   arm through the head, a wrist bent the wrong way).
-- **Tents stand on an earth mound.** On sloping sand each tent's floor is
-  levelled on a low platform with sloped sides (so there is no step at the
-  door); on a steep spot the mound is plain to see. Camps pick the flattest
-  ground near where their data puts them.
+- **A pack walking out of the player's reach slides frozen.** Members only get
+  physics where the sand's collider is (it follows the player and can lag tens
+  of metres behind on a run out). Until it arrives, near members slide along the
+  ground in their last pose, as far ones always have.
+- **The fire is three glowing cones.** No particles or smoke.
+- **Members crowd the fire** on their way to their spots; they do not sit on
+  the logs.
+- **A camp levels the sand in a square** 34 m across with a 22 m blend
+  (`PlanetTerrain.camp_flat_sites`); a camp moved by a rock on its spot can end
+  up at the pad's edge, where the tents' low earth floors show again.
 - **There is no running day and night.** Packs come in "at night" by the F11
   time-of-day hour, which only changes when you move the slider or rest. Camps
   and chests come back on in-game hours (`WorldState.game_hours`), which run on

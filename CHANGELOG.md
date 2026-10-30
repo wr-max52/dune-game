@@ -22,7 +22,20 @@ Plain English, newest on top. One entry per milestone.
 - **No more voices for the packs.** Their yells and gestures show as text, never
   through ElevenLabs, and their entry in the voice profiles is gone ("man_fierce"
   stays in the library as a spare).
-- **They walk round boulders and mesas** instead of through them.
+- **They walk round boulders and mesas** instead of through them, and round the
+  tents and the camp's clutter.
+- **Camps sit on level ground.** The sand under each camp is levelled (a pad the
+  sand you see, the ground you stand on and the camp all share), so the fire,
+  the tents and the people round it no longer sit at odds with a dune's slope.
+- **No more falling through the sand.** Walking up to a pack, its people used to
+  drop through the ground: they switched on their physics before the sand's
+  collider had reached them. They now wait for it.
+- **Textures and clutter.** Stitched hide with patches, woven rugs, rough rock,
+  wood grain and clay, all drawn in code. Tents have wall posts, roof ribs, a
+  painted band, guy ropes and streamers; inside, cushions, pots, a hanging
+  lantern and an iron-bound chest. Round the camp: stacks of painted scavenged
+  canisters, a woodpile, a drying rack hung with hides, water jars, spears, a
+  spit and pot over the fire, logs to sit on, and a ring of stones.
 - **Follow-ups filed:** planet-wide sandstorms (#175) and packs stealing
   vehicles (#176).
 

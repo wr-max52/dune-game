@@ -173,8 +173,12 @@ func test_town_demo_builds_the_desert() -> void:
 	assert_not_null(d.terrain, "desert on by default")
 	assert_not_null(d.terrain.collider_body, "greybox gets the collider")
 	assert_eq(d.terrain.get_node_or_null("Mesh"), null, "but no mesh (nothing draws in CI)")
-	assert_eq(d.terrain.flat_sites.size(), 3, "the home planet levels all three droid relay yards")
-	for site in d.terrain.flat_sites:
+	# The camp pads (issue #96) are level to "up" there, not to the ball's radius:
+	# test_native_camps checks those.
+	var yards: Array = d.terrain.flat_sites.filter(func(s): return not s.has("plane_u"))
+	assert_eq(yards.size(), 3, "the home planet levels all three droid relay yards")
+	assert_eq(d.terrain.flat_sites.size() - yards.size(), 2, "and a pad under each pack's camp")
+	for site in yards:
 		var r: Rect2 = site.rect
 		var y := float(site.y)
 		var sp: PlanetSphere = (d.terrain as PlanetTerrain).sphere
