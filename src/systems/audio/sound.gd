@@ -40,6 +40,7 @@ var _deck: AudioStreamPlayer   ## the track playing now
 var _spare: AudioStreamPlayer  ## the last one, fading out
 var _tw: Tween
 var _credits := -1
+var _carried: Dictionary = {}  ## key -> AudioStreamPlayer (carried_loop)
 
 
 # ------------------------------------------------------------------ the calls
@@ -90,6 +91,20 @@ static func loop(key: String, parent: Node, spatial := true) -> Node:
 	var p := s._player(c, spatial and parent is Node3D)
 	p.stream = _looping(stream, 0.0)
 	parent.add_child(p)
+	return p
+
+
+## A looping 2D player that lives under Sound, not in a scene, so it plays on
+## across a scene change (the ship's drone over a no-fade handoff). One per key;
+## the scene starts and stops it. Null when the key is unknown.
+static func carried_loop(key: String) -> AudioStreamPlayer:
+	var s := lib()
+	var p: AudioStreamPlayer = s._carried.get(key)
+	if p != null and is_instance_valid(p):
+		return p
+	p = loop(key, s, false) as AudioStreamPlayer
+	if p != null:
+		s._carried[key] = p
 	return p
 
 

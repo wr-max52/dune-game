@@ -38,7 +38,7 @@ static func scene(path: String) -> Resource:
 static func prefetch(paths: Array) -> void:
 	for p in paths:
 		var path := str(p)
-		if _scenes.has(path) or _pending.has(path) or not ResourceLoader.exists(path):
+		if _scenes.has(path) or _pending.has(path) or ResourceLoader.has_cached(path) or not ResourceLoader.exists(path):
 			continue
 		if ResourceLoader.load_threaded_request(path) == OK:
 			_pending[path] = true

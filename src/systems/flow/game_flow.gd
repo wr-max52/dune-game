@@ -193,7 +193,11 @@ static func travel(tree: SceneTree, to: String, ship_id: String = "", name: Stri
 	arrival = { "mode": "handoff" if extra.has("handoff") else "travel", "from": from, "to": to, "ship": ship_id, "name": name,
 		"pad": str(data().get("pads", {}).keys()[0]) if not data().get("pads", {}).is_empty() else "" }
 	arrival.merge(extra)
-	_go(tree, str(data().get("default_port_scene", "res://scenes/town_demo.tscn")))
+	var path := str(data().get("default_port_scene", "res://scenes/town_demo.tscn"))
+	if extra.has("handoff") and not change_scene.is_valid() and tree != null:
+		_swap_scene.call_deferred(tree, path)
+		return
+	_go(tree, path)
 
 
 static func _go(tree: SceneTree, path: String) -> void:
@@ -201,3 +205,20 @@ static func _go(tree: SceneTree, path: String) -> void:
 		change_scene.call(path)
 	elif tree != null:
 		tree.change_scene_to_file.call_deferred(path)
+
+
+## A no-fade handoff's scene change: the old scene leaves the tree, the new one
+## takes its place in the same frame, and the old one is freed over the frames
+## after (SceneReaper) instead of all at once before the new one is built.
+static func _swap_scene(tree: SceneTree, path: String) -> void:
+	var packed := load(path) as PackedScene
+	if packed == null:
+		tree.change_scene_to_file(path)
+		return
+	var old := tree.current_scene
+	if old != null:
+		tree.root.remove_child(old)
+	var fresh := packed.instantiate()
+	tree.root.add_child(fresh)
+	tree.current_scene = fresh
+	SceneReaper.reap(old)
