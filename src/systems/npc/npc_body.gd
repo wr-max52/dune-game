@@ -860,12 +860,12 @@ func _animate(dt: float, move: Vector3) -> void:
 		(joints.head as Node3D).rotation_degrees.y = yaw * 0.6
 	# Issue #96: a swing, a throw or a gesture over the walk (NativeMoves).
 	if action != "":
-		var w := NativeMoves.weight(action, action_t / maxf(action_len, 0.001))
+		var mw := NativeMoves.weight(action, action_t / maxf(action_len, 0.001))
 		var pose := NativeMoves.pose(action, action_t / maxf(action_len, 0.001), action_t)
 		for jn in pose:
 			if joints.has(jn):
 				var j := joints[jn] as Node3D
-				j.rotation_degrees = j.rotation_degrees.lerp(pose[jn], w)
+				j.rotation_degrees = j.rotation_degrees.lerp(pose[jn], mw)
 	# A rigged model (SkinnedBody, characters.json "model") follows the joints only
 	# when told to, after they have moved this frame.
 	if look_body.has_meta("skin"):
