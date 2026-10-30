@@ -11,10 +11,10 @@
     "standard": { "height": 4.2, "cloth": "#b8762e", "note": "The leader's pole with a rag on top, so a pack can be seen coming from far off." }
   },
   "styles": [
-    { "id": "sun_bleached", "head": "goggles:sand", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand", "hide": "#b49a72", "rug": "#9a4a2a" },
-    { "id": "rust", "head": "goggles:oxblood", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder", "hide": "#8e6a4e", "rug": "#7a2a22" },
-    { "id": "dull_dye", "head": "goggles:violet", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate", "hide": "#9a8a74", "rug": "#4a4a62" },
-    { "id": "bone", "head": "goggles:sand", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal", "hide": "#c4b494", "rug": "#2e6a62" }
+    { "id": "sun_bleached", "head": "nomad", "torso": "cantina_owner:sand", "legs": "player:sand", "leader_head": "cantina_owner:sand", "hide": "#b49a72", "rug": "#9a4a2a" },
+    { "id": "rust", "head": "nomad", "torso": "cantina_owner:madder", "legs": "player:rust", "leader_head": "cantina_owner:madder", "hide": "#8e6a4e", "rug": "#7a2a22" },
+    { "id": "dull_dye", "head": "nomad", "torso": "cantina_owner:slate", "legs": "player:dusk", "leader_head": "cantina_owner:slate", "hide": "#9a8a74", "rug": "#4a4a62" },
+    { "id": "bone", "head": "nomad", "torso": "cantina_owner:teal", "legs": "player:olive", "leader_head": "cantina_owner:teal", "hide": "#c4b494", "rug": "#2e6a62" }
   ],
   "soldier": {
     "label": "Dune nomad",

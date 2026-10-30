@@ -501,6 +501,7 @@ func _build_hud() -> void:
 	_stam.show_percentage = false
 	_stam.max_value = 100
 	_stam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stam.visible = false          # until the blade is out or tired (a seated pilot never updates it)
 	_hud.add_child(_stam)
 
 

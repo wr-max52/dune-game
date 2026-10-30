@@ -8,8 +8,8 @@ extends Node
 ## "Took damage" is read from the target afterwards, because the hit has already
 ## landed by the time the signal fires: bodies stamp `damage_usec` (the clock time
 ## of their last accepted hit) and we check it is fresh. That way
-## ignored friendly fire and hits on the dead show nothing. Things with no stamp
-## (droids, ships) count if they have apply_damage at all.
+## ignored friendly fire and hits on the dead show nothing. Ship hulls stamp it too
+## (issue #181). Things with no stamp (droids) count if they have apply_damage at all.
 
 const THUD := "res://assets/audio/hud/hit_thud.wav"
 const KILL := "res://assets/audio/hud/hit_kill.wav"
@@ -72,7 +72,12 @@ func on_hit(target: Object, _damage: float = 0.0) -> void:
 	var r := classify(target)
 	if r == Result.NONE:
 		return
-	var kill := r == Result.KILL
+	confirm(r == Result.KILL)
+
+
+## Issue #181: a hit the caller already knows landed (the space fight's director
+## reports its own hits and kills), shown the same way.
+func confirm(kill: bool) -> void:
 	marker.show_hit(kill)
 	if kill:
 		kill_markers_shown += 1

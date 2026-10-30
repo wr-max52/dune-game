@@ -138,3 +138,54 @@ The fit lines its waistband up with the hips (`align_top`) and trims the strip a
 it (`trim_top`); it stands within 2 cm of the base body's legs at every height.
 
 Raw review sheet: `docs/kit/79_raw.png` (`tools/look/sheets/19_issue79_raw.json`).
+
+## Sand nomad heads (native packs)
+
+A sand version of the dune nomads' goggle-mask head (`goggles_head`), plus three
+variations for later NPCs. Each is a kit part `from` the head, fitted into the
+goggle head's box (`kit.fit.parts` in `content/look/character_models.json`), so it
+goes on any body and shows in the character builder.
+
+References: front and side crops of `goggles_head` with its sand recolour
+(`colors/goggles_sand.png`). Settings: Gen-2.5-High, Raw, `quality_override` 30000.
+
+Pack head prompt (`nomad_head`):
+
+> The same alien goggle-mask head as the reference images, recoloured entirely in
+> desert sand tones. A close-fitting sand-coloured cloth hood wraps the whole skull.
+> Over it a long, narrow, unsettling beaked face mask in sun-bleached bone and pale
+> sand, with a thin ridge running up the forehead, two short swept-back horn tabs,
+> and two big round goggle lenses in worn sandstone-coloured rims with ribbed ear
+> discs at the sides. The lenses are dark smoky amber. No skin, no face visible.
+> Freaky, alien, not human. Only the head piece: hood and mask at human head scale,
+> open at the neck, nothing below the neck, no body, no shoulders. Matte dusty
+> materials, no metal shine, gritty painterly realism, no text. Single object,
+> centred, neutral background.
+
+The variations used the same references with a feature swapped in: a third
+forehead lens and a segmented chitin crest (`nomad_crest`), a ribbed snout split
+into mandible tubes (`nomad_maw`), and swept-back horns with slit lenses
+(`nomad_horn`).
+
+| Piece | Generation | Source |
+|---|---|---|
+| nomad (pack head) | bd39fad1-76e8-40cf-91ff-b6dbd0753ea5 | `nomad_head.glb` |
+| nomad_crest | 1be4d472-a09e-4a3a-9b8e-25bf7b6836cf | `nomad_crest_head.glb` |
+| nomad_maw | 2382505a-bd84-4af6-b491-f5217d61690f | `nomad_maw_head.glb` |
+| nomad_horn | be19a337-54eb-4775-abd5-702156e34492 | `nomad_horn_head.glb` |
+
+**The references won over the prompts.** All four came back as the goggle head's
+shape, so the variations differ from it (and from each other) only in small details.
+Their colours also came back wrong: a light grey hood and an olive-brass, fully
+metallic mask. The fit bakes the sand in (`recolor`: hood to sand, mask to bone,
+`metallic` 0), each in slightly different tones. The swaps all read the original
+texture, so the second never catches the first's result. Textures are shrunk in the
+fit (`texture_size`: 1024 for the pack head, 512 for the variations) to keep
+`parts.glb` under GitHub's 100 MB file limit (it is about 95 MB now).
+
+A retry (prompt-only variations, and a pack head from darker matte sand-and-bone
+reference renders with de-lighting) was refused for lack of Hyper3D credits. With
+credits, that retry is the way to get truly different variations.
+
+Review: `docs/kit/nomad_heads.png` (close up, `tools/look/sheets/23_nomad_heads.json`)
+and `docs/kit/nomad_heads_body.png` (on a nomad's body, `24_nomad_heads_body.json`).

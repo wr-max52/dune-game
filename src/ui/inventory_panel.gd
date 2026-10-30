@@ -2,12 +2,16 @@ class_name InventoryPanel
 extends CanvasLayer
 ## What you are carrying (M15), on I. Credits, then every item you own with how
 ## many, whether it is worn, what a vendor would pay, and a CONTRABAND tag on what
-## the Remnant would confiscate at the gate. No game logic: GearController hands it
-## the inventory and the item data; it only reads.
+## the Remnant would confiscate at the gate. Beside it, the job log: the story's
+## chapter, the drop or goods you are running, the bounty out, and any job taken
+## (Objective.log_entries). No game logic: GearController hands it the inventory
+## and the item data; it only reads.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
 const RED := Color("#ff6a55")
+const SIZE := Vector2(800, 460)   ## the panel's size, shrunk to fit a small (or text-scaled) screen
+const MARGIN := Vector2(16, 48)   ## kept clear on each side: the HUD's banner and footer
 
 var inventory: Inventory          ## null = WorldState.inventory, read fresh (a load replaces it)
 var content                       ## CoreContent (item labels, values, contraband)
@@ -16,7 +20,9 @@ var panel: PanelContainer
 var title: Label
 var credits_label: Label
 var list: VBoxContainer
+var jobs: VBoxContainer
 var rows: Array = []              ## the text of each row, for tests
+var job_rows: Array = []          ## the job log's text, title then line, for tests
 
 
 func _init() -> void:
@@ -27,10 +33,6 @@ func _init() -> void:
 func _ready() -> void:
 	panel = PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -260
-	panel.offset_right = 260
-	panel.offset_top = -200
-	panel.offset_bottom = 200
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.06, 0.05, 0.9)
 	sb.border_color = AMBER
@@ -41,15 +43,39 @@ func _ready() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.visible = false
 	add_child(panel)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	panel.add_child(outer)
+	# Scrolls (the wheel) when a long job log is taller than the panel, so the
+	# panel never grows past the screen.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 24)
+	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(cols)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
-	panel.add_child(v)
+	v.custom_minimum_size.x = 220
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_stretch_ratio = 0.8
+	cols.add_child(v)
 	title = _text(v, "INVENTORY", 20, AMBER)
 	credits_label = _text(v, "", 17, INK)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
 	v.add_child(list)
-	_text(v, "[I] close", 13, Color(INK, 0.6))
+	var jv := VBoxContainer.new()
+	jv.add_theme_constant_override("separation", 8)
+	jv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_child(jv)
+	_text(jv, Objective.line("log_title"), 20, AMBER)
+	jobs = VBoxContainer.new()
+	jobs.add_theme_constant_override("separation", 6)
+	jv.add_child(jobs)
+	_text(outer, "[I] close", 13, Color(INK, 0.6))
 
 
 func _text(parent: Control, t: String, size: int, color: Color) -> Label:
@@ -76,8 +102,20 @@ func toggle() -> void:
 
 
 func open() -> void:
+	_fit()
 	refresh()
 	panel.visible = true
+
+
+## Centre the panel at SIZE, or smaller when the screen (after the text scale)
+## is: the columns wrap to whatever width they get.
+func _fit() -> void:
+	var vp := panel.get_viewport_rect().size if panel.is_inside_tree() else SIZE
+	var half := Vector2(minf(SIZE.x, vp.x - 2.0 * MARGIN.x), minf(SIZE.y, vp.y - 2.0 * MARGIN.y)) * 0.5
+	panel.offset_left = -half.x
+	panel.offset_right = half.x
+	panel.offset_top = -half.y
+	panel.offset_bottom = half.y
 
 
 func close() -> void:
@@ -86,6 +124,7 @@ func close() -> void:
 
 ## Rebuild the rows from the inventory as it is now.
 func refresh() -> void:
+	_job_log()
 	rows.clear()
 	for c in list.get_children():
 		c.queue_free()
@@ -97,7 +136,7 @@ func refresh() -> void:
 		if not rows.is_empty():
 			return
 		rows.append("Nothing but the clothes on your back.")
-		_text(list, rows[0], 16, Color(INK, 0.7))
+		_wrap(_text(list, rows[0], 16, Color(INK, 0.7)))
 		return
 	for id in ids:
 		var it: Dictionary = content.get_item(str(id)) if content != null else {}
@@ -110,7 +149,27 @@ func refresh() -> void:
 		if illegal:
 			row += "   CONTRABAND"
 		rows.append(row)
-		_text(list, row, 16, RED if illegal else INK)
+		_wrap(_text(list, row, 16, RED if illegal else INK))
+
+
+## The job log, from Objective: a title over each entry's line, then the tally.
+func _job_log() -> void:
+	job_rows.clear()
+	for c in jobs.get_children():
+		c.queue_free()
+	for e in Objective.log_entries():
+		if str(e.title) != "":
+			job_rows.append(str(e.title))
+			_text(jobs, str(e.title), 13, AMBER)
+		job_rows.append(str(e.text))
+		_wrap(_text(jobs, str(e.text), 14, INK))
+	job_rows.append(Objective.tally())
+	_text(jobs, job_rows[-1], 13, Color(INK, 0.6))
+
+
+func _wrap(l: Label) -> void:
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 200
 
 
 ## Issue #51: your droids, one row each. What a cargo droid carries is not
@@ -119,7 +178,7 @@ func _droid_rows() -> void:
 	for d in WorldState.droids.owned:
 		var row := "%s   (droid)   %d cr" % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))]
 		rows.append(row)
-		_text(list, row, 16, AMBER)
+		_wrap(_text(list, row, 16, AMBER))
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -359,6 +359,20 @@ static func _smuggle_job(j: Dictionary) -> Dictionary:
 	if smuggle.is_empty():
 		return {}
 	var out := j.duplicate()
+	out["text"] = str(j.get("text", "%s %s")) % [smuggle_goods_text(j), str(smuggle.hint)]
+	out["pays"] = int(smuggle.count) * int(_item(str(smuggle.item)).get("value", 0))
+	return out
+
+
+## What the drop is, in the job's words ("2 cases of holocrystals"). `j` = the
+## smuggling job; {} = the one for the drop's own town. Reads only.
+static func smuggle_goods_text(j: Dictionary = {}) -> String:
+	if smuggle.is_empty():
+		return ""
+	if j.is_empty():
+		for b in board():
+			if str(b.get("kind", "")) == "smuggle" and str(b.get("location", "")) == str(smuggle.get("location", "")):
+				j = b
 	var n := int(smuggle.count)
 	var goods := {}
 	for g in j.get("goods", []):
@@ -367,9 +381,7 @@ static func _smuggle_job(j: Dictionary) -> Dictionary:
 	var what := str(goods.get("say_one", goods.get("say", "%d"))) if n == 1 else str(goods.get("say", "%d"))
 	if what.contains("%d"):
 		what = what % n
-	out["text"] = str(j.get("text", "%s %s")) % [what, str(smuggle.hint)]
-	out["pays"] = n * int(_item(str(smuggle.item)).get("value", 0))
-	return out
+	return what
 
 
 ## Pick the next drop: goods from the job, a hiding place from the location's

@@ -40,6 +40,7 @@ var _streak: MeshInstance3D
 
 signal on_hit(target)
 signal on_reflect
+signal on_splash(target)        ## issue #181: each thing the burst damaged (not the direct hit)
 
 
 func integrate(dt: float) -> Vector3:
@@ -87,6 +88,9 @@ func _splash(direct: Object) -> void:
 			c.apply_damage_from(splash_damage, shooter)
 		elif c.has_method("apply_damage"):
 			c.apply_damage(splash_damage)
+		else:
+			continue
+		on_splash.emit(c)
 
 
 func handle_hit(target: Object) -> void:

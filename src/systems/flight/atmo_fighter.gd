@@ -347,6 +347,7 @@ func _on_hit(amount: float, shooter: Node) -> void:
 	if shooter == hull:
 		return
 	defense.apply_damage(amount)
+	hull.took_damage()                  # issue #181: a hit marker for whoever shot it
 	if brain != null:
 		brain.notify_hit()
 	if not defense.is_alive():
@@ -358,6 +359,7 @@ func _go_down(at: Vector3, shot: bool) -> void:
 		return
 	atmo._crash(at, "shot_down" if shot else "ground")
 	mode = Mode.DOWN
+	hull.dead = true
 	respawn_left = p("respawn_s", 120.0)
 	visual.visible = false
 	_set_solid(false)
@@ -379,6 +381,7 @@ func _reset_home() -> void:
 	defense = ShipDefense.new(cfg)
 	guns = ShipLoadout.new(cfg, content)
 	mode = Mode.PARKED
+	hull.dead = false
 	respawn_left = -1.0
 	visual.visible = true
 	_set_solid(true)

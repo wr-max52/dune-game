@@ -48,6 +48,7 @@ func update_for(altitude: float, viewer: Vector3) -> void:
 		_star_mat.albedo_color.a = level
 	if env == null or env.sky_mat == null:
 		return
+	env.set_space_level(level)
 	if absf(level - _applied) < 0.003 and env.current == _applied_preset:
 		return
 	_applied = level

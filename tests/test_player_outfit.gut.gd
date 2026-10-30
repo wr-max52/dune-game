@@ -34,13 +34,15 @@ func _texture(body: Node3D, mesh: String) -> String:
 
 func test_catalog_lists_every_kit_piece_and_colour() -> void:
 	var cat := PlayerOutfit.catalog()
-	assert_eq(cat.head.keys(), ["player", "goggles", "guard", "cantina_owner", "local"], "the player's own piece first, then the kit's")
+	assert_eq(cat.head.keys(), ["player", "goggles", "nomad", "nomad_crest", "nomad_maw", "nomad_horn", "guard", "cantina_owner", "local"],
+		"the player's own piece first, then the kit's (the sand nomad head and its variations among them)")
 	assert_eq(cat.torso.keys(), ["player", "guard", "cantina_owner", "local"])
 	assert_eq(cat.legs.keys(), ["player", "cantina_owner", "guard", "local"])
 	assert_eq(cat.head.player, ["dusk", "olive", "rust", "sand"], "the player's head has its own textures")
 	assert_eq(cat.torso.player, ["dusk", "olive", "rust", "sand"])
 	assert_eq(cat.legs.guard, ["black", "desert", "gunmetal", "navy", "oxblood"])
 	assert_eq(cat.head.goggles, ["oxblood", "sand", "violet"])
+	assert_eq(cat.head.nomad, [], "the nomad heads are baked sand: no colour variants")
 
 
 func test_save_survives_a_restart() -> void:
