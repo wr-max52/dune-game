@@ -102,6 +102,13 @@ static func box_xf(b: Dictionary) -> Transform3D:
 ## measured along) from p. So an item whose bounding sphere is further than
 ## max(h, 0.5) * axis_length from p cannot change the answer and is skipped without
 ## running its own test; the tests that do run are the old ones, unchanged.
+##
+## From high up (a ship in orbit) that sphere reaches every item, so a wide query
+## also uses the line the item is measured along: that point lies on the line
+## through p along the item's axis (a box's own Y, a column's or boulder's up, the
+## gravity up at p for a wreck plate), so an item whose sphere misses that line is
+## skipped too. A cell is skipped when no item in it can reach the line (its
+## items' axes are within `spread` of the cell's).
 func height_above(p: Vector3) -> float:
 	var sp := sphere()
 	if sp == null:
@@ -121,10 +128,10 @@ func height_above(p: Vector3) -> float:
 	var lo := ((p - rv) / IX_CELL).floor()
 	var hi := ((p + rv) / IX_CELL).floor()
 	var cells := (hi.x - lo.x + 1.0) * (hi.y - lo.y + 1.0) * (hi.z - lo.z + 1.0)
-	if cells > IX_MAX_CELLS and reach > IX_LINEAR_REACH:
-		return _height_above_linear(p, h)
-	var wreck_up := Vector3.ZERO
-	var wreck_up_set := false
+	var wide := cells > IX_MAX_CELLS
+	var wreck_up := up_at(p) if wide else Vector3.ZERO
+	var wreck_up_set := wide
+	var axis := _ix_axis
 	var nb := _ix_nb
 	var nc := _ix_nc
 	var ctr := _ix_ctr
@@ -141,15 +148,36 @@ func height_above(p: Vector3) -> float:
 					if ci >= 0:
 						lists.append(_ix_cells[ci])
 	else:
-		# Wide query: test each occupied cell's own sphere instead of walking the grid.
+		# Wide query: test each occupied cell's own sphere and line instead of
+		# walking the grid.
 		var qs := q * _ix_small_scale
 		for ci in _ix_cells.size():
-			if p.distance_to(_ix_cell_ctr[ci]) <= qs + _ix_cell_rad[ci]:
+			var cc: Vector3 = _ix_cell_ctr[ci]
+			var cr: float = _ix_cell_rad[ci]
+			if p.distance_to(cc) > qs + cr:
+				continue
+			var rc := cc - p
+			var near := false
+			if _ix_cell_plain[ci]:
+				var a: Vector3 = _ix_cell_axis[ci]
+				var al := rc.dot(a)
+				var lim := cr + (rc.length() + cr) * _ix_cell_spread[ci]
+				near = rc.length_squared() - al * al <= lim * lim
+			if not near and _ix_cell_wreck[ci]:
+				var aw := rc.dot(wreck_up)
+				near = rc.length_squared() - aw * aw <= cr * cr
+			if near:
 				lists.append(_ix_cells[ci])
 	for list in lists:
 		for i in (list as PackedInt32Array):
 			if p.distance_to(ctr[i]) > q * scl[i] + rad[i]:
 				continue
+			if wide:
+				var ri: Vector3 = ctr[i] - p
+				var ai: Vector3 = axis[i]
+				var along := ri.dot(wreck_up if ai == Vector3.ZERO else ai)
+				if ri.length_squared() - along * along > rad[i] * rad[i]:
+					continue
 			if i < nb:
 				var b: Dictionary = boxes[i]
 				if b.has("wreck_finish"):
@@ -258,8 +286,7 @@ func _height_above_linear(p: Vector3, h_start: float) -> float:
 const IX_CELL := 96.0
 const IX_SMALL_RADIUS := 48.0      ## items with a bigger sphere go to the big list
 const IX_SLACK := 2.0              ## metres added to every sphere: float rounding is nowhere near it
-const IX_MAX_CELLS := 48.0         ## a query touching more cells than this tests the occupied cells' spheres
-const IX_LINEAR_REACH := 1200.0    ## ... and past this reach (a ship high up) just scans everything
+const IX_MAX_CELLS := 48.0         ## a query touching more cells than this tests the occupied cells' spheres and lines
 const IX_MIN_ITEMS := 24           ## fewer items than this: scanning is as cheap
 
 var _ix_ok := false                ## the index is built and usable
@@ -273,11 +300,16 @@ var _ix_nbd := 0
 var _ix_ctr := PackedVector3Array()
 var _ix_rad := PackedFloat64Array()
 var _ix_scl := PackedFloat64Array()
+var _ix_axis := PackedVector3Array()   ## unit axis each item is measured along (ZERO: the gravity up at p)
 var _ix_big := PackedInt32Array()
 var _ix_grid := {}                 ## cell key -> index into _ix_cells
 var _ix_cells: Array = []          ## per occupied cell: PackedInt32Array of item numbers
 var _ix_cell_ctr := PackedVector3Array()
 var _ix_cell_rad := PackedFloat64Array()
+var _ix_cell_axis := PackedVector3Array()      ## the mean axis of a cell's own-axis items
+var _ix_cell_spread := PackedFloat64Array()    ## how far any of their axes is from it
+var _ix_cell_plain := PackedByteArray()        ## the cell has items with an axis of their own
+var _ix_cell_wreck := PackedByteArray()        ## ... and wreck plates (measured along the gravity up)
 var _ix_small_radius := 0.0
 var _ix_small_scale := 1.0
 
@@ -315,6 +347,8 @@ func _build_index() -> void:
 	_ix_rad.resize(n)
 	_ix_scl = PackedFloat64Array()
 	_ix_scl.resize(n)
+	_ix_axis = PackedVector3Array()
+	_ix_axis.resize(n)
 	_ix_big = PackedInt32Array()
 	_ix_grid = {}
 	_ix_cells = []
@@ -324,7 +358,7 @@ func _build_index() -> void:
 	if not _ix_ok:
 		return
 	for i in n:
-		var s := _item_sphere(i)       # (centre.xyz, radius); its axis length goes to _ix_scl[i]
+		var s := _item_sphere(i)       # (centre.xyz, radius); its axis length goes to _ix_scl[i], its direction to _ix_axis[i]
 		var ok := is_finite(s.w) and is_finite(s.x) and is_finite(s.y) and is_finite(s.z) \
 			and is_finite(_ix_scl[i]) and absf(s.x) < 390000.0 and absf(s.y) < 390000.0 \
 			and absf(s.z) < 390000.0
@@ -333,6 +367,7 @@ func _build_index() -> void:
 			_ix_ctr[i] = Vector3.ZERO
 			_ix_rad[i] = INF
 			_ix_scl[i] = 1.0
+			_ix_axis[i] = Vector3.UP
 			_ix_big.append(i)
 			continue
 		_ix_ctr[i] = Vector3(s.x, s.y, s.z)
@@ -356,17 +391,37 @@ func _build_index() -> void:
 	_ix_cell_ctr.resize(_ix_cells.size())
 	_ix_cell_rad = PackedFloat64Array()
 	_ix_cell_rad.resize(_ix_cells.size())
+	_ix_cell_axis = PackedVector3Array()
+	_ix_cell_axis.resize(_ix_cells.size())
+	_ix_cell_spread = PackedFloat64Array()
+	_ix_cell_spread.resize(_ix_cells.size())
+	_ix_cell_plain = PackedByteArray()
+	_ix_cell_plain.resize(_ix_cells.size())
+	_ix_cell_wreck = PackedByteArray()
+	_ix_cell_wreck.resize(_ix_cells.size())
 	for ci in _ix_cells.size():
 		var items: PackedInt32Array = _ix_cells[ci]
 		var c := Vector3.ZERO
+		var a := Vector3.ZERO
 		for i in items:
 			c += _ix_ctr[i]
+			a += _ix_axis[i]
+			if _ix_axis[i] == Vector3.ZERO:
+				_ix_cell_wreck[ci] = 1
+			else:
+				_ix_cell_plain[ci] = 1
 		c /= items.size()
+		a = a.normalized() if a.length() > 0.001 else Vector3.UP
 		var r := 0.0
+		var spread := 0.0
 		for i in items:
 			r = maxf(r, c.distance_to(_ix_ctr[i]) + _ix_rad[i])
+			if _ix_axis[i] != Vector3.ZERO:
+				spread = maxf(spread, a.distance_to(_ix_axis[i]))
 		_ix_cell_ctr[ci] = c
 		_ix_cell_rad[ci] = r
+		_ix_cell_axis[ci] = a
+		_ix_cell_spread[ci] = spread
 
 
 ## Bounding sphere (x, y, z, r) of item i, and the length of the axis its height is
@@ -385,6 +440,7 @@ func _item_sphere(i: int) -> Vector4:
 			r = maxf(r, ctr.distance_to(xf * corner))
 		# A plain box is measured along its own Y, a wreck plate along the unit up.
 		_ix_scl[i] = maxf(1.0, xf.basis.y.length())
+		_ix_axis[i] = Vector3.ZERO if b.has("wreck_finish") else xf.basis.y.normalized()
 		return Vector4(ctr.x, ctr.y, ctr.z, r)
 	if i < _ix_nb + _ix_nc:
 		var c: Dictionary = columns[i - _ix_nb]
@@ -394,6 +450,7 @@ func _item_sphere(i: int) -> Vector4:
 		_ix_scl[i] = up.length()
 		if absf(up.length() - 1.0) > 0.001:
 			return Vector4(NAN, NAN, NAN, NAN)
+		_ix_axis[i] = up
 		var ctr2 := base + up * (top * 0.5)
 		return Vector4(ctr2.x, ctr2.y, ctr2.z, sqrt(top * top * 0.25 + float(c.radius) * float(c.radius)))
 	var bd: Dictionary = boulders[i - _ix_nb - _ix_nc]
@@ -403,6 +460,7 @@ func _item_sphere(i: int) -> Vector4:
 		return Vector4(NAN, NAN, NAN, NAN)
 	var hh := float(bd.height)
 	var rr := float(bd.radius) * RAMP_SPREAD
+	_ix_axis[i] = bu
 	var ctr3: Vector3 = (bd.center as Vector3) + bu * (hh * 0.5)
 	return Vector4(ctr3.x, ctr3.y, ctr3.z, sqrt(hh * hh * 0.25 + rr * rr))
 

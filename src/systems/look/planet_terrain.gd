@@ -95,6 +95,106 @@ var rock_look := {}
 const ROCK_SHADER := preload("res://src/systems/look/shaders/moon_rock.gdshader")
 
 
+## The ball terrain planet `planet`'s scene builds (a PlanetGen.build dictionary),
+## seated on its town and flat sites, not built yet; null when its world is not a
+## ball. The scene and a handoff's prewarm (prewarm_far) both make it here, so the
+## far mesh one computes is the one the other needs.
+static func for_planet(planet: Dictionary) -> PlanetTerrain:
+	var world: Dictionary = planet.get("world", {})
+	var r := float(world.get("terrain", {}).get("sphere_radius", 0.0))
+	if r <= 0.0:
+		return null
+	var pt := PlanetTerrain.new()
+	if str(planet.get("ground", "")) == "ball":
+		# Issue #99: the asteroid: cratered rock all the way round.
+		var surf: Dictionary = planet.get("type_cfg", {}).get("surface", {})
+		pt.use_sphere(AsteroidSphere.new(r, surf))
+		pt.rock_look = surf.get("look", {})
+	else:
+		pt.set_radius(r)
+	pt.cache_key = "%s/%d" % [str(planet.get("id", "")), int(r)]
+	var site := SpaceTravel.site_of(planet.get("town", {}))
+	pt.configure_site(site.floor, site.walls, site.sunken, 0.0)
+	pt.configure_flat_sites(droid_flat_sites(planet, pt.sphere))
+	return pt
+
+
+## Keep the droid relay yards from inheriting dune slopes (the home planet only).
+## The height is sampled before registering the pad, so each one stays at the
+## terrain's original level.
+static func droid_flat_sites(planet: Dictionary, sp: PlanetSphere) -> Array:
+	if str(planet.get("id", "")) != PlanetGen.home_id():
+		return []
+	var sites: Array = []
+	for lm in planet.get("world", {}).get("landmarks", []):
+		var location_id := str(lm.get("location", ""))
+		if not location_id.begins_with("droid_post_"):
+			continue
+		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
+		sites.append({
+			"rect": Rect2(at.x - 10.0, at.z - 10.0, 20.0, 20.0),
+			"y": sp.elevation(sp.map_dir(at.x, at.z)),
+			"blend": 8.0,
+		})
+	return sites
+
+
+# ---------------------------------------------------------------- handoff prewarm
+
+## A no-fade handoff's scene builds its ball's coarse far mesh on its first frame
+## (~80 ms for the moon, with the frame waiting on the workers). Flying in, the
+## ship is seconds away from that switch: prewarm_far() starts the same chunks on
+## worker threads then, and the scene's _build_far takes them instead of making its
+## own. Keyed by cache_key (planet and radius); one entry per planet, used once.
+var cache_key := ""
+static var _prewarmed := {}           ## cache_key -> { terrain, group, cells, results }
+## A ball drawn in another planet's sky (SpaceTravel._ball_body): its far chunks are
+## kept for the session, since the scene that shows it is built again on the way
+## home from it. By cache_key and cells.
+var keep_far := false
+static var _far_kept := {}
+
+
+static func prewarm_far(planet: Dictionary) -> bool:
+	var pt := for_planet(planet)
+	if pt == null:
+		return false
+	if _prewarmed.has(pt.cache_key):
+		pt.free()
+		return false
+	var cells := mini(pt.far_coarse_cells, pt.far_cells / 4)
+	if cells < 2:
+		cells = pt.far_cells
+	var count := 6 * pt.far_chunks * pt.far_chunks
+	var results := []
+	results.resize(count)
+	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = pt._far_chunk(k, cells), count, -1, false, "planet far prewarm")
+	_prewarmed[pt.cache_key] = { "terrain": pt, "group": g, "cells": cells, "results": results }
+	return true
+
+
+static func is_prewarmed(key: String) -> bool:
+	return _prewarmed.has(key)
+
+
+## The prewarmed chunks for `key` at `cells` (waiting for any still running), or
+## [] when there are none. Either way the entry is gone afterwards.
+static func _take_prewarmed(key: String, cells: int) -> Array:
+	if key == "" or not _prewarmed.has(key):
+		return []
+	var e: Dictionary = _prewarmed[key]
+	_prewarmed.erase(key)
+	WorkerThreadPool.wait_for_group_task_completion(int(e.group))
+	(e.terrain as PlanetTerrain).free()
+	return e.results if int(e.cells) == cells else []
+
+
+## Drop every prewarm (a scene that never came; tests).
+static func clear_prewarmed() -> void:
+	for key in _prewarmed.keys():
+		_take_prewarmed(key, -1)
+
+
 func configure_site(floor_rect: Rect2, walls_rect: Rect2, sunken: Array, floor_y: float = 0.0) -> void:
 	super.configure_site(floor_rect, walls_rect, sunken, floor_y)
 	sphere.configure_site(floor_rect, walls_rect, sunken, floor_y)
@@ -189,7 +289,7 @@ func build_far_only(center: Vector3, staged: bool = false) -> void:
 	material.shader = SAND_SHADER if rock_look.is_empty() else ROCK_SHADER
 	for k in rock_look:
 		material.set_shader_parameter(k, Color(str(rock_look[k])) if rock_look[k] is String else rock_look[k])
-	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(256, 3, 0.01))
+	material.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 3, 0.01))   # the ball's own scene's (a handoff changes nothing)
 	material.set_shader_parameter("planet_center", center)
 	material.set_shader_parameter("planet_radius", sphere.radius)
 	if staged:
@@ -250,8 +350,8 @@ func build_staged(with_mesh: bool = true) -> void:
 ## The far ball coarse now, full detail on worker threads (refine_far_step).
 func _build_far_staged() -> void:
 	var coarse := mini(far_coarse_cells, far_cells / 4)
-	if coarse < 2:
-		_build_far()
+	if coarse < 2 or (keep_far and _far_kept.has("%s/%d" % [cache_key, far_cells])):
+		_build_far()          # (kept: the full detail is already made, nothing to wait for)
 		return
 	_build_far(coarse)
 	far_refined = false
@@ -321,15 +421,21 @@ func refine_far_step(budget_ms: float = 2.0) -> bool:
 ## they still ran, as a handoff can within a second of arriving).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		if _far_group >= 0:
-			WorkerThreadPool.wait_for_group_task_completion(_far_group)
-			_far_group = -1
-		if _town_task >= 0:
-			WorkerThreadPool.wait_for_task_completion(_town_task)
-			_town_task = -1
-		for task in _live_tasks:
-			WorkerThreadPool.wait_for_task_completion(task)
-		_live_tasks.clear()
+		finish_jobs()
+
+
+## Wait for every worker job still running on this terrain (before freeing it:
+## a node a worker is calling into cannot be freed).
+func finish_jobs() -> void:
+	if _far_group >= 0:
+		WorkerThreadPool.wait_for_group_task_completion(_far_group)
+		_far_group = -1
+	if _town_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_town_task)
+		_town_task = -1
+	for task in _live_tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	_live_tasks.clear()
 
 
 func _build_town_collider() -> void:
@@ -802,11 +908,18 @@ func _build_far(cells: int = -1) -> void:
 	_far_chunk_angles.clear()
 	far_detail_cells = fc
 	var count := 6 * far_chunks * far_chunks
-	var results := []
-	results.resize(count)
-	var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k, fc), count, -1, true, "planet far")
 	var wait_started := Time.get_ticks_usec()
-	WorkerThreadPool.wait_for_group_task_completion(g)
+	var results := _take_prewarmed(cache_key, fc)
+	var kept := "%s/%d" % [cache_key, fc]
+	if results.size() != count and keep_far:
+		results = _far_kept.get(kept, [])
+	if results.size() != count:
+		results = []
+		results.resize(count)
+		var g := WorkerThreadPool.add_group_task(func(k: int): results[k] = _far_chunk(k, fc), count, -1, true, "planet far")
+		WorkerThreadPool.wait_for_group_task_completion(g)
+	if keep_far and cache_key != "":
+		_far_kept[kept] = results
 	perf_far_worker_wait_ms += (Time.get_ticks_usec() - wait_started) / 1000.0
 	var maximum_vertex_radius := sphere.radius
 	for k in count:

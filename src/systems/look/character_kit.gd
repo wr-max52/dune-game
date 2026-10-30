@@ -190,8 +190,18 @@ func _outfit_material(base: Material, pattern: String, color: String) -> Materia
 
 
 ## Issue #162: every outfit colour texture the characters can wear (characters.json
-## "colors" patterns), for ModelCache.prefetch().
+## "colors" patterns), for ModelCache.prefetch(). Listed once a session (a handoff's
+## first frame asks again).
+static var _outfit_paths: Array = []
+
+
 static func outfit_textures() -> Array:
+	if _outfit_paths.is_empty():
+		_outfit_paths = _list_outfit_textures()
+	return _outfit_paths
+
+
+static func _list_outfit_textures() -> Array:
 	var out: Array = []
 	var cfgs: Array = []
 	for p in _read_json(PALETTES_PATH).get("archetypes", {}).values():

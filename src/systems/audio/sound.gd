@@ -7,11 +7,12 @@ extends Node
 ##   Sound.loop("jet_loop", self)       a looping player on `self`; the caller
 ##                                      plays, stops and pitches it
 ##   Sound.battle()                     an NPC just fired at the player
-##   Sound.set_space(true)              the player crossed into space
+##   Sound.set_space(true)              a fight in orbit started
 ##
 ## The music is three ambient tracks that cycle with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
-## after, and a space track while you are up there. Space beats battle beats
+## after, and a space track during a fight in orbit (not for being up there:
+## nothing marks where space starts). Space beats battle beats
 ## ambient. Credits going up or down make a coin sound wherever they changed.
 ##
 ## Static and lazy, like GameFlow and WorldState (no autoload): the first call
@@ -39,6 +40,7 @@ var _deck: AudioStreamPlayer   ## the track playing now
 var _spare: AudioStreamPlayer  ## the last one, fading out
 var _tw: Tween
 var _credits := -1
+var _carried: Dictionary = {}  ## key -> AudioStreamPlayer (carried_loop)
 
 
 # ------------------------------------------------------------------ the calls
@@ -89,6 +91,20 @@ static func loop(key: String, parent: Node, spatial := true) -> Node:
 	var p := s._player(c, spatial and parent is Node3D)
 	p.stream = _looping(stream, 0.0)
 	parent.add_child(p)
+	return p
+
+
+## A looping 2D player that lives under Sound, not in a scene, so it plays on
+## across a scene change (the ship's drone over a no-fade handoff). One per key;
+## the scene starts and stops it. Null when the key is unknown.
+static func carried_loop(key: String) -> AudioStreamPlayer:
+	var s := lib()
+	var p: AudioStreamPlayer = s._carried.get(key)
+	if p != null and is_instance_valid(p):
+		return p
+	p = loop(key, s, false) as AudioStreamPlayer
+	if p != null:
+		s._carried[key] = p
 	return p
 
 

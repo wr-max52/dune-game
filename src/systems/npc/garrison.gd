@@ -122,7 +122,7 @@ func setup(town_demo, all: Array) -> void:
 		_adopt(g)
 	# Cover anywhere in town: the yard troopers fight wherever the alarm takes them.
 	var b0 := TownNav.town_bounds(town)
-	spots = CoverPicker.candidates(town.boxes(), b0.get_center(), b0.size.length())
+	spots = town_spots(town, b0)
 	hud = CheckpointHud.new()
 	add_child(hud)
 	hud.chosen.connect(_on_chosen)
@@ -415,6 +415,21 @@ func spots_near(p: Vector3, r: float) -> Array:
 			if _grid.has(c):
 				out.append_array(_grid[c])
 	return out
+
+
+## The town's cover spots, made once per town a session: the town's garrison and
+## each outpost's all ask for the same ones (~56 ms each, four in one frame when the
+## port is built again on the way home from the moon). Shared, so read only; a
+## garrison that drops the unreachable ones keeps its own list (_check_spots).
+static var _town_spots := {}
+
+
+static func town_spots(t, bounds: AABB) -> Array:
+	var data: Dictionary = t.data if t.data is Dictionary else {}
+	var key := "%s/%d/%s" % [str(data.get("id", "")), t.boxes().size(), bounds]
+	if not _town_spots.has(key):
+		_town_spots[key] = CoverPicker.candidates(t.boxes(), bounds.get_center(), bounds.size.length())
+	return _town_spots[key]
 
 
 ## Drop spots the navmesh cannot reach, a slice a frame once the mesh is in
