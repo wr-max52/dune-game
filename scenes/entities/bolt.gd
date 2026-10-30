@@ -62,9 +62,9 @@ func apply_to(target: Object) -> void:
 		return
 	_die()
 	# Whatever it landed on (a body, the ground, a blade that blocked it) gets the
-	# droid's small pop of sparks; a rock just thuds. One that runs out of range does not.
+	# bolt pop of sparks; a rock just thuds. One that runs out of range does not.
 	if not matte and is_inside_tree():
-		ExplosionFx.small(get_parent(), global_position)
+		ExplosionFx.bolt(get_parent(), global_position)
 	handle_hit(target)
 	if splash_radius > 0.0:
 		_splash(target)

@@ -6,6 +6,8 @@ extends RefCounted
 ##
 ##   small(): a droid going pop. A blue-white flash, a spray of sparks, a few bits
 ##            of casing and a wisp of smoke. About a second.
+##   bolt():  a blaster bolt or a blade landing. small() without the smoke, and its
+##            fire burns out red rather than to soot.
 ##   big():   a ship or speeder going up. A white flash and a shock ring, a fireball
 ##            that boils from white through orange to soot, embers and hull chunks
 ##            thrown out on arcs, then a column of dark smoke. About four seconds.
@@ -23,20 +25,38 @@ static var _m: Dictionary = {}      ## shared meshes, materials, ramps and curve
 
 ## A droid going pop at `at` (its middle).
 static func small(parent: Node, at: Vector3) -> Node3D:
+	var r := _pop(parent, at, "fire")
+	if r == null:
+		return null
+	_emit(r, _quad(), _mat("smoke"), 4, 1.5, { "delay": 0.1, "radius": 0.15, "speed": Vector2(0.5, 1.1), "dir": Vector3.UP, "spread": 25.0,
+		"gravity": Vector3(0, 0.4, 0), "damping": Vector2(0.3, 0.6), "scale": Vector2(0.7, 1.1), "grow": _curve("rise"), "ramp": _ramp("smoke_light"), "spin": 15.0 })
+	_free_after(r, 1.7)
+	return r
+
+
+## A blaster bolt (any gun's) or a blade landing at `at`: small()'s pop, but the
+## fire burns out red instead of cooling to soot and no smoke hangs about.
+static func bolt(parent: Node, at: Vector3) -> Node3D:
+	var r := _pop(parent, at, "fire_clean")
+	if r == null:
+		return null
+	_free_after(r, 1.0)
+	return r
+
+
+## The flash, fire, sparks and hot bits small() and bolt() share. `fire`: its ramp.
+static func _pop(parent: Node, at: Vector3, fire: String) -> Node3D:
 	var r := _root(parent, at)
 	if r == null:
 		return null
 	_light(r, Color("#bfe0ff"), 6.0, 7.0, 0.3)
 	_emit(r, _quad(), _mat("flash"), 1, 0.12, { "scale": Vector2(2.4, 2.4), "grow": _curve("pop"), "ramp": _ramp("flash_cold"), "radius": 0.01, "speed": Vector2.ZERO })
 	_emit(r, _quad(), _mat("fire"), 7, 0.5, { "radius": 0.2, "speed": Vector2(1.0, 2.6), "damping": Vector2(5.0, 7.0),
-		"gravity": Vector3(0, 1.0, 0), "scale": Vector2(0.9, 1.4), "grow": _curve("billow"), "ramp": _ramp("fire") })
+		"gravity": Vector3(0, 1.0, 0), "scale": Vector2(0.9, 1.4), "grow": _curve("billow"), "ramp": _ramp(fire) })
 	_emit(r, _spark_mesh(), _mat("spark"), 26, 0.6, { "speed": Vector2(4.0, 9.0), "gravity": Vector3(0, -9.8, 0), "damping": Vector2(1.0, 2.0),
 		"scale": Vector2(0.3, 0.5), "grow": _curve("shrink"), "ramp": _ramp("spark_cold"), "streak": true, "spin": 0.0, "life_rand": 0.5 })
 	_emit(r, _chunk_mesh(), _mat("chunk"), 6, 0.9, { "speed": Vector2(2.5, 5.5), "dir": Vector3.UP, "spread": 70.0, "gravity": Vector3(0, -12.0, 0),
 		"scale": Vector2(0.06, 0.12), "grow": _curve("shrink"), "spin_speed": 540.0 })
-	_emit(r, _quad(), _mat("smoke"), 4, 1.5, { "delay": 0.1, "radius": 0.15, "speed": Vector2(0.5, 1.1), "dir": Vector3.UP, "spread": 25.0,
-		"gravity": Vector3(0, 0.4, 0), "damping": Vector2(0.3, 0.6), "scale": Vector2(0.7, 1.1), "grow": _curve("rise"), "ramp": _ramp("smoke_light"), "spin": 15.0 })
-	_free_after(r, 1.7)
 	return r
 
 
@@ -233,6 +253,8 @@ static func _ramp(key: String) -> Gradient:
 	match key:
 		"fire":
 			stops = [[0.0, "#fff3d6"], [0.12, "#ffc35a"], [0.3, "#ff7a1c"], [0.5, "#c2340f"], [0.68, "#3a2620e8"], [0.85, "#221a16a0"], [1.0, "#1a141100"]]
+		"fire_clean":    # fire that fades out hot, never going to soot
+			stops = [[0.0, "#fff3d6"], [0.15, "#ffc35a"], [0.4, "#ff7a1c"], [0.7, "#c2340fa0"], [1.0, "#80200000"]]
 		"smoke_dark":
 			stops = [[0.0, "#2a221c00"], [0.1, "#2a221cd8"], [0.5, "#3a322ab0"], [1.0, "#5a524a00"]]
 		"smoke_light":

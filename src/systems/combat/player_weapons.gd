@@ -376,7 +376,7 @@ func _sword_hits() -> void:
 			else:
 				target.apply_damage(dmg)
 			sword_hits += 1
-			ExplosionFx.small(player.get_parent(), p)     # sparks where the blade bit
+			ExplosionFx.bolt(player.get_parent(), p)      # sparks where the blade bit
 			var heavy: bool = combo.swing_def().heavy
 			_hitstop = 0.09 if heavy else 0.06          # the combo's centre chop lands harder
 			_play("blade_clash")
