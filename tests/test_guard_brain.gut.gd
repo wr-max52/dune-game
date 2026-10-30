@@ -75,6 +75,22 @@ func test_attends_a_challenge() -> void:
 	assert_ne(b.state, GuardBrain.State.ATTEND)
 
 
+func test_lead_walks_up_to_ask() -> void:
+	var b := _brain()
+	b.target_pos = Vector3(93, 0, 0)
+	b.attend()
+	b.walk_up = 2.2
+	_run(b, 5.0)
+	var d := Vector2(b.pos.x - 93.0, b.pos.z).length()
+	assert_between(d, 1.5, 2.3, "stops a couple of metres off, not on top of you")
+	assert_eq(b.go_to, Vector3.INF)
+	assert_eq(b.face, Vector3(93, 0, 0))
+	# A half step back: it stays put.
+	b.target_pos = Vector3(93, 0, -0.5)
+	_run(b, 0.5)
+	assert_eq(b.go_to, Vector3.INF)
+
+
 func test_opens_fire_then_runs_for_cover() -> void:
 	var b := _brain()
 	b.visible = true

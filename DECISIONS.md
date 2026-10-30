@@ -2,6 +2,25 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-30 — A shooter's feedback in the ship (issue #181)
+
+- **The cockpit is painted, not modelled.** CockpitView draws the canopy tint, two
+  struts and the dash (with its instruments) on a CanvasLayer. The cockpit camera
+  is locked to the ship, so a flat frame never moves against the view, exactly as a
+  model would not; it needs no per-ship geometry, so one cockpit fits every ship,
+  and the instruments are plain 2D drawing that headless tests can call.
+  Alternative: a 3D cockpit mesh on the camera with SubViewport textures for the
+  dials. Rejected: a model per ship size (or one that clips through big ships),
+  extra viewports to render, and nothing gained while the camera cannot look round.
+- **Hits on ships count only when the owner took them.** ShipHull now carries the
+  same `damage_usec` stamp and `dead` flag NPCs do, set by its owner (ShipPilot for
+  parked ships, AtmoFighter for the interceptor), so HitFeedback can tell a hit that
+  hurt from one shrugged off. Before, any bolt on any hull counted. In space the
+  director already reports its hits and kills, so those drive the marker directly
+  (HitFeedback.confirm).
+- **Bursts report what they caught** (bolt.gd `on_splash`), so strafing troopers
+  shows a marker even when the bolt lands beside them, not on them.
+
 ## 2026-10-27 — Dead droids across the home planet (issue #93)
 
 - **Seed a field once, then replenish slowly.** The home ball starts with eight

@@ -24,6 +24,12 @@ var ambient_energy_scale := 1.0
 var suppressed := {}                 ## issue #46: feature -> true, held off (set_suppressed)
 var _wanted := {}                    ## what the preset asks for: ssao, ssil, sdfgi, volumetric, shadows
 var _ambient_energy_base := 1.0
+## Up in space every planet is lit alike (moon handoff): the ambient fill eases from
+## this planet's own (its sky's ambient, its scene's scale) to the plain preset's
+## as AltitudeSky's level goes to 1, so two planets' scenes match up there.
+var space_presets: Dictionary = {}   ## the presets as loaded, before a planet lays its sky over them
+var space_level := 0.0
+var _ambient_space := 1.0
 var _tracked: Array[ShaderMaterial] = []
 var _lamps: Array[Light3D] = []
 var _lamp_mats: Array[StandardMaterial3D] = []
@@ -74,6 +80,7 @@ func _init() -> void:
 	name = "LookEnvironment"
 	var data := load_presets()
 	presets = data.get("presets", {})
+	space_presets = presets.duplicate(true)
 	default_preset = data.get("default", "golden")
 	hours = data.get("hours", [])
 
@@ -118,12 +125,23 @@ func _init() -> void:
 
 ## Issue #77: on the home planet's ball, turn the sky's gradient and clouds to
 ## the up of whoever is looking (the drawing camera), wherever on the ball they are.
+## Up in space (space_level) it turns to `space_frame` instead when a scene sets
+## one: the moon's scene takes its parent planet's up there, so the sky is the one
+## the parent's scene draws at that point and a handoff changes nothing.
+var space_frame: Callable = Callable()   ## world point -> Basis, or none (this ball's own up)
+
+
 func _process(_dt: float) -> void:
 	if sky_mat == null or PlanetSphere.current == null or not is_inside_tree():
 		return
 	var cam := get_viewport().get_camera_3d()
-	if cam != null:
-		sky_mat.set_shader_parameter("sky_frame", PlanetSphere.current.tilt_at(cam.global_position))
+	if cam == null:
+		return
+	var frame: Basis = PlanetSphere.current.tilt_at(cam.global_position)
+	if space_level > 0.0 and space_frame.is_valid():
+		var far: Basis = space_frame.call(cam.global_position)
+		frame = Basis(frame.get_rotation_quaternion().slerp(far.get_rotation_quaternion(), space_level))
+	sky_mat.set_shader_parameter("sky_frame", frame)
 
 
 func track_material(m: ShaderMaterial) -> void:
@@ -148,7 +166,20 @@ func track_glow(m: StandardMaterial3D) -> void:
 func set_ambient_energy_scale(scale: float) -> void:
 	ambient_energy_scale = maxf(0.0, scale)
 	if env != null:
-		env.ambient_light_energy = _ambient_energy_base * ambient_energy_scale
+		env.ambient_light_energy = ambient_now()
+
+
+## How far up into space the viewer is (AltitudeSky.level, 0..1).
+func set_space_level(level: float) -> void:
+	if absf(level - space_level) < 0.001:
+		return
+	space_level = clampf(level, 0.0, 1.0)
+	if env != null:
+		env.ambient_light_energy = ambient_now()
+
+
+func ambient_now() -> float:
+	return lerpf(_ambient_energy_base * ambient_energy_scale, _ambient_space, space_level)
 
 
 func apply(preset_id: String = "") -> void:
@@ -159,6 +190,7 @@ func apply(preset_id: String = "") -> void:
 		return
 	current = preset_id
 	hour = -1.0
+	_ambient_space = _space_ambient(space_presets.get(preset_id, presets[preset_id]))
 	_apply_values(presets[preset_id])
 
 
@@ -170,6 +202,8 @@ func apply_hour(h: float) -> void:
 		return
 	hour = h
 	current = str(k.a) if float(k.t) < 0.5 else str(k.b)
+	_ambient_space = lerpf(_space_ambient(space_presets.get(k.a, presets[k.a])),
+		_space_ambient(space_presets.get(k.b, presets[k.b])), float(k.t))
 	_apply_values(blend(presets[k.a], presets[k.b], float(k.t)))
 
 
@@ -197,6 +231,10 @@ func hour_of(preset_id: String) -> float:
 		if str(e.get("preset", "")) == preset_id:
 			return float(e.hour)
 	return -1.0
+
+
+static func _space_ambient(p: Dictionary) -> float:
+	return float(p.get("ambient", {}).get("energy", 1.0))
 
 
 ## Two preset dictionaries mixed at t: numbers lerp, "#rrggbb" colors lerp,
@@ -249,7 +287,7 @@ func _apply_values(p: Dictionary) -> void:
 	sky_mat.set_shader_parameter("ring_color", Color.html(k["ring"]))
 
 	_ambient_energy_base = float(p["ambient"]["energy"])
-	env.ambient_light_energy = _ambient_energy_base * ambient_energy_scale
+	env.ambient_light_energy = ambient_now()
 	env.fog_enabled = true
 	env.fog_density = float(fog["density"])
 	env.fog_aerial_perspective = float(fog["aerial"])

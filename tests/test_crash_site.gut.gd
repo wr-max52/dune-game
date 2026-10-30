@@ -5,6 +5,8 @@ extends GutTest
 ## to the bridge platform and the upper gallery; every part wears the wreck's metal;
 ## the Remnant's droids patrol the bridge and the ship; an old cargo droid in the deep
 ## hold carries a red energy saber that turns your blade red.
+## Wreck cleanup: the hold floor is an open speeder ramp; three tiers of decks hang
+## off the plating with catwalks, ramps and railings; four assassins on the pad.
 ## Pure WorldGround queries on the analytic planet, plus a small scene for the droids.
 
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
@@ -139,8 +141,15 @@ func test_a_speeder_rides_up_the_boarding_plate_into_the_hold() -> void:
 
 # ---- the interior -------------------------------------------------------------------
 
+const U := StarcruiserWreck.INTERIOR_V
+const M := StarcruiserWreck.MID_V
+const L := StarcruiserWreck.LOW_V
+const B := StarcruiserWreck.BRIDGE_V
+
+
 func test_the_interior_floors_are_level() -> void:
-	for id in ["interior_deck", "gallery_landing", "bridge_platform"]:
+	for id in ["starboard_deck", "upper_catwalk", "port_deck_stern", "mid_catwalk", "starboard_ledge",
+			"port_ledge", "starboard_balcony", "port_balcony", "bridge_platform"]:
 		var b := _box(id)
 		assert_false(b.is_empty(), id)
 		var xf := WorldGround.box_xf(b)
@@ -148,48 +157,129 @@ func test_the_interior_floors_are_level() -> void:
 		assert_gt(xf.basis.y.normalized().dot(g.up_at(c)), cos(deg_to_rad(4.0)), "%s is level with the horizon, not the hull" % id)
 
 
-func test_the_hold_climbs_to_the_interior_and_the_bridge_ramp_leads_out_to_the_platform() -> void:
-	var a := deg_to_rad(34.0)
-	var meet_z := (StarcruiserWreck.INTERIOR_V + 24.0 * cos(a)) / sin(a)
-	var meet_w := 24.0 * sin(a) + meet_z * cos(a)
-	var v := StarcruiserWreck.INTERIOR_V
+## Wreck cleanup: nothing but the floor within six metres of the hold floor's
+## middle, from the breach to the stern bulkhead; the floor runs right up to it.
+func test_the_hold_floor_is_an_open_speeder_ramp_to_the_stern() -> void:
+	var mine := g.boxes.filter(func(b): return str(b.id).begins_with(ID + "/") and not str(b.id).contains("lower_deck"))
+	var x_max := StarcruiserWreck.CLEAR_X - 1.0
+	var blocked := {}
+	for x in [-x_max, -x_max * 0.5, 0.0, x_max * 0.5, x_max]:
+		for z in range(-80, 296, 2):
+			for k in [1.0, 2.5, 4.0, 6.0]:
+				var p := _hull(x, StarcruiserWreck.DECK_Y + k, z)
+				for b in mine:
+					if _inside(b, p):
+						blocked[str(b.id)] = p
+	assert_eq(blocked, {}, "the speeder lane is open")
+	assert_eq(_walkable([_hull(0, -24, -30), _hull(0, -24, 295)]), "", "up the floor to the bulkhead")
+
+
+func test_the_hold_floor_leads_to_the_stern_ramp_and_on_up_to_the_landing_pad() -> void:
+	var w := StarcruiserWreck.STERN_RAMP_W
+	var head := StarcruiserWreck.floor_v(w)
 	var route := [
-		_hull(30, -24, 120), _hull(30, -24, meet_z - 0.5),      # up the hold's starboard side
-		_lv(24, v, meet_w - 0.4), _lv(20, v, 200),              # onto the interior deck
-		_lv(0, v, 183), _lv(0, v, 180),
-		_lv(0, StarcruiserWreck.BRIDGE_V, 150),                 # up through the torn dorsal plates
-		_lv(0, StarcruiserWreck.BRIDGE_V, 132),                 # out on the bridge platform
+		_hull(24, -24, 150), _hull(24, -24, 285),               # up the hold floor beside the ramp lane
+		_lv(28, head, w - 0.5), _lv(31, head - 0.1, w - 1.0),   # step across onto the ramp's head
+		_lv(33, U, 232), _lv(30, U, 228),                       # down along the starboard plating
+		_lv(30, U, 188), _lv(30, U, 182), _lv(0, U, 182),       # across the starboard deck to the catwalk
+		_lv(0, U, 180), _lv(0, B, 150), _lv(0, B, 132),         # up through the torn dorsal plates
 	]
-	assert_eq(_walkable(route), "", "hold -> interior deck -> bridge ramp -> bridge platform")
-	var top := _lv(0, StarcruiserWreck.BRIDGE_V, 132)
+	assert_eq(_walkable(route), "", "hold floor -> stern ramp -> starboard deck -> catwalk -> bridge ramp -> pad")
+	assert_lt(head - U, 6.0, "the starboard deck is a short drop below the top of the floor")
+	assert_gt(head, U, "and it is lower")
+	var top := _lv(0, B, 132)
 	assert_gt(_sp.height_above_ground(top), 150.0, "the bridge stands high over the dunes")
 
 
-func test_a_ramp_joins_the_interior_to_the_upper_gallery() -> void:
+func test_a_ramp_joins_the_upper_gallery_to_the_port_decks() -> void:
 	var a := deg_to_rad(34.0)
-	var v := StarcruiserWreck.INTERIOR_V
 	var g_end := Vector3(-20, -3.3, 235)
 	var route := [
-		_lv(20, v, 200), _lv(-8, v, 223), _lv(-20, v, 223),    # across the deck to the landing
-		_lv(-20, v, 219),
+		_hull(-20, -3.3, 200),                                  # up the gallery
 		_lv(-20, g_end.y * cos(a) + g_end.z * sin(a), -g_end.y * sin(a) + g_end.z * cos(a)),
-		_hull(-20, -3.3, 200),                                  # and down the gallery
+		_lv(-20, U, 219), _lv(-20, U, 225), _lv(-34, U, 225),   # onto the port deck's stern
+		_lv(-34, U, 190), _lv(-34, U, 182), _lv(0, U, 182),     # along the plating to the catwalk
 	]
-	assert_eq(_walkable(route), "", "interior deck -> landing -> ramp -> upper gallery")
+	assert_eq(_walkable(route), "", "gallery -> ramp -> port decks -> upper catwalk")
+
+
+func test_stairs_and_drops_reach_the_mid_and_low_tiers_on_both_sides() -> void:
+	for s in [1.0, -1.0]:
+		var route := [
+			_lv(23 * s, U, 182), _lv(23 * s, U, 178),           # the stair off the upper catwalk
+			_lv(23 * s, M, 154), _lv(23 * s, M, 152),           # onto the mid catwalk
+			_lv(33 * s, M, 152), _lv(33 * s, M, 170),           # along the ledge
+			_lv(39 * s, M, 174), _lv(39 * s, M, 176),
+			_lv(36 * s, L, 200), _lv(34 * s, L, 203),           # and back aft, down to the balcony
+		]
+		assert_eq(_walkable(route), "", "%s: upper catwalk -> stair -> mid catwalk -> ledge -> drop -> balcony" % ("starboard" if s > 0 else "port"))
+	assert_eq(_walkable([_lv(-30, M, 152), _lv(30, M, 152)]), "", "the mid catwalk crosses the hold")
+	assert_eq(_walkable([_lv(-34, U, 182), _lv(34, U, 182)]), "", "so does the upper one")
+
+
+## Wreck cleanup: the decks hang off the plating. Walk out from each toward the
+## hull wall: there is deck underfoot all the way until the plating stops your
+## feet (below the hull's waist the plating leans out above the deck).
+func test_every_hung_deck_meets_the_plating() -> void:
+	for d in [
+		["starboard_deck", U, 1.0, [188, 200, 214, 230]], ["port_deck_bow", U, -1.0, [188, 194]],
+		["port_deck_outer", U, -1.0, [198, 208, 217]], ["port_deck_stern", U, -1.0, [224, 227]],
+		["upper_catwalk", U, 1.0, [180, 184]], ["upper_catwalk", U, -1.0, [180, 184]],
+		["mid_catwalk", M, 1.0, [151, 153]], ["mid_catwalk", M, -1.0, [151, 153]],
+		["starboard_ledge", M, 1.0, [158, 166, 174]], ["port_ledge", M, -1.0, [160, 166, 174]],
+		["starboard_balcony", L, 1.0, [201, 205]], ["port_balcony", L, -1.0, [201, 205]],
+	]:
+		for w in d[3]:
+			var v: float = d[1]
+			var s: float = d[2]
+			var x := 32.0
+			var met := ""
+			while x < 50.0 and met == "":
+				var p := _lv(x * s, v, float(w))
+				if g.hit(p + g.up_at(p) * 0.5, 0.5) != "":
+					met = "wall"
+				elif absf(g.height_above(p + g.up_at(p)) - 1.0) > 0.3:
+					met = "falls off at x=%.1f" % (x * s)
+				x += 0.25
+			assert_eq(met, "wall", "%s at w=%s reaches the plating" % [d[0], w])
+
+
+func test_three_times_the_decks_ramps_and_railings() -> void:
+	var interior := ["starboard_deck", "upper_catwalk", "port_deck_bow", "port_deck_outer", "port_deck_stern",
+		"mid_catwalk", "starboard_ledge", "port_ledge", "starboard_balcony", "port_balcony", "bridge_platform"]
+	for id in interior:
+		assert_eq(str(_box(id).get("kind", "")), "floor", "%s is a floor" % id)
+	var ramps := ["stern_ramp", "gallery_ramp", "bridge_ramp", "starboard_stair", "port_stair", "starboard_drop", "port_drop"]
+	for id in ramps:
+		assert_false(_box(id).is_empty(), id)
+	var runs := {}
+	for b in g.boxes:
+		var id := str(b.id)
+		if id.begins_with(ID + "/") and id.contains("_rail") and id.contains("_post_"):
+			runs[id.get_slice("_post_", 0)] = true
+	assert_gte(interior.size() + 1, 3 * 4, "with the gallery; was the interior deck, landing, bridge platform and gallery")
+	assert_gte(ramps.size(), 3 * 2, "was the gallery and bridge ramps")
+	assert_gte(runs.size(), 3 * 8, "was eight railing runs")
 
 
 func test_broken_railings_line_the_open_edges() -> void:
-	for run in ["deck_bow_rail", "deck_starboard_rail", "bridge_port_rail", "bridge_starboard_rail"]:
+	for run in ["starboard_deck_rail", "mid_catwalk_bow_rail", "upper_catwalk_stern_rail", "bridge_port_rail",
+			"starboard_stair_rail_p", "stern_ramp_rail_p"]:
 		var panels := g.boxes.filter(func(b): return str(b.id).begins_with(ID + "/" + run + "_") and not str(b.id).contains("_post_"))
-		assert_gt(panels.size(), 1, "%s stands" % run)
-	assert_false(_box("deck_bow_rail_0").is_empty())
-	assert_true(_box("deck_bow_rail_2").is_empty(), "with panels knocked out")
-	var sagging := _box("deck_starboard_rail_2")
+		assert_gt(panels.size(), 0, "%s stands" % run)
+	assert_false(_box("starboard_deck_rail_0").is_empty())
+	assert_true(_box("starboard_deck_rail_3").is_empty(), "with panels knocked out")
+	var sagging := _box("starboard_deck_rail_2")
 	assert_false(sagging.is_empty())
 	var up := g.up_at(WorldGround.box_xf(sagging).origin)
 	assert_lt(WorldGround.box_xf(sagging).basis.y.normalized().dot(up), cos(deg_to_rad(10.0)), "and some sagging")
-	# A rail stops you walking off the deck's bow edge.
-	assert_ne(g.hit(_lv(0, StarcruiserWreck.INTERIOR_V + 1.0, 172), 0.35), "", "the bow rail is solid")
+	# A rail stops you walking off the starboard deck's inner edge.
+	assert_ne(g.hit(_lv(22, U + 1.0, 190), 0.35), "", "the deck rail is solid")
+	# A ramp's rail follows its slope.
+	var stair := _box("starboard_stair_rail_p_0")
+	assert_false(stair.is_empty())
+	assert_lt(absf(WorldGround.box_xf(stair).basis.z.normalized().dot(g.up_at(WorldGround.box_xf(stair).origin))), 0.5)
+	assert_gt(absf(WorldGround.box_xf(stair).basis.z.normalized().dot(g.up_at(WorldGround.box_xf(stair).origin))), 0.2, "sloped with the stair")
 
 
 func test_the_hatch_is_torn_and_the_old_solid_bridge_is_gone() -> void:
@@ -209,11 +299,24 @@ func test_every_surface_wears_the_wreck_metal() -> void:
 	scenery.setup(g)
 	add_child_autofree(scenery)
 	scenery.build_visuals()
-	for id in ["interior_deck", "bridge_platform", "bridge_ramp", "gallery_ramp", "speeder_kicker", "deck_bow_rail_0"]:
-		var mi := scenery.find_child(ID + "_" + id, true, false) as MeshInstance3D
-		assert_not_null(mi, id)
+	# Wreck cleanup: walkways get their own finish on top: decking, grating, ramp
+	# cleats and the bridge platform's landing-pad paint.
+	for pair in [["starboard_deck", 5], ["starboard_deck_fill_s3", 5], ["upper_catwalk", 6], ["mid_catwalk", 6],
+			["bridge_platform", 8], ["bridge_ramp", 7], ["gallery_ramp", 7], ["stern_ramp", 7],
+			["speeder_kicker", 0], ["starboard_deck_rail_0", 3]]:
+		var mi := scenery.find_child(ID + "_" + str(pair[0]), true, false) as MeshInstance3D
+		assert_not_null(mi, pair[0])
 		if mi != null:
-			assert_eq((mi.material_override as ShaderMaterial).shader, WorldScenery.WRECK_SHADER, "%s is the ship's metal" % id)
+			var mat := mi.material_override as ShaderMaterial
+			assert_eq(mat.shader, WorldScenery.WRECK_SHADER, "%s is the ship's metal" % pair[0])
+			assert_eq(int(mat.get_shader_parameter("finish")), int(pair[1]), "%s finish" % pair[0])
+
+
+func _inside(b: Dictionary, p: Vector3) -> bool:
+	var l := WorldGround.box_xf(b).affine_inverse() * p
+	var mn: Vector3 = b.min
+	var mx: Vector3 = b.max
+	return l.x > mn.x and l.x < mx.x and l.y > mn.y and l.y < mx.y and l.z > mn.z and l.z < mx.z
 
 
 # ---- the droids ----------------------------------------------------------------------
@@ -228,10 +331,14 @@ func test_every_wreck_route_runs_on_a_floor() -> void:
 	for u in wc.units:
 		assert_true(wc.routes.has(str(u.route)), "unit route %s exists" % u.route)
 	assert_true(wc.routes.has(str(wc.hauler.route)))
-	var bridge_units: Array = wc.units.filter(func(u): return str(u.route) == "bridge")
-	var ship_units: Array = wc.units.filter(func(u): return str(u.route) != "bridge")
-	assert_gt(bridge_units.size(), 0, "a droid walks the bridge")
-	assert_gt(ship_units.size(), 1, "and others the ship")
+	var pad_units: Array = wc.units.filter(func(u): return str(u.route) in ["bridge", "pad"] and str(u.kind) == "assassin")
+	var floaters: Array = wc.units.filter(func(u): return str(u.kind) == "floating")
+	assert_eq(pad_units.size(), 4, "four assassin droids hold the landing pad on the bridge platform")
+	assert_gte(floaters.size(), 10, "floating droids all over the inside of the ship")
+	var routes := {}
+	for u in floaters:
+		routes[str(u.route)] = true
+	assert_gte(routes.size(), 8, "on every tier, not bunched up")
 
 
 func test_the_remnant_patrols_the_wreck_and_a_cargo_droid_carries_the_saber() -> void:

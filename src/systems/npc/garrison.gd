@@ -95,6 +95,10 @@ var _last_key := ""
 var _last_key_t := -100.0
 var _clock := 0.0
 var _warn_left: Dictionary = {}   ## NpcBody -> seconds until a sentry/yard "halt" becomes the alarm
+var _card: Dictionary = {}        ## a card waiting for the lead guard to walk up: { title, choices }
+var _card_wait := 0.0
+var _face_g: NpcBody = null       ## the guard the player is turning to face
+var _face_left := 0.0
 
 
 ## `all` = every soldier NpcBody in town. Gate guards are those whose role is "gate".
@@ -118,7 +122,7 @@ func setup(town_demo, all: Array) -> void:
 		_adopt(g)
 	# Cover anywhere in town: the yard troopers fight wherever the alarm takes them.
 	var b0 := TownNav.town_bounds(town)
-	spots = CoverPicker.candidates(town.boxes(), b0.get_center(), b0.size.length())
+	spots = town_spots(town, b0)
 	hud = CheckpointHud.new()
 	add_child(hud)
 	hud.chosen.connect(_on_chosen)
@@ -258,6 +262,8 @@ func _physics_process(dt: float) -> void:
 	_order_brains()
 	for g in alive:
 		_run_brain(g, dt, ppos)
+	_tick_card(dt)
+	_tick_face(dt)
 	_hp_hud(false)
 
 
@@ -301,10 +307,13 @@ func _raise(why: String) -> void:
 
 
 func _order_brains() -> void:
+	var lead := _lead(guards)
+	var talk := float(profile.get("checkpoint", {}).get("talk_dist", 2.2))
 	for g in brains:
 		if g.dead:
 			continue
 		var b: GuardBrain = brains[g]
+		b.walk_up = 0.0
 		if alarm.active():
 			b.engage()
 			b.alarm_pos = alarm.last_known
@@ -314,6 +323,9 @@ func _order_brains() -> void:
 			match checkpoint.state:
 				Checkpoint.State.CHALLENGE, Checkpoint.State.SEARCHING, Checkpoint.State.WARN, Checkpoint.State.FOUND:
 					b.attend()
+					# The nearest one comes over to ask (not to chase a man pushing through).
+					if g == lead and checkpoint.state != Checkpoint.State.WARN:
+						b.walk_up = talk
 					continue
 		if b.state == GuardBrain.State.ATTEND:
 			b.patrol()
@@ -405,6 +417,21 @@ func spots_near(p: Vector3, r: float) -> Array:
 	return out
 
 
+## The town's cover spots, made once per town a session: the town's garrison and
+## each outpost's all ask for the same ones (~56 ms each, four in one frame when the
+## port is built again on the way home from the moon). Shared, so read only; a
+## garrison that drops the unreachable ones keeps its own list (_check_spots).
+static var _town_spots := {}
+
+
+static func town_spots(t, bounds: AABB) -> Array:
+	var data: Dictionary = t.data if t.data is Dictionary else {}
+	var key := "%s/%d/%s" % [str(data.get("id", "")), t.boxes().size(), bounds]
+	if not _town_spots.has(key):
+		_town_spots[key] = CoverPicker.candidates(t.boxes(), bounds.get_center(), bounds.size.length())
+	return _town_spots[key]
+
+
 ## Drop spots the navmesh cannot reach, a slice a frame once the mesh is in
 ## (thousands of nearest-point queries in one frame cost ~80 ms). Until it is
 ## done, picks use the spots not yet checked too.
@@ -445,12 +472,15 @@ func _handle(events: Array) -> void:
 			"bark":
 				_say(_lead(guards), str(e.key))
 			"card":
-				cards_shown += 1
 				var title: String = BAND_TITLES.get(str(e.band), "CHECKPOINT")
 				if str(e.band) == "found":
 					title += ":  " + ", ".join((e.get("found", []) as Array).map(func(it): return "%s x%d" % [it.label, int(it.count)]))
-				hud.show_card(title, e.choices)
+				# Held until the guard asking has walked up (_tick_card).
+				_card = { "title": title, "choices": e.choices }
+				_card_wait = 0.0
 			"card_close":
+				_card = {}
+				_face_left = 0.0
 				hud.hide_card()
 			"lock_player":
 				player.locked = true
@@ -497,6 +527,50 @@ func _handle(events: Array) -> void:
 					else:
 						b.calm()
 				claimed.clear()
+
+
+## Show the held card once the lead gate guard is close (or has had long enough to
+## get there), and turn the player to face him.
+func _tick_card(dt: float) -> void:
+	if _card.is_empty():
+		return
+	_card_wait += dt
+	var cfg: Dictionary = profile.get("checkpoint", {})
+	var g := _lead(guards)
+	var off := g.global_position - player.global_position if g != null else Vector3.ZERO
+	var close := g == null or Vector2(off.x, off.z).length() <= float(cfg.get("talk_dist", 2.2)) + 0.5
+	if not close and _card_wait < float(cfg.get("card_wait_s", 6.0)):
+		return
+	cards_shown += 1
+	hud.show_card(str(_card.title), _card.choices)
+	_card = {}
+	if g != null:
+		_face_g = g
+		_face_left = float(cfg.get("face_turn_s", 0.4))
+
+
+## Ease the view (and the body under it) round to the guard, eyes level with his.
+func _tick_face(dt: float) -> void:
+	if _face_left <= 0.0:
+		return
+	_face_left -= dt
+	var rig = demo.get("_rig")
+	if rig == null or not is_instance_valid(_face_g) or _face_g.dead:
+		_face_left = 0.0
+		return
+	var tilt: Basis = player.get("tilt") if player.get("tilt") is Basis else Basis.IDENTITY
+	var d: Vector3 = tilt.inverse() * (_face_g.global_position - player.global_position)
+	if Vector2(d.x, d.z).length() < 0.3:
+		_face_left = 0.0
+		return
+	var cam = rig.rig
+	var want_yaw := atan2(d.x, d.z)
+	var want_pitch := clampf(atan2(d.y, Vector2(d.x, d.z).length()), float(cam.min_pitch), float(cam.max_pitch))
+	var f := 1.0 if _face_left <= 0.0 else 1.0 - exp(-14.0 * dt)
+	cam.yaw = lerp_angle(cam.yaw, want_yaw, f)
+	cam.pitch = lerpf(cam.pitch, want_pitch, f)
+	if "player_kit" in demo and demo.player_kit != null and demo.player_kit.avatar != null:
+		demo.player_kit.avatar.facing_yaw = cam.yaw
 
 
 func _tick_klaxon(dt: float) -> void:
