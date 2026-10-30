@@ -184,14 +184,14 @@ func _build_side(side: String) -> void:
 	var cuff_len := float(fa.get("cuff_len", 0.04))
 	var cuff_r := float(fa.get("cuff_r", 0.0385))
 	var s_in := _s_in(side)
-	var sleeve := _mat("sleeve", _col("sleeve", "#22201d"),
-			{ "roughness": 0.92, "sheen": 0.35, "weave": 1.0, "stitch": 0.6, "wear": 0.1,
+	var sleeve := _mat("sleeve", _col("sleeve", "#191715"),
+			{ "roughness": 1.0, "spec": 0.12, "sheen": 0.15, "weave": 1.0, "stitch": 0.6, "wear": 0.1,
 			"stitch_u": _seam_u(rings, 0.25 if side == "r" else 0.75) })
-	var cuff := _mat("cuff", _col("cuff", "#161412"),
-			{ "roughness": 0.85, "sheen": 0.3, "weave": 0.7, "stitch": 0.9, "stitch_u": -1.0,
+	var cuff := _mat("cuff", _col("cuff", "#121110"),
+			{ "roughness": 0.95, "spec": 0.15, "sheen": 0.12, "weave": 0.7, "stitch": 0.9, "stitch_u": -1.0,
 			"stitch_rings": 0.008, "length_v": cuff_len + 0.018, "wear": 0.2 })
-	var glove := _mat("glove", _col("glove", "#1c1915"),
-			{ "roughness": 0.5, "sheen": 0.4, "grain": 1.0, "wear": 0.3 })
+	var glove := _mat("glove", _col("glove", "#161311"),
+			{ "roughness": 0.5, "sheen": 0.16, "grain": 1.0, "wear": 0.3 })
 
 	# Forearm: one lathe from a rounded elbow cap down the rings to the wrist.
 	var arm := Node3D.new()

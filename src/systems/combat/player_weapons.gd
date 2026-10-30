@@ -222,6 +222,7 @@ func _physics_process(dt: float) -> void:
 	avatar.sword_trail_on = cur == "energy_blade" and combo.cutting()
 	avatar.current = cur
 	avatar.drawn = holder.drawn()
+	avatar.reload = (guns[cur] as Weapon).reload_progress() if guns.has(cur) else -1.0
 	_update_hud(dt)
 
 

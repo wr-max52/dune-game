@@ -21,6 +21,8 @@ uniform float stitch_u = 0.0;
 uniform float stitch_rings = 0.0;     // > 0: v of a ring of stitches near each end
 uniform float length_v = 0.0;         // the piece's v length (for the far ring)
 uniform float wear = 0.4;
+uniform float spec = 0.45;            // cloth wants little: a low sun ahead made sleeves glow tan
+uniform float fill = 0.0;             // self-light (off: with the rim it read as bare skin)
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 
 varying vec3 lpos;
@@ -77,9 +79,10 @@ void fragment() {
 	col = mix(col, thread.rgb, st);
 
 	ALBEDO = col;
+	EMISSION = col * fill;
 	ROUGHNESS = clamp(rough, 0.2, 1.0);
 	METALLIC = 0.0;
-	SPECULAR = 0.45;
+	SPECULAR = spec;
 	NORMAL_MAP = normalize(vec3(-slope.x, -slope.y, 1.0)) * 0.5 + 0.5;
 	RIM = sheen;
 	RIM_TINT = 0.4;
