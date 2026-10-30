@@ -22,6 +22,7 @@ const ACTION_DOCS := {
 	"hint_secret": '{"type": "hint_secret", "id": "<secret id>"}  when you let a secret slip',
 	"pour_drink": '{"type": "pour_drink", "name": "<drink from the menu>"}  when they order',
 	"offer_speeder": '{"type": "offer_speeder"}  when they want to buy (the game shows them the price and asks them to confirm; you never take money yourself)',
+	"offer_ship": '{"type": "offer_ship", "id": "<ship id from YOUR SHIPS>"}  when you recommend a ship or they want to buy one (the game shows them its price and asks them to confirm; you never take money yourself)',
 	"trust": '{"type": "trust", "delta": -3..2, "why": "<short reason>"}  how this exchange changed your trust in them',
 	"refuse_topic": '{"type": "refuse_topic"}  when you will not talk about something',
 	"end_conversation": '{"type": "end_conversation"}  when you are done with them',
@@ -77,6 +78,12 @@ func persona_message() -> Dictionary:
 	var sale: Dictionary = card.get("sale", {})
 	if not sale.is_empty():
 		lines.append("WHAT YOU SELL: %s for %d credits. %s" % [sale.get("name", ""), int(sale.get("price", 0)), sale.get("note", "")])
+	# T-89's stock, with its numbers (ShipSalesman fills "ships" in from the ship files).
+	var ships: PackedStringArray = []
+	for sh in card.get("ships", []):
+		ships.append("[%s] %s: %d credits. %s" % [sh.id, sh.name, int(sh.price), sh.get("text", "")])
+	if not ships.is_empty():
+		lines.append("YOUR SHIPS (id, name, price, numbers):\n- " + "\n- ".join(ships))
 	return { "role": "system", "content": "\n\n".join(lines) }
 
 
@@ -102,7 +109,7 @@ Use "then": [] when nothing happens. "tone" is how you feel right now. Never put
 
 
 ## The per-turn briefing, plus the ids the validator will accept.
-## world: { flags, standing, time, events, credits }   rel: Relationship
+## world: { flags, standing, time, events, credits, extra }   rel: Relationship
 ## rumors / jobs: arrays of data entries already filtered for truth and tier.
 func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 	var L: PackedStringArray = []
@@ -162,15 +169,20 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 			job_ids.append(str(j.id))
 			js.append("[%s] %s Pays %d." % [j.id, j.text, int(j.get("pays", 0))])
 		L.append("JOBS ON YOUR BOARD:\n" + "\n".join(js))
+	for line in world.get("extra", []):
+		L.append(str(line))        # the character's own facts for this turn (T-89: what is on their pad)
 	if not rel.facts.is_empty():
 		L.append("YOU REMEMBER ABOUT THEM: " + "; ".join(PackedStringArray(rel.facts)) + ".")
 	var drinks := {}
 	for d in card.get("drinks", []):
 		drinks[str(d.id)] = { "name": d.name, "price": int(d.price) }
+	var ship_ids := {}
+	for sh in card.get("ships", []):
+		ship_ids[str(sh.id)] = { "name": sh.name, "price": int(sh.price) }
 	return {
 		"message": { "role": "system", "content": "YOUR BRIEFING (true right now):\n" + "\n".join(L) },
 		"ids": { "rumors": rumor_ids, "jobs": job_ids, "secrets": secret_ids, "drinks": drinks,
-			"allowed": actions(), "sale": card.get("sale", {}) },
+			"allowed": actions(), "sale": card.get("sale", {}), "ships": ship_ids },
 	}
 
 

@@ -179,7 +179,7 @@ func spot_in_range() -> TalkSpot:
 	var p: Node3D = demo._player
 	var best: TalkSpot = null
 	for s in spots:
-		if s.in_range(p) and (best == null or s.distance_to(p) < best.distance_to(p)):
+		if not s.manual and s.in_range(p) and (best == null or s.distance_to(p) < best.distance_to(p)):
 			best = s
 	return best
 

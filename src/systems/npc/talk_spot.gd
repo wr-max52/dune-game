@@ -15,6 +15,7 @@ var stand := Vector3.ZERO          ## where the player stands to talk (the bar f
 var radius := 1.9
 var height_tolerance := 1.5
 var face_height := 1.5             ## the two-shot frames this height on the body
+var manual := false                ## true: the character's own [E] starts the talk (T-89's menu), not the host's
 
 
 func _init(npc_brain: NpcBrain = null, npc_body: Node3D = null, stand_at: Vector3 = Vector3.ZERO) -> void:

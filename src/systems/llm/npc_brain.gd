@@ -45,6 +45,7 @@ var log_transcripts := true
 var log_dir := LOG_ROOT + "/cantina_owner"
 var last_turn: Dictionary = {}       ## for the debug overlay
 var turns: Array = []                ## every finished turn this session (tests read it)
+var extra_brief: Callable            ## () -> Array of lines: this character's own facts each turn (T-89: the pad)
 
 var _turn_id := -1
 var _raw := ""
@@ -161,6 +162,7 @@ func say(text: String) -> bool:
 		"events": WorldState.events, "credits": WorldState.credits,
 		"place": _place(), "people": NameHooks.known("npc:"),
 		"story": Story.brief(id()),
+		"extra": extra_brief.call() if extra_brief.is_valid() else [],
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
 	_messages = built.messages
@@ -292,7 +294,7 @@ func _apply(kept: Array) -> Array:
 					rel.trust_this_visit += int(a.delta)
 			"pour_drink":
 				_pour(a)
-			"offer_speeder":
+			"offer_speeder", "offer_ship":
 				sale_offered.emit({ "id": a.id, "name": a.name, "price": int(a.price) })
 			"call_guards":
 				rel.banned_until = WorldState.clock + 90.0
@@ -346,6 +348,8 @@ func canned_reply(text: String) -> Dictionary:
 	var c: Dictionary = card.get("canned", {})
 	var topic := _topic(text)
 	var can: Array = builder.actions()
+	if can.has("offer_ship") and topic in ["buy", "recommend"]:
+		return _canned_ship(text, c)
 	var needs := { "smuggle": "offer_job", "job": "offer_job", "drink": "pour_drink", "buy": "offer_speeder", "rumor": "share_rumor" }
 	if needs.has(topic) and not can.has(needs[topic]):
 		topic = ""
@@ -379,11 +383,43 @@ func canned_reply(text: String) -> Dictionary:
 func _topic(text: String) -> String:
 	var low := text.to_lower()
 	var tw: Dictionary = card.get("topic_words", {})
-	for topic in ["bye", "buy", "smuggle", "job", "rumor", "drink", "war"]:
+	for topic in ["bye", "recommend", "buy", "smuggle", "job", "rumor", "drink", "war"]:
 		for w in tw.get(topic, []):
 			if low.contains(str(w)):
 				return topic
 	return ""
+
+
+## T-89 offline: the ship whose "good_for" words they used (else the dearest they
+## can afford, else the cheapest), and if it is out of their reach, the best one
+## that is not. Real ships, real prices.
+func _canned_ship(text: String, c: Dictionary) -> Dictionary:
+	var ships: Array = card.get("ships", [])
+	if ships.is_empty():
+		return { "say": _pick(c.get("default", ["Hold on."])), "actions": [] }
+	var low := text.to_lower()
+	var credits := WorldState.credits
+	var want: Dictionary = {}
+	for sh in ships:
+		for w in sh.get("good_for", []):
+			if low.contains(str(w)):
+				want = sh
+				break
+		if not want.is_empty():
+			break
+	var best_ok: Dictionary = {}
+	for sh in ships:
+		if int(sh.price) <= credits and (best_ok.is_empty() or int(sh.price) > int(best_ok.price)):
+			best_ok = sh
+	if want.is_empty():
+		want = best_ok if not best_ok.is_empty() else ships[0]
+	if int(want.price) <= credits or best_ok.is_empty():
+		return { "say": _pick(c.get("recommend", ["The %s. %d credits."])) % [want.name, int(want.price)],
+			"actions": [{ "type": "offer_ship", "id": want.id }] }
+	var line := _pick(c.get("recommend_short", ["The {want} is the one for you, but the {can} is what you can fly today."]))
+	return { "say": line.format({ "want": want.name, "want_price": int(want.price), "can": best_ok.name,
+			"can_price": int(best_ok.price), "credits": credits }),
+		"actions": [{ "type": "offer_ship", "id": best_ok.id }] }
 
 
 func _pick(arr: Array) -> String:

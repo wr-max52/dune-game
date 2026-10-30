@@ -1,6 +1,6 @@
 {
   "id": "t89",
-  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. It says hello once every time the game starts and offers the tutorial (controls and how things work, a page at a time). The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Read by src/systems/npc/ship_salesman.gd.",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Read by src/systems/npc/ship_salesman.gd.",
   "name": "T-89",
   "marker": "t89",
   "pad": "spare_pad",
@@ -21,6 +21,12 @@
     "freighter": 2400
   },
   "greeting": "Hello, pilot! T-89, at your service. Welcome to the pit.",
+  "returning": [
+    "Pilot! I have multiple ships for sale, ready for all kinds of things!",
+    "Welcome back, pilot! Fast ones, tough ones, ones that haul. Come and have a look!",
+    "Back in port? Every ship on my lot is fuelled and ready, pilot!",
+    "Pilot! Need something faster? Something tougher? I have a ship for that!"
+  ],
   "offer_tutorial": "New in port? I can walk you through the basics. It only takes a minute.",
   "tutorial": [
     "Walking first. W A S D to move, Shift to run, Space to jump, C to crouch. The mouse looks around; V swaps between first and third person.",
@@ -44,6 +50,7 @@
   },
   "labels": {
     "talk": "[E] Talk to %s",
+    "chat": "Talk (ask which ship suits you)",
     "menu_title": "%s  -  you have %d cr",
     "yes_tutorial": "Yes, show me the basics",
     "no_tutorial": "No thanks, I know my way around",
