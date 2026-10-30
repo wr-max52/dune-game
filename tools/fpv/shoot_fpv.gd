@@ -71,8 +71,16 @@ func _initialize() -> void:
 		["tpv_rifle_sprint_front", _tpv.bind("rifle_blaster", true, Vector3(-0.8, 0.3, 2.4))],
 		["tpv_rifle_sprint_back", _tpv.bind("rifle_blaster", true, Vector3(-0.6, 0.6, -3.2))],
 	]
+	# A strip through one swipe (strip_<frames>), and a chained second and third
+	# (the combo: double click), for judging the whole arc.
+	for f in range(2, 27, 2):
+		_shots.append(["strip_left_%02d" % f, _fpv_swing.bind(f)])
+	for f in range(2, 27, 2):
+		_shots.append(["strip_right_%02d" % f, _fpv_swing_right.bind(f)])
+	for f in range(2, 37, 3):
+		_shots.append(["strip_combo_%02d" % f, _fpv_combo.bind(f)])
 	if not _only.is_empty():
-		_shots = _shots.filter(func(s): return _only.has(s[0]))
+		_shots = _shots.filter(func(s): return _only.has(s[0]) or _only.any(func(o): return o.ends_with("*") and str(s[0]).begins_with(o.trim_suffix("*"))))
 
 
 func _process(_d: float) -> bool:
@@ -143,6 +151,7 @@ func _reset() -> void:
 	rig_node._override_blend = 0.0
 	kit.weapons.release_fire()
 	kit.weapons.set_alt(false)
+	kit.weapons.combo.reset()       # else the next swipe alternates side from the last shot
 
 
 ## Facing away from the low sun (lit hands), or into it.
@@ -239,6 +248,29 @@ func _fpv_swing(frames: int) -> int:
 		kit.weapons.press_fire()
 		kit.weapons.release_fire())
 	return 25 + frames
+
+
+## A left swipe, then a click once it ends: the right swipe, shot `frames` in.
+func _fpv_swing_right(frames: int) -> int:
+	_fpv("energy_blade", 0.0)
+	for at in [20, 48]:
+		_after(at, func():
+			kit.weapons.press_fire()
+			kit.weapons.release_fire())
+	return 48 + frames
+
+
+## A double click (the combo: left, right, centre), shot `frames` after the
+## right swipe starts.
+func _fpv_combo(frames: int) -> int:
+	_fpv("energy_blade", 0.0)
+	_after(25, func():
+		kit.weapons.press_fire()
+		kit.weapons.release_fire())
+	_after(27, func():
+		kit.weapons.press_fire()
+		kit.weapons.release_fire())
+	return 25 + int(0.42 * 0.74 * 60.0) + frames
 
 
 func _fpv_block() -> int:

@@ -344,6 +344,13 @@ func set_first_person(on: bool) -> void:
 				else (shadow_only if on else normal)
 	if _fpv != null:
 		_fpv.set_visible(on)
+	# Issue #229: from the eye the blade's outer halo (sized to read from a
+	# distance) washed out the view whenever it passed near the lens: narrower here.
+	var w := weapon_node("energy_blade")
+	if w != null and w.has_meta("sword"):
+		var halo := (w.get_meta("sword") as Node3D).get_node_or_null("Blade/Halo") as Node3D
+		if halo != null:
+			halo.scale = Vector3(0.55, 1.0, 0.55) if on else Vector3.ONE
 
 
 func _collect_meshes() -> void:
