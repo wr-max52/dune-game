@@ -15,6 +15,8 @@ extends RefCounted
 ##   neighbours-- other planets in its sky you can fly to: { id, at, radius, color... }
 ##   cantina   -- who runs the cantina { card, look }
 ##   natives   -- issue #96: its native packs and wild animals (NativesData.resolve)
+##   beast     -- its beast, if it has one: the "beast" block of its file ({} if none;
+##                PlanetBeast.config lays it over content/core/hazards/beast.json)
 ##
 ## Pure and cheap: no nodes. Town scenes ask for the current planet
 ## (GameFlow.planet()); tests can build any planet without a scene.
@@ -123,6 +125,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 		"town_name": str(cfg.get("town_name", "")),
 		"neighbours": neighbours(id, cc),
 		"natives": natives,
+		"beast": cfg.get("beast", {}),
 	}
 
 

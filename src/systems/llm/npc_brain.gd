@@ -162,6 +162,7 @@ func say(text: String) -> bool:
 		"events": WorldState.events, "credits": WorldState.credits,
 		"place": _place(), "people": NameHooks.known("npc:"),
 		"story": Story.brief(id()),
+		"beast": PlanetBeast.brief(GameFlow.planet()),     # everyone here knows the planet's beast
 		"extra": extra_brief.call() if extra_brief.is_valid() else [],
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)

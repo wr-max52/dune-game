@@ -19,5 +19,5 @@
   "notes": "All names and labels live in this layer only. Code references entries by id.",
   "species": ["dune_nomads", "desert_folk", "frost_folk"],
   "fauna": ["sand_pig"],
-  "hazards": ["desert_blob"]
+  "hazards": ["beast"]
 }

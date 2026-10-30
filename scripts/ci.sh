@@ -308,14 +308,15 @@ if [ ! -f test_results/natives_trace.txt ]; then
 fi
 echo "CI: natives trace present ($(wc -l < test_results/natives_trace.txt) lines)"
 
-# Issue #220: the desert blob: built out in the desert, rolls, farts, kills on touch.
-echo "CI: generating blob trace..."
-"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/blob_trace.gd >/dev/null 2>&1 || true
-if [ ! -f test_results/blob_trace.txt ]; then
-  echo "CI: ERROR -- blob trace was not generated" >&2
+# Issue #220: the planet's beast: named from the planet's data, rolls, farts, kills
+# on touch, chases when hurt until you are 1 km away, 1000 health, stays dead.
+echo "CI: generating beast trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/beast_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/beast_trace.txt ]; then
+  echo "CI: ERROR -- beast trace was not generated" >&2
   exit 1
 fi
-echo "CI: blob trace present ($(wc -l < test_results/blob_trace.txt) lines)"
+echo "CI: beast trace present ($(wc -l < test_results/beast_trace.txt) lines)"
 
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes

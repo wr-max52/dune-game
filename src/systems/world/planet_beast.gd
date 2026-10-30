@@ -1,34 +1,58 @@
-class_name DesertBlob
-extends Node3D
-## Issue #220: a big purple blob that rolls about the desert. Touch it and you die
-## on the spot (then wake as from any other death). It has nowhere to be: its
-## heading drifts at random and its pace changes now and then, with no pull
-## toward or away from the town; only a loose leash round its own home spot (out
-## in the desert) turns it back if it strays very far. Now and then it farts: a
-## sound, a puff and a squash.
+class_name PlanetBeast
+extends StaticBody3D
+## A planet's beast (issue #220's purple blob, made the beast): a big purple blob
+## that rolls about the desert. Every planet may have one, named in its own file
+## (content/core/planets/<id>.json, a "beast" block: name, home, what the locals
+## say of it); the numbers every beast shares are content/core/hazards/beast.json,
+## and the planet's block may override any of them.
+##
+##   wander   it has nowhere to be: its heading drifts at random and its pace
+##            changes now and then, with no pull toward or away from the town; only
+##            a loose leash round its own home spot turns it back if it strays
+##   touch    dead on the spot, whatever your health (on foot, or a speeder into it)
+##   hurt     it has hp (1000) and takes bolts and blades like anything else. Hurt
+##            by the player, it chases them, faster than a run, until they are
+##            chase_give_up_m (1 km) away or dead, then goes back to wandering
+##   dead     it sinks into a puddle and stays dead: WorldState flag
+##            beast_slain_<planet id>, so it is not built again and the locals know
+##
+## Now and then it farts: a sound, a puff and a squash.
 ##
 ## It rides the ground (WorldGround: the home planet's ball), moved here rather
-## than by physics, and rolls as it goes. Numbers: content/core/hazards/desert_blob.json.
+## than by physics. Its ball is solid to bolts and blades (layer 4, "enemies") but
+## nothing collides with it: touching it is what kills.
 
 signal killed_player
 signal farted
+signal provoked
+signal gave_up
+signal slain
 
-const DATA := "res://content/core/hazards/desert_blob.json"
+const DATA := "res://content/core/hazards/beast.json"
+const LAYER_ENEMIES := 1 << 3
 
 var demo                              ## town_demo.gd
 var ground: WorldGround
 var player: CharacterBody3D
-var cfg: Dictionary = {}
+var planet_id := ""
+var cfg: Dictionary = {}              ## the species defaults with the planet's block laid over
+var beast_name := "the beast"
 var radius := 3.6
+var hp := 1000.0
+var max_hp := 1000.0
+var dead := false
+var chasing := false
 var home := Vector3.ZERO
 var heading := Vector3.FORWARD        ## along the ground
 var speed := 2.0
 var kills := 0
 var farts := 0
+var hits_taken := 0
 var travelled := 0.0                  ## metres rolled (traces)
 var _rng := RandomNumberGenerator.new()
 var _ball: Node3D                     ## the rolling, wobbling body
 var _mat: StandardMaterial3D
+var _shape: CollisionShape3D
 var _speed_left := 0.0
 var _fart_left := 10.0
 var _squash := 0.0
@@ -37,25 +61,78 @@ var _wake_left := -1.0
 var _sfx: AudioStreamPlayer3D
 
 
-static func data() -> Dictionary:
+static func defaults() -> Dictionary:
 	var f := FileAccess.open(DATA, FileAccess.READ)
 	var d = JSON.parse_string(f.get_as_text()) if f != null else null
 	return d if d is Dictionary else {}
 
 
-## True if the planet `planet_id` has a blob.
-static func lives_on(planet_id: String) -> bool:
-	return (data().get("planets", []) as Array).has(planet_id)
+## The planet's beast (a built planet, PlanetGen.build): the defaults with its
+## "beast" block laid over, or {} if it has none.
+static func config(planet: Dictionary) -> Dictionary:
+	var own: Dictionary = planet.get("beast", {})
+	if own.is_empty():
+		return {}
+	var c := defaults()
+	for k in own:
+		if k == "lines" and c.get("lines") is Dictionary:
+			var l: Dictionary = (c.lines as Dictionary).duplicate()
+			l.merge(own.lines, true)
+			c.lines = l
+		else:
+			c[k] = own[k]
+	return c
 
 
-func setup(town_demo, world_ground: WorldGround) -> void:
+static func slain_flag(id: String) -> String:
+	return "beast_slain_" + id
+
+
+static func is_slain(id: String) -> bool:
+	return WorldState.has_flag(slain_flag(id))
+
+
+## Whether the planet has a beast still alive to build.
+static func lives_on(planet: Dictionary) -> bool:
+	return not config(planet).is_empty() and not is_slain(str(planet.get("id", "")))
+
+
+## What the locals say of the planet's beast (its "lore", or "lore_slain" once it
+## is dead), [] if it has none.
+static func lore(planet: Dictionary) -> Array:
+	var c := config(planet)
+	if c.is_empty():
+		return []
+	var key := "lore_slain" if is_slain(str(planet.get("id", ""))) else "lore"
+	return c.get(key, c.get("lore", []))
+
+
+## One line for an AI character's briefing: the beast, by name, and what is said of it.
+static func brief(planet: Dictionary) -> String:
+	var c := config(planet)
+	if c.is_empty():
+		return ""
+	var nm := str(c.get("name", "the beast"))
+	var said := " ".join(PackedStringArray(lore(planet)))
+	if is_slain(str(planet.get("id", ""))):
+		return "THIS PLANET'S BEAST: %s, a huge purple blob that rolled about the desert and killed anyone it touched. Word is someone killed it. What people say: %s" % [nm, said]
+	return "THIS PLANET'S BEAST: %s, a huge purple blob that rolls about the desert. Anyone it touches dies; hurt it and it chases you a long way. Everyone here knows of it. What people say: %s" % [nm, said]
+
+
+func setup(town_demo, world_ground: WorldGround, planet: Dictionary) -> void:
 	demo = town_demo
 	ground = world_ground
 	player = demo._player
-	cfg = data()
+	planet_id = str(planet.get("id", ""))
+	cfg = config(planet)
+	beast_name = str(cfg.get("name", cfg.get("label", "the beast")))
 	radius = float(cfg.get("radius", 3.6))
+	max_hp = float(cfg.get("hp", 1000))
+	hp = max_hp
 	_rng.seed = 220
-	name = "DesertBlob"
+	name = "PlanetBeast"
+	collision_layer = LAYER_ENEMIES
+	collision_mask = 0
 
 
 func _ready() -> void:
@@ -65,6 +142,11 @@ func _ready() -> void:
 	_new_pace()
 	_fart_left = _range("fart_every_s", 9.0, 26.0)
 	_build_look()
+	_shape = CollisionShape3D.new()
+	var sph := SphereShape3D.new()
+	sph.radius = radius
+	_shape.shape = sph
+	add_child(_shape)
 	_place(home)
 	var path := str(cfg.get("fart_sound", ""))
 	_sfx = AudioStreamPlayer3D.new()
@@ -78,6 +160,11 @@ func _ready() -> void:
 func _range(key: String, a: float, b: float) -> float:
 	var r: Array = cfg.get(key, [a, b])
 	return _rng.randf_range(float(r[0]), float(r[1]))
+
+
+## A line from the data with its name put in ("" if there is none).
+func line(key: String) -> String:
+	return str(cfg.get("lines", {}).get(key, "")).replace("{name}", beast_name)
 
 
 # ------------------------------------------------------------------ ground
@@ -152,26 +239,33 @@ func _build_look() -> void:
 
 func _physics_process(dt: float) -> void:
 	_t += dt
+	_tick_wake(dt)
+	if dead:
+		return
 	_wander(dt)
 	_wobble(dt)
 	_touch()
 	_tick_fart(dt)
-	_tick_wake(dt)
 
 
 ## Aimless: the heading drifts at random, the pace changes now and then. Only a
-## loose leash round its own home turns it back if it strays very far.
+## loose leash round its own home turns it back if it strays very far. Chasing, it
+## steers at the player instead, at its chase speed.
 func _wander(dt: float) -> void:
 	var at := global_position - _up(global_position) * radius
 	_speed_left -= dt
 	if _speed_left <= 0.0:
 		_new_pace()
-	var jitter := deg_to_rad(float(cfg.get("turn_jitter_deg", 70.0)))
-	heading = heading.rotated(_up(at), _rng.randfn() * jitter * sqrt(dt))
-	if at.distance_to(home) > float(cfg.get("leash_m", 1400.0)):
-		heading = heading.lerp(_flat(home - at, at).normalized(), minf(1.0, dt * 0.5))
+	if chasing:
+		_chase(at, dt)
+	else:
+		var jitter := deg_to_rad(float(cfg.get("turn_jitter_deg", 70.0)))
+		heading = heading.rotated(_up(at), _rng.randfn() * jitter * sqrt(dt))
+		if at.distance_to(home) > float(cfg.get("leash_m", 1400.0)):
+			heading = heading.lerp(_flat(home - at, at).normalized(), minf(1.0, dt * 0.5))
 	heading = _flat(heading, at).normalized()
-	var step := heading * speed * dt
+	var pace := float(cfg.get("chase_speed", 5.5)) if chasing else speed
+	var step := heading * pace * dt
 	var next := _ground_at(at + step)
 	travelled += step.length()
 	_place(next)
@@ -180,6 +274,28 @@ func _wander(dt: float) -> void:
 	if axis.length() > 0.5 and _ball != null:
 		_ball.basis = Basis(axis, step.length() / radius) * _ball.basis
 		_ball.basis = _ball.basis.orthonormalized()
+
+
+## After the player: steer at them; give up once they are far enough away (or dead).
+func _chase(at: Vector3, dt: float) -> void:
+	if player == null or not is_instance_valid(player) or bool(player.get("is_downed")):
+		_calm()
+		return
+	var to := _flat(player.global_position - at, at)
+	if to.length() > float(cfg.get("chase_give_up_m", 1000.0)):
+		_calm()
+		_toast(line("gave_up"))
+		return
+	if to.length() > 0.01:
+		heading = heading.lerp(to.normalized(), minf(1.0, dt * float(cfg.get("chase_turn", 2.5))))
+
+
+func _calm() -> void:
+	if not chasing:
+		return
+	chasing = false
+	_new_pace()
+	gave_up.emit()
 
 
 func _new_pace() -> void:
@@ -211,6 +327,69 @@ static func _scale_along(up: Vector3, s: Vector3) -> Basis:
 	return b * Basis.from_scale(Vector3(s.x, s.y, s.z)) * b.inverse()
 
 
+# ------------------------------------------------------------------ hurt, dead
+
+## Bolts call this (bolt.gd). Only the player (on foot, or in what they ride)
+## sets it chasing; a stray bolt from anyone else just hurts.
+func apply_damage_from(amount: float, shooter: Node) -> void:
+	_hurt(amount, _is_player(shooter))
+
+
+## Blades and anything that does not say who: only the player swings a blade here.
+func apply_damage(amount: float) -> void:
+	_hurt(amount, true)
+
+
+func apply_blade_hit(amount: float, _dir: Vector3) -> void:
+	_hurt(amount, true)
+
+
+func _is_player(shooter: Node) -> bool:
+	if shooter == null or player == null or not is_instance_valid(shooter):
+		return shooter == null
+	if shooter == player:
+		return true
+	var v = player.get("vehicle") if bool(player.get("piloting")) else null
+	return v is Node and is_instance_valid(v) and (shooter == v or (v as Node).is_ancestor_of(shooter))
+
+
+func _hurt(amount: float, by_player: bool) -> void:
+	if dead or amount <= 0.0:
+		return
+	hits_taken += 1
+	hp -= amount
+	_squash = maxf(_squash, 0.5)
+	if hp <= 0.0:
+		_die()
+		return
+	if by_player and not chasing:
+		chasing = true
+		_toast(line("provoked"))
+		provoked.emit()
+
+
+## It sinks into a purple puddle and stays dead (the flag keeps it from being built
+## again, and the locals hear of it).
+func _die() -> void:
+	hp = 0.0
+	dead = true
+	chasing = false
+	if _shape != null:
+		_shape.set_deferred("disabled", true)
+	if planet_id != "":
+		WorldState.set_flag(slain_flag(planet_id))
+	WorldState.log_event("Killed %s, the beast." % beast_name)
+	_toast(line("slain"))
+	if _ball != null:
+		var mi := _ball.get_node_or_null("Blob") as Node3D
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(self, "global_position", global_position - _up(global_position) * radius * 0.85, 2.5)
+		if mi != null:
+			var up_local := (_ball.global_basis.inverse() * _up(global_position)).normalized()
+			tw.tween_property(mi, "basis", _scale_along(up_local, Vector3(1.6, 0.15, 1.6)), 2.5)
+	slain.emit()
+
+
 # ------------------------------------------------------------------ touch = death
 
 func _touch() -> void:
@@ -229,14 +408,15 @@ func _touch() -> void:
 
 
 ## Dead on the spot. Whoever handles a downed player (the town's garrison) wakes
-## them; if nobody does in a few seconds, the blob does it, in the pit.
+## them; if nobody does in a few seconds, the beast does it, in the pit.
 func _kill() -> void:
 	kills += 1
 	if "invulnerable_left" in player:
 		player.invulnerable_left = 0.0
 	player.apply_damage_from(float(player.health.hp) + 9999.0, self)
-	_toast(str(cfg.get("lines", {}).get("killed", "")))
+	_toast(line("killed"))
 	_wake_left = 4.0
+	_calm()
 	killed_player.emit()
 
 
@@ -254,7 +434,7 @@ func _tick_wake(dt: float) -> void:
 			player.call("align_to_ground", true)
 		player.revive()
 		player.locked = false
-		_toast(str(cfg.get("lines", {}).get("woke", "")))
+		_toast(line("woke"))
 
 
 func _toast(text: String) -> void:

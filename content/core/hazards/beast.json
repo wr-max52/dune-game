@@ -1,0 +1,31 @@
+{
+  "id": "beast",
+  "label": "the beast",
+  "note": "IP-neutral. Issue #220: a planet's beast, a big purple blob that rolls about its desert. These are the defaults every beast shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"beast\" block, which gives it a name, a home spot, what the locals say of it, and may override any number here. Touch it (on foot, or ride a speeder into it) and you die on the spot. It wanders with no pull toward or away from the town: its heading drifts at random, and only a loose leash round its home spot turns it back. Hurt it and it chases you until you are chase_give_up_m away; it has hp health and stays dead once killed (WorldState flag beast_slain_<planet id>). Now and then it farts. The town's locals know it: walk close by one, calm, and now and then they say one of the planet's lore lines (every locals_say_every_s at most, read by src/systems/npc/townsfolk.gd); every AI character is briefed on it (PlanetBeast.brief). {name} in a line is the planet's name for it. Read by src/systems/world/planet_beast.gd.",
+  "hp": 1000,
+  "leash_m": 1400.0,
+  "radius": 3.6,
+  "speed": [1.2, 3.4],
+  "chase_speed": 5.5,
+  "chase_turn": 2.5,
+  "chase_give_up_m": 1000.0,
+  "turn_jitter_deg": 70.0,
+  "speed_change_s": [3.0, 8.0],
+  "kill_margin": 0.35,
+  "speeder_margin": 1.4,
+  "fart_every_s": [9.0, 26.0],
+  "locals_say_m": 4.0,
+  "locals_say_every_s": 30.0,
+  "locals_say_first_s": 6.0,
+  "fart_sound": "res://assets/audio/npc/blob_fart.wav",
+  "color": "#8a3fc8",
+  "glow": "#c07aff",
+  "puff": "#9a8a4a",
+  "lines": {
+    "killed": "{name} rolled right over you.",
+    "woke": "You wake up in the pit, smelling faintly of {name}.",
+    "provoked": "{name} turns toward you.",
+    "gave_up": "{name} has lost interest in you.",
+    "slain": "{name} is dead. The locals won't believe it."
+  }
+}
