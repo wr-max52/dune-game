@@ -20,6 +20,13 @@ const REST := {
 	"rifle": [Vector3(-0.15, -0.38, 0.17), Vector3(44, 48, -14)],
 	"pistol": [Vector3(-0.27, -0.5, 0.08), Vector3(78, 8, 0)],
 }
+## Issue #229: sprinting, a rifle at REST hung across the thighs, so a running leg
+## swung through the barrel every stride. Port arms instead: diagonal across the
+## chest, muzzle up and to the left, held out clear of the torso and the legs.
+## A pistol keeps its rest (it hangs by the thigh, short of the knee).
+const SPRINT := {
+	"rifle": [Vector3(-0.1, -0.16, 0.34), Vector3(-45, 62, -25)],
+}
 
 var ready := 0.0               ## 0 = at rest, 1 = aimed (linear; see eased())
 var _hold := 0.0
@@ -55,8 +62,8 @@ func on_target() -> bool:
 
 ## The resting transform (chest space) for a gun of `kind` whose right-hand grip
 ## sits at `grip_r` in the gun's own space.
-static func rest_xf(kind: String, grip_r: Vector3) -> Transform3D:
-	var r: Array = REST.get(kind, REST["rifle"])
+static func rest_xf(kind: String, grip_r: Vector3, sprint := false) -> Transform3D:
+	var r: Array = SPRINT[kind] if sprint and SPRINT.has(kind) else REST.get(kind, REST["rifle"])
 	var b := Basis.from_euler((r[1] as Vector3) * PI / 180.0)
 	return Transform3D(b, (r[0] as Vector3) - b * grip_r)
 

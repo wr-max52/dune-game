@@ -52,6 +52,7 @@ func integrate(dt: float) -> Vector3:
 	_traveled += step.length()
 	if _traveled >= range_m:
 		_die()
+	_trail()
 	return step
 
 
@@ -172,6 +173,21 @@ func _orient() -> void:
 	var hint := Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT
 	var x := hint.cross(y).normalized()
 	_streak.basis = Basis(x, y, x.cross(y))
+	_trail()
+
+
+## Issue #229: the streak's head is the bolt; its tail trails only as far as the
+## bolt has come (since it was fired or turned). Centred on the bolt, a fresh one
+## reached half its length back past the muzzle: from the eye, a pale slab over
+## the shooter's own hand.
+func _trail() -> void:
+	if _streak == null or direction.length() < 0.01:
+		return
+	var vis := clampf(_traveled + 0.08, 0.12, streak_length)
+	var k := vis / streak_length
+	var y := direction.normalized()
+	_streak.basis = Basis(_streak.basis.x.normalized(), y * k, _streak.basis.z.normalized())
+	_streak.position = -y * (vis * 0.5 - streak_radius)
 
 
 ## A blade sent it back: new heading, new owner, a little faster.
