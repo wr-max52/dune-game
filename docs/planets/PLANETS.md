@@ -114,6 +114,30 @@ A new type is a new entry in `types.json`, with no code change, as long as its
 ground is `terrain`, `platform` or `ball` and its surface is one of `water`,
 `lava`, `gas` or `rock`.
 
+## The Remnant cruiser: in this sky, not a planet (issue #193)
+
+The cruiser is not a planet. It belongs to the home planet's map, like the wreck
+in the desert: a landmark of the home world (`kind: "cruiser"` in
+`content/core/worlds/port_desert.json`, with `at` on the map, `altitude` and
+`yaw_deg`), so it lives in the home town scene and nothing loads or fades on the
+way to it. A planet's scene is a town on a ball; a space fight ends at a handoff;
+and Oda's job is a fight on the way up you can run from straight into the bay.
+
+- **Where:** 4.6 km up over a point 6.5 km east along the ground, past the curve:
+  hidden from the port, plain to see from space.
+- **Level with the port:** its decks are square to world up, not to the ground
+  below it, and its own gravity (`PlanetSphere.gravity_zones`) makes world up the
+  up aboard, so everything that walks, sees and paths works as it does in town.
+- **Its shapes** are `src/systems/world/cruiser_hull.gd` (boxes in its own frame:
+  solid to ships through WorldGround, to feet through WorldScenery's landmark
+  colliders); **its look, ships, crew and general** are
+  `src/systems/world/remnant_cruiser.gd`; **everything else** (pads, docking,
+  crew, droids, reward, lines) is `content/core/cruiser/remnant_cruiser.json`.
+- **Z** within `dock.radius` of it docks you in its bay (ShipPilot.dock).
+- `scenes/cruiser_trace.gd` docks, walks every deck and ramp, wakes the crew and
+  kills the general, headless; `tools/review/cruiser_shot.gd` renders stills (a
+  sheet is in `docs/cruiser/issue_193_cruiser.jpg`).
+
 ## Native peoples and wild animals (issue #96)
 
 A planet's native packs and wild animals come from the planet generator too. A

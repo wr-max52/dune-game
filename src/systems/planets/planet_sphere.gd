@@ -41,6 +41,11 @@ var dune_offset := 12.0
 var sink_ramp := 3.0
 const UNDER_INSET := 1.5
 
+## Issue #193: places with gravity of their own (the Remnant cruiser in orbit):
+## inside `box` (in `frame`), up is the frame's y, not the ball's. Each is
+## { frame, inv, box, center, reach }; the bounding sphere is a quick reject.
+var gravity_zones: Array = []
+
 var _dune := FastNoiseLite.new()
 var _warp := FastNoiseLite.new()
 var _swell := FastNoiseLite.new()
@@ -127,8 +132,12 @@ func surface_at(x: float, z: float) -> Vector3:
 
 
 ## "Up" at a world point: straight up on the town's plateau, away from the centre
-## out in the desert, eased in between so nothing tips over at a line.
+## out in the desert, eased in between so nothing tips over at a line. Issue #193:
+## a gravity zone's own up inside it.
 func up_at(p: Vector3) -> Vector3:
+	for z in gravity_zones:
+		if p.distance_squared_to(z.center) < z.reach and (z.box as AABB).has_point((z.inv as Transform3D) * p):
+			return (z.frame as Transform3D).basis.y
 	var radial := (p - center).normalized()
 	var d := dir_map(radial).length()
 	var t := smoothstep(flat_radius, flat_radius + up_blend, d)
@@ -137,6 +146,17 @@ func up_at(p: Vector3) -> Vector3:
 	if t >= 1.0:
 		return radial
 	return Vector3.UP.slerp(radial, t).normalized()
+
+
+## Issue #193: inside `box` (an AABB in `frame`) up is the frame's own y. Adding one
+## again with the same frame replaces it (a scene built twice on one ball).
+func add_gravity_zone(frame: Transform3D, box: AABB) -> void:
+	for z in gravity_zones:
+		if (z.frame as Transform3D).is_equal_approx(frame):
+			return
+	var c := frame * box.get_center()
+	var r := box.size.length() * 0.5
+	gravity_zones.append({ "frame": frame, "inv": frame.affine_inverse(), "box": box, "center": c, "reach": r * r })
 
 
 ## The rotation that takes world up to `up_at(p)` (identity on the plateau).

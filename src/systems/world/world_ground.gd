@@ -474,6 +474,9 @@ func _add_landmark(lm: Dictionary, content) -> void:
 	if str(lm.get("kind", "")) == "wreck":
 		StarcruiserWreck.add_to_ground(self, lm)
 		return
+	if str(lm.get("kind", "")) == CruiserHull.LANDMARK_KIND:
+		CruiserHull.add_to_ground(self, lm)         # issue #193: in orbit, not on the ground
+		return
 	var at := _v3(lm.get("at", [0, 0, 0]))
 	if sphere() != null:
 		_add_landmark_on_ball(lm, content, at)
@@ -708,7 +711,20 @@ func hit(p: Vector3, r: float) -> String:
 			continue
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
-		var lp: Vector3 = box_xf(b).affine_inverse() * p if b.has("xf") else p
+		var lp := p
+		if b.has("xf"):
+			# Issue #193: a box in its own frame keeps its bounding sphere and inverse
+			# (made on first use), so the hundreds on the wreck and the cruiser cost a
+			# distance each when the ship is nowhere near them.
+			if not b.has("hit_inv"):
+				var xf := box_xf(b)
+				b["hit_c"] = xf * ((mn + mx) * 0.5)
+				b["hit_r"] = ((mx - mn) * 0.5).length()
+				b["hit_inv"] = xf.affine_inverse()
+			var rr: float = float(b.hit_r) + r
+			if p.distance_squared_to(b.hit_c) > rr * rr:
+				continue
+			lp = (b.hit_inv as Transform3D) * p
 		if lp.y - r * 0.5 >= mx.y:
 			continue            # above it: that is landing, not hitting
 		var q := Vector3(clampf(lp.x, mn.x, mx.x), clampf(lp.y, mn.y, mx.y), clampf(lp.z, mn.z, mx.z))

@@ -101,6 +101,14 @@
       "at": [700, 0, -1550],
       "yaw_deg": 250,
       "clear": 28
+    },
+    {
+      "id": "remnant_cruiser",
+      "kind": "cruiser",
+      "note": "Issue #193: the Remnant's star cruiser, holding orbit 4.6 km up over map point 'at' (6.5 km east along the ground, 75 degrees round the ball): below the port's horizon, in plain sight from space. It is level with the port (its decks square to world up, with its own gravity aboard) and its bay is turned toward the port; yaw_deg turns it about its up. Its shapes are src/systems/world/cruiser_hull.gd, everything else content/core/cruiser/remnant_cruiser.json.",
+      "at": [6500, 0, 0],
+      "altitude": 4600,
+      "yaw_deg": 0
     }
   ],
   "atmosphere": {

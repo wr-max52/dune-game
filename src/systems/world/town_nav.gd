@@ -269,6 +269,56 @@ func add_terrain_region(terrain: DesertTerrain, center: Vector3, half_extent: fl
 	return tile
 
 
+## Issue #193: a region baked from triangles in a frame of their own (the Remnant
+## cruiser's decks, walls and ramps, in its frame), limited to `bounds` (in it). It
+## bakes on a worker thread and joins the shared map when done; `done` (optional)
+## gets the region. The frame must map +Y to the region's up.
+func add_faces_region(faces: PackedVector3Array, frame: Transform3D, bounds: AABB,
+		done: Callable = Callable()) -> void:
+	var nm := NavigationMesh.new()
+	nm.cell_size = float(settings.cell_size)
+	nm.cell_height = float(settings.cell_height)
+	nm.agent_radius = float(settings.agent_radius)
+	nm.agent_height = float(settings.agent_height)
+	nm.agent_max_climb = float(settings.agent_max_climb)
+	nm.agent_max_slope = float(settings.agent_max_slope)
+	nm.filter_baking_aabb = bounds
+	var src := NavigationMeshSourceGeometryData3D.new()
+	src.add_faces(faces, Transform3D.IDENTITY)
+	NavigationServer3D.bake_from_source_geometry_data_async(nm, src, _on_faces_baked.bind(nm, frame, done))
+
+
+func _on_faces_baked(nm: NavigationMesh, frame: Transform3D, done: Callable) -> void:
+	if OS.get_thread_caller_id() != OS.get_main_thread_id():
+		call_deferred("_on_faces_baked", nm, frame, done)
+		return
+	if not is_inside_tree():
+		return
+	var tile := NavigationRegion3D.new()
+	tile.name = "FacesNavRegion"
+	tile.navigation_mesh = nm
+	tile.transform = frame
+	add_child(tile)
+	desert_regions.append(tile)
+	if done.is_valid():
+		done.call(tile)
+
+
+## Every box as 12 triangles in the frame its xf is given in (the corner and
+## winding order box_faces uses). `boxes`: [{ size, xf }].
+static func oriented_box_faces(boxes: Array) -> PackedVector3Array:
+	var faces := PackedVector3Array()
+	for b in boxes:
+		var xf: Transform3D = b.xf
+		var half: Vector3 = (b.size as Vector3) * 0.5
+		var c := []
+		for i in 8:
+			c.append(xf * Vector3(half.x * (1 if i & 1 else -1), half.y * (1 if i & 2 else -1), half.z * (1 if i & 4 else -1)))
+		for q in [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]:
+			faces.append_array(PackedVector3Array([c[q[0]], c[q[1]], c[q[2]], c[q[0]], c[q[2]], c[q[3]]]))
+	return faces
+
+
 ## Build the region and bake. `async` = on a worker thread (the live game).
 ## The town may override any bake setting with a "nav" block in its data.
 func build(town, async: bool = true) -> void:

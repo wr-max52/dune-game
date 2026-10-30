@@ -32,6 +32,11 @@ extends Node
 ##     data, model, hull and home bay); E beside any parked one boards it, and that
 ##     ship's own stats, guns and Shift ability fly from then on. The one you left
 ##     stays where you landed it.
+##   - issue #193: Z within reach of the Remnant cruiser in orbit (any altitude, a
+##     fight running or not) flies her round its hull, in through its bay's mouth and
+##     down onto its empty pad (dock()); Space lifts off again, out through the bay.
+##     While Oda has you on the cruiser, the climb out meets its escort instead of
+##     the pad's fight.
 ##   - issue #181: the guns' hits pop the hit marker (ships, NPCs, anything that
 ##     takes damage; in space the fight's own hits and kills), being hit flashes the
 ##     screen's edge red, and the HUD is a flight-sim HUD in the chase view and a
@@ -105,6 +110,9 @@ var travel: SpaceTravel          ## issue #45: the other planets in this sky, an
 var _engine: AudioStreamPlayer   ## issue #16: the engine drone while the ship flies
 var bay_landing := false          ## issue #75: Z near the bay: she is flying herself in
 var bay_landings := 0             ## times that brought her down (traces, tests)
+var docking := false              ## issue #193: Z by the cruiser: she is flying herself into its bay
+var dockings := 0                 ## times that brought her down there (traces, tests)
+var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
 
 
@@ -513,6 +521,73 @@ func _bay_step(dt: float) -> void:
 	f.speed = v
 
 
+# ------------------------------------------------------------------ Z: dock in the cruiser (issue #193)
+
+## The Remnant cruiser in this sky (RemnantCruiser), or null. Untyped on purpose:
+## the cruiser's crew are NpcBodies, which need the autoloads, and the headless
+## traces compile this script before those exist.
+func cruiser():
+	var c = demo.get("cruiser") if demo != null else null
+	return c if c != null and is_instance_valid(c) else null
+
+
+## Close enough to the cruiser for Z to take her into its bay.
+func near_cruiser() -> bool:
+	var c = cruiser()
+	return piloting and c != null and atmo.state == AtmoFlight.State.FLYING and c.can_dock(atmo.position())
+
+
+## Z by the cruiser: a fight running is broken off (you run for the bay), and she
+## flies herself round the hull and in. False when not near enough.
+func dock() -> bool:
+	if docking or not near_cruiser():
+		return false
+	var c = cruiser()
+	if fight != null:
+		end_fight("left", true)
+	bay_landing = false
+	docking = true
+	_dock_path = c.dock_path(atmo.position())
+	_throttle = 0.0
+	hud.toast(c.line("docking"), 3.0)
+	return true
+
+
+## One frame of the docking autopilot: on to the next point of the path (fast out
+## in space, slow from the bay's mouth in), nose along the way and level with the
+## cruiser, then over the pad turned to its heading, and the normal landing.
+func _dock_step(dt: float) -> void:
+	var c = cruiser()
+	if c == null or _dock_path.is_empty():
+		docking = false
+		return
+	var f = atmo.flight
+	var dc: Dictionary = c.dock_cfg()
+	var goal: Vector3 = _dock_path[0]
+	var to: Vector3 = goal - f.position
+	var d := to.length()
+	var last := _dock_path.size() == 1
+	var slow := _dock_path.size() <= 2
+	var top := float(dc.get("slow_speed", 26.0)) if slow else float(dc.get("speed", 140.0))
+	var v := clampf(d * (0.8 if slow else 0.6), 3.0, top)
+	if d < 0.5 or v * dt >= d:
+		f.position = goal
+		_dock_path.pop_front()
+		if last:
+			f.speed = 0.0
+			f.basis = Basis(Vector3.UP, c.dock_yaw())
+			docking = false
+			if atmo.land():
+				dockings += 1
+				hud.toast(c.line("docked"), 3.0)
+		return
+	f.position += to / d * v * dt
+	var flat := Vector3(to.x, 0.0, to.z)
+	var yaw: float = atan2(-flat.x, -flat.z) if flat.length() > 4.0 and not last else float(c.dock_yaw())
+	f.basis = f.basis.slerp(Basis(Vector3.UP, yaw), minf(1.0, dt * 2.0)).orthonormalized()
+	f.speed = v
+
+
 ## A bot's command for this frame and on: { pitch, yaw, roll, throttle, boost }.
 ## Pass {} to give control back to the keys.
 func set_external_command(c: Dictionary) -> void:
@@ -523,6 +598,8 @@ func set_external_command(c: Dictionary) -> void:
 ## The space encounter over this planet: the planet's own ("" = quiet sky), else
 ## the pad's (issue #45).
 func encounter_id() -> String:
+	if cruiser() != null and Story.cruiser_mission() and cruiser().escort_id() != "":
+		return cruiser().escort_id()      # issue #193: Oda said you'd have company on the way up
 	var e = demo.planet.get("encounter", null) if "planet" in demo else null
 	return str(e) if e != null else str(pad.get("encounter", ""))
 
@@ -727,7 +804,13 @@ func _on_foot() -> void:
 	if sky != null:
 		sky.update_for(ground.altitude(p.global_position), p.global_position)
 	if demo.detail != null:
-		demo.detail.update_for(ground.altitude(p.global_position))
+		var alt := ground.altitude(p.global_position)
+		var c = cruiser()
+		if c != null and c.aboard(p.global_position):
+			# Issue #193: aboard the cruiser you are in space, but up close: its shadows
+			# and props stay on (the town's people, far below, stay off).
+			alt = minf(alt, float(c.cfg.get("detail_altitude", 600.0)))
+		demo.detail.update_for(alt)
 	var i := nearest_berth() if not p.locked else -1
 	var near := i >= 0
 	if near:
@@ -761,6 +844,8 @@ func _seated(dt: float) -> void:
 	_jolt_xf = jolt.step(dt)
 	if fight != null:
 		_fight_step(dt)
+	elif docking:
+		_dock_step(dt)
 	elif bay_landing:
 		_bay_step(dt)
 	else:
@@ -805,13 +890,15 @@ func _read_keys(dt: float) -> void:
 		return
 	if st == AtmoFlight.State.FLYING and _just("crouch_act"):
 		bay_landing = false
+		docking = false
 		land()
 	if st == AtmoFlight.State.FLYING and _just("bay_land"):
-		if bay_landing:
+		if bay_landing or docking:
 			bay_landing = false          # Z again: take her back
-		else:
+			docking = false
+		elif not dock():
 			bay_land()
-	if bay_landing:
+	if bay_landing or docking:
 		return
 	_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
 	var pitch := clampf(_axis("flight_pitch_down", "flight_pitch_up") + _stick.y, -1.0, 1.0)
@@ -1182,7 +1269,8 @@ func _steal(i: int) -> void:
 	var g = outposts.garrisons.get(str(berths[i].outpost)) if outposts != null else null
 	if g != null:
 		g._raise("ship_stolen")
-	WorldState.log_event("A Remnant ship was stolen from %s." % Story.outpost_label(str(berths[i].outpost)))
+	var where := str(berths[i].get("where", Story.outpost_label(str(berths[i].outpost))))
+	WorldState.log_event("A Remnant ship was stolen from %s." % where)
 
 
 ## A stolen ship that went down is gone; you wake in the pit, flying your own again.

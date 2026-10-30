@@ -1,0 +1,14 @@
+{
+  "id": "cruiser_sentry",
+  "base": "outpost_trooper",
+  "label": "Cruiser sentry",
+  "note": "Issue #193: a sentry on the cruiser's bay gantry or the shaft's landings. Holds its post (it has no way down that a fight would let it take) and shoots from it. Only the blocks below differ from outpost_trooper.json.",
+  "hp": 80,
+  "perception": {
+    "sight_range": 70.0,
+    "fov_deg": 150.0
+  },
+  "combat": {
+    "alert_radius": 120.0
+  }
+}

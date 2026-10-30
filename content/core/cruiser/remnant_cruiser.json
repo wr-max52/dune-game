@@ -1,0 +1,70 @@
+{
+  "id": "remnant_cruiser",
+  "label": "Remnant star cruiser",
+  "note": "IP-neutral. Issue #193: the Remnant's star cruiser, holding orbit over the home planet far to the east, out of sight of the port but plain to see from space. Its geometry is code (src/systems/world/cruiser_hull.gd, all in the cruiser's own frame: x to starboard, where the bay opens, y up, z bow to stern); where it hangs is the home world's 'cruiser' landmark (content/core/worlds/port_desert.json). This file is everything else: its pads and the ships parked on them, how Z docks you, who is aboard, the droids, the reward and every line. Points are [x, y, z] in the cruiser's frame: the bay, corridor and shaft decks are at y -14, the bridge at 58, its crew pits at 55. When the general is dead the cruiser is taken (WorldState flag cruiser_taken): nobody is aboard from then on, and it is still there to fly to and walk round.",
+  "naming": { "vessel": "vessel" },
+  "pads": [
+    { "id": "bay_a", "at": [24, 0, -124], "yaw_deg": -90, "radius": 11, "ship": "remnant_interceptor", "flyable": true },
+    { "id": "bay_b", "at": [24, 0, -94], "yaw_deg": -90, "radius": 11, "ship": "remnant_interceptor", "flyable": true },
+    { "id": "dock", "at": [24, 0, -62], "yaw_deg": -90, "radius": 12, "ship": "" },
+    { "id": "frigate", "at": [10, 0, -12], "yaw_deg": -90, "radius": 21, "ship": "remnant_freighter", "scale": 3.0 }
+  ],
+  "dock": {
+    "pad": "dock",
+    "radius": 3200.0,
+    "hold_y": 0.0,
+    "approach_x": 230.0,
+    "over_y": 150.0,
+    "under_y": -90.0,
+    "speed": 140.0,
+    "slow_speed": 26.0,
+    "slow_within": 240.0,
+    "note": "Z within radius metres of the cruiser (any altitude, a fight running or not) flies you round the hull, in through the bay's mouth at hold_y and sets you down on the dock pad. Z again gives you the stick back."
+  },
+  "wake_distance": 2600.0,
+  "sleep_distance": 460.0,
+  "detail_altitude": 600.0,
+  "escort": "cruiser_escort",
+  "reward": { "credits": 20000, "locals": 60, "remnant": -40, "smuggler": 15 },
+  "general": { "soldier": "cruiser_general", "at": [0, 58, 219], "face": [0, 0, -1] },
+  "crew": [
+    { "soldier": "cruiser_sentry", "at": [-43, 2, -118], "face": [1, 0, 0] },
+    { "soldier": "cruiser_sentry", "at": [-43, 2, -64], "face": [1, 0, 0] },
+    { "soldier": "cruiser_trooper", "at": [36, -14, -30], "face": [1, 0, 0], "route": [[36, -14, -30], [36, -14, -140]] },
+    { "soldier": "cruiser_trooper", "at": [-12, -14, -74], "face": [1, 0, 0], "route": [[-12, -14, -74], [-12, -14, 12]] },
+    { "soldier": "cruiser_trooper", "at": [-16, -14, 18], "face": [1, 0, 0] },
+    { "soldier": "cruiser_trooper", "at": [12, -14, 20], "face": [1, 0, 0] },
+    { "soldier": "cruiser_trooper", "at": [0, -14, 60], "face": [0, 0, -1], "route": [[0, -14, 60], [0, -14, 255]] },
+    { "soldier": "cruiser_trooper", "at": [3, -14, 150], "face": [0, 0, -1] },
+    { "soldier": "cruiser_trooper", "at": [16, -14, 122], "face": [-1, 0, 0] },
+    { "soldier": "cruiser_trooper", "at": [-16, -14, 188], "face": [1, 0, 0] },
+    { "soldier": "cruiser_trooper", "at": [-12, -14, 300], "face": [0, 0, -1] },
+    { "soldier": "cruiser_sentry", "at": [0, 22, 322], "face": [0, 0, -1] },
+    { "soldier": "cruiser_sentry", "at": [-2, 46, 322], "face": [0, 0, -1] },
+    { "soldier": "cruiser_honour_guard", "at": [-10, 58, 266], "face": [0, 0, 1] },
+    { "soldier": "cruiser_honour_guard", "at": [10, 58, 266], "face": [0, 0, 1] },
+    { "soldier": "cruiser_trooper", "at": [18, 55, 236], "face": [0, 0, -1] },
+    { "soldier": "cruiser_trooper", "at": [-18, 55, 246], "face": [0, 0, -1] },
+    { "soldier": "cruiser_honour_guard", "at": [-6, 58, 224], "face": [0, 0, 1] },
+    { "soldier": "cruiser_honour_guard", "at": [6, 58, 224], "face": [0, 0, 1] }
+  ],
+  "droids": [
+    { "kind": "assassin", "variant": "remnant", "hp": 60, "route": [[30, -14, -140], [30, -14, -100], [0, -14, -100], [0, -14, -140]] },
+    { "kind": "assassin", "variant": "remnant", "hp": 60, "route": [[-20, -14, -80], [-14, -14, -80], [-14, -14, 4], [-20, -14, 4]] },
+    { "kind": "floating", "variant": "remnant", "hp": 30, "route": [[0, -14, 40], [0, -14, 230]],
+      "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
+    { "kind": "floating", "variant": "remnant", "hp": 30, "route": [[-20, -14, 280], [20, -14, 280], [20, -14, 316], [-20, -14, 316]],
+      "gun": { "range": 18.0, "interval": 1.6, "damage": 6.0, "bolt_speed": 18.0, "spread_deg": 3.0, "color": "#ff3030" } },
+    { "kind": "assassin", "variant": "remnant", "hp": 60, "route": [[-20, 58, 274], [20, 58, 274]] }
+  ],
+  "lines": {
+    "dock_hint": "%s  ·  %.1f km  ·  Z to land in its bay",
+    "docking": "Lining up with the cruiser's bay. Z to take back control.",
+    "docked": "Down in the cruiser's bay.",
+    "general_dead": "%s is dead. The cruiser is yours.",
+    "taken": "+%d cr  ·  The port will hear about this.",
+    "event_taken": "%s, the Remnant general aboard their star cruiser, was killed on the bridge. The cruiser is empty. The whole port is celebrating.",
+    "fell": "You were pulled back aboard.",
+    "label": "◇ %s"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "cruiser_trooper",
+  "base": "outpost_trooper",
+  "label": "Cruiser trooper",
+  "role": "yard",
+  "note": "Issue #193: a trooper aboard the Remnant star cruiser. Walks its beat in the bay or the corridor and, once anyone aboard sounds the alarm, runs to the fight along the cruiser's own navmesh. Always hostile: the cruiser's garrison shoots on sight. Never comes back once dead (the cruiser is taken when its general dies). Only the blocks below differ from outpost_trooper.json.",
+  "hp": 80,
+  "perception": {
+    "sight_range": 48.0,
+    "fov_deg": 140.0
+  },
+  "combat": {
+    "hold_ground": false,
+    "alert_radius": 90.0,
+    "chase_leash": 70.0,
+    "hold_radius": 4.0
+  },
+  "patrol": {
+    "pause_s": 4.0
+  }
+}

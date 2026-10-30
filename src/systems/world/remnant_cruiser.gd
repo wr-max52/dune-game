@@ -1,0 +1,647 @@
+class_name RemnantCruiser
+extends Node3D
+## Issue #193: the Remnant's star cruiser, in orbit over the home planet far to the
+## east: past the curve from the port, plain to see from space. It is part of the
+## home planet's map (a landmark of its world, like the wreck), not a planet of its
+## own: the fight on the way up, the flight across and the landing in its bay are
+## one sky, with nothing loaded or faded on the way. Its shapes are CruiserHull's
+## (already solid to ships and to feet, through WorldGround and WorldScenery); this
+## node adds, in the town scene:
+##   - the look: the hull, decks and bridge merged into a few meshes on one shader
+##     (cruiser_metal), glass, light strips, a beacon on every mast, the engines'
+##     glow, the bay's energy shield (solid to people, open to ships) and the
+##     lights inside,
+##   - the ships on the bay's pads: two interceptors (flyable: taking one sounds the
+##     alarm), a frigate, and the empty pad Z sets you down on (ShipPilot.dock),
+##   - the crew: troopers and sentries in the bay, the corridor and its rooms and the
+##     ramp shaft, an honour guard on the bridge, and the general at the great window,
+##     plus the Remnant droids, all built a body a frame once your ship comes within
+##     wake_distance, on a navmesh baked from the cruiser's own decks, run by a
+##     garrison of their own that shoots on sight,
+##   - the general's death: the cruiser is taken (WorldState.on_cruiser_taken): the
+##     locals' purse, the port's love, and the end of Oda's story. From then on
+##     nobody is aboard; anyone left alive is gone the next time you come back,
+##   - the label naming it in the sky while you fly, and a pull back aboard if you
+##     fall out of it.
+## Everything else is data: content/core/cruiser/remnant_cruiser.json.
+
+const SHADER := preload("res://src/systems/look/shaders/cruiser_metal.gdshader")
+const TownDecor := preload("res://src/systems/world/town_decor.gd")
+const FINISHES := { "hull": 0, "trim": 1, "deck": 2, "wall": 3, "grate": 4, "ramp": 5, "cargo": 6,
+	"console": 7, "rail": 8, "bridge": 9, "pad": 10, "beacon": 11 }
+const NAV_BOUNDS := AABB(Vector3(-52, -20, -152), Vector3(118, 100, 484))
+
+var demo                               ## town_demo.gd
+var ground: WorldGround
+var cfg: Dictionary = {}
+var id := "remnant_cruiser"
+var frame := Transform3D.IDENTITY      ## the cruiser's own frame in the world
+var inv := Transform3D.IDENTITY
+var vessel_name := ""
+var garrison: Garrison
+var crew: Array = []                   ## NpcBody aboard (the general too)
+var general: NpcBody
+var units: Array = []                  ## the Remnant droids aboard (DroidUnit)
+var ships: Array = []                  ## { pad, node, berth (or -1) }
+var woke := false                      ## the crew has been (or is being) built
+var nav_ready := false
+var taken_here := false                ## the general died in this scene
+var falls := 0                         ## times you were pulled back aboard (traces, tests)
+
+var _queue: Array = []                 ## crew still to build (Callables), a body a frame
+var _hull: Node3D                      ## the look, in the cruiser's frame
+var _inside: Node3D                    ## its interior lights (off from far away)
+var _layer: CanvasLayer
+var _label: Label
+var _was_aboard := false
+var _last_aboard := Vector3.INF
+var _mats: Dictionary = {}
+
+static var _meshes: Dictionary = {}    ## finish -> ArrayMesh, built once a session
+
+
+func setup(town_demo, world_ground: WorldGround) -> void:
+	demo = town_demo
+	ground = world_ground
+	cfg = CruiserHull.data()
+	id = str(cfg.get("id", id))
+	frame = CruiserHull.frame(ground, id)
+	inv = frame.affine_inverse()
+	name = "RemnantCruiser"
+	vessel_name = NameHooks.vessel(cfg, "vessel:" + id)
+
+
+func _ready() -> void:
+	_hull = Node3D.new()
+	_hull.name = "Hull"
+	add_child(_hull)
+	_hull.transform = frame
+	if demo.use_look:
+		_build_look()
+	_build_shield()
+	_park_ships()
+	_bake_nav()
+	_build_label()
+
+
+# ------------------------------------------------------------------ queries
+
+func to_local_point(p: Vector3) -> Vector3:
+	return inv * p
+
+
+func to_world(local: Vector3) -> Vector3:
+	return frame * local
+
+
+## Somewhere in its walkable interior.
+func aboard(p: Vector3) -> bool:
+	return CruiserHull.aboard(inv * p)
+
+
+func taken() -> bool:
+	return Story.cruiser_taken()
+
+
+func label() -> String:
+	var l := str(cfg.get("label", "cruiser"))
+	return "%s %s" % [l, vessel_name] if vessel_name != "" else l
+
+
+## How far `p` is from the cruiser's middle (metres).
+func distance(p: Vector3) -> float:
+	return p.distance_to(frame.origin)
+
+
+## Close enough for Z to dock you.
+func can_dock(p: Vector3) -> bool:
+	return distance(p) <= float(cfg.get("dock", {}).get("radius", 3200.0)) and not aboard(p)
+
+
+## The world points the docking autopilot flies through from `p` (CruiserHull.dock_path).
+func dock_path(p: Vector3) -> Array:
+	return CruiserHull.dock_path(inv * p).map(func(l): return frame * (l as Vector3))
+
+
+## The dock pad's heading (a yaw about world up: the cruiser is level with the port).
+func dock_yaw() -> float:
+	var pd := CruiserHull.dock_pad()
+	return (frame.basis * Basis(Vector3.UP, float(pd.get("yaw", 0.0)))).get_euler().y
+
+
+func dock_cfg() -> Dictionary:
+	return cfg.get("dock", {})
+
+
+func line(key: String) -> String:
+	return str(cfg.get("lines", {}).get(key, ""))
+
+
+func escort_id() -> String:
+	return str(cfg.get("escort", ""))
+
+
+## Where the objective arrow points: the bay from outside, the general once aboard.
+func objective_point(from: Vector3) -> Vector3:
+	if general != null and is_instance_valid(general) and not general.dead and aboard(from):
+		return general.global_position
+	if aboard(from):
+		return frame * WorldGround._v3(cfg.get("general", {}).get("at", [0, 58, 219]))
+	return frame * (CruiserHull.dock_pad().get("at", Vector3.ZERO) as Vector3)
+
+
+# ------------------------------------------------------------------ frame
+
+func _physics_process(_dt: float) -> void:
+	var p: Node3D = demo._player if demo != null else null
+	if p == null or not is_instance_valid(p):
+		return
+	var at: Vector3 = p.global_position
+	var near := distance(at) <= float(cfg.get("wake_distance", 2600.0))
+	if _inside != null:
+		_inside.visible = distance(at) < 3000.0
+	if near and not woke and not taken():
+		_wake()
+	if not _queue.is_empty():
+		(_queue.pop_front() as Callable).call()
+	if taken() and not near and not crew.is_empty():
+		_abandon()                     # the survivors took the pods while you were away
+	var sleep := float(cfg.get("sleep_distance", 460.0))
+	for g in crew:
+		if is_instance_valid(g) and not g.dead:
+			g.process_mode = Node.PROCESS_MODE_DISABLED if g.global_position.distance_to(at) > sleep else Node.PROCESS_MODE_INHERIT
+	crew = crew.filter(func(g): return is_instance_valid(g))
+	_fall_guard(p)
+
+
+## Fallen out of the cruiser (through the bay's mouth, off the hull): back aboard
+## by the dock pad.
+func _fall_guard(p: Node3D) -> void:
+	if p.get("piloting") == true:
+		_was_aboard = false
+		return
+	var here := aboard(p.global_position)
+	if here:
+		_was_aboard = true
+		_last_aboard = p.global_position
+		return
+	if not _was_aboard:
+		return
+	var local := inv * p.global_position
+	if local.y > CruiserHull.DECK_Y - 12.0 and CruiserHull.GRAVITY_BOX.has_point(local):
+		return
+	var pd := CruiserHull.dock_pad()
+	var back := frame * ((pd.get("at", Vector3.ZERO) as Vector3) + Vector3(-16, 0.1, 0))
+	p.global_position = back
+	if p.has_method("align_to_ground"):
+		p.call("align_to_ground", true)
+	falls += 1
+	_toast(line("fell"), 3.0)
+
+
+# ------------------------------------------------------------------ the crew
+
+## Your ship is close: the crew comes aboard, a body a frame (the bay first).
+func _wake() -> void:
+	woke = true
+	if not demo.has_method("make_soldier"):
+		return
+	var i := 0
+	for c in cfg.get("crew", []):
+		_queue.append(_add_crew.bind(c, i))
+		i += 1
+	if not cfg.get("general", {}).is_empty():
+		_queue.append(_add_general)
+	_queue.append(_add_droids)
+
+
+func _add_crew(c: Dictionary, i: int) -> NpcBody:
+	var here := frame * WorldGround._v3(c.get("at", [0, 0, 0]))
+	var face := frame.basis * WorldGround._v3(c.get("face", [0, 0, -1]))
+	var g: NpcBody = demo.make_soldier(str(c.get("soldier", "cruiser_trooper")), here + Vector3(0, 0.05, 0),
+		atan2(face.x, face.z), "%s/crew_%d" % [id, i], "npc:%s/crew_%d" % [id, i], self)
+	if g == null:
+		return null
+	_enlist(g)
+	var route: Array = c.get("route", [])
+	if route.size() >= 2 and garrison != null and garrison.brains.has(g):
+		garrison.brains[g].patrol_points = route.map(func(r): return frame * WorldGround._v3(r))
+	return g
+
+
+func _add_general() -> void:
+	var c: Dictionary = cfg.get("general", {})
+	var here := frame * WorldGround._v3(c.get("at", [0, 58, 219]))
+	var face := frame.basis * WorldGround._v3(c.get("face", [0, 0, -1]))
+	general = demo.make_soldier(str(c.get("soldier", "cruiser_general")), here + Vector3(0, 0.05, 0),
+		atan2(face.x, face.z), "%s/general" % id, "npc:%s/general" % id, self)
+	if general == null:
+		return
+	_enlist(general)
+	general.died.connect(_on_general_died)
+
+
+## A body joins the cruiser's garrison (made by the first one aboard).
+func _enlist(g: NpcBody) -> void:
+	g.set_meta("cruiser", id)
+	g.nav = demo.nav
+	crew.append(g)
+	if garrison == null:
+		if not demo.npc_brains:
+			return
+		garrison = demo._make_garrison("Garrison_" + id, [g], false,
+			frame * Vector3(0, CruiserHull.DECK_Y, (CruiserHull.BAY_Z.x + CruiserHull.BAY_Z.y) * 0.5))
+		garrison.always_hostile = true
+		var outposts = demo.outposts
+		if outposts != null:
+			outposts.garrisons[id] = garrison      # a ship taken from its bay sounds its alarm
+	else:
+		garrison.add_member(g)
+
+
+## The Remnant droids aboard (DroidController), on routes in the cruiser's frame.
+func _add_droids() -> void:
+	var dc = demo.droids
+	if dc == null:
+		return
+	for d in cfg.get("droids", []):
+		var spec: Dictionary = (d as Dictionary).duplicate(true)
+		spec["patrol"] = (spec.get("route", []) as Array).map(func(r): return frame * WorldGround._v3(r))
+		spec.erase("route")
+		spec["site"] = id
+		spec["hostile"] = true
+		spec["respawn"] = false
+		if garrison != null:
+			spec["garrison"] = garrison
+		var u = dc.spawn_site_unit(spec)
+		if u != null:
+			units.append(u)
+
+
+## The general is dead: the cruiser is taken.
+func _on_general_died() -> void:
+	if taken():
+		return
+	taken_here = true
+	var who := general.display_name if general != null and general.display_name != "" else "The general"
+	var pay := WorldState.on_cruiser_taken(who, cfg.get("reward", {}), line("event_taken"))
+	_toast(line("general_dead") % who, 6.0)
+	if pay > 0:
+		_toast(line("taken") % pay, 6.0)
+	Sound.battle()
+
+
+## Taken, and you are away: whoever was left aboard is gone.
+func _abandon() -> void:
+	for g in crew:
+		if not is_instance_valid(g):
+			continue
+		if garrison != null:
+			garrison.remove_member(g)
+		demo.npcs.erase(g)
+		g.queue_free()
+	crew.clear()
+	general = null
+	for u in units:
+		if is_instance_valid(u) and demo.droids != null:
+			demo.droids.remove_site_unit(u)
+	units.clear()
+
+
+# ------------------------------------------------------------------ the navmesh
+
+func _bake_nav() -> void:
+	if demo.nav == null:
+		return
+	var boxes := CruiserHull.parts().filter(func(p): return bool(p.get("nav", false)))
+	demo.nav.add_faces_region(TownNav.oriented_box_faces(boxes), frame, NAV_BOUNDS,
+		func(_r): nav_ready = true)
+
+
+# ------------------------------------------------------------------ ships on the pads
+
+func _park_ships() -> void:
+	var cc = demo._content()
+	var root := Node3D.new()
+	root.name = "ParkedShips"
+	add_child(root)
+	for pd in CruiserHull.pads():
+		var ship_id := str(pd.ship)
+		if ship_id == "":
+			continue
+		var look_id := str(cc.get_ship(ship_id).get("look", ""))
+		var ship: Node3D
+		if demo.use_look and look_id != "":
+			ship = (demo.pilot.kit if demo.pilot != null and demo.pilot.kit != null else ShipKit.new(demo._flat_mats())).build(look_id)
+		else:
+			ship = Node3D.new()
+		var s := float(pd.scale)
+		var a := TownDecor.visual_aabb(ship) if demo.use_look else AABB(Vector3(-4, -1, -4), Vector3(8, 3, 8))
+		root.add_child(ship)
+		var b := (frame.basis * Basis(Vector3.UP, float(pd.yaw))).scaled(Vector3.ONE * s)
+		var lift := Vector3(-a.get_center().x, -a.position.y + 0.1, -a.get_center().z)
+		ship.global_transform = Transform3D(b, frame * (pd.at as Vector3) + b * lift)
+		ship.name = "Ship_" + str(pd.id)
+		ship.set_meta("ship_id", ship_id)
+		var entry := { "pad": pd.id, "node": ship, "berth": -1 }
+		if bool(pd.flyable) and demo.pilot != null:
+			entry.berth = demo.pilot.add_outpost_berth(ship, ship_id, id)
+			demo.pilot.berths[entry.berth]["where"] = label()
+		else:
+			_solid_ship(root, ship, a, s, str(pd.id))
+		ships.append(entry)
+
+
+## A ship that only stands there (the frigate): solid to feet and to ships. The
+## body is not under the (scaled) model: a box its size, in its place.
+func _solid_ship(root: Node3D, ship: Node3D, a: AABB, s: float, pad_id: String) -> void:
+	var xf := ship.global_transform * Transform3D(Basis.IDENTITY, a.get_center())
+	xf = Transform3D(xf.basis.orthonormalized(), xf.origin)
+	var half := a.size * s * 0.5
+	var body := StaticBody3D.new()
+	body.name = "Hull_" + pad_id
+	var cs := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = half * 2.0
+	cs.shape = shape
+	body.add_child(cs)
+	root.add_child(body)
+	body.global_transform = xf
+	ground.add_box("%s/ship_%s" % [id, pad_id], "solid", -half, half, "", false, xf)
+
+
+# ------------------------------------------------------------------ the bay's shield
+
+## Across the bay's mouth: you cannot walk out into space, a ship flies straight through.
+func _build_shield() -> void:
+	var z := CruiserHull.BAY_Z
+	var size := Vector3(0.4, 28.0, z.y - z.x)
+	var at := Vector3(CruiserHull.BAY_X.y + 0.5, 0.0, (z.x + z.y) * 0.5)
+	var body := StaticBody3D.new()
+	body.name = "BayShield"
+	var cs := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size + Vector3(1.6, 0, 0)
+	cs.shape = shape
+	body.add_child(cs)
+	_hull.add_child(body)
+	body.position = at
+	if not demo.use_look:
+		return
+	var mi := MeshInstance3D.new()
+	mi.name = "ShieldLook"
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
+uniform vec4 tint : source_color = vec4(0.25, 0.65, 1.0, 1.0);
+varying vec3 lp;
+void vertex() { lp = VERTEX; }
+void fragment() {
+	float lines = 0.5 + 0.5 * sin(lp.y * 3.0 - TIME * 2.0);
+	float edge = smoothstep(11.0, 14.0, abs(lp.y)) + smoothstep(80.0, 86.0, abs(lp.z));
+	ALBEDO = tint.rgb;
+	ALPHA = 0.012 + 0.018 * lines + 0.3 * clamp(edge, 0.0, 1.0);
+}"""
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_hull.add_child(mi)
+	mi.position = at
+
+
+# ------------------------------------------------------------------ the look
+
+func _build_look() -> void:
+	var noise: Texture2D = demo._flat_mats().noise
+	for f in FINISHES:
+		if f == "pad":
+			continue
+		var m := ShaderMaterial.new()
+		m.shader = SHADER
+		m.set_shader_parameter("finish", FINISHES[f])
+		m.set_shader_parameter("noise_tex", noise)
+		_mats[f] = m
+	_mats["glass"] = _glass()
+	_mats["glow"] = _emissive(Color("#e8f6ff"), 3.0)
+	_mats["screen"] = _emissive(Color("#1d86b0"), 1.3)
+	_mats["reactor"] = _emissive(Color("#9fdcff"), 6.0)
+	var groups := {}
+	for p in CruiserHull.parts():
+		var f := str(p.finish)
+		if f == "pad":
+			_pad(p, noise)
+			continue
+		if not groups.has(f):
+			groups[f] = []
+		groups[f].append(p)
+	for f in groups:
+		var mi := MeshInstance3D.new()
+		mi.name = "Cruiser_" + str(f)
+		mi.mesh = _merged(str(f), groups[f])
+		mi.material_override = _mats.get(f, _mats["hull"])
+		if f in ["glass", "glow", "screen", "reactor", "beacon"]:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.extra_cull_margin = 50.0
+		_hull.add_child(mi)
+	_engines()
+	_globes()
+	_lights()
+
+
+## Every part of a finish as one mesh in the cruiser's frame (made once a session).
+static func _merged(finish: String, list: Array) -> ArrayMesh:
+	if _meshes.has(finish):
+		return _meshes[finish]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for p in list:
+		var bm := BoxMesh.new()
+		bm.size = p.size
+		st.append_from(bm, 0, p.xf)
+	var mesh := st.commit()
+	_meshes[finish] = mesh
+	return mesh
+
+
+func _pad(p: Dictionary, noise: Texture2D) -> void:
+	var m := ShaderMaterial.new()
+	m.shader = SHADER
+	m.set_shader_parameter("finish", FINISHES.pad)
+	m.set_shader_parameter("noise_tex", noise)
+	m.set_shader_parameter("plate_half", (p.size as Vector3) * 0.5)
+	var mi := MeshInstance3D.new()
+	mi.name = "Cruiser_" + str(p.id)
+	var bm := BoxMesh.new()
+	bm.size = p.size
+	mi.mesh = bm
+	mi.material_override = m
+	mi.transform = p.xf
+	_hull.add_child(mi)
+
+
+static func _glass() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.45, 0.62, 0.75, 0.16)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.metallic = 0.9
+	m.roughness = 0.04
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return m
+
+
+static func _emissive(c: Color, energy: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return m
+
+
+## The four engine bells on the stern, their glowing mouths and a soft plume each.
+func _engines() -> void:
+	var bell_mat: Material = _mats["trim"]
+	var glow := _emissive(Color("#bfe6ff"), 7.0)
+	var plume := StandardMaterial3D.new()
+	plume.albedo_color = Color(0.45, 0.75, 1.0, 0.22)
+	plume.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	plume.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	plume.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	plume.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var along := Basis(Vector3.RIGHT, PI * 0.5)       # a cylinder's axis (y) down the keel (z)
+	for e in CruiserHull.engines():
+		var c: Vector3 = e.at
+		var r := float(e.radius)
+		var bell := CylinderMesh.new()
+		bell.top_radius = r * 0.8
+		bell.bottom_radius = r
+		bell.height = 12.0
+		bell.radial_segments = 24
+		_mesh(bell, bell_mat, Transform3D(along, c + Vector3(0, 0, -4.0)))
+		var mouth := CylinderMesh.new()
+		mouth.top_radius = r * 0.82
+		mouth.bottom_radius = r * 0.82
+		mouth.height = 0.4
+		mouth.radial_segments = 24
+		_mesh(mouth, glow, Transform3D(along, c + Vector3(0, 0, 2.0)))
+		var cone := CylinderMesh.new()
+		cone.top_radius = r * 0.75
+		cone.bottom_radius = r * 0.15
+		cone.height = 46.0
+		cone.radial_segments = 16
+		cone.cap_top = false
+		cone.cap_bottom = false
+		_mesh(cone, plume, Transform3D(along, c + Vector3(0, 0, 25.0)))
+		var light := OmniLight3D.new()
+		light.light_color = Color("#9fd6ff")
+		light.light_energy = 3.0
+		light.omni_range = 70.0
+		_hull.add_child(light)
+		light.position = c + Vector3(0, 0, 12.0)
+
+
+## The sensor globes on the tower's roof, in the hull's own grey.
+func _globes() -> void:
+	for g in CruiserHull.globes():
+		var sphere := SphereMesh.new()
+		sphere.radius = float(g.radius)
+		sphere.height = float(g.radius) * 2.0
+		sphere.radial_segments = 32
+		sphere.rings = 16
+		var mi := _mesh(sphere, _mats["hull"], Transform3D(Basis.IDENTITY, g.at))
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+
+func _mesh(mesh: Mesh, mat: Material, xf: Transform3D) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.transform = xf
+	_hull.add_child(mi)
+	return mi
+
+
+## The lights inside: floods in the bay, lamps down the corridor and in its rooms,
+## up the shaft (and the reactor's blue through its grille), and over the bridge.
+func _lights() -> void:
+	_inside = Node3D.new()
+	_inside.name = "InteriorLights"
+	_hull.add_child(_inside)
+	var d := CruiserHull.DECK_Y
+	var list: Array = []
+	for x: float in [-20.0, 24.0]:
+		for z: float in [-120.0, -64.0, -8.0]:
+			list.append([Vector3(x, CruiserHull.BAY_TOP - 6.0, z), "#e4edff", 5.0, 64.0])
+	for z in [-110.0, -40.0, 10.0]:
+		list.append([Vector3(-38.0, d + 8.0, z), "#ffcf9a", 2.0, 30.0])      # warm fill along the cargo
+	for i in 8:
+		list.append([Vector3(0, CruiserHull.HALL_TOP - 1.5, 44.0 + i * 30.0), "#cfe6ff", 2.6, 21.0])
+	list.append([Vector3(16, CruiserHull.HALL_TOP - 1.5, 122), "#ffd9a8", 2.2, 17.0])
+	list.append([Vector3(-16, CruiserHull.HALL_TOP - 1.5, 188), "#ffd9a8", 2.2, 17.0])
+	for y in [d + 8.0, d + 32.0, d + 56.0, d + 80.0]:
+		list.append([Vector3(0, y, 298), "#c3dbff", 3.4, 40.0])
+	list.append([Vector3(0, 12, 318), "#7fc8ff", 4.0, 42.0])
+	for z: float in [226.0, 242.0, 258.0]:
+		list.append([Vector3(0, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 1.7, 30.0])
+	for x: float in [-18.0, 18.0]:
+		list.append([Vector3(x, CruiserHull.PIT_Y + 2.0, 242), "#38c8ff", 1.0, 14.0])
+	for l in list:
+		var o := OmniLight3D.new()
+		o.position = l[0]
+		o.light_color = Color(str(l[1]))
+		o.light_energy = float(l[2])
+		o.omni_range = float(l[3])
+		o.omni_attenuation = 0.8
+		_inside.add_child(o)
+
+
+# ------------------------------------------------------------------ the label and toasts
+
+func _build_label() -> void:
+	_layer = CanvasLayer.new()
+	_layer.layer = 4
+	add_child(_layer)
+	_label = Label.new()
+	_label.add_theme_font_size_override("font_size", 16)
+	_label.add_theme_color_override("font_color", Color("#ffb08a"))
+	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_label.add_theme_constant_override("outline_size", 5)
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label.visible = false
+	_layer.add_child(_label)
+
+
+func _process(_dt: float) -> void:
+	if _label == null:
+		return
+	var pilot = demo.pilot
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	var flying: bool = pilot != null and pilot.piloting and pilot.atmo.state in [AtmoFlight.State.FLYING, AtmoFlight.State.LIFTOFF]
+	var at: Vector3 = frame.origin
+	if cam == null or not flying or cam.is_position_behind(at) or aboard(pilot.atmo.position()):
+		_label.visible = false
+		return
+	var d := distance(pilot.atmo.position())
+	var text := line("label") % label()
+	if can_dock(pilot.atmo.position()):
+		text = line("dock_hint") % [text, d / 1000.0]
+	else:
+		text += "  %.1f km" % (d / 1000.0)
+	_label.text = text
+	_label.position = cam.unproject_position(at) + Vector2(14, -10)
+	_label.visible = true
+
+
+func _toast(text: String, secs: float) -> void:
+	if text == "":
+		return
+	if demo.gear != null and demo.gear.hud != null:
+		demo.gear.hud.toast(text, secs)
+	elif demo.pilot != null:
+		demo.pilot.hud.toast(text, secs)

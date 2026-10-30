@@ -68,6 +68,7 @@ var respawned := 0
 ## player being knocked out (and draws the health bar): handles_player.
 var handles_player := true
 var klaxon_at := Vector3.INF      ## INF = the town's klaxon marker
+var always_hostile := false       ## issue #193: the Remnant cruiser's crew shoot on sight, whatever your standing
 var knockout_s := 1.6             ## black screen before you wake in the pit
 
 ## Numbers the traces read.
@@ -272,7 +273,7 @@ func _physics_process(dt: float) -> void:
 func _watch_for_trouble(dt: float, alive: Array, night: bool) -> void:
 	var standing := int(WorldState.standing.get("imperial_remnant", 0))
 	# Issue #64: after the fleet is beaten, what is left of them shoots on sight.
-	var wanted := (checkpoint.base_band(standing) == "hostile" and not night) or Story.remnant_hostile()
+	var wanted := (checkpoint.base_band(standing) == "hostile" and not night) or Story.remnant_hostile() or always_hostile
 	for g in alive:
 		if guards.has(g) or not bool(g.profile.get("alarm", {}).get("raise_on_hostile_sight", false)):
 			continue
