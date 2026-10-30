@@ -1,0 +1,69 @@
+{
+  "id": "general",
+  "note": "Issue #203: the Remnant general in a story save (src/systems/npc/general_post.gd). Where he stands: in the pit while the story is at the 'general' chapter ('pit'), else in the barracks yard ('barracks'): a town marker plus an offset; his guard and assassin droid stand at offsets from him. 'insult_standing': Remnant standing each insult costs; 'search_after': insults in one talk before his guards search you (the gate's rules). Issue #204: 'droid_kind' he buys for 'pay_mult' times the droid merchant's resale, each one raising Remnant standing by 'droid_standing'; 'tip_standing': at or above it he tells you about the crashed cruiser (issue #205). 'armour_outfit': his look once the Remnant has left (issue #214).",
+  "pit": {
+    "marker": "player_spawn",
+    "offset": [
+      -7.0,
+      0.0,
+      5.0
+    ]
+  },
+  "barracks": {
+    "marker": "trooper_yard_a",
+    "offset": [
+      -6.0,
+      0.0,
+      -6.0
+    ]
+  },
+  "guard_offset": [
+    1.6,
+    0.0,
+    -1.2
+  ],
+  "droid_offset": [
+    -1.8,
+    0.0,
+    -1.0
+  ],
+  "reach": 3.2,
+  "insult_standing": -5,
+  "search_after": 2,
+  "droid_kind": "assassin",
+  "pay_mult": 3,
+  "droid_standing": 5,
+  "job": "j_general_droids",
+  "tip_standing": 15,
+  "outfit": {
+    "head": "guard:oxblood",
+    "torso": "guard:oxblood",
+    "legs": "guard:oxblood"
+  },
+  "armour_outfit": {
+    "head": "guard:desert",
+    "torso": "guard:desert",
+    "legs": "guard:desert"
+  },
+  "guard_outfit": {
+    "head": "guard:gunmetal",
+    "torso": "guard:gunmetal",
+    "legs": "guard:gunmetal"
+  },
+  "labels": {
+    "talk": "[E] Talk to %s",
+    "menu_title": "%s  -  Remnant standing %d",
+    "chat": "Talk",
+    "work": "Ask for work",
+    "hand_over": "Hand over your %s  (+%d cr)",
+    "leave": "Leave"
+  },
+  "lines": {
+    "searched": "Search this one! ... Took: %s.",
+    "searched_clean": "Search this one! ... Clean. This time.",
+    "no_work": "I have no work for enemies of the Remnant. Get out of my sight.",
+    "job_taken": "Bring me assassin droids from the desert. I pay %d a head.",
+    "paid": "A fine machine. %d credits. The Hegemony thanks you.",
+    "tip": "Spacer... you have earned this. Go and see the cruiser that crashed out on the horizon. Even in the sand she is magnificent. I walk her halls sometimes, to remember being a private. There is something red still aboard."
+  }
+}

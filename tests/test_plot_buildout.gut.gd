@@ -1,0 +1,258 @@
+extends GutTest
+## The plot plan's build-out (issues #202-#205, #208-#215): the story line from the
+## landing to the end card, the general, the hidden gear, the fence's upgrades and
+## armour, the nomads, the droid merchant. Tiny and headless.
+
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const Health := preload("res://src/systems/combat/health.gd")
+
+var content
+
+
+class FakePlayer extends CharacterBody3D:
+	var max_health := 100
+	var health = preload("res://src/systems/combat/health.gd").new(100)
+	var jetpack
+	var piloting := false
+	var locked := false
+
+
+func before_each() -> void:
+	WorldState.new_game(WorldState.STORY)
+	content = CoreContent.new()
+	content.load_from()
+
+
+func after_each() -> void:
+	WorldState.reset()
+
+
+func _general() -> GeneralPost:
+	var g := GeneralPost.new()
+	add_child_autofree(g)
+	return g
+
+
+# ---- #215: the chapters, walked by their events -----------------------------------
+
+func test_the_story_walks_every_chapter() -> void:
+	assert_eq(Story.chapter(), "land")
+	var steps := [["landed", "general"], ["general_done", "t89"]]
+	for s in steps:
+		assert_true(Story.event(s[0]), s[0])
+		assert_eq(Story.chapter(), s[1])
+	Story.beat("t89")
+	assert_eq(Story.chapter(), "meet_oda", "T-89 told it: Oda next")
+	Story.beat("cantina_owner")
+	assert_eq(Story.chapter(), "range")
+	for s in [["range_visited", "remote"], ["range_visited", "smuggle_1"]]:
+		Story.event(s[0])
+		assert_eq(Story.chapter(), s[1])
+	WorldState.story.took_run = true
+	Story.event("smuggle_sold")
+	assert_eq(Story.chapter(), "droid_merchant")
+	for i in 3:
+		Story.on_droid_delivered()
+	assert_eq(Story.chapter(), "bounty")
+	for s in [["bounty_paid", "fleet"], ["fleet_beaten", "end"]]:
+		Story.event(s[0])
+		assert_eq(Story.chapter(), s[1])
+	EndCard.close()
+	assert_eq(Story.chapter(), "free")
+	assert_string_contains(str(Story.beat("cantina_owner").say), "native tribes")
+
+
+func test_freeplay_skips_the_story_only_chapters_and_old_saves_rename() -> void:
+	WorldState.reset()
+	assert_eq(Story.chapter(), "meet_oda")
+	var d := WorldState.to_save()
+	d.story = { "chapter": "smuggle_2", "told": false }
+	WorldState.from_save(d)
+	assert_eq(Story.chapter(), "droid_merchant")
+
+
+# ---- #203: the general ---------------------------------------------------------------
+
+func test_the_general_meets_you_in_the_pit_and_moves_to_the_barracks() -> void:
+	Story.event("landed")
+	assert_eq(GeneralPost.station(), "pit")
+	var g := _general()
+	assert_not_null(g.body)
+	g.talk_ended()
+	assert_eq(Story.chapter(), "t89")
+	assert_eq(GeneralPost.station(), "barracks")
+	WorldState.reset()
+	assert_eq(GeneralPost.station(), "", "story saves only")
+
+
+func test_polite_is_neutral_and_insults_get_you_searched() -> void:
+	var g := _general()
+	var brain := NpcBrain.new(null, GeneralPost.CARD_PATH)
+	assert_false(brain.filter.is_hostile("Just passing through, sir."))
+	assert_true(brain.filter.is_hostile("shut up, you fascist"))
+	WorldState.inventory.add("holocrystals", 2)
+	assert_false(g.on_insult(), "one insult: standing only")
+	assert_eq(int(WorldState.standing.imperial_remnant), -5)
+	assert_true(g.on_insult(), "two: searched on the spot")
+	assert_false(WorldState.inventory.has("holocrystals"), "contraband taken")
+
+
+# ---- #204, #205: droids for the general, the crash site tip -------------------------
+
+func test_droid_jobs_pay_three_times_and_raise_standing() -> void:
+	var g := _general()
+	assert_true(g.take_job())
+	var d := WorldState.droids.add("assassin", "")
+	var c0 := WorldState.credits
+	assert_eq(g.hand_over(int(d.uid)), 3 * DroidRoster.resale("assassin"))
+	assert_eq(WorldState.credits, c0 + 3 * DroidRoster.resale("assassin"))
+	assert_eq(int(WorldState.standing.imperial_remnant), 5)
+	assert_false(g.job_active(), "open again for the next droid")
+	WorldState.standing.imperial_remnant = -49
+	assert_true(g.take_job(), "-49 still gets jobs")
+	WorldState.jobs_taken.erase(GeneralPost.job_id())
+	WorldState.standing.imperial_remnant = -50
+	assert_false(g.take_job(), "hostile: no work")
+
+
+func test_good_standing_tips_the_crash_site_and_the_saber_finishes_it() -> void:
+	var g := _general()
+	assert_false(g.maybe_tip())
+	WorldState.standing.imperial_remnant = 20
+	assert_true(g.maybe_tip())
+	assert_eq(Quests.state("crashed_cruiser"), "open")
+	assert_true(Quests.waypoint().is_empty(), "waypoint off by default")
+	var saber := _pickup("wreck_red_saber")
+	Story.event(str(saber.event))
+	assert_eq(Quests.state("crashed_cruiser"), "done")
+
+
+# ---- #210: hidden gear ------------------------------------------------------------------
+
+func _pickup(id: String) -> Dictionary:
+	for e in content.get_pickups("port_town"):
+		if str(e.id) == id:
+			return e
+	return {}
+
+
+func test_hints_open_quests_and_the_hidden_gear_unlocks_weapons() -> void:
+	var oda := NpcBrain.new(null, "res://content/core/npcs/cantina_owner_card.json")
+	assert_false(oda.hints_for("What do you know about the Remnant guards?").is_empty())
+	assert_eq(Quests.state("barracks_rifle"), "open")
+	var skrugs := NpcBrain.new(null, "res://content/core/npcs/skrugs_card.json")
+	skrugs.hints_for("Any nomad packs out there?")
+	assert_eq(Quests.state("nomad_trade"), "open")
+	assert_false(WorldState.weapon_allowed("rifle_blaster"))
+	var rifle := _pickup("barracks_rifle")
+	assert_true(WorldState.inventory.pick_up(rifle))
+	Story.event(str(rifle.event))
+	assert_true(WorldState.weapon_allowed("rifle_blaster"))
+	assert_eq(Quests.state("barracks_rifle"), "done")
+	assert_eq(str(_pickup("pit_jetpack").get("inside", "")), "pit_hauler", "the jetpack is inside the cargo droid")
+
+
+# ---- #212: the droid merchant ----------------------------------------------------------
+
+func test_three_droids_end_the_chapter_and_oda_tells_of_the_blade() -> void:
+	Story.skip_to("droid_merchant")
+	assert_eq(Story.droids_wanted(), 3)
+	assert_eq(Story.droid_wanted_kind(), "cargo")
+	Story.on_droid_delivered()
+	assert_string_contains(Story.line_of(Story.chapter_cfg(), "remind"), "2 more")
+	Story.on_droid_delivered()
+	Story.on_droid_delivered()
+	assert_eq(Story.chapter(), "bounty")
+	Story.beat("cantina_owner")
+	assert_eq(Quests.state("tower_blade"), "open", "Oda tells you about the blade on the tower")
+
+
+# ---- #211: the nomads ----------------------------------------------------------------------
+
+func test_nomads_win_over_in_a_minute_and_trade_goods_for_meat() -> void:
+	var d = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/species/dune_nomads.json"))
+	assert_almost_eq(float(d.hostile.survive_s), 60.0, 0.1)
+	WorldState.inventory.add("food", 30)
+	assert_false(NativesDirector.swap_food("jetpack", 31), "not enough meat")
+	assert_true(NativesDirector.swap_food("jetpack", 30))
+	assert_true(WorldState.inventory.has("jetpack"))
+	assert_eq(WorldState.inventory.count("food"), 0)
+
+
+# ---- #208, #209: the fence -------------------------------------------------------------------
+
+func test_gun_and_jetpack_upgrades() -> void:
+	WorldState.credits = 1000
+	var pistol: Dictionary = CharacterKit._read_json("res://content/core/weapons/pistol_blaster.json")
+	assert_eq(GearUpgrades.buy("pistol_damage"), "bought")
+	assert_eq(GearUpgrades.buy("pistol_damage"), "", "one-time")
+	assert_almost_eq(float(GearUpgrades.apply(pistol, "pistol_blaster").damage), float(pistol.damage) * 1.75, 0.01)
+	GearUpgrades.buy("jetpack_fuel")
+	var jet: Dictionary = content.get_item("jetpack")
+	WorldState.from_save(WorldState.to_save())
+	assert_almost_eq(float(GearUpgrades.apply(jet, "jetpack").jetpack.fuel), float(jet.jetpack.fuel) * 2.0, 0.01, "saved")
+	assert_eq(WorldState.credits, 1000 - 150 - 250)
+
+
+func test_armour_after_the_bounty_triples_health() -> void:
+	WorldState.credits = 1000
+	assert_eq(GearUpgrades.buy("quantonium_armour"), "", "locked before the bounty")
+	WorldState.bump("bounties_paid")
+	assert_eq(GearUpgrades.buy("quantonium_armour"), "bought")
+	assert_eq(WorldState.credits, 500)
+	var gear := GearController.new()
+	gear.content = content
+	var p := FakePlayer.new()
+	add_child_autofree(p)
+	gear.player = p
+	assert_eq(gear.toggle_item("quantonium_armour"), "attached")
+	assert_eq(p.health.max_hp, 300)
+	assert_eq(gear.toggle_item("quantonium_armour"), "detached")
+	assert_eq(p.health.max_hp, 100)
+	gear.free()
+	WorldState.from_save(WorldState.to_save())
+	assert_true(WorldState.inventory.has("quantonium_armour"))
+	assert_eq(GearUpgrades.buy("quantonium_armour"), "", "sold once")
+
+
+# ---- #213: who the first bounty is on ---------------------------------------------------------
+
+func test_the_first_bounty_is_the_general_at_minus_15() -> void:
+	Story.skip_to("bounty")
+	WorldState.standing.imperial_remnant = -15
+	WorldState.job("j_bounty")
+	assert_true(bool(WorldState.bounty.get("general", false)))
+	assert_eq(str(WorldState.bounty.name), "General Vask")
+	assert_true(WorldState.accept_job("j_bounty"))
+	assert_eq(GeneralPost.station(), "", "he is out at the outpost")
+	WorldState.on_bounty_killed()
+	assert_true(WorldState.has_flag("general_dead"))
+	assert_string_contains(EndCard.text(), "general dead")
+
+
+func test_above_minus_15_the_officer_and_the_general_lives() -> void:
+	Story.skip_to("bounty")
+	WorldState.standing.imperial_remnant = -14
+	WorldState.job("j_bounty")
+	assert_false(bool(WorldState.bounty.get("general", false)))
+	assert_string_contains(EndCard.text(), "the general stays")
+	Story.skip_to("free")
+	assert_eq(GeneralPost.station(), "barracks", "still buying droids after the Remnant leave")
+
+
+# ---- #186 / #214: own ship, upgrades, saved -----------------------------------------------------
+
+func test_earn_rebuild_upgrade_save_load() -> void:
+	var s := ShipSalesman.new()
+	add_child_autofree(s)
+	WorldState.credits = 2500
+	assert_eq(s.rebuild(), "rebuilt")
+	assert_true(ShipPilot.berth_open({}, 0), "the fleet chapter has your own ship")
+	assert_false(ShipPilot.berth_open({}, 1), "and no free keys")
+	assert_eq(s.fit(WorldState.wreck_ship, "hull"), "fitted")
+	assert_eq(GearUpgrades.buy("pistol_rate"), "bought")
+	WorldState.from_save(JSON.parse_string(JSON.stringify(WorldState.to_save())))
+	assert_true(WorldState.owns_ship())
+	assert_true(ShipUpgrades.has(WorldState.wreck_ship, "hull"))
+	assert_true(GearUpgrades.bought("pistol_rate"))
+	assert_eq(WorldState.credits, 2500 - 500 - 1200 - 150)

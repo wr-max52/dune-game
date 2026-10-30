@@ -39,7 +39,7 @@ func test_the_dune_people_are_primitive() -> void:
 	assert_eq(s.trade.wants, ["food"], "they want food")
 	assert_eq(s.trade.gives, "quartz")
 	assert_almost_eq(float(s.body.child_scale), 0.6, 0.001, "children are the same bodies at 60%")
-	assert_almost_eq(float(s.hostile.survive_s), 300.0, 0.1, "five minutes to win a hostile pack over")
+	assert_almost_eq(float(s.hostile.survive_s), 60.0, 0.1, "issue #211: a minute to win a hostile pack over")
 
 
 func test_generated_planets_get_their_own_people() -> void:

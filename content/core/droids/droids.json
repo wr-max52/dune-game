@@ -433,6 +433,8 @@
     "tame_declined": "The drone loses interest and goes back to shooting at people.",
     "event_bought": "Someone bought a %s at the market.",
     "event_found": "Someone dragged a broken %s back to life out in the desert.",
-    "event_remnant_droid": "Someone scrapped one of the Remnant's patrol droids."
+    "event_remnant_droid": "Someone scrapped one of the Remnant's patrol droids.",
+    "deliver": "Hand over your %s for Oda's friend  (%d still wanted)",
+    "delivered": "Your %s is the droid merchant's now. %d more to go."
   }
 }

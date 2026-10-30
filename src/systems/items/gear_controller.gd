@@ -16,6 +16,13 @@ extends Node
 ##   - catches a player who flew out over the walls (the town has no ground there)
 ##     and puts them back where they last stood.
 ##
+##   - issues #208, #209: the fence's offers (GearUpgrades) from a menu on [E]:
+##     gun and jetpack upgrades, and quantonium armour once the first bounty is
+##     paid. Worn armour (slot "armour", toggled in the inventory on I) multiplies
+##     the player's health; in a story save it is the desert guard's whole look,
+##   - issue #210: a pickup can be "story_only", can sit "inside" a droid (no glow,
+##     "[E] Open the cargo droid"), and reports its "event" to the story when taken.
+##
 ## The headless trace calls interact() and toggle_gear() directly: the same code
 ## path the keys use. All words come from content/core/flow/gear.json.
 
@@ -24,6 +31,7 @@ const Jetpack := preload("res://src/systems/player/jetpack.gd")
 const PickupNode := preload("res://src/systems/items/pickup_node.gd")
 const LABELS_PATH := "res://content/core/flow/gear.json"
 const SLOT_BACK := "back"
+const SLOT_ARMOUR := "armour"
 const FALL_MARGIN := 20.0       ## metres below the lowest floor before a rescue
 
 var content
@@ -58,6 +66,9 @@ var vendor_open := Callable()
 var closed_line := Callable()
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
+var menu: DroidMenu             ## issue #208: the fence's offers
+var on_refit := Callable()      ## issue #208: () after an upgrade (the town refits the player's guns)
+var _armour_look := false       ## issue #209: the desert guard's look is on (story saves)
 var _last_safe := Vector3.ZERO
 
 
@@ -88,7 +99,10 @@ func _ready() -> void:
 	inventory_panel = InventoryPanel.new()
 	inventory_panel.content = content
 	inventory_panel.name_of = _shown
+	inventory_panel.toggle_item = toggle_item
 	add_child(inventory_panel)
+	menu = DroidMenu.new()
+	add_child(menu)
 	lowest_floor = _lowest_floor()
 	if player != null:
 		_last_safe = player.global_position
@@ -143,6 +157,8 @@ func _build_pickups() -> void:
 	for entry in content.get_pickups(location_id):
 		if inv().is_taken(str(entry.get("id", ""))):
 			continue
+		if bool(entry.get("story_only", false)) and not WorldState.story_mode():
+			continue
 		var item: Dictionary = content.get_item(str(entry.get("item", "")))
 		if item.is_empty():
 			push_warning("GearController: pickup %s names an unknown item" % str(entry.get("id", "")))
@@ -151,7 +167,7 @@ func _build_pickups() -> void:
 		node.setup(items, entry, item, _place(entry))
 		# Issue #148: one a droid carries stays hidden (and out of reach) until
 		# its carrier puts it on its back (DroidController._haul).
-		node.visible = not bool(entry.get("carried", false))
+		node.visible = not bool(entry.get("carried", false)) and str(entry.get("inside", "")) == ""
 		add_child(node)
 		pickups.append(node)
 
@@ -251,7 +267,7 @@ func _physics_process(dt: float) -> void:
 func _find_focus() -> Dictionary:
 	var p := player.global_position
 	for n in pickups:
-		if is_instance_valid(n) and n.visible and n.in_reach(p):
+		if is_instance_valid(n) and (n.visible or str(n.pickup.get("inside", "")) != "") and n.in_reach(p):
 			return { "kind": "pickup", "node": n }
 	if drop != null and is_instance_valid(drop) and drop.in_reach(p):
 		return { "kind": "pickup", "node": drop }
@@ -275,6 +291,8 @@ func prompt_text() -> String:
 	if focus.is_empty():
 		return ""
 	if focus.kind == "pickup":
+		if str(focus.node.pickup.get("inside", "")) != "":
+			return _l("open_droid")
 		var item: Dictionary = content.get_item(str(focus.node.pickup.get("item", "")))
 		return _l("pick_up") % _shown(item, str(focus.node.pickup.get("item", "")))
 	var v: Dictionary = focus.cfg
@@ -288,6 +306,8 @@ func prompt_text() -> String:
 		var it: Dictionary = content.get_item(sell_id)
 		return _l("sell") % [_shown(it, sell_id), str(v.get("label", "vendor")).to_lower(),
 			Inventory.sell_price(it, v)]
+	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
+		return _l("browse") % str(v.get("label", "vendor")).to_lower()
 	for id in inv().vendor_stock(v):
 		var it: Dictionary = content.get_item(str(id))
 		var cost := Inventory.buy_price(it, v)
@@ -334,6 +354,7 @@ func _take(node) -> String:
 	var item: Dictionary = content.get_item(id)
 	if str(entry.get("taken_flag", "")) != "":
 		WorldState.set_flag(str(entry.taken_flag))
+	Story.event(str(entry.get("event", "")))     # issue #210: an optional quest done
 	pickups.erase(node)
 	if node == drop:
 		drop = null
@@ -379,6 +400,9 @@ func _trade(v: Dictionary) -> String:
 		if hud != null:
 			hud.toast(_l("sold") % [str(it.get("label", sell_id)), price])
 		return "sold"
+	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
+		open_offers(v)
+		return "menu"
 	for id in inv().vendor_stock(v):
 		var it: Dictionary = content.get_item(str(id))
 		var cost := inv().buy(str(id), it, v, WorldState.credits)
@@ -392,6 +416,61 @@ func _trade(v: Dictionary) -> String:
 		if hud != null:
 			hud.toast(_l("bought") % [str(it.get("label", id)), cost])
 		return "bought"
+	return ""
+
+
+# ------------------------------------------------------------------ the fence's offers (issues #208, #209)
+
+func open_offers(v: Dictionary) -> void:
+	var opts: Array = []
+	for o in GearUpgrades.open_offers():
+		opts.append({ "id": str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
+	var lock: bool = player != null and not bool(player.get("locked"))
+	if lock:
+		player.locked = true
+	menu.open(_l("offers_title") % [str(v.get("label", "Fence")), WorldState.credits], opts, func(id):
+		if lock:
+			player.locked = false
+		if id != "":
+			buy_offer(id))
+
+
+## Buy one of the fence's offers. Returns GearUpgrades.buy's answer.
+func buy_offer(id: String) -> String:
+	var o := GearUpgrades.offer(id)
+	var r := GearUpgrades.buy(id)
+	if r == "bought":
+		refit()
+		if hud != null:
+			hud.toast(_l("offer_bought") % str(o.label), 4.0)
+	elif r == "cant_afford" and hud != null:
+		hud.toast(_l("offer_cant_afford") % [str(o.label), int(o.price), WorldState.credits], 4.0)
+	return r
+
+
+## An upgrade went on: the jetpack takes its new tank, the guns their new numbers.
+func refit() -> void:
+	_packs.clear()
+	sync_gear()
+	if on_refit.is_valid():
+		on_refit.call()
+
+
+## Issue #209: put on or take off a worn item (the inventory's button): the
+## jetpack on the back, the armour. Returns "attached", "detached" or "".
+func toggle_item(id: String) -> String:
+	var item: Dictionary = content.get_item(id)
+	if inv().is_attached(id):
+		inv().detach(id)
+		sync_gear()
+		return "detached"
+	if inv().has(id) and str(item.get("slot", "")) != "":
+		var on := inv().in_slot(str(item.slot))
+		if on != "":
+			inv().detach(on)
+		if inv().attach(id, item):
+			sync_gear()
+			return "attached"
 	return ""
 
 
@@ -427,15 +506,40 @@ func sync_gear() -> void:
 	var item: Dictionary = content.get_item(back) if back != "" else {}
 	if item.has("jetpack"):
 		if not _packs.has(back):
-			_packs[back] = Jetpack.new(item.jetpack)
+			_packs[back] = Jetpack.new(GearUpgrades.apply(item, back).jetpack)    # issue #208: the fence's tank
 		player.jetpack = _packs[back]
 	else:
 		player.jetpack = null
 	_mount_worn(back, item)
+	_sync_armour()
 	var avatar := player.get_node_or_null("Avatar")
 	var color := blade_color()
 	if avatar != null and avatar.has_method("set_blade_color") and color.a > 0.0:
 		avatar.set_blade_color(color, blade_hilt())
+
+
+## Issue #209: worn armour multiplies the player's health (the hurt share kept);
+## in a story save its "outfit" is the player's whole look while it is on.
+func _sync_armour() -> void:
+	var id := inv().in_slot(SLOT_ARMOUR)
+	var item: Dictionary = content.get_item(id) if id != "" else {}
+	if not "max_health" in player:
+		return
+	if not player.has_meta("base_health"):
+		player.set_meta("base_health", int(player.max_health))
+	var want := int(round(int(player.get_meta("base_health")) * float(item.get("health_mult", 1.0))))
+	if int(player.max_health) != want:
+		var h = player.health
+		var frac := float(h.hp) / maxf(1.0, float(h.max_hp))
+		player.max_health = want
+		h.max_hp = want
+		h.hp = maxi(1, int(round(frac * want)))
+	var avatar := player.get_node_or_null("Avatar")
+	var look := WorldState.story_mode() and item.has("outfit")
+	if avatar == null or not avatar.has_method("set_outfit") or look == _armour_look:
+		return
+	_armour_look = look
+	avatar.set_outfit(item.outfit if look else PlayerOutfit.load_outfit())
 
 
 ## Issue #148: the energy sword's colour from what the player owns (an item with

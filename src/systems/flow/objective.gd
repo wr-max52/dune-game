@@ -121,6 +121,9 @@ static func log_entries() -> Array:
 			"text": line("log_hunt") % [str(b.name), Story.outpost_label(str(b.outpost)), int(b.pay), str(b.crime)] })
 	elif WorldState.bounty_collectable():
 		out.append({ "title": line("log_bounty"), "text": line("log_collect") % [str(b.name), int(b.pay)] })
+	var gear_line := GearUpgrades.owned_line()
+	if gear_line != "":
+		out.append({ "title": line("log_gear"), "text": gear_line })    # issue #208
 	var ships := ShipUpgrades.owned_lines()
 	if not ships.is_empty():
 		out.append({ "title": line("log_ships"), "text": "\n".join(PackedStringArray(ships)) })    # issue #207

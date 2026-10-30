@@ -23,6 +23,8 @@ signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
+
+var last_hints: Array = []                     ## the hint lines the last line set off (tests)
 signal ended(reason: String)
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
@@ -143,6 +145,31 @@ func baseline_mood() -> String:
 	return "warm" if rel.tier() in ["trusted", "confidant"] else "wary"
 
 
+## Issue #204: the open jobs that are this character's to give ("giver" on the
+## board; Oda's by default).
+func my_jobs(tier: String) -> Array:
+	return WorldState.open_jobs(tier).filter(func(j): return str(j.get("giver", "cantina_owner")) == id())
+
+
+# ------------------------------------------------------------------ hints (issues #204, #205, #210, #211)
+
+## The card's "hints" this line touches: { words, event, say, requires }. Each
+## one the player's words match (and whose requires hold, WorldState's rules)
+## reports its event to the story (an optional quest unlocks) and returns a line
+## for the briefing so the character tells them. Returns those lines.
+func hints_for(text: String, tier: String = "stranger") -> Array:
+	var out: Array = []
+	var low := text.to_lower()
+	for h in card.get("hints", []):
+		if not (h.get("words", []) as Array).any(func(w): return low.contains(str(w))):
+			continue
+		if not WorldState._conditions_hold(h.get("requires", {}), tier):
+			continue
+		Story.event(str(h.get("event", "")))
+		out.append("TELL THEM NOW, in your own words: " + str(h.get("say", "")))
+	return out
+
+
 # ------------------------------------------------------------------ a turn
 
 ## The player said something. Returns false if she is mid-answer.
@@ -157,13 +184,15 @@ func say(text: String) -> bool:
 		insults += 1
 	var tier := rel.tier()
 	var rumors := WorldState.rumors(tier, rel.known_rumors, 4)
-	var jobs := WorldState.open_jobs(tier)
+	# Issue #204: a job is the giver's ("giver" on the board, Oda's by default).
+	var jobs := my_jobs(tier)
+	last_hints = hints_for(text, tier)
 	var world := {
 		"flags": WorldState.flags, "standing": WorldState.standing, "time": WorldState.time_of_day,
 		"events": WorldState.events, "credits": WorldState.credits,
 		"place": _place(), "people": NameHooks.known("npc:"),
 		"story": Story.brief(id()),
-		"extra": extra_brief.call() if extra_brief.is_valid() else [],
+		"extra": (extra_brief.call() if extra_brief.is_valid() else []) + last_hints,
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
 	_messages = built.messages
@@ -363,12 +392,12 @@ func canned_reply(text: String) -> Dictionary:
 				return { "say": _pick(c.get("no_rumor", ["Quiet week."])), "actions": [] }
 			return { "say": _pick(c.get("rumor", ["%s"])) % str(rs[0].text), "actions": [{ "type": "share_rumor", "id": rs[0].id }] }
 		"smuggle":
-			var sj := WorldState.open_jobs(rel.tier()).filter(func(j): return str(j.get("kind", "")) == "smuggle")
+			var sj := my_jobs(rel.tier()).filter(func(j): return str(j.get("kind", "")) == "smuggle")
 			if sj.is_empty():
 				return { "say": _pick(c.get("no_smuggle", ["Nothing lined up."])), "actions": [] }
 			return { "say": _pick(c.get("job", ["%s"])) % str(sj[0].text), "actions": [{ "type": "offer_job", "id": sj[0].id }] }
 		"job":
-			var js := WorldState.open_jobs(rel.tier())
+			var js := my_jobs(rel.tier())
 			if js.is_empty():
 				return { "say": _pick(c.get("no_job", ["Nothing."])), "actions": [] }
 			return { "say": _pick(c.get("job", ["%s"])) % str(js[0].text), "actions": [{ "type": "offer_job", "id": js[0].id }] }

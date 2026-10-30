@@ -82,6 +82,20 @@
       "glow": "#b98cff",
       "tint": 0.75
     },
+    "blue_saber": {
+      "frame": "saber", "hilt": "#8c8478", "trim": "#d8b878", "blade": "#59b8ff", "length": 0.9,
+      "note": "Issue #210: the energy blade on the cantina tower."
+    },
+    "rifle_case": {
+      "frame": "case", "scene": "res://assets/gear/cargo_case.glb", "width": 1.1, "height": 0.18, "depth": 0.26,
+      "shell": "#2f3236", "trim": "#8c8478", "glow": "#ff6a2a", "tint": 0.75,
+      "note": "Issue #210: the rifle on the barracks roof, in its long case."
+    },
+    "armour_case": {
+      "frame": "case", "scene": "res://assets/gear/cargo_case.glb", "width": 0.7, "height": 0.45, "depth": 0.45,
+      "shell": "#b59a6a", "trim": "#5a4a36", "glow": "#d8b878", "tint": 0.75,
+      "note": "Issue #209: quantonium armour, boxed."
+    },
     "red_saber": {
    "frame": "saber",
    "hilt_model": "res://assets/gear/saber_hilt_dark.glb",

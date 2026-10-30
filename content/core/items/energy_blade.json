@@ -1,0 +1,8 @@
+{
+  "id": "energy_blade",
+  "label": "Energy blade",
+  "kind": "weapon",
+  "value": 350,
+  "look": "blue_saber",
+  "note": "Issue #210: the energy blade as something you own. In a story save it can only be drawn once you have it (WorldState.weapon_allowed); one is stashed on top of the cantina tower (pickups/port_town.json). A different blade from the red saber in the wreck."
+}

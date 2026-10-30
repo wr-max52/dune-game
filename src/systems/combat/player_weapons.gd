@@ -80,13 +80,21 @@ func setup(p: CharacterBody3D, a: PlayerAvatar, rig: Node3D, bolts_into: Node3D)
 	bolt_parent = bolts_into
 	look = CharacterKit._read_json(LOOK_PATH)
 	for id in holder.slots:
-		cfg[id] = CharacterKit._read_json("res://content/core/weapons/%s.json" % id)
+		cfg[id] = GearUpgrades.apply(CharacterKit._read_json("res://content/core/weapons/%s.json" % id), id)
 		if id != "energy_blade":
 			guns[id] = Weapon.new(cfg[id])
 	combo = SwordCombo.new(cfg.get("energy_blade", {}))
 	holder.can_draw = func(id): return WorldState.weapon_allowed(id)      # issue #200: a story save starts with the pistol only
 	avatar.build_weapons(holder.slots)
 	avatar.set_blade_extent(0.0)
+
+
+## Issue #208: the fence fitted an upgrade: each gun takes its data again with
+## every upgrade on (the magazine keeps its rounds).
+func refit() -> void:
+	for id in guns:
+		cfg[id] = GearUpgrades.apply(CharacterKit._read_json("res://content/core/weapons/%s.json" % id), id)
+		(guns[id] as Weapon).config = cfg[id]
 
 
 func _ready() -> void:

@@ -44,7 +44,26 @@ static func chapter_ids() -> Array:
 
 
 static func chapter() -> String:
-	return str(WorldState.story.get("chapter", chapter_ids()[0] if not chapters().is_empty() else ""))
+	return str(WorldState.story.get("chapter", _first()))
+
+
+## Issue #215: a chapter is in this save's mode ("modes", default every mode).
+## land, general and t89 are story only: a freeplay story starts at meet_oda.
+static func applies(c: Dictionary) -> bool:
+	var modes: Array = c.get("modes", [])
+	return modes.is_empty() or modes.has(WorldState.mode)
+
+
+static func _first() -> String:
+	for c in chapters():
+		if applies(c):
+			return str(c.id)
+	return ""
+
+
+## The chapter a save holds, under its current id (old saves: chapter_renames).
+static func renamed(id: String) -> String:
+	return str(data().get("chapter_renames", {}).get(id, id))
 
 
 static func chapter_cfg(id: String = "") -> Dictionary:
@@ -65,9 +84,9 @@ static func reached(id: String) -> bool:
 	return index(chapter()) >= index(id) and index(id) >= 0
 
 
-## A fresh story: the first chapter, nothing told.
+## A fresh story: the first chapter of this save's mode, nothing told.
 static func fresh() -> Dictionary:
-	return { "chapter": str(chapter_ids()[0]) if not chapters().is_empty() else "", "told": false }
+	return { "chapter": _first(), "told": false }
 
 
 ## Jump straight to a chapter (settings, tests). Earlier chapters' unlocks apply.
@@ -77,6 +96,8 @@ static func skip_to(id: String) -> void:
 	WorldState.story = { "chapter": id, "told": false }
 	if reached("fleet"):
 		WorldState.set_flag("ships_unlocked")
+	if reached("end"):
+		WorldState.set_flag("remnant_fleet_beaten")    # issue #214: the Remnant have left
 	if id == "free":
 		WorldState.story.told = true
 		WorldState.set_flag("remnant_fleet_beaten")
@@ -92,8 +113,11 @@ static func event(name: String) -> bool:
 	var c := chapter_cfg()
 	if c.is_empty() or str(c.get("done_on", "")) != name or name == "":
 		return false
-	var ids := chapter_ids()
-	var next := str(ids[mini(index(chapter()) + 1, ids.size() - 1)])
+	var next := chapter()
+	for later in chapters().slice(index(chapter()) + 1):
+		if applies(later):
+			next = str(later.id)
+			break
 	WorldState.story = { "chapter": next, "told": false }
 	WorldState.log_event("Story: " + next.replace("_", " ") + ".")
 	# Issue #193: done before it was asked (the cruiser taken before Oda sent you).
@@ -116,6 +140,15 @@ static func beat(teller: String) -> Dictionary:
 		return {}
 	var first := not bool(WorldState.story.get("told", false))
 	WorldState.story.told = true
+	var out := _tell(c, first)
+	if first:
+		# Issue #201/#215: "told:<chapter>" unlocks quests (the blade on the tower) and
+		# ends a chapter that is only the telling (T-89's).
+		event("told:" + str(c.id))
+	return out
+
+
+static func _tell(c: Dictionary, first: bool) -> Dictionary:
 	if first and int(c.get("pays", 0)) > 0:
 		WorldState.credits += int(c.pays)
 		WorldState.log_event("Oda paid %d cr for the practice." % int(c.pays))
@@ -125,7 +158,7 @@ static func beat(teller: String) -> Dictionary:
 		return _free_beat(first)
 	var job := str(c.get("job", ""))
 	var job_open := job != "" and WorldState.open_jobs("confidant").any(func(j): return str(j.id) == job)
-	var say := str(c.get("intro" if first else "remind", ""))
+	var say := line_of(c, "intro" if first else "remind")
 	if job_open and not first:
 		say = str(c.get("intro", ""))       # the job is on offer again: say what it is
 	if job == "j_bounty" and job_open:
@@ -150,17 +183,50 @@ static func brief(teller: String) -> String:
 	var c := chapter_cfg()
 	if str(c.get("teller", "")) != teller:
 		return ""
-	var out := str(c.get("remind", ""))
-	if chapter() == "smuggle_1" and not WorldState.has_flag("story_jetpack_given"):
+	var out := line_of(c, "remind")
+	if chapter() == "smuggle_1" and not WorldState.has_flag("pit_jetpack_taken"):
 		out += " " + str(c.get("jetpack_hint", ""))
 	return out.strip_edges()
 
 
+## A chapter's line; "%d" in it is how many droids the droid merchant still needs.
+static func line_of(c: Dictionary, key: String) -> String:
+	var s := str(c.get(key, ""))
+	if s.contains("%d") and c.has("deliver"):
+		s = s % droids_wanted()
+	return s
+
+
+# ------------------------------------------------------------------ the droid merchant (issue #212)
+
+## Cargo droids Oda's friend still needs (0 outside that chapter).
+static func droids_wanted() -> int:
+	var d: Dictionary = chapter_cfg().get("deliver", {})
+	return maxi(0, int(d.get("count", 0)) - WorldState.count("merchant_droids")) if not d.is_empty() else 0
+
+
+## The kind of droid the merchant wants now, or "".
+static func droid_wanted_kind() -> String:
+	return str(chapter_cfg().get("deliver", {}).get("kind", "")) if droids_wanted() > 0 else ""
+
+
+## One droid of that kind handed over at a droid post. The last one ends the chapter.
+static func on_droid_delivered() -> void:
+	if droids_wanted() <= 0:
+		return
+	WorldState.bump("merchant_droids")
+	WorldState.log_event("Delivered a droid to Oda's friend, the droid merchant.")
+	if droids_wanted() == 0:
+		event("droids_delivered")
+
+
 ## Oda's mood after a line (or when the player takes her job). In the first
-## smuggling run, amused or warm, she lends the player her jetpack, once.
-## Returns her line about it, or "".
+## smuggling run, amused or warm, she lent the player her jetpack, once, while
+## the chapter had a "jetpack_line". Issue #210: it has none now (she tells you
+## about the one in the pit's cargo droid). Returns her line about it, or "".
 static func on_owner_mood(mood: String) -> String:
-	if chapter() != "smuggle_1" or WorldState.has_flag("story_jetpack_given") or not mood in ["amused", "warm"]:
+	if chapter() != "smuggle_1" or WorldState.has_flag("story_jetpack_given") or not mood in ["amused", "warm"] \
+			or str(chapter_cfg().get("jetpack_line", "")) == "":
 		return ""
 	WorldState.set_flag("story_jetpack_given")
 	if not WorldState.inventory.has(JETPACK):

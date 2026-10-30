@@ -25,7 +25,7 @@ func test_the_waypoint_toggle_leads_the_pointer_one_at_a_time() -> void:
 	Quests.unlock("barracks_rifle")
 	Quests.unlock("tower_blade")
 	assert_true(Quests.toggle_waypoint("barracks_rifle"))
-	assert_eq(Objective.current().target, "marker:barracks_upper")
+	assert_eq(Objective.current().target, "marker:trooper_roof_c")
 	assert_true(Quests.toggle_waypoint("tower_blade"))
 	assert_false(bool(WorldState.quests.barracks_rifle.waypoint), "the other goes off")
 	assert_false(Quests.toggle_waypoint("tower_blade"), "off again")

@@ -77,5 +77,21 @@
     { "if_flags": ["shots_in_street"], "mood": "irritated" },
     { "if_flags": ["remnant_patrol_beaten"], "mood": "amused" },
     { "if_flags": ["gate_checkpoint_up"], "mood": "wary" }
+  ],
+  "hints": [
+    {
+      "words": [
+        "remnant",
+        "guard",
+        "garrison",
+        "barracks",
+        "trooper",
+        "soldier",
+        "gun",
+        "rifle"
+      ],
+      "event": "heard_of_rifle",
+      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof."
+    }
   ]
 }
