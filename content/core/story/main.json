@@ -65,6 +65,35 @@
       "remind": ""
     }
   ],
+  "objectives": {
+    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer). The jobs' lines take the job's own words (%s).",
+    "teller": { "text": "Talk to Oda at the cantina", "target": "npc:cantina_owner" },
+    "chapters": {
+      "meet_oda": { "text": "Find Oda Vell at the cantina, far end of town", "target": "npc:cantina_owner" },
+      "range": { "text": "Shoot the targets at the range in the landing pit", "target": "range" },
+      "remote": { "text": "Try the sparring droid in the pit, then go back to Oda", "target": "remote" },
+      "smuggle_1": { "text": "Ask Oda about the drop", "target": "npc:cantina_owner" },
+      "smuggle_2": { "text": "Ask Oda about the next drop", "target": "npc:cantina_owner" },
+      "bounty": { "text": "Ask Oda about the bounty", "target": "npc:cantina_owner" },
+      "fleet": { "text": "Take a ship from the pit up to the Remnant fleet", "target": "pad" },
+      "free": { "text": "Ask Oda for work", "target": "npc:cantina_owner" }
+    },
+    "drop": "Find the drop %s",
+    "sell": "Sell the goods to the fence",
+    "hunt": "Kill %s at %s",
+    "hunt_away": "Fly home: %s is at %s",
+    "collect": "Collect the bounty on %s from the fence",
+    "log_title": "JOBS",
+    "log_story": "STORY",
+    "log_smuggle": "SMUGGLING RUN",
+    "log_drop": "Somebody left %s %s. Keep it away from the gate.",
+    "log_carry": "You have the goods. Sell them to the fence, and keep them away from the Remnant at the gate.",
+    "log_bounty": "CONTRACT",
+    "log_hunt": "%s, at %s. %d cr from the fence. %s",
+    "log_collect": "%s is dead. Collect %d cr from the fence.",
+    "log_none": "Nothing on. Oda always has something.",
+    "log_tally": "Runs sold: %d    Bounties paid: %d"
+  },
   "fleet_reward": 5000,
   "ship_locked": "Locked. The keys aren't yours to take yet.",
   "jetpack_toast": "Oda gave you her old jetpack.",

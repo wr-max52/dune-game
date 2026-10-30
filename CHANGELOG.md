@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Objective pointer and job log (2026-10-29)
+
+- **Always know what to do next.** A line under the banner says the next thing
+  to do ("Find Oda Vell at the cantina, far end of town   84 m"), with an arrow
+  turning towards it and a diamond over the place while it is on screen. It
+  follows the story chapter by chapter, then whatever job is on: a bounty to
+  collect or hunt (the outpost), goods to sell (the fence), a drop to find (the
+  drop's area, not the exact spot, so the search is still yours). Lines and
+  targets are data (`content/core/story/main.json` "objectives"); the logic is
+  `src/systems/flow/objective.gd`, the HUD `src/ui/objective_hud.gd`.
+- **A job log on I.** The inventory screen has a JOBS column beside the items:
+  the story's current chapter, the smuggling run (what the goods are, where they
+  were left), the bounty (who, where, the pay, their crime) and any job taken
+  from Oda's board, with runs sold and bounties paid at the bottom.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina
