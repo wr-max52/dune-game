@@ -2,6 +2,22 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Villagers draw pistols; your droids fight beside you (2026-10-29)
+
+- **Villagers carry pistols.** The port's locals (walkers, stall merchants and the
+  fence) now hold the same blaster pistol the player uses when they fight back. It
+  stays out of sight while the port is calm, comes out the moment their alarm goes
+  up, and is put away once they calm down. They used to shoot from empty hands.
+- **Your droids help in any fight.** Your assassin droid and now your floating
+  droid (a smaller, slower gun) shoot whoever you are fighting: the Remnant as
+  before, the port's locals once their alarm is up, and a native pack on the
+  attack. A Remnant droid is a target once you shot one, it shot at you, or its
+  alarm is up. They never start a fight: nobody calm is shot. Cargo droids still
+  carry no gun.
+- **What your droids hit counts as yours.** A native your droid kills locks that
+  pack hostile, and a local your droid kills costs you standing, as if you had
+  fired.
+
 ## Cantina owner's hood tufts go with her helmet (2026-10-29)
 
 - **A clean hood under any head.** Two small dark tufts on the rim of the cantina

@@ -5,6 +5,10 @@ extends Node3D
 ##   - your droids follow you on foot, vanish while you fly the ship and come
 ##     back beside you when you climb out,
 ##   - an assassin droid of yours shoots whoever the town is fighting you with,
+##     and so does a floating droid of yours, with its smaller gun: the Remnant,
+##     the port's locals once their alarm is up, a native pack on the attack
+##     (anything you are in a fight with; enemies()). What they hit or kill counts
+##     as yours (by_player),
 ##   - a cargo droid holds items the gate never searches ([E] near it),
 ##   - the droid merchant in the market buys and sells all three kinds,
 ##   - broken droids turn up in the desert now and then; [E] and ten seconds
@@ -638,11 +642,11 @@ func _follow(dt: float) -> void:
 			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
 			pos += to / dist * minf(speed * dt, dist)
 			_face(u, to)
-		elif u.kind != "assassin" or u.target == null:
+		elif u.target == null:
 			_face(u, player.global_position - u.global_position)
 		pos += _separation(u, pos) * dt
 		_put(u, pos)
-		u.walk(dt, u.following, speed, u.kind == "assassin" and u.target != null)
+		u.walk(dt, u.following, speed, u.target != null)
 
 
 ## A push away from any other droid of yours closer than a body's width.
@@ -659,39 +663,72 @@ func _separation(u: DroidUnit, at: Vector3) -> Vector3:
 	return push
 
 
-## Your assassin droid: deadly aim at whoever the town is fighting you with.
+## Your assassin droid (deadly aim) and floating droid (a smaller gun): each kind's
+## "gun" block, at whoever you are fighting. A kind with no gun (cargo) never shoots.
 func _companion_guns(dt: float) -> void:
+	var cands := enemies()
 	for uid in companions:
 		var u: DroidUnit = companions[uid]
-		if u.kind != "assassin":
+		var gun: Dictionary = DroidRoster.kind_cfg(u.kind).get("gun", {})
+		if gun.is_empty():
 			continue
 		u.gun_cd -= dt
-		u.target = _enemy_near(u, float(DroidRoster.kind_cfg("assassin").get("gun", {}).get("range", 34.0)))
+		u.target = _enemy_near(u, float(gun.get("range", 30.0)), cands)
 		if u.target == null:
 			continue
 		var aim := _chest(u.target)
 		_face(u, aim - u.global_position)
 		if u.gun_cd <= 0.0:
-			u.gun_cd = float(DroidRoster.kind_cfg("assassin").get("gun", {}).get("interval", 0.9))
-			fire(u, aim, DroidRoster.kind_cfg("assassin").get("gun", {}))
+			u.gun_cd = float(gun.get("interval", 1.0)) * (0.9 + u.quirk().x * 0.2)
+			fire(u, aim, gun)
 
 
-func _enemy_near(u: DroidUnit, reach: float) -> Node3D:
+## Everyone in a fight with you right now, for your droids to shoot: the Remnant's
+## soldiers while their garrison's alarm is up (issue #64: the town's, or their
+## outpost's), its droids once you shot one, it shot at you or its alarm is up
+## (never a cargo droid running off: that one is yours to fix; and never one that
+## has not started on you yet, so your droids do not start a fight), the port's locals while their alarm is up, and every
+## member of a native pack on the attack. Nobody you are not fighting.
+func enemies() -> Array:
+	var out: Array = []
+	for r in remnant:
+		if not r.dead and not r.spec.has("flee") and (r.provoked or _alarm_up(r)):
+			out.append(r)
+	if demo == null:
+		return out
+	for n in demo.npcs:
+		if not is_instance_valid(n) or n.dead:
+			continue
+		var g = demo.garrison_for(n) if demo.has_method("garrison_for") else _garrison()
+		if n.hostile or (g != null and g.alarm.active()):
+			out.append(n)
+	var folk = demo.get("townsfolk")
+	var up: bool = folk != null and is_instance_valid(folk) and folk.alarm != null and folk.alarm.active()
+	var locals = demo.get("locals")
+	for n in (locals if locals != null else []):
+		if is_instance_valid(n) and not n.dead and (up or n.hostile):
+			out.append(n)
+	var nat = demo.get("natives")
+	if nat != null and is_instance_valid(nat):
+		for p in nat.packs:
+			if p is Dictionary and p.has("members") and str(p.get("state", "")) == "attack":
+				for m in nat.alive(p):
+					out.append(m.npc)
+	return out
+
+
+## A shot from `shooter` is the player's: theirs, or from one of their droids
+## (the natives and the locals hold your droid's kills against you).
+static func by_player(shooter, player: Node) -> bool:
+	if shooter == null or not is_instance_valid(shooter):
+		return false
+	return shooter == player or (shooter is DroidUnit and (shooter as DroidUnit).faction == "" and (shooter as DroidUnit).uid >= 0)
+
+
+## The nearest of `cands` (enemies()) within `reach` with nothing in the way.
+func _enemy_near(u: DroidUnit, reach: float, cands: Array) -> Node3D:
 	var best: Node3D = null
 	var best_d := reach
-	var cands: Array = []
-	for r in remnant:
-		if not r.dead and r.provoked:
-			cands.append(r)
-	if demo != null:
-		for n in demo.npcs:
-			if not is_instance_valid(n) or n.dead:
-				continue
-			# Whoever is fighting you: their own garrison's alarm is up (issue #64:
-			# the town's, or their outpost's).
-			var g = demo.garrison_for(n) if demo.has_method("garrison_for") else _garrison()
-			if g != null and g.alarm.active():
-				cands.append(n)
 	for c in cands:
 		var d: float = u.global_position.distance_to(c.global_position)
 		if d < best_d and _clear_shot(u, c):
@@ -915,6 +952,7 @@ func _remnant_step(dt: float) -> void:
 			var d: float = u.global_position.distance_to(player.global_position)
 			sees = d <= float(rc.get("sight", 22.0)) and _clear_shot(u, player)
 		if sees:
+			u.provoked = true              # in a fight with you now: your droids answer it
 			var aim := _chest(player)
 			_face(u, aim - u.global_position)
 			u.walk(dt, false, 0.0, true)

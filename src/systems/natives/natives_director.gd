@@ -553,7 +553,7 @@ func _win_over(p: Dictionary) -> void:
 
 
 func _on_member_hit(shooter: Node, _amount: float, p: Dictionary) -> void:
-	if shooter != player:
+	if not DroidController.by_player(shooter, player):
 		return
 	if bool(p.rec.friendly) and not bool(p.rec.get("won", false)):
 		p.rec.friendly = false            # you started it
@@ -564,7 +564,7 @@ func _on_member_hit(shooter: Node, _amount: float, p: Dictionary) -> void:
 
 
 func _on_member_died(p: Dictionary, npc: NpcBody) -> void:
-	if npc.last_hit_by != player:
+	if not DroidController.by_player(npc.last_hit_by, player):
 		return
 	p.rec.kills = int(p.rec.get("kills", 0)) + 1
 	p.rec.friendly = false

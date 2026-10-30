@@ -74,7 +74,7 @@ func build(archetype: String, pose: String = "", outfit: Dictionary = {}) -> Nod
 			_dress_trooper(root, p, true)
 			default_pose = "parade_rest"
 			if base == "remnant_marked":
-				_pistol(root)
+				pistol(root)
 		"smuggler":
 			_dress_smuggler(root, p)
 			default_pose = "gunslinger"
@@ -591,7 +591,9 @@ func _rifle(body: Node3D, p: Dictionary) -> void:
 ## (hand_weapons.json "pistol_blaster"), darkened the same way. Held one-handed:
 ## aimed where the player's third-person pistol sits ("aim"), rested by the right
 ## thigh by WeaponCarry (the prop's "carry" meta). No model, no pistol.
-func _pistol(body: Node3D) -> void:
+## The port's locals carry the same pistol undarkened (`dark` false; their
+## profile's "sidearm", NpcBody).
+func pistol(body: Node3D, dark := true) -> void:
 	var spec: Dictionary = _read_json(HAND_WEAPONS_PATH).get("pistol_blaster", {})
 	var path := str(spec.get("model", ""))
 	var packed = ModelCache.scene(path) if path != "" and ResourceLoader.exists(path) else null
@@ -603,7 +605,7 @@ func _pistol(body: Node3D) -> void:
 	var model: Node3D = (packed as PackedScene).instantiate()
 	var k := float(spec.get("scale", 1.0))
 	model.scale = Vector3.ONE * k
-	if spec.get("dark") is Dictionary:
+	if dark and spec.get("dark") is Dictionary:
 		PlayerAvatar._darken(model, spec.dark)
 	r.add_child(model)
 	var g: Array = spec.get("grips", {}).get("r", [0, 0, 0])

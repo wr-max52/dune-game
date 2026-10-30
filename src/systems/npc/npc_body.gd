@@ -55,6 +55,11 @@ var damage_usec := -1000000000         ## Time.get_ticks_usec() of the last acce
 ## Issue #65: set by brief() from the brain: true while this NPC is fighting. With
 ## "has taken damage" it decides whether the health bar shows.
 var hostile := false
+## The port's locals (profile "sidearm"): a pistol kept out of sight until they
+## fight. Their director sets `drawn` while their alarm is up; once it is false
+## and the pistol is back down at rest, it is put away again.
+var sidearm := false
+var drawn := true
 
 ## M15: the rifle. A brain sets aim_point and calls fire_at(); the body owns the
 ## weapon state (ammo, rate, reload) and spawns real bolts.
@@ -157,8 +162,13 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 		look_body.name = "Look"
 		add_child(look_body)
 		joints = look_body.get_meta("joints")
+		if bool(soldier.get("sidearm", false)) and not look_body.has_meta("weapon"):
+			kit.pistol(look_body, false)
+			sidearm = look_body.has_meta("weapon")
+			drawn = not sidearm
 		if look_body.has_meta("weapon"):
 			_rifle_aim_xf = (look_body.get_meta("weapon") as Node3D).transform
+			(look_body.get_meta("weapon") as Node3D).visible = drawn
 	else:
 		var mesh := CapsuleMesh.new()
 		mesh.radius = 0.35
@@ -715,6 +725,7 @@ func _go_limp(was_moving: Vector3) -> void:
 	if look_body.has_meta("weapon"):
 		var w: Node3D = look_body.get_meta("weapon")
 		look_body.remove_meta("weapon")
+		w.visible = true              # a local cut down before drawing still drops it
 		dropped_weapon = Ragdoll.drop(w, get_parent() as Node3D, was_moving + kick * 0.6, cfg)
 
 
@@ -799,9 +810,12 @@ func _animate(dt: float, move: Vector3) -> void:
 	if _flinch > 0.0:
 		(joints.chest as Node3D).rotation_degrees.x -= 14.0 * _flinch
 	# Hands back on the rifle: shouldered at CharacterKit's "rifle" pose when aiming,
-	# slung low across the body at rest (issue #87).
-	if look_body.has_meta("weapon"):
-		var w: Node3D = look_body.get_meta("weapon")
+	# slung low across the body at rest (issue #87). A local's put-away pistol
+	# leaves the hands to the walk.
+	var w: Node3D = look_body.get_meta("weapon") if look_body.has_meta("weapon") else null
+	if w != null:
+		w.visible = drawn or carry.ready > 0.0
+	if w != null and w.visible:
 		var grips: Dictionary = w.get_meta("grips", {})
 		var kind := str(w.get_meta("carry", "rifle"))      # issue #76: the marked officer's pistol
 		w.transform = WeaponCarry.blend(WeaponCarry.rest_xf(kind, grips.get("r", Vector3.ZERO)), _rifle_aim_xf, carry.eased())
