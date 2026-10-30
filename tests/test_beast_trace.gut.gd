@@ -60,6 +60,7 @@ func test_hurt_it_and_it_chases() -> void:
 	assert_gt(int(t.get("CHASE_CLOSED_M", 0)), 20, "it rolls at you")
 	_true("CHASE_CAUGHT")
 	_true("CHASE_STOPS_ON_KILL")
+	_true("ALIVE_BEFORE_BLADE")
 	_true("BLADE_HIT_CHASES")
 	_true("GAVE_UP_AT_1KM")
 

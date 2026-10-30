@@ -67,6 +67,10 @@ func _run() -> void:
 	out("LORE_LINES", lore.size())
 	out("LORE_NAMES_IT", lore.any(func(l): return str(l).contains(beast.beast_name)))
 	var folk = demo.get("townsfolk")
+	if folk == null and not demo.locals.is_empty():
+		folk = load("res://src/systems/npc/townsfolk.gd").new()      # npc_brains is off here: run the locals ourselves
+		demo.add_child(folk)
+		folk.setup(demo, demo.locals)
 	if folk != null and not folk.members.is_empty():
 		folk._beast_next = 0.0
 		var local = folk.members[0]
@@ -96,7 +100,7 @@ func _run() -> void:
 	var up: Vector3 = beast._up(beast.global_position)
 	var side: Vector3 = up.cross(beast.heading).normalized()
 	var q := PhysicsRayQueryParameters3D.create(beast.global_position + side * (beast.radius + 20.0), beast.global_position)
-	var hit := beast.get_world_3d().direct_space_state.intersect_ray(q)
+	var hit: Dictionary = beast.get_world_3d().direct_space_state.intersect_ray(q)
 	out("RAY_HITS_IT", not hit.is_empty() and hit.collider == beast)
 	# ---------------------------------------------------------------- touch = death
 	_put_player(beast._ground_at(beast.global_position + side * (beast.radius - 0.5)))
@@ -141,9 +145,11 @@ func _run() -> void:
 	out("CHASE_CLOSED_M", int(d0 - beast.global_position.distance_to(player.global_position)))
 	out("CHASE_CAUGHT", died_to_chase)
 	out("CHASE_STOPS_ON_KILL", not beast.chasing)
+	_put_player(town)          # back on your feet, away from it
 	player.revive(0.0)
 	player.locked = false
 	await frames(2)
+	out("ALIVE_BEFORE_BLADE", not player.is_downed and beast.kills == 2)
 	# Hurt it, then be far away: it gives up.
 	beast.apply_damage(20.0)
 	out("BLADE_HIT_CHASES", beast.chasing)

@@ -4,10 +4,12 @@ Honest list of what is broken or faked. Updated every milestone.
 
 ## After issue #220, the beast (2026-10-30)
 
-**Checked:** the smoke test and a headless boot of the town only. The beast
-trace (`scenes/beast_trace.gd`: named from the planet, rolls, farts, kills on
-touch, chases when hurt, gives up at 1 km, 1000 health, stays dead, the locals
-talk of it) was written but not run for this PR, nor was the rest of the suite.
+**Checked:** the smoke test, a headless boot of the town, and the beast trace
+(`scenes/beast_trace.gd`, all 38 lines true; `tests/test_beast_trace.gut.gd` 8/8:
+named from the planet, rolls, farts, kills on touch, chases when hurt, gives up
+at 1 km, 1000 health, stays dead, the locals talk of it). The rest of the suite
+was not run for this PR. The trace drives hits and the chase directly (no bolts
+are fired), and runs the locals itself since it turns the NPC brains off.
 
 - **It goes through things.** The beast is moved by hand along the ground, not by
   physics. It rolls through rocks, wrecks, packs and buildings, and a chase can
