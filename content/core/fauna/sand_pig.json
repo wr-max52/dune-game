@@ -10,6 +10,6 @@
   "flee_range": 18.0,
   "flee_s": 6.0,
   "food": { "item": "food", "count": 2 },
-  "size": [0.9, 0.7, 1.5],
-  "look": { "hide": "#b08a62", "belly": "#d2b48c", "snout": "#7a4e3a", "dark": "#3a2a20" }
+  "size": [0.85, 1.1, 1.5],
+  "look": { "scene": "res://assets/characters/sand_pig/sand_pig.glb", "yaw_deg": 180.0, "hide": "#b08a62", "belly": "#d2b48c", "snout": "#7a4e3a", "dark": "#3a2a20" }
 }

@@ -23,7 +23,7 @@
   "types": {
     "sand": {
       "label": "sand desert",
-      "natives": { "people": "desert_folk", "packs": [2, 3], "pack_size": [10, 20], "hostile_share": 0.5, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1400.0], "fauna": [ { "species": "sand_pig", "count": 8, "radius": 900.0 } ] },
+      "natives": { "people": "desert_folk", "packs": [2, 3], "pack_size": [10, 20], "hostile_share": 0.5, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1400.0], "fauna": [ { "species": "sand_pig", "count": 20, "radius": 900.0 } ] },
       "ground": "terrain",
       "default_style": "desert",
       "sand": {},
@@ -50,7 +50,7 @@
     },
     "red_desert": {
       "label": "red desert",
-      "natives": { "people": "desert_folk", "packs": [2, 4], "pack_size": [10, 18], "hostile_share": 0.6, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1500.0], "fauna": [ { "species": "sand_pig", "count": 6, "radius": 900.0 } ] },
+      "natives": { "people": "desert_folk", "packs": [2, 4], "pack_size": [10, 18], "hostile_share": 0.6, "children_share": 0.15, "adults_only_share": 0.25, "route_radius": [500.0, 1500.0], "fauna": [ { "species": "sand_pig", "count": 14, "radius": 900.0 } ] },
       "ground": "terrain",
       "default_style": "desert",
       "sand": { "sand_light": "#d9845a", "sand_mid": "#b0532f", "sand_shadow": "#5e2a1e" },

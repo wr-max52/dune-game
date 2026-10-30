@@ -55,11 +55,14 @@ func setup(fauna_cfg: Dictionary, world_ground: WorldGround, at: Vector3, rng_se
 	_place(at)
 
 
-## Blocky pig: body, head, snout, ears, four legs and a tail (look only).
+## The look's "scene" (a Hyper3D boar), or a blocky pig when there is none: body,
+## head, snout, ears, four legs and a tail (look only).
 func _build_look(size: Vector3, mats: LookMaterials) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Look"
 	var lk: Dictionary = cfg.get("look", {})
+	if _build_model(root, str(lk.get("scene", "")), float(lk.get("yaw_deg", 0.0)), size):
+		return root
 	var hide := _mat(mats, Color(str(lk.get("hide", "#b08a62"))))
 	var belly := _mat(mats, Color(str(lk.get("belly", "#d2b48c"))))
 	var snout := _mat(mats, Color(str(lk.get("snout", "#7a4e3a"))))
@@ -75,6 +78,39 @@ func _build_look(size: Vector3, mats: LookMaterials) -> Node3D:
 			_box(root, Vector3(0.16, leg_h, 0.16), dark, Vector3(sx * size.x * 0.32, leg_h * 0.5, sz2 * size.z * 0.28))
 	_box(root, Vector3(0.06, 0.06, 0.3), dark, Vector3(0, leg_h + size.y * 0.5, size.z * 0.45))
 	return root
+
+
+## The model at `path`, turned by yaw_deg so its snout faces -Z, scaled so it
+## stands size.y tall, centred over the feet. False (nothing added) without one.
+static func _build_model(root: Node3D, path: String, yaw_deg: float, size: Vector3) -> bool:
+	if path == "" or not ResourceLoader.exists(path):
+		return false
+	var res = ModelCache.scene(path)
+	var inst = (res as PackedScene).instantiate() if res is PackedScene else null
+	if not (inst is Node3D):
+		if inst != null:
+			inst.free()
+		return false
+	var m := inst as Node3D
+	m.name = "Model"
+	var box := AABB()
+	var first := true
+	for mi: MeshInstance3D in m.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = mi.transform * mi.mesh.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	if first or box.size.y <= 0.0:
+		m.free()
+		return false
+	var s := size.y / box.size.y
+	var turn := Node3D.new()
+	turn.name = "Turn"
+	turn.rotation.y = deg_to_rad(yaw_deg)
+	turn.scale = Vector3.ONE * s
+	root.add_child(turn)
+	turn.add_child(m)
+	m.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
+	return true
 
 
 static func _mat(mats: LookMaterials, c: Color) -> Material:
