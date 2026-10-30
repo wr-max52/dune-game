@@ -56,3 +56,18 @@ func test_sprinting_drops_the_gun_at_once() -> void:
 		c.step(1.0 / 60.0, true, true)
 	assert_almost_eq(c.ready, 0.0, 0.001, "down within the lower time")
 	assert_false(c.on_target())
+
+
+func test_sprinting_rifle_is_at_port_arms_clear_of_the_legs() -> void:
+	# Issue #229: at REST the rifle hung across the thighs and a running leg swung
+	# through it. Sprinting, it is up across the chest: muzzle up, the whole gun
+	# (stock -0.47 m to muzzle +0.48 m along it) in front of the chest and above the hips.
+	var grip := Vector3(0.0, -0.08, -0.11)
+	var xf := WeaponCarry.rest_xf("rifle", grip, true)
+	assert_almost_eq((xf * grip - WeaponCarry.SPRINT.rifle[0]).length(), 0.0, 0.0001, "grip on target")
+	assert_gt((xf.basis * Vector3(0, 0, 1)).y, 0.4, "muzzle up")
+	for z in [-0.47, 0.0, 0.48]:
+		var p := xf * Vector3(0, 0, z)
+		assert_gt(p.y, -0.42, "above the hips at %.2f" % z)
+		assert_gt(p.z, 0.08, "in front of the chest at %.2f" % z)
+	assert_eq(WeaponCarry.rest_xf("pistol", Vector3.ZERO, true), WeaponCarry.rest_xf("pistol", Vector3.ZERO), "a pistol keeps its rest")
