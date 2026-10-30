@@ -11,8 +11,10 @@ smoke, story, smuggling and IP-neutrality suites, and a headless boot of the tow
 with no script errors.
 
 **Not done, honestly:**
-- **Not looked at on a real screen.** The arrow's angle and the diamond's place
-  are drawn from the camera; check them in first and third person, and in a ship.
+- **Rendered on foot in third person only** (1600x900, the default text scale):
+  the arrow, the diamond and the I screen look right there. Not yet looked at in
+  first person or from a ship. With a long job log the tally scrolls below the
+  fold (mouse wheel).
 - **No key to hide it.** It is always on in the full game (off in the CI greybox).
 - **Off the home planet** the pointer only knows the station's drop and fence;
   a bounty out at the port's outposts just says to fly home.
