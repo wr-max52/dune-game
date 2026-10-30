@@ -2,24 +2,28 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
-## After issue #220, the desert blob (2026-10-30)
+## After issue #220, the beast (2026-10-30)
 
-**Checked:** headless trace only (`scenes/blob_trace.gd`: built, rolls, farts,
-kills on touch, player wakes), plus one rendered still. The full test suite was
-not run for this PR.
+**Checked:** the smoke test and a headless boot of the town only. The beast
+trace (`scenes/beast_trace.gd`: named from the planet, rolls, farts, kills on
+touch, chases when hurt, gives up at 1 km, 1000 health, stays dead, the locals
+talk of it) was written but not run for this PR, nor was the rest of the suite.
 
-- **It goes through things.** The blob is moved by hand along the ground, not by
-  physics. It rolls through rocks, wrecks, packs and buildings, if it ever
-  wanders into town.
+- **It goes through things.** The beast is moved by hand along the ground, not by
+  physics. It rolls through rocks, wrecks, packs and buildings, and a chase can
+  take it straight through the town walls.
 - **Only the player dies.** NPCs, packs and sand pigs it rolls over are not hurt.
+- **No health bar.** You can't see how hurt it is; it only squashes when hit.
+- **Who hurt it is a guess for blades.** A blade hit (or anything that doesn't
+  say who) counts as the player's.
 - **Speeder touch uses a simple distance check** (the speeder's centre against the
-  blob's radius plus a margin), so a glancing pass at the craft's nose or tail
+  beast's radius plus a margin), so a glancing pass at the craft's nose or tail
   may miss.
 - **The puff is a few fading spheres**, not real particles, and is skipped in
   headless runs.
-- **One blob, one planet.** Only `port_desert` lists it. Other planets would need
-  their id added to `planets` in the data, and the blob's home spot is a fixed
-  map point.
+- **One beast so far.** Only `port_desert` has a `beast` block. Generated
+  planets get none unless their file adds one, and every beast is the same purple
+  blob (only its numbers and colours can change per planet).
 
 ## After issue #96, desert pack camps (2026-10-29)
 
