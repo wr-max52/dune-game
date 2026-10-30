@@ -204,6 +204,12 @@ func _physics_process(dt: float) -> void:
 				skip.append((f as CollisionObject3D).get_rid())
 		q.exclude = skip
 		var hit := space.intersect_ray(q)
+		# Issue #193: a body marked "bolts_pass" (the cruiser bay's shield) stops
+		# people, not shots.
+		while not hit.is_empty() and (hit.collider as Object).has_meta("bolts_pass"):
+			skip.append(hit.rid)
+			q.exclude = skip
+			hit = space.intersect_ray(q)
 		if not hit.is_empty():
 			global_position = hit.position
 			apply_to(hit.collider if hit_target == null else hit_target)
@@ -237,7 +243,7 @@ func _on_body_entered(body: Node3D) -> void:
 		shooter = null
 	if shooter != null and body == shooter:
 		return
-	if friends.has(body):
+	if friends.has(body) or body.has_meta("bolts_pass"):
 		return
 	if hit_target != null:
 		apply_to(hit_target)

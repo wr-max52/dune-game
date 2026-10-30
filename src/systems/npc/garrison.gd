@@ -641,6 +641,12 @@ func _on_player_downed() -> void:
 	if _ko_left > 0.0:
 		return
 	knockouts += 1
+	# The town's garrison sleeps with the town's people while you are high up (the
+	# altitude detail tier): downed up there (aboard the cruiser) it must still
+	# count you out and wake you in the pit. The pit brings the tier back down,
+	# and that sets this back with the rest of the people.
+	if not can_process():
+		process_mode = Node.PROCESS_MODE_INHERIT
 	var lead := _lead(_alive())
 	if lead != null:
 		_say(lead, "downed")

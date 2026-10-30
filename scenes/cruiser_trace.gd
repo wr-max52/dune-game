@@ -190,6 +190,9 @@ func _aboard(c) -> void:
 		if is_instance_valid(g) and not c.aboard(g.global_position):
 			fallen += 1
 	out("CREW_FALLEN", fallen)
+	await _ship_guns(c)
+	await _shot_asleep(c)
+	await _downed_aboard(c)
 	var credits: int = WorldState.credits
 	var locals: int = WorldState.standing.get("locals", 0)
 	if c.general != null:
@@ -204,6 +207,78 @@ func _aboard(c) -> void:
 	player.global_position = c.frame.origin + Vector3(0, 0, 4000)
 	await frames(5)
 	out("CREW_AFTER_LEAVING", c.crew.size())
+
+
+## Your ship's guns at troopers in the bay: from outside its mouth (through the
+## shield) and parked on the pad. The guns cross on what is under the nose.
+func _ship_guns(c) -> void:
+	pilot._seat_arriving()
+	pilot.atmo.reached_space = true
+	out("GUNS_FROM_OUTSIDE", await _guns_at(c, c.crew[2], Vector3(140, -8, -30), false))
+	out("GUNS_PARKED", await _guns_at(c, c.crew[3], CruiserHull.dock_pad().at, true))
+	pilot.exit_ship()
+	await frames(10)
+
+
+## The nose on g's chest from `local` (cruiser frame), the trigger held up to 2 s:
+## whether he died.
+func _guns_at(c, g, local: Vector3, parked: bool) -> bool:
+	for f in 120:
+		if g.dead:
+			break
+		var chest: Vector3 = g.global_position + Vector3(0, 1.2, 0)
+		var at: Vector3 = c.frame * local
+		if parked:
+			if f == 0:
+				var flat := chest - at
+				pilot.atmo.park(at, atan2(-flat.x, -flat.z))
+		else:
+			pilot.atmo.place_flying(at, (chest - at).normalized(), 0.0, 0.0)
+			pilot.atmo.flight.basis = Basis.looking_at(chest - at, Vector3.UP)
+		pilot.set_external_command({ "fire": true, "throttle": 0.0 })
+		await physics_frame
+	pilot.set_external_command({})
+	return g.dead
+
+
+## A trooper asleep (you far off, as in your ship) is still solid to a bolt, and
+## wakes to fall when it kills him.
+func _shot_asleep(c) -> void:
+	var g = c.crew[5]
+	c._was_aboard = false
+	player.global_position = g.global_position + Vector3(0, 0, 700)
+	player.process_mode = Node.PROCESS_MODE_DISABLED
+	await frames(3)
+	out("ASLEEP", not g.can_process())
+	var b = load("res://scenes/entities/bolt.tscn").instantiate()
+	b.direction = Vector3.RIGHT
+	b.speed = 60.0
+	b.damage = 1000.0
+	b.range_m = 30.0
+	b.shooter = player
+	b.sweep = true
+	demo.add_child(b)
+	b.global_position = g.global_position + Vector3(-3, 1.2, 0)
+	await frames(30)
+	out("ASLEEP_SHOT_DEAD", g.dead)
+	out("ASLEEP_SHOT_WOKE", g.can_process())
+	player.process_mode = Node.PROCESS_MODE_INHERIT
+
+
+## Downed aboard: woken in the port's pit, and left there (not pulled back aboard).
+func _downed_aboard(c) -> void:
+	player.global_position = c.frame * ((CruiserHull.dock_pad().at as Vector3) + Vector3(-16, 0.1, 0))
+	player.align_to_ground(true)
+	await frames(10)
+	player.apply_damage(100000.0)
+	out("DOWNED_ABOARD", player.is_downed)
+	await frames(60 * 4)
+	out("DOWNED_WOKE", not player.is_downed and not player.locked)
+	await frames(60 * 2)
+	out("DOWNED_IN_TOWN_KM", snappedf(c.distance(player.global_position) / 1000.0, 0.1))
+	player.global_position = c.frame * ((CruiserHull.dock_pad().at as Vector3) + Vector3(-16, 0.1, 0))
+	player.align_to_ground(true)
+	await frames(10)
 
 
 func _finish() -> void:

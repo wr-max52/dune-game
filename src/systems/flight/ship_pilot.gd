@@ -100,6 +100,7 @@ var _jolt_xf := Transform3D.IDENTITY
 var hull: ShipHull               ## the ship's own collision: solid parked and flying (bolts hit it)
 var defense                      ## issue #55: ShipDefense, the flown ship's shield and hull
 var guns                         ## issue #55: ShipLoadout, its guns in the air
+var _gun_reach := 300.0          ## where the guns cross with nothing nearer under the nose
 var shots := 0                   ## bolts the guns fired in the air (traces, tests)
 var vessel_name := ""            ## issue #15: the ship's own name (same key as in space)
 var planet_name := ""
@@ -321,6 +322,7 @@ func _use_berth(i: int) -> void:
 	_sync_visual()
 	defense = ShipDefense.new(ship_cfg)
 	guns = ShipLoadout.new(ship_cfg, content)
+	_gun_reach = guns.convergence
 	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
 	hud.vessel_name = vessel_name
 	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
@@ -1233,6 +1235,8 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 	if guns == null or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	var v: Vector3 = atmo.flight.velocity() if atmo.state != AtmoFlight.State.PARKED else Vector3.ZERO
+	if trigger:
+		guns.convergence = _gun_cross()
 	var volley := false
 	for s in guns.fire(dt, atmo.transform(), v, trigger, false):
 		if str(s.kind) != "bolt":
@@ -1246,6 +1250,29 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 		volley = true
 	if volley:
 		Sound.play("ship_cannon", atmo.position())
+
+
+## Where the guns cross: on whatever is under the nose, out to their own reach.
+## Crossing 300 m ahead, the wing guns' bolts pass a man 50 m off a metre or two
+## either side (a trooper in the cruiser's bay, issue #193); now they meet on him.
+func _gun_cross() -> float:
+	var xf := atmo.transform()
+	var from := xf.origin
+	var q := PhysicsRayQueryParameters3D.create(from, from - xf.basis.z * _gun_reach)
+	var skip: Array[RID] = []
+	for n in [hull, player()]:
+		if n is CollisionObject3D:
+			skip.append((n as CollisionObject3D).get_rid())
+	q.exclude = skip
+	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state
+	var hit := space.intersect_ray(q)
+	while not hit.is_empty() and (hit.collider as Object).has_meta("bolts_pass"):
+		skip.append(hit.rid)
+		q.exclude = skip
+		hit = space.intersect_ray(q)
+	if hit.is_empty():
+		return _gun_reach
+	return clampf(from.distance_to(hit.position), 8.0, _gun_reach)
 
 
 ## One cannon shot from ShipLoadout.fire() as a real bolt in the air (sweeping, so
