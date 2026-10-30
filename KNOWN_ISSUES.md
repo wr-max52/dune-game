@@ -21,6 +21,50 @@ with no script errors.
 - **`test_inventory` has two failures that were there before this change** (the
   food stall makes three port vendors, and the food look check).
 
+## After the moon handoff smoothing (2026-10-29)
+
+**Checked:** rendered on this Mac, port to the moon (`scenes/handoff_trace.gd`):
+the switch frame ~130 ms (was ~680), then 55 and 75 ms, then normal; the first
+frame after differs from the last before by 0.017 (mean RGB: the HUD numbers and
+the ship's progress; was 0.085); the music and the engine drone carry on with the
+same players. `test_handoff_seams`, `test_staged_build`, `test_space_fight`,
+`test_sound`, `test_smoke` pass. The headless planets trace still hands the ship
+over with 0 error both ways.
+
+**Not done, honestly:**
+- **Still about three long frames at the switch.** The station's shell is ~75 ms
+  (decor ~25, desert ~15, outside of the station ~16) and its first render ~50 ms
+  more; then the bar (~22 ms) and the player's body.
+- **The way home is still the longer switch:** the port's shell is ~205 ms (town
+  decor ~95, the ship's ground and scenery ~60, boxes ~20), then three ~75 ms
+  frames. About 1.5 s later two staged steps still run long: the outposts' sites
+  (~180 ms for one piece) and the natives' bodies (~145 ms). Not looked into yet.
+- **`scenes/garrison_trace.gd` does not run with `-s`:** it compiles the town
+  before the `NpcVoice` autoload exists ("Identifier not found: NpcVoice"), so
+  `test_garrison_trace` has no trace to read. Not from this change.
+- **The ALT read-out jumps** at the switch (altitude above the moon instead of
+  the home planet). It is the true number for where you are.
+- **One run had a 1.1 s navmesh step** on the moon's first staged frame; it did
+  not happen again in five more runs.
+- **`test_planets_trace` fails one check** (`STATION_BUILDINGS`: the station's
+  town has had gray homes since they moved there; the test still expects none).
+
+## After the orbit stutter fix (2026-10-29)
+
+**Checked:** rendered on this Mac, pad to the moon handoff with the Remnant's
+interceptor up (`scenes/orbit_trace.gd`): every altitude band p50 ~10 ms, p95
+~12 ms, nothing over 25 ms (5-7 km was ~145 ms a frame). The ground index tests
+pass, including high queries straight over every item (exactly the plain scan).
+
+**Not done, honestly:**
+- **`scenes/m14_flight_trace.gd` stops at its crash step:** it looks up
+  `mesa_1500_1700`, which the desert's landforms no longer place (the code that
+  places them was not touched here). Its GUT test fails for that reason.
+- **The interceptor still circles under its ceiling while you are in orbit** (it
+  cannot follow you up and keeps hunting until you come down or leave).
+- **The pad's orbital fight still starts at the old edge** (space_altitude), with
+  its "Contact!" toast: the board's orbital jobs need it.
+
 ## After issue #76 part 3, dogfights in the port's sky (2026-10-29)
 
 **Checked:** headless tests drive the real town with the ship and the

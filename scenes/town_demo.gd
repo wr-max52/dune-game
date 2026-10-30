@@ -198,8 +198,14 @@ func build_plan(staged_build: bool) -> Array:
 				_dress_desert()
 			return true)
 		add.call("dress_platform", SHELL, func():
-			if platform != null:
+			if platform is AsteroidWorld:
+				(platform as AsteroidWorld).dress_outside(look, decor.mats)   # what shows from space
+			elif platform != null:
 				platform.dress(look, decor.mats)
+			return true)
+		add.call("dress_platform_inside", LATER, func():
+			if platform is AsteroidWorld:
+				(platform as AsteroidWorld).dress_inside()
 			return true)
 	else:
 		add.call("light_and_sky", SHELL, func(): _add_light_and_sky(); return true)
@@ -269,7 +275,8 @@ func build_plan(staged_build: bool) -> Array:
 		add_child(dev_settings)
 		return true)
 	if use_look:
-		add.call("retro_hud", LATER, func():
+		# On the first frame: the HUD's frame must not blink out over a handoff.
+		add.call("retro_hud", SHELL, func():
 			retro_hud = RetroHud.new()
 			retro_hud.demo = self
 			add_child(retro_hud)
@@ -691,8 +698,10 @@ func _content() -> CoreContent:
 
 ## When a dead trooper comes back, and where (Garrison asks as each one dies).
 ## Town troopers: behind the barracks a minute later, while the garrison holds
-## the town; they walk back to their post. Outpost troopers: at their post after
-## a few minutes. The bounty target never comes back. {} = stays dead.
+## the town; they walk back to their post. A sentry up on a roof or the tower
+## (profile combat.hold_ground) has no way up from there, so it comes back at its
+## post on the same clock. Outpost troopers: at their post after a few minutes.
+## The bounty target never comes back. {} = stays dead.
 func respawn_rule(g: NpcBody) -> Dictionary:
 	if g.has_meta("bounty"):
 		return {}
@@ -704,7 +713,8 @@ func respawn_rule(g: NpcBody) -> Dictionary:
 	var mk := str(rc.get("town_respawn_marker", "remnant_respawn"))
 	if not Story.town_garrison() or town.get_marker(mk).is_empty():
 		return {}
-	r.merge({ "delay": float(rc.get("town_respawn_s", 60.0)), "at": town.marker_pos(mk) })
+	var aloft := bool(g.profile.get("combat", {}).get("hold_ground", false))
+	r.merge({ "delay": float(rc.get("town_respawn_s", 60.0)), "at": g.post_pos if aloft else town.marker_pos(mk) })
 	return r
 
 
@@ -1005,25 +1015,15 @@ func desert_site() -> Dictionary:
 ## first frame needs (a coarse far mesh) and the rest on worker threads.
 func _build_desert(staged_build := false) -> void:
 	var site := desert_site()
-	# Issue #77: a world with a sphere_radius is a whole ball (the home planet);
-	# the rest are still a square of desert.
-	var r := float(world.get("terrain", {}).get("sphere_radius", 0.0))
-	if r > 0.0:
-		var pt := PlanetTerrain.new()
-		if str(planet.get("ground", "")) == "ball":
-			# Issue #99: the asteroid: cratered rock all the way round.
-			var surf: Dictionary = planet.get("type_cfg", {}).get("surface", {})
-			pt.use_sphere(AsteroidSphere.new(r, surf))
-			pt.rock_look = surf.get("look", {})
-		else:
-			pt.set_radius(r)
-		terrain = pt
-	else:
+	# Issue #77: a world with a sphere_radius is a whole ball (the home planet,
+	# seated on its town: PlanetTerrain.for_planet); the rest are still a square
+	# of desert.
+	terrain = PlanetTerrain.for_planet(planet)
+	if terrain == null:
 		terrain = DesertTerrain.new()
 		terrain.resolution = terrain_resolution
 		terrain.collider_size = 512.0
-	terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
-	terrain.configure_flat_sites(_droid_merchant_flat_sites())
+		terrain.configure_site(site.floor, site.walls, site.sunken, 0.0)
 	add_child(terrain)
 	if staged_build and terrain is PlanetTerrain:
 		(terrain as PlanetTerrain).build_staged(use_look)
@@ -1034,29 +1034,6 @@ func _build_desert(staged_build := false) -> void:
 		tree_exiting.connect(func():
 			if PlanetSphere.current == (terrain as PlanetTerrain).sphere:
 				PlanetSphere.current = null)
-
-
-## Keep the droid relay yards from inheriting dune slopes. The height is sampled
-## before registering the pad, so each one stays at the terrain's original level.
-func _droid_merchant_flat_sites() -> Array:
-	if str(planet.get("id", "")) != PlanetGen.home_id():
-		return []
-	var sites: Array = []
-	for lm in world.get("landmarks", []):
-		var location_id := str(lm.get("location", ""))
-		if not location_id.begins_with("droid_post_"):
-			continue
-		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
-		var y := terrain.height_at(at.x, at.z)
-		if terrain is PlanetTerrain:
-			var sp: PlanetSphere = (terrain as PlanetTerrain).sphere
-			y = sp.elevation(sp.map_dir(at.x, at.z))
-		sites.append({
-			"rect": Rect2(at.x - 10.0, at.z - 10.0, 20.0, 20.0),
-			"y": y,
-			"blend": 8.0,
-		})
-	return sites
 
 
 ## Look only: the aprons outside the walls are hidden (still solid) so the terrain's
@@ -1158,7 +1135,8 @@ func _build_launch_pads() -> void:
 		pad.configure(r, _player)
 		add_child(pad)
 		pads.append(pad)
-	if not _arrival.is_empty() and not pads.is_empty():
+	# A no-fade handoff says nothing: the player should not notice the switch.
+	if not _arrival.is_empty() and not pads.is_empty() and str(_arrival.get("mode", "")) != "handoff":
 		pads[0].toast(GameFlow.arrival_text(_arrival), 5.0)
 
 
