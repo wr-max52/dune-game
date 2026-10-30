@@ -1000,6 +1000,9 @@ func _update_hud(agl_now: float) -> void:
 			d = me.defense
 	var up := atmo.up()
 	var att := FlightHud.attitude(PlanetSphere.tilt_to(up).inverse() * f.basis)
+	# The stick as last commanded, for the cockpit's yoke (centred while the bay
+	# landing flies her in, which commands nothing).
+	var cmd: Dictionary = {} if bay_landing else atmo._command
 	hud.set_cockpit(chase.is_cockpit())
 	hud.show_values({
 		"speed": f.speed, "throttle": _throttle, "max_speed": live.max_speed(),
@@ -1009,6 +1012,8 @@ func _update_hud(agl_now: float) -> void:
 		"hull": d.hull_hp(), "hull_max": d.hull_max(), "shield": int(d.shield), "shield_max": d.shield_max,
 		"pitch": att.pitch, "roll": att.roll, "heading": att.heading,
 		"ability": live.ability(), "ability_on": live.boosting,
+		"stick_pitch": float(cmd.get("pitch", 0.0)), "stick_yaw": float(cmd.get("yaw", 0.0)),
+		"stick_roll": float(cmd.get("roll", 0.0)),
 	})
 	var tip := ""
 	match atmo.state:

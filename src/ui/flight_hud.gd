@@ -89,7 +89,8 @@ func _center_label(from_bottom: float) -> Label:
 ## values: speed, throttle (0..1), boost (0..1), agl, altitude, climb, state,
 ## (issue #55) hull, hull_max, shield, and (issue #181) shield_max, max_speed, the
 ## attitude (pitch, roll, heading in degrees: attitude()), and the Shift ability
-## (ability: its kind, ability_on: running now)
+## (ability: its kind, ability_on: running now), and the stick as commanded
+## (stick_pitch, stick_yaw, stick_roll, -1..1) for the cockpit's yoke
 func show_values(v: Dictionary) -> void:
 	if gauge == null:
 		return
