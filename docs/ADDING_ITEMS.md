@@ -50,7 +50,8 @@ Add an entry under `looks` in `content/look/items.json`:
   and colours. A new frame is a new function in `src/systems/items/item_kit.gd`.
 - `on_back`: where it sits on the chest joint (`pos` in metres, `rot` in degrees).
 - `model_scale`: `[x, y, z]` squeezes a real model along its own axes, worn and as a
-  pickup (the jetpack is `[0.5, 1, 1]`: half as wide). Move `flames_at` to match.
+  pickup (the jetpack is `[1, 1, 0.5]`: half as deep, flat on the back). Move
+  `flames_at` to match.
 
 Check it with `./tools/m13/shoot_jetpack.sh shots=worn_back,worn_side,flames_close`.
 
