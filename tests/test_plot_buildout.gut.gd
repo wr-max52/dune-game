@@ -194,6 +194,20 @@ func test_gun_and_jetpack_upgrades() -> void:
 	assert_eq(WorldState.credits, 1000 - 150 - 250)
 
 
+func test_the_fence_shows_the_armour_locked_until_the_bounty() -> void:
+	var ids := func(a: Array): return a.map(func(o): return str(o.id))
+	assert_true(ids.call(GearUpgrades.locked_offers()).has("quantonium_armour"), "on the menu, locked")
+	assert_false(ids.call(GearUpgrades.open_offers()).has("quantonium_armour"))
+	var labels: Dictionary = CharacterKit._read_json("res://content/core/flow/gear.json").labels
+	var o := GearUpgrades.offer("quantonium_armour")
+	assert_string_contains(str(labels.offer_locked) % [str(o.label), int(o.price), str(o.locked)], "bounty")
+	WorldState.bump("bounties_paid")
+	assert_false(ids.call(GearUpgrades.locked_offers()).has("quantonium_armour"), "unlocked")
+	assert_true(ids.call(GearUpgrades.open_offers()).has("quantonium_armour"))
+	var fence := NpcBrain.new(null, "res://content/core/npcs/fence_card.json")
+	assert_string_contains(str(fence.card.voice), "quantonium armour", "he is always selling it")
+
+
 func test_armour_after_the_bounty_triples_health() -> void:
 	WorldState.credits = 1000
 	assert_eq(GearUpgrades.buy("quantonium_armour"), "", "locked before the bounty")

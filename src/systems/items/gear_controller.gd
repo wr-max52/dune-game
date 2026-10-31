@@ -309,7 +309,7 @@ func prompt_text() -> String:
 		var it: Dictionary = content.get_item(sell_id)
 		return _l("sell") % [_shown(it, sell_id), str(v.get("label", "vendor")).to_lower(),
 			Inventory.sell_price(it, v)]
-	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
+	if v.has("offers") and _has_offers():
 		return _l("browse") % str(v.get("label", "vendor")).to_lower()
 	if v.has("offers") and vendor_talk.has(str(v.get("id", ""))):
 		return _l("talk_to") % str(v.get("label", "vendor")).to_lower()
@@ -405,7 +405,7 @@ func _trade(v: Dictionary) -> String:
 		if hud != null:
 			hud.toast(_l("sold") % [str(it.get("label", sell_id)), price])
 		return "sold"
-	if v.has("offers") and (not GearUpgrades.open_offers().is_empty() or vendor_talk.has(str(v.get("id", "")))):
+	if v.has("offers") and (_has_offers() or vendor_talk.has(str(v.get("id", "")))):
 		open_offers(v)
 		return "menu"
 	for id in inv().vendor_stock(v):
@@ -426,6 +426,11 @@ func _trade(v: Dictionary) -> String:
 
 # ------------------------------------------------------------------ the fence's offers (issues #208, #209)
 
+## Something on the fence's menu: on sale, or shown locked.
+func _has_offers() -> bool:
+	return not GearUpgrades.open_offers().is_empty() or not GearUpgrades.locked_offers().is_empty()
+
+
 func open_offers(v: Dictionary) -> void:
 	var opts: Array = []
 	var talk: Callable = vendor_talk.get(str(v.get("id", "")), Callable())
@@ -433,6 +438,8 @@ func open_offers(v: Dictionary) -> void:
 		opts.append({ "id": "talk", "text": _l("talk") })     # issue #188: the fence is an AI character
 	for o in GearUpgrades.open_offers():
 		opts.append({ "id": str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
+	for o in GearUpgrades.locked_offers():
+		opts.append({ "id": "locked:" + str(o.id), "text": _l("offer_locked") % [str(o.label), int(o.price), str(o.locked)] })
 	var lock: bool = player != null and not bool(player.get("locked"))
 	if lock:
 		player.locked = true
@@ -441,6 +448,10 @@ func open_offers(v: Dictionary) -> void:
 			player.locked = false
 		if id == "talk":
 			talk.call()
+		elif id.begins_with("locked:"):
+			var o := GearUpgrades.offer(id.substr(7))
+			if hud != null:
+				hud.toast(_l("offer_locked_toast") % [str(o.label), str(o.locked)], 4.0)
 		elif id != "":
 			buy_offer(id))
 

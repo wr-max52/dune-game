@@ -11,6 +11,8 @@ extends RefCounted
 ##       "jetpack.fuel"), put on by apply() where that data is used,
 ##   { id, label, price, item, requires }  an item, sold once (requires: WorldState's
 ##       conditions, e.g. a bounty paid).
+## An offer with a "locked" hint shows on the menu before its conditions hold
+## (locked_offers), so the player knows it is there and what opens it.
 
 const FENCE_PATH := "res://content/core/vendors/fence.json"
 
@@ -40,6 +42,13 @@ static func bought(id: String) -> bool:
 static func open_offers() -> Array:
 	return offers().filter(func(o): return not bought(str(o.id)) \
 		and WorldState._conditions_hold(o.get("requires", {}), "stranger"))
+
+
+## Offers not on sale yet but shown with their "locked" hint: not bought, and
+## their conditions do not hold.
+static func locked_offers() -> Array:
+	return offers().filter(func(o): return o.has("locked") and not bought(str(o.id)) \
+		and not WorldState._conditions_hold(o.get("requires", {}), "stranger"))
 
 
 ## Pay for an offer: an upgrade goes on, an item goes in your pockets. Returns
