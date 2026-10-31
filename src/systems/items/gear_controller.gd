@@ -11,8 +11,7 @@ extends Node
 ##   - gives the player node a Jetpack while one is on its back, puts the pack's
 ##     look on the body's chest joint, and lights its flames while thrusting,
 ##   - issue #148: owning an item with a "blade_color" (the red saber from the
-##     wreck) turns the player's energy sword that colour,
-##   - draws the fuel meter, and
+##     wreck) turns the player's energy sword that colour, and
 ##   - catches a player who flew out over the walls (the town has no ground there)
 ##     and puts them back where they last stood.
 ##
@@ -105,7 +104,6 @@ func _ready() -> void:
 	labels = raw.get("labels", {}) if raw is Dictionary else {}
 	items = ItemKit.new()
 	hud = GearHud.new()
-	hud.fuel_label = _l("fuel")
 	add_child(hud)
 	# M15: what you are carrying, on I.
 	inventory_panel = InventoryPanel.new()
@@ -299,7 +297,6 @@ func _physics_process(dt: float) -> void:
 		focus = {}
 		if hud != null:
 			hud.set_prompt("")
-			hud.set_fuel(0.0, false, false)
 		return
 	sync_drop()
 	_build_site_crates()
@@ -316,8 +313,6 @@ func _physics_process(dt: float) -> void:
 	var jet = player.jetpack
 	if worn != null:
 		ItemKit.set_flames(worn, jet != null and jet.thrusting, 1.0)
-	if hud != null:
-		hud.set_fuel(jet.fraction() if jet != null else 0.0, jet != null, jet != null and jet.thrusting)
 	_guard_fall()
 
 

@@ -186,7 +186,6 @@ func _run() -> void:
 	out("PACK_LIT", jet_starts - starts0)
 	out("FLAMES_WHILE_THRUSTING", flames_seen)
 	out("FLAMES_AFTER_LANDING", gear.worn.get_node("Flames").visible if gear.worn != null else true)
-	out("HUD_METER_VISIBLE", gear.hud.meter.visible)
 	out("FUEL_ON_LANDING", snappedf(jet.fuel, 0.001))
 	await frames(30)
 	out("FUEL_HALF_SECOND_LATER", snappedf(jet.fuel, 0.001))
