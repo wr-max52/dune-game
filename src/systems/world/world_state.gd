@@ -15,6 +15,7 @@ const RUMOR_DIR := "res://content/core/rumors"
 const BOARD_PATH := "res://content/core/board/bar_board.json"
 const PICKUP_DIR := "res://content/core/pickups"
 const ITEM_DIR := "res://content/core/items"
+const VENDOR_DIR := "res://content/core/vendors"
 const FACTIONS := ["imperial_remnant", "locals", "smuggler"]
 const DEFAULT_STANDING := { "imperial_remnant": -10, "locals": 5, "smuggler": 20 }
 const STORY := "story"
@@ -248,14 +249,8 @@ static func on_flight_returned(arrival: Dictionary) -> void:
 		change_standing("imperial_remnant", -15, "A Remnant patrol in orbit was shot to pieces.")
 		change_standing("locals", 4)
 		change_standing("smuggler", 5)
-		if Story.chapter() == "fleet":
-			# Issue #64: the Remnant fleet. The locals' purse, and the garrison leaves town.
-			credits += Story.fleet_reward()
-			set_flag("remnant_fleet_beaten")
-			log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
-			Story.event("fleet_beaten")
-		else:
-			credits += int(arrival.get("payout", 0))
+		# The fleet's fighters are only in the way: the story waits on the cruiser's general.
+		credits += int(arrival.get("payout", 0))
 		_complete_jobs("flight_complete")
 	else:
 		set_flag("ship_limped_home")
@@ -445,8 +440,19 @@ static func _smuggle_job(j: Dictionary) -> Dictionary:
 		return {}
 	var out := j.duplicate()
 	out["text"] = str(j.get("text", "%s %s")) % [smuggle_goods_text(j), str(smuggle.hint)]
-	out["pays"] = int(smuggle.count) * int(_item(str(smuggle.item)).get("value", 0))
+	out["pays"] = int(smuggle.count) * maxi(0, Inventory.sell_price(_item(str(smuggle.item)), _fence(str(smuggle.get("location", "")))))
 	return out
+
+
+## The vendor in `location` that buys contraband (the fence the drop goes to), or {}.
+static func _fence(location: String) -> Dictionary:
+	for f in DirAccess.get_files_at(VENDOR_DIR):
+		if not f.ends_with(".json"):
+			continue
+		var v = _read_json(VENDOR_DIR + "/" + f)
+		if v is Dictionary and str(v.get("location", "")) == location and (v.get("buys", []) as Array).has("contraband"):
+			return v
+	return {}
 
 
 ## What the drop is, in the job's words ("2 cases of holocrystals"). `j` = the
@@ -622,7 +628,7 @@ static func _roll_bounty() -> void:
 	var run := int(bounty.get("run", 0)) + 1
 	var key := "npc:bounty/%d" % run
 	var crimes: Array = cfg.get("crimes", ["They did something unforgivable."])
-	var span: Array = cfg.get("pay", [900, 1600])
+	var span: Array = cfg.get("pay", [1800, 3200])
 	var first := count("bounties_paid") == 0
 	var last := str(bounty.get("outpost", ""))
 	var choices := Story.OUTPOSTS.filter(func(o): return o != last)
@@ -631,7 +637,7 @@ static func _roll_bounty() -> void:
 		bounty = {
 			"run": run, "key": "npc:general", "name": str(NpcBrain._read(GENERAL_CARD).get("name", "the general")),
 			"crime": str(cfg.get("general_crime", "He runs this port for the Remnant.")),
-			"outpost": Story.OUTPOSTS[0], "pay": int(cfg.get("first_pay", 600)), "state": "rolled", "general": true,
+			"outpost": Story.OUTPOSTS[0], "pay": int(cfg.get("first_pay", 1200)), "state": "rolled", "general": true,
 		}
 		return
 	var who := NameHooks.person(Story.target_naming(), key)
@@ -639,7 +645,7 @@ static func _roll_bounty() -> void:
 		"run": run, "key": key, "name": who if who != "" else "the officer",
 		"crime": str(crimes[rng.randi() % crimes.size()]),
 		"outpost": Story.OUTPOSTS[0] if first else str(choices[rng.randi() % choices.size()]),
-		"pay": int(cfg.get("first_pay", 600)) if first else rng.randi_range(int(span[0]), int(span[1])),
+		"pay": int(cfg.get("first_pay", 1200)) if first else rng.randi_range(int(span[0]), int(span[1])),
 		"state": "rolled",
 	}
 
@@ -794,6 +800,8 @@ static func from_save(d: Dictionary) -> void:
 	wreck_ship = str(d.get("wreck_ship", ""))
 	gear_fits = d.get("gear_fits", []).duplicate()
 	control = d.get("control", {}).duplicate(true)
+	if story.has("chapter"):
+		Story.catch_up()       # the general dead in a save from when the fleet chapter waited on a dogfight
 
 
 static func _read_json(path: String) -> Variant:

@@ -96,7 +96,7 @@ has a toggle in the log.
 |---|---|---|
 | Rebuild your ship | T-89, chapter 2 | Your own ship |
 | Steal the rifle from the barracks roof | Ask Oda or Skrugs about the Remnant (*the guards keep guns lying around on top of the barracks*) | Rifle |
-| Trade with the nomad packs | Skrugs | Anything any vendor sells, for meat only. Packs turn friendly after 1 minute (was 5) |
+| Trade with the nomad packs | Skrugs | Anything any vendor sells, for sand pig only (single digits: blaster 5, armour 12). Packs turn friendly after 1 minute (was 5) |
 | The blade on the cantina tower | Oda, after `droid_merchant` | Energy blade |
 | The crashed cruiser | The general, in good standing | Red saber (the only prize there) |
 

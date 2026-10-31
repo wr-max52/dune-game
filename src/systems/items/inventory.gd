@@ -169,10 +169,11 @@ func pick_up(pickup: Dictionary) -> bool:
 # ---- trade ----------------------------------------------------------------------
 
 ## What a vendor has for sale: its data stock until the player trades with it, then
-## whatever trading left there.
+## whatever trading left there. A vendor with "resells": false (the fences, which pay
+## more than they would ask) never sells on what it bought.
 func vendor_stock(vendor_cfg: Dictionary) -> Array:
 	var vid := str(vendor_cfg.get("id", ""))
-	if stock.has(vid):
+	if stock.has(vid) and bool(vendor_cfg.get("resells", true)):
 		return stock[vid]
 	return (vendor_cfg.get("stock", []) as Array).duplicate()
 
@@ -194,15 +195,16 @@ static func buy_price(item_cfg: Dictionary, vendor_cfg: Dictionary) -> int:
 
 
 ## Sell one of an item. Returns the credits earned, or -1 when you do not own it or
-## the vendor does not buy it. The vendor stocks what it bought.
+## the vendor does not buy it. The vendor stocks what it bought (unless "resells": false).
 func sell(id: String, item_cfg: Dictionary, vendor_cfg: Dictionary) -> int:
 	var price := sell_price(item_cfg, vendor_cfg)
 	if price < 0 or not has(id):
 		return -1
 	remove(id)
-	var s := vendor_stock(vendor_cfg)
-	s.append(id)
-	stock[str(vendor_cfg.get("id", ""))] = s
+	if bool(vendor_cfg.get("resells", true)):
+		var s := vendor_stock(vendor_cfg)
+		s.append(id)
+		stock[str(vendor_cfg.get("id", ""))] = s
 	return price
 
 

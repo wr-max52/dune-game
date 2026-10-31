@@ -3,7 +3,7 @@
   "label": "Orbital Skirmish",
   "world": "port_desert",
   "location": "outpost",
-  "payout": 200,
+  "payout": 1000,
   "arena": { "center": [0, 0, 0], "radius": 1600.0 },
   "player": { "ship": "interceptor", "spawn": [0, 0, 0], "facing": [0, 0, -1] },
   "allies": [

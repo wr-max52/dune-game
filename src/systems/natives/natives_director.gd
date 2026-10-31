@@ -979,7 +979,7 @@ func trade_goods(id: String, item: String) -> String:
 	var cc = gear.content if gear != null else null
 	var label: String = str(cc.get_item(item).get("label", item)) if cc != null else item
 	_toast(_line("traded_goods") % [price, label, str(p.label)])
-	WorldState.log_event("Traded %d food for a %s with the %s." % [price, label.to_lower(), str(p.label)])
+	WorldState.log_event("Traded %d sand pig for a %s with the %s." % [price, label.to_lower(), str(p.label)])
 	Story.event("nomad_traded")
 	return "traded"
 
@@ -1029,7 +1029,7 @@ func trade(id: String) -> String:
 		lead.say(str(people.get("voice", {}).get("gesture_thanks", "")), 3.5)
 		p.gesture_t = float(people.get("pack", {}).get("offer_every_s", 7.0))
 	_toast(_line("traded") % [n, str(p.label), int(p.rec.rep)])
-	WorldState.log_event("Traded food for quartz with the %s." % str(p.label))
+	WorldState.log_event("Traded sand pig for quartz with the %s." % str(p.label))
 	traded.emit(id, n)
 	return "traded"
 
@@ -1336,5 +1336,5 @@ func butcher(pig: SandPig) -> int:
 		return 0
 	WorldState.inventory.add(str(got.item), int(got.count))
 	butchered += 1
-	_toast(_line("butchered") % [int(got.count), str(pig.cfg.get("label", "animal"))])
+	_toast(_line("butchered") % [str(pig.cfg.get("label", "animal")), int(got.count)])
 	return int(got.count)
