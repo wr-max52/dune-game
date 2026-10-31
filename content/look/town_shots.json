@@ -148,6 +148,34 @@
                       -56.0
                 ],
                 "fov": 62.0
+          },
+          "skrugs_yard": {
+                "note": "Issue #295: Skrugs's yard behind the cantina, from the back lane: the garage opening onto it, the display speeder, his stall and house. Lookdev mode builds no speeders step, so his post is not in these renders; docs/town/look/port_round/golden_skrugs_*.png came from a full boot.",
+                "pos": [
+                      -113.0,
+                      3.0,
+                      -33.0
+                ],
+                "target": [
+                      -127.0,
+                      1.5,
+                      -12.0
+                ],
+                "fov": 66.0
+          },
+          "skrugs_yard_aerial": {
+                "note": "Issue #295: the yard from above the cantina's back: wall, back gate, lane and yard in one view.",
+                "pos": [
+                      -100.0,
+                      38.0,
+                      -42.0
+                ],
+                "target": [
+                      -128.0,
+                      0.0,
+                      -14.0
+                ],
+                "fov": 60.0
           }
     }
   }

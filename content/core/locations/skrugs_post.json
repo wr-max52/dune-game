@@ -1,18 +1,29 @@
 {
   "id": "skrugs_post",
   "kind": "post",
-  "note": "Issue #42: Skrugs's speeder stall, just outside the back gate. Set in the world as a landmark (content/core/worlds/port_desert.json), so ships and speeders collide with it and the player walks on it. Local frame: +x faces the town's back gate. 'visual': false = no placeholder box (src/systems/world/speeder_post.gd dresses it). 'rise' makes a building a ramp (its top slopes up toward that side). 'points' are where things go: the stall (Skrugs stands behind the counter, the player in front), the display speeder, the spot behind the house where a bought speeder is parked, and the ramp's run-up.",
+  "note": "Issue #42: Skrugs's speeder stall. Issue #295: this is the square port's (F11 > World > Town), out in the sand past its back gate; the round port uses skrugs_post_round, behind the cantina inside the wall. The 'skrugs_post' landmark in content/core/worlds/port_desert.json picks one per layout, so ships and speeders collide with it and the player walks on it. Local frame: +x faces the town's back gate. 'visual': false = no placeholder box (src/systems/world/speeder_post.gd dresses it). A building's position y lifts it off the sand (the garage roof). The garage is wall pieces, not one box, so a speeder drives in through its open side (+x). 'points': the stall (Skrugs stands behind the counter, the player in front), the display speeder, his garage's bay (where his bench works on a speeder, free roam only), where you stand at the bench, and the spot by the post where he looks at a ship you want to sell him. 'parking': where bought speeders wait, first in the garage, then behind the house; 'nose' is the way each one faces. The jump ramp is its own landmark now (skrugs_ramp).",
   "buildings": [
     { "id": "house", "shape": "box", "size": [7, 4.2, 7], "position": [-4, 0, 0], "visual": false },
     { "id": "stall", "shape": "box", "size": [1, 1.1, 3.6], "position": [3, 0, 5], "visual": false },
     { "id": "display_pad", "shape": "box", "size": [3.4, 0.3, 5.2], "position": [3.5, 0, -3], "visual": false },
-    { "id": "ramp", "shape": "box", "size": [6, 2.4, 10], "position": [0, 0, -31], "rise": "-z", "visual": false }
+    { "id": "garage_back", "shape": "box", "size": [0.4, 4.2, 7.2], "position": [-7.4, 0, -13], "visual": false },
+    { "id": "garage_side_a", "shape": "box", "size": [9.4, 4.2, 0.4], "position": [-2.9, 0, -16.4], "visual": false },
+    { "id": "garage_side_b", "shape": "box", "size": [9.4, 4.2, 0.4], "position": [-2.9, 0, -9.6], "visual": false },
+    { "id": "garage_roof", "shape": "box", "size": [9.4, 0.3, 7.2], "position": [-2.9, 4.2, -13], "visual": false },
+    { "id": "bench", "shape": "box", "size": [1.2, 1.0, 3.0], "position": [3.4, 0, -18.6], "visual": false }
   ],
   "points": {
     "merchant": [2.15, 0, 5],
     "customer": [4.4, 0, 5],
     "display": [3.5, 0.3, -3],
-    "spawn": [-12, 0, 0],
-    "ramp_run_up": [0, 0, -8]
-  }
+    "bay": [-2.4, 0, -13],
+    "bench": [4.7, 0, -18.6],
+    "ship_sell": [-10, 0, 30]
+  },
+  "parking": [
+    { "at": [-2.4, 0, -13], "nose": "+x" },
+    { "at": [-12, 0, 0], "nose": "-x" },
+    { "at": [-12, 0, 4.5], "nose": "-x" },
+    { "at": [-12, 0, 9], "nose": "-x" }
+  ]
 }

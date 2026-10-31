@@ -261,11 +261,19 @@ func show_job(job: Dictionary) -> void:
 
 
 ## Issue #42: something for sale. `item`: { id, name, price, text }. The Buy
-## button is off when the player cannot afford it; only a click buys.
+## button is off when the player cannot afford it; only a click buys. Issue #295:
+## with "selling", the other way round: they pay the player, and Sell is the button.
 func show_sale(item: Dictionary, credits: int) -> void:
 	_job_id = str(item.get("id", ""))
 	_job_kind = "sale"
 	var price := int(item.get("price", 0))
+	if bool(item.get("selling", false)):
+		_job_title.text = "%s  ·  +%d credits" % [str(item.get("name", "Your ship")), price]
+		_job_text.text = "%s\n\nYou have %d credits." % [str(item.get("text", "")), credits]
+		_yes.text = "Sell"
+		_yes.disabled = false
+		_job.visible = true
+		return
 	_job_title.text = "%s  ·  %d credits" % [str(item.get("name", "For sale")).capitalize(), price]
 	var afford := credits >= price
 	_job_text.text = "%s\n\nYou have %d credits.%s" % [str(item.get("text", "")), credits,

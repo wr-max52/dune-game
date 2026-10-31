@@ -1,7 +1,8 @@
 extends GutTest
 ## Issue #42: speeders and Skrugs. The hover model (rides the ground, launches off
 ## a ramp, lands with no damage, only gunfire hurts it), Skrugs's card (sells, no
-## jobs, knows Oda), and buying one at his stall outside the back gate.
+## jobs, knows Oda), and buying one at his stall by the back gate (issue #295: in
+## the round port, his yard behind the cantina; more in test_skrugs_yard).
 
 const TownDemo := preload("res://scenes/town_demo.gd")
 
@@ -139,12 +140,12 @@ func _town() -> Node:
 	return t
 
 
-func test_the_post_is_outside_the_back_gate() -> void:
+func test_the_post_is_by_the_back_gate() -> void:
 	var t = _town()
 	var post: SpeederPost = t.speeder_post
 	var gap: Vector3 = t.town.marker_pos("back_gap")
 	var stall := post.world_point("customer")
-	assert_lt(stall.x, gap.x, "outside the wall")
+	assert_lt(Vector2(stall.x, stall.z).length(), 140.0, "issue #295: inside the round port's wall")
 	assert_lt(Vector2(stall.x - gap.x, stall.z - gap.z).length(), 45.0, "a short walk from the back gate")
 	assert_not_null(post.spot, "Skrugs is someone to talk to")
 	assert_true(t.bar.spots.has(post.spot))
@@ -163,7 +164,7 @@ func test_buying_a_speeder_at_the_stall() -> void:
 	assert_eq(post.speeders.size(), 1, "one speeder")
 	assert_eq(WorldState.count("speeders_owned"), 1, "saved as owned")
 	var s: SpeederNode = post.speeders[0]
-	assert_lt(s.model.position.x, post.origin.x - 7.0, "parked behind the house, away from the stall")
+	assert_lt(s.model.position.distance_to(post.world_point("bay")), 1.5, "issue #295: parked in his garage")
 	assert_eq(post.spot.brain.rel.mood, "warm", "Skrugs is happy")
 	assert_true(WorldState.has_flag("bought_speeder"))
 	t.bar.end_talk()
@@ -249,6 +250,11 @@ func test_ride_it_and_get_off() -> void:
 	WorldState.credits = 100
 	post.buy()
 	var s: SpeederNode = post.speeders[0]
+	# Issue #295: it waits in his garage inside the wall; ride it on open sand,
+	# out past the back gate, nose to the desert.
+	var gap: Vector3 = t.town.marker_pos("back_gap")
+	var out := Vector3(gap.x, 0, gap.z).normalized()
+	s.place(gap + out * 20.0, atan2(-out.x, -out.z))
 	var p = t._player
 	p.global_position = s.model.position + Vector3(1.5, -1.0, 0)
 	assert_true(s.can_mount(), "close enough to climb on")
