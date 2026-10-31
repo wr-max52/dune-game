@@ -146,7 +146,7 @@
     { "id": "barracks_rifle", "title": "Steal a rifle", "target": "marker:trooper_roof_c", "unlocked_by": "heard_of_rifle", "done_on": "rifle_taken",
       "text": "The guards keep guns lying around on top of the barracks. Nobody would miss one." },
     { "id": "nomad_trade", "title": "Trade with the nomads", "target": "", "unlocked_by": "heard_of_nomads", "done_on": "nomad_traded",
-      "text": "The nomad packs out in the desert trade anything for meat. Keep your gun down for a minute and they warm up." },
+      "text": "The nomad packs out in the desert trade anything for sand pig: a blaster for 5, armour for 12. Keep your gun down for a minute and they warm up." },
     { "id": "tower_blade", "title": "The blade on the cantina tower", "target": "marker:cantina_owner", "unlocked_by": "told:bounty", "done_on": "blade_taken",
       "text": "Oda says there's an energy blade stashed up on the cantina tower." },
     { "id": "crashed_cruiser", "title": "The crashed cruiser", "target": "wreck", "unlocked_by": "heard_of_wreck", "done_on": "red_saber_taken",
