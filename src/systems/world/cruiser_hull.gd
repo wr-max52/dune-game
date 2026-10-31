@@ -230,6 +230,7 @@ static func _build() -> Array:
 	_hall(out)
 	_shaft(out)
 	_bridge(out)
+	_computers(out)
 	_tower(out)
 	_dorsal(out)
 	return out
@@ -511,7 +512,7 @@ static func _bridge(out: Array) -> void:
 				Vector3((xs.x + xs.y) * 0.5 + side * 1.0, PIT_Y + 1.5, z + 0.5), "screen", Basis(Vector3.RIGHT, deg_to_rad(-25.0)))
 			out[-1]["kind"] = "decor"
 	# The holo table half way down the walkway, and its map glowing over it.
-	var hz := (pit_z.x + pit_z.y) * 0.5
+	var hz := holo_table().z
 	_box(out, "holo_table", Vector3(5.0, 1.1, 5.0), Vector3(0, BRIDGE_Y + 0.55, hz), "console", Basis.IDENTITY, true)
 	_box(out, "holo_top", Vector3(4.4, 0.08, 4.4), Vector3(0, BRIDGE_Y + 1.14, hz), "screen")
 	out[-1]["kind"] = "decor"
@@ -526,6 +527,73 @@ static func _bridge(out: Array) -> void:
 	for i in 4:
 		_box(out, "bridge_light_%d" % i, Vector3(BRIDGE_X * 1.6, 0.15, 0.8), Vector3(0, BRIDGE_TOP - 0.1, z0 + 8.0 + i * 13.0), "glow")
 		out[-1]["kind"] = "decor"
+
+
+## Computers all through the ship: monitors over the bridge's console rows and
+## banks along the pits' outer edges, a screen on every rack in the corridor's two
+## rooms and a terminal on each room's fore wall, terminals down the corridor's
+## walls between the door frames, and one on every landing of the ramp shaft.
+## Casings are "console" and solid (in the crew's navmesh too), their displays
+## "screen" (drawn only, flush on a casing, each a live picture).
+static func _computers(out: Array) -> void:
+	var pit_z := Vector2(BRIDGE_Z.x + 10.0, BRIDGE_Z.y - 8.0)
+	for side: float in [-1.0, 1.0]:
+		var tag := "s" if side > 0 else "p"
+		var mid_x := side * ((WALK_HALF + BRIDGE_X) * 0.5 + 1.0)
+		for i in 3:
+			var z := pit_z.x + 6.0 + i * 9.0
+			for k in 3:
+				var x := mid_x + (k - 1) * 5.0
+				_box(out, "monitor_%s_%d_%d" % [tag, i, k], Vector3(2.4, 1.3, 0.08), Vector3(x, PIT_Y + 2.35, z - 0.15),
+					"screen", Basis(Vector3.RIGHT, deg_to_rad(-12.0)))
+				out[-1]["kind"] = "decor"
+				_box(out, "monitor_%s_%d_%d_stand" % [tag, i, k], Vector3(0.2, 0.8, 0.2), Vector3(x, PIT_Y + 1.5, z - 0.1), "trim")
+				out[-1]["kind"] = "decor"
+		# Banks of computers along the pit's outer edge, their screens facing in.
+		for j in 3:
+			var z := pit_z.x + 5.0 + j * 10.0
+			var bx := side * (BRIDGE_X - 0.8)
+			_box(out, "bank_%s_%d" % [tag, j], Vector3(1.6, 2.8, 6.0), Vector3(bx, PIT_Y + 1.4, z), "console", Basis.IDENTITY, true)
+			_box(out, "bank_%s_%d_screen" % [tag, j], Vector3(0.08, 1.3, 4.6), Vector3(bx - side * 0.84, PIT_Y + 1.9, z), "screen")
+			out[-1]["kind"] = "decor"
+	# The corridor's rooms: a screen on each rack, a terminal on the fore wall.
+	for r in [["armoury", 1.0, Vector2(110, 134)], ["crew", -1.0, Vector2(176, 200)]]:
+		var side: float = r[1]
+		var zs: Vector2 = r[2]
+		var room := str(r[0])
+		for i in 4:
+			var z := zs.x + 3.5 + i * 5.6
+			_box(out, "%s_rack_%d_screen" % [room, i], Vector3(0.08, 1.0, 2.8), Vector3(side * (24.6 - 0.84), DECK_Y + 2.1, z), "screen")
+			out[-1]["kind"] = "decor"
+		_box(out, "%s_terminal" % room, Vector3(4.0, 1.1, 1.2), Vector3(side * 16.0, DECK_Y + 0.55, zs.x + 0.9), "console", Basis.IDENTITY, true)
+		_box(out, "%s_terminal_screen" % room, Vector3(3.6, 1.6, 0.08), Vector3(side * 16.0, DECK_Y + 2.3, zs.x + 0.1), "screen")
+		out[-1]["kind"] = "decor"
+	# Terminals down the corridor, between the door frames, on alternate walls.
+	var z0 := BAY_Z.y + 2.0
+	var i := 0
+	var z := z0 + 18.0
+	while z < SHAFT_Z.x - 4.0:
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var wx := side * HALL_HALF
+		_box(out, "hall_terminal_%d" % i, Vector3(0.5, 1.6, 1.8), Vector3(wx - side * 0.25, DECK_Y + 1.7, z), "console",
+			Basis.IDENTITY, true)
+		_box(out, "hall_terminal_%d_screen" % i, Vector3(0.06, 0.9, 1.4), Vector3(wx - side * 0.53, DECK_Y + 1.95, z), "screen",
+			Basis(Vector3.FORWARD, side * deg_to_rad(8.0)))
+		out[-1]["kind"] = "decor"
+		i += 1
+		z += 24.0
+	# A terminal on every landing of the ramp shaft, at its wall-side end.
+	for k in FLIGHTS - 1:
+		var y1 := DECK_Y + (k + 1) * FLIGHT_RISE
+		var aft := k % 2 == 0
+		var lz := SHAFT_Z.y - 1.0 if aft else SHAFT_Z.x + 1.0
+		var face := -1.0 if aft else 1.0
+		for sx: float in [-1.0, 1.0]:
+			var at := Vector3(sx * (LANDING_HALF - 1.6), y1, lz)
+			_box(out, "landing_%d_terminal_%d" % [k, int(sx)], Vector3(2.2, 1.2, 0.9), at + Vector3(0, 0.6, 0), "console", Basis.IDENTITY, true)
+			_box(out, "landing_%d_terminal_%d_screen" % [k, int(sx)], Vector3(2.0, 1.1, 0.06),
+				at + Vector3(0, 1.85, -face * 0.25), "screen", Basis(Vector3.RIGHT, face * deg_to_rad(-15.0)))
+			out[-1]["kind"] = "decor"
 
 
 ## The tower round the bridge and the shaft's top: window walls on the bridge's bow
@@ -642,6 +710,12 @@ static func _engine_block(out: Array) -> void:
 	# Braces between the upper and lower housing on each side: one nacelle.
 	for sx: float in [-1.0, 1.0]:
 		_box(out, "engine_brace_%d" % int(sx), Vector3(28.0, 6.0, deep - 2.0), Vector3(sx * 25.0, 3.0, mid), "trim")
+
+
+## The middle of the holo table's top, half way down the bridge's walkway: the
+## planet map (CruiserHolo) floats over it.
+static func holo_table() -> Vector3:
+	return Vector3(0, BRIDGE_Y + 1.18, (BRIDGE_Z.x + 10.0 + BRIDGE_Z.y - 8.0) * 0.5)
 
 
 ## The two sensor globes on the tower's roof: centre and radius.

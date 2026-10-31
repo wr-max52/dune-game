@@ -11,6 +11,11 @@ shader_type spatial;
 // - Glow: emission on the painted accent bands, like the rifle's orange panels.
 // Back faces cull, so aimed in, the open tube is see-through round the reticle
 // (GunSights hides the outside hardware then, or it would show through).
+// Aimed in, the parts left in view are pinned to the eye (viewmodel_pin).
+
+render_mode skip_vertex_transform;
+
+#include "res://src/systems/look/shaders/viewmodel_pin.gdshaderinc"
 
 uniform vec4 base : source_color = vec4(0.045, 0.045, 0.05, 1.0);
 uniform float roughness = 0.42;
@@ -25,6 +30,11 @@ varying vec3 lpos;
 
 void vertex() {
 	lpos = VERTEX;
+	mat4 mv = pin_modelview(MODELVIEW_MATRIX);
+	VERTEX = (mv * vec4(VERTEX, 1.0)).xyz;
+	NORMAL = normalize(mat3(mv) * NORMAL);
+	TANGENT = normalize(mat3(mv) * TANGENT);
+	BINORMAL = normalize(mat3(mv) * BINORMAL);
 }
 
 void fragment() {

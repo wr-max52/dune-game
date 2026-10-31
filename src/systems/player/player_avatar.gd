@@ -613,6 +613,22 @@ func _smooth_render() -> void:
 	position = _rest_position + CharBody.local_offset(pbasis, parent.call("render_origin"), parent.global_position)
 
 
+## Through the scope, its parts are drawn straight at their place in the camera's
+## space (GunSights.pin): far out (the cruiser is 11.5 km from the origin) world
+## positions round to a millimetre, which at 2.5x and 11 cm from the eye shook the
+## view by pixels a frame. Fully aimed that place is aimed_cam, exact; while the
+## blend runs out it is read back from the world (a few frames, a millimetre at most).
+func _pin_scope(w: Node3D, aimed_cam: Transform3D) -> void:
+	var on := ads_blend > 0.85 and first_person and ads_camera != null and is_inside_tree()
+	if not on:
+		GunSights.pin(w, Transform3D(), false)
+		return
+	var cam_from_weapon := aimed_cam
+	if ads_blend < 1.0 or drawn < 1.0:
+		cam_from_weapon = ads_camera.global_transform.affine_inverse() * w.global_transform
+	GunSights.pin(w, cam_from_weapon, true)
+
+
 func _place_weapon(upper: String, pitch: float) -> void:
 	for id in weapons:
 		(weapons[id] as Node3D).visible = (id == current and current != "")
@@ -635,6 +651,7 @@ func _place_weapon(upper: String, pitch: float) -> void:
 			rest = rest.interpolate_with(WeaponCarry.rest_xf(kind, g_r, true), s)
 		ready = WeaponCarry.blend(rest, ready, up)
 	var f := drawn * drawn * (3.0 - 2.0 * drawn)
+	var aimed_cam := Transform3D()      ## the weapon in the camera's space, fully aimed in
 	if _recoil > 0.0 and current != "energy_blade":
 		var rc: Dictionary = look.get("recoil", {})
 		var k := _recoil * _recoil
@@ -648,18 +665,20 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	if ads_blend > 0.0 and first_person and ads_camera != null and is_inside_tree() and current != "energy_blade":
 		var a := Ads.spec(look, current)
 		var sc := float((look.get(current, {}) as Dictionary).get("scale", 1.0))
-		var aimed := Ads.weapon_global(ads_camera.global_transform, Ads.sight_point(look, current) * sc, float(a.relief))
+		aimed_cam = Ads.weapon_local(Ads.sight_point(look, current) * sc, float(a.relief))
 		if _recoil > 0.0:
 			var rc2: Dictionary = look.get("recoil", {})
 			var k2 := _recoil * _recoil * 0.5
-			aimed = aimed * Transform3D(Basis(Vector3.RIGHT, -deg_to_rad(float(rc2.get("up_deg", 7.0))) * k2),
+			aimed_cam = aimed_cam * Transform3D(Basis(Vector3.RIGHT, -deg_to_rad(float(rc2.get("up_deg", 7.0))) * k2),
 				Vector3(0, 0.005, -float(rc2.get("back", 0.05))) * k2)
+		var aimed := ads_camera.global_transform * aimed_cam
 		var to_chest := (joints.chest as Node3D).global_transform.affine_inverse() * aimed
 		ready = ready.interpolate_with(to_chest, ads_blend * ads_blend * (3.0 - 2.0 * ads_blend))
 	# Issue #229: first person draws a gun up from below the view, not the holster.
 	if first_person and current != "energy_blade":
 		holster = WeaponMotion.fpv_low(ready)
 	w.transform = holster.interpolate_with(ready, f)
+	_pin_scope(w, aimed_cam)
 	_show_cell()
 	if upper == BodyAnimator.UPPER_FREE:
 		_fpv_stance(false)

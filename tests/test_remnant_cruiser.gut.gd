@@ -65,6 +65,21 @@ func test_the_parts_are_solid_and_floored() -> void:
 		assert_true(ids.has(id), "has " + id)
 
 
+## The computers you can walk up to stop you: every terminal, bank and rack is a
+## solid casing in the crew's navmesh; only the screens on them are drawn only.
+func test_the_computers_are_solid() -> void:
+	var casings := 0
+	for p in CruiserHull.parts():
+		var id := str(p.id)
+		if id.ends_with("_screen") or id.ends_with("_stand") or id.begins_with("monitor_") or id.begins_with("screen_"):
+			continue
+		if "terminal" in id or id.begins_with("bank_") or "_rack_" in id:
+			assert_eq(str(p.kind), "solid", id)
+			assert_true(bool(p.nav), id + " is in the navmesh")
+			casings += 1
+	assert_gt(casings, 30, "terminals down the corridor, on the landings, in the rooms, banks on the bridge")
+
+
 func test_six_flights_climb_from_the_deck_to_the_bridge() -> void:
 	assert_eq(CruiserHull.DECK_Y + CruiserHull.FLIGHTS * CruiserHull.FLIGHT_RISE, CruiserHull.BRIDGE_Y)
 	var run := CruiserHull.FLIGHT_Z.y - CruiserHull.FLIGHT_Z.x
