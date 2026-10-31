@@ -107,3 +107,57 @@ func test_pages_are_built_on_first_open_only() -> void:
 	p.open_tab("LLM")
 	assert_eq(p.tabs.get_tab_title(p.tabs.current_tab), "LLM", "F10 still lands on the LLM page")
 	p.close()
+
+
+func test_story_save_greys_out_the_cheats() -> void:
+	var town = _town()
+	var p: DevSettingsPanel = town.dev_settings
+	WorldState.new_game(WorldState.STORY)
+	p.open()
+	assert_gt(p._cheats.size(), 0)
+	for c in p._cheats:
+		var live: bool = not c.disabled if c is BaseButton else bool(c.get("editable"))
+		assert_false(live, "a story save locks " + str(c))
+	for n in p._story_notes:
+		assert_true(n.visible, "each page says why")
+	assert_false(p.teleport("cantina_door"), "no teleport in a story save")
+	p.close()
+	WorldState.new_game(WorldState.FREEPLAY)
+	p.open()
+	for c in p._cheats:
+		var live: bool = not c.disabled if c is BaseButton else bool(c.get("editable"))
+		assert_true(live, "free roam gives it back: " + str(c))
+	for n in p._story_notes:
+		assert_false(n.visible)
+	p.close()
+
+
+func test_story_skip_asks_first_and_only_goes_ahead() -> void:
+	var town = _town()
+	var p: DevSettingsPanel = town.dev_settings
+	WorldState.new_game(WorldState.STORY)
+	p.open()
+	var start := Story.chapter()
+	assert_false(p.skip_chapter(start), "not to where you already are")
+	assert_true(p.skip_chapter("range"))
+	assert_true(p.skip_confirm.visible, "the stuck warning comes up")
+	assert_string_contains(p.skip_confirm.dialog_text, "ask the interactive NPCs")
+	assert_eq(Story.chapter(), start, "nothing moves until Yes")
+	p.skip_confirm.hide()
+	assert_eq(Story.chapter(), start, "No leaves the story where it was")
+	p.skip_chapter("range")
+	p.skip_confirm.confirmed.emit()
+	assert_eq(Story.chapter(), "range", "Yes skips ahead")
+	assert_false(p.skip_chapter("meet_oda"), "never back")
+	p.close()
+
+
+func test_new_story_game_drops_free_roam_tweaks() -> void:
+	var town = _town()
+	Engine.time_scale = 0.25
+	GameFlow.set_space_dogfight(false)
+	NpcBody.show_debug = true
+	town.dev_settings.new_game(WorldState.STORY, false)
+	assert_eq(Engine.time_scale, 1.0)
+	assert_true(GameFlow.space_dogfight(), "the fleet always meets you in orbit")
+	assert_false(NpcBody.show_debug)
