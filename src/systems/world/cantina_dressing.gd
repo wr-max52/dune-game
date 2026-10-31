@@ -16,6 +16,8 @@ const SERVED_COLORS := ["#c98a3a", "#3f8f8a", "#7a2a26", "#e0b040", "#6b6f78", "
 const SERVED_MAX := 12
 const SERVED_GAP := 0.2
 
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
+
 var mats: LookMaterials
 const LAMP_ENERGY := 3.2
 const FILL_ENERGY := 1.1
@@ -42,6 +44,12 @@ func dress(town, materials: LookMaterials) -> void:
 	# Issue #261: with no building (the moon's dome rave) the back bar stands on
 	# its own behind her, on a panel of its own.
 	var back_x := float(wall_w.max[0]) + 0.05 if not wall_w.is_empty() else cmin.x - 3.4
+	# Issue #237: in a round room the back bar stands against the curve behind her.
+	var body: Dictionary = town.get_box("cantina_body")
+	if not body.is_empty():
+		var info := RingWall.info(body)
+		var dz := 6.5 + absf((cmin.z + cmax.z) * 0.5 - float(info.c.z))
+		back_x = float(info.c.x) - sqrt(maxf(float(info.ri) * float(info.ri) - dz * dz, 0.0)) + 0.05
 	counter_min = cmin
 	counter_max = cmax
 	shelf_x = back_x + 0.2
@@ -76,7 +84,7 @@ func dress(town, materials: LookMaterials) -> void:
 	# Back bar cabinet under the shelves.
 	_box(Vector3(back_x + 0.35, 0.5, 0.0), Vector3(0.7, 1.0, shelf_z * 2.0), wood)
 	if wall_w.is_empty():
-		_box(Vector3(back_x - 0.08, 1.9, 0.0), Vector3(0.16, 3.8, shelf_z * 2.0 + 0.6), dark_wood)
+		_box(Vector3(back_x - 0.08, 1.9, 0.0), Vector3(0.16, 3.8, shelf_z * 2.0 + 0.6), dark_wood)       # its own back panel (the rave's, and the round room's curve behind it)
 	# The framed card deck: her famous cursed deck.
 	_box(Vector3(back_x + 0.03, 2.95, 0.0), Vector3(0.04, 0.5, 0.8), brass)
 	_box(Vector3(back_x + 0.06, 2.95, 0.0), Vector3(0.02, 0.42, 0.72), mats.flat(Color("#1c1816"), 0.9))
@@ -131,12 +139,25 @@ func _add_fill(town, west_x: float, ceiling: float, dim := 1.0) -> void:
 	var east: Dictionary = town.get_box("cantina_wall_e_s")
 	var north: Dictionary = town.get_box("cantina_wall_n")
 	var south: Dictionary = town.get_box("cantina_wall_s")
-	if east.is_empty() or north.is_empty() or south.is_empty():
-		return
 	var x0 := west_x
-	var x1 := float(east.min[0])
-	var z0 := float(south.max[2])
-	var z1 := float(north.min[2])
+	var x1 := 0.0
+	var z0 := 0.0
+	var z1 := 0.0
+	var body: Dictionary = town.get_box("cantina_body")
+	if not body.is_empty():
+		# Issue #237: the round room's quarters are those of the square inside it.
+		var info := RingWall.info(body)
+		var h := float(info.ri) * 0.75
+		x0 = float(info.c.x) - h
+		x1 = float(info.c.x) + h
+		z0 = float(info.c.z) - h
+		z1 = float(info.c.z) + h
+	elif east.is_empty() or north.is_empty() or south.is_empty():
+		return
+	else:
+		x1 = float(east.min[0])
+		z0 = float(south.max[2])
+		z1 = float(north.min[2])
 	for fx in [0.25, 0.75]:
 		for fz in [0.25, 0.75]:
 			var l := OmniLight3D.new()

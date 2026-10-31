@@ -10,11 +10,21 @@ for b in B:
         z=Z[b["zone"]]
         if not(b["min"][0]>=z["min"][0] and b["max"][0]<=z["max"][0] and b["min"][2]>=z["min"][1] and b["max"][2]<=z["max"][1]): E.append(f"outside zone {b['id']}")
     elif b["zone"] not in ("ground","perimeter"): E.append(f"unknown zone {b['id']}")
+# Issue #237: a round box (shape "round", a stair tower, a lookout) is its circle, not its square.
+def is_round(b): return b.get("shape")=="round" or b["kind"] in ("spiral","lookout")
+def round_r(b): return min(b["max"][0]-b["min"][0], b["max"][2]-b["min"][2])/2
+def ctr(b): return ((b["min"][0]+b["max"][0])/2, (b["min"][2]+b["max"][2])/2)
+def round_overlap(a,b):
+    if not is_round(a) and not is_round(b): return True
+    if is_round(a) and is_round(b): return math.dist(ctr(a),ctr(b)) < round_r(a)+round_r(b)-0.001
+    c,o=(a,b) if is_round(a) else (b,a); x,z=ctr(c)
+    dx=max(o["min"][0]-x,0,x-o["max"][0]); dz=max(o["min"][2]-z,0,z-o["max"][2])
+    return math.hypot(dx,dz) < round_r(c)-0.001
 for i in range(len(B)):
     for j in range(i+1,len(B)):
         a,b=B[i],B[j]
         if a.get("hollow") or b.get("hollow"): continue
-        if all(a["min"][k]<b["max"][k] and b["min"][k]<a["max"][k] for k in range(3)): E.append(f"overlap {a['id']} {b['id']}")
+        if all(a["min"][k]<b["max"][k] and b["min"][k]<a["max"][k] for k in range(3)) and round_overlap(a,b): E.append(f"overlap {a['id']} {b['id']}")
 def seg_box_dist(p,q,b):
     # sample distance from segment to rect
     best=1e9; n=max(2,int(math.dist(p,q)/0.1))

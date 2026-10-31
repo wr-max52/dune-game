@@ -118,8 +118,6 @@
     },
     "moves": {
       "gate": [41.9, 0.0],
-      "barracks": [31.0, -6.0],
-      "market": [31.0, 19.0],
       "cantina": [-27.0, 0.0]
     },
     "main_street": {
@@ -238,7 +236,200 @@
         "id": "town_front",
         "center": 90.0
       }
-    ]
+    ],
+    "market": {
+      "note": "Issue #237 part 3: the market, three times today's. Curved aisles round the pit (r: the aisle's middle, width between the counters) with a row of stalls each side, two cross aisles cutting through them (deg: the line they run along, r: from and to), 'stalls' spread evenly over every row; the outer aisle has shops on its far side instead of stalls. A stall is today's (counter, vendor's space, back panel) but taller: the back panel and the canopy ('canopy_lift', read by town_market.gd). 'merchants' stand behind evenly spread stalls (the first four are vendor_1 to vendor_4, whose trade is in content/core/vendors); 'shoppers' each walk a stretch of an aisle. keep_out: [x0, z0, x1, z1] boxes nothing is built in (the front gate and its south tower).",
+      "sector": [-94.0, -14.0],
+      "aisles": [
+        {
+          "r": 86.0,
+          "width": 7.0
+        },
+        {
+          "r": 104.0,
+          "width": 7.0
+        },
+        {
+          "r": 122.0,
+          "width": 7.0,
+          "outer": "shops"
+        }
+      ],
+      "cross": [
+        {
+          "deg": -58.0,
+          "r": [78.0, 134.0],
+          "width": 5.0
+        },
+        {
+          "deg": -36.0,
+          "r": [78.0, 134.0],
+          "width": 5.0
+        }
+      ],
+      "stall": {
+        "length": 4.0,
+        "counter": [1.0, 1.1],
+        "vendor": 1.3,
+        "back": [2.6, 0.4, 3.4],
+        "canopy_lift": 0.9
+      },
+      "stalls": 48,
+      "shops": {
+        "count": 6,
+        "size": 7.0,
+        "height": 4.5
+      },
+      "merchants": 12,
+      "shoppers": 6,
+      "stroll_deg": 14.0,
+      "keep_out": [
+        [112.0, -28.0, 142.0, 0.0]
+      ]
+    },
+    "barracks": {
+      "note": "Issue #237 part 3: the barracks, about twice today's. Laid out by hand (metres, town frame, ids as the square port's where they are the same thing): a yard behind a low wall on the main street with the Remnant's pad and a drill ground, the hall (rifle roof posts on top, the upper block and the bridge to the bunk tower as before), a second block and an armoury behind, and where a killed trooper comes back. Boxes: [id, kind, [x0, y0, z0], [x1, y1, z1], look]; looks and styles not given are the square port's for that id.",
+      "boxes": [
+        [
+          "yard_wall_w",
+          "cover",
+          [76.0, 0.0, 12.0],
+          [92.0, 1.5, 12.6],
+          ""
+        ],
+        [
+          "yard_wall_e",
+          "cover",
+          [100.0, 0.0, 12.0],
+          [124.0, 1.5, 12.6],
+          ""
+        ],
+        [
+          "barracks_pad",
+          "pad",
+          [100.0, 0.0, 18.0],
+          [112.0, 0.03, 30.0],
+          ""
+        ],
+        [
+          "drill_yard",
+          "floor",
+          [78.0, 0.0, 18.0],
+          [96.0, 0.02, 42.0],
+          ""
+        ],
+        [
+          "yard_crate_1",
+          "cover",
+          [98.0, 0.0, 36.0],
+          [100.0, 1.2, 38.0],
+          ""
+        ],
+        [
+          "yard_crate_2",
+          "cover",
+          [116.0, 0.0, 20.0],
+          [118.0, 1.2, 22.0],
+          ""
+        ],
+        [
+          "yard_crate_3",
+          "cover",
+          [80.0, 0.0, 44.0],
+          [83.0, 1.2, 45.0],
+          ""
+        ],
+        [
+          "barracks_hall",
+          "solid",
+          [66.0, 0.0, 50.0],
+          [112.0, 7.0, 72.0],
+          ""
+        ],
+        [
+          "barracks_upper",
+          "solid",
+          [96.0, 7.0, 58.0],
+          [112.0, 14.0, 72.0],
+          ""
+        ],
+        [
+          "barracks_bunk",
+          "solid",
+          [52.0, 0.0, 56.0],
+          [64.0, 16.0, 70.0],
+          ""
+        ],
+        [
+          "barracks_bridge",
+          "overhead",
+          [64.0, 13.4, 62.0],
+          [96.0, 14.0, 65.0],
+          ""
+        ],
+        [
+          "barracks_block_2",
+          "solid",
+          [60.0, 0.0, 82.0],
+          [88.0, 9.0, 104.0],
+          "hall"
+        ],
+        [
+          "barracks_armoury",
+          "solid",
+          [36.0, 0.0, 78.0],
+          [50.0, 6.0, 92.0],
+          "upper"
+        ]
+      ],
+      "markers": {
+        "trooper_yard_a": {
+          "pos": [90.0, 0.0, 30.0]
+        },
+        "trooper_yard_b": {
+          "pos": [114.0, 0.0, 38.0]
+        },
+        "trooper_roof_w": {
+          "pos": [72.0, 7.0, 52.5],
+          "face": [80.0, 0.0, 26.0]
+        },
+        "trooper_roof_c": {
+          "pos": [88.0, 7.0, 52.5],
+          "face": [92.0, 0.0, 14.0]
+        },
+        "trooper_roof_e": {
+          "pos": [106.0, 7.0, 52.5],
+          "face": [124.0, 0.0, 4.0]
+        },
+        "remnant_respawn": {
+          "pos": [76.0, 0.0, 77.0]
+        }
+      },
+      "routes": {
+        "patrol_yard_a": [
+          [90.0, 30.0],
+          [82.0, 30.0],
+          [82.0, 38.0],
+          [90.0, 38.0]
+        ],
+        "patrol_yard_b": [
+          [114.0, 38.0],
+          [120.0, 38.0],
+          [120.0, 32.0],
+          [116.0, 32.0]
+        ]
+      }
+    },
+    "cantina": {
+      "note": "Issue #237 part 4: the cantina (the club, issue #261) gets a round body with the same floor area as the square port room, centred where that room was: a ring wall (thickness, open at the door on the square side and at the stair tower), a round roof at the old roof height, and the stair tower outside the wall as a turret at tower.deg, its door facing the room through the wall. Everything inside keeps its place against the bar; a marker or walk that the curve now leaves within inset of the wall is pulled in to that.",
+      "thickness": 0.5,
+      "door_half": 2.0,
+      "tower": {
+        "deg": 135.0,
+        "gap_half": 1.0
+      },
+      "inset": 1.4
+    }
   },
   "bay_ships": ["freighter", "courier", "gunship"],
   "ship_boxes": {
