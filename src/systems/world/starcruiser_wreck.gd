@@ -26,6 +26,9 @@ extends RefCounted
 ## The Remnant droids that patrol it, and the cargo droid in the deep hold, are
 ## data (content/core/droids/droids.json, "wreck"); site_point() turns their
 ## routes into world points.
+## Wreck field: more of the same class lie out east under the Remnant's cruiser,
+## each its own landmark (worlds/port_desert.json). A landmark's "variant" makes
+## each one barely unique (see VARIANT_KEYS); none leaves the original.
 
 const HALF_LENGTH := 300.0
 const DECK_Y := -24.0
@@ -44,6 +47,12 @@ const CLEAR_X := 19.0              ## the hold floor is open this far either sid
 const KICKER_X := 120.0
 const KICKER_W := Vector2(20.0, 55.0)
 const KICKER_LIP := 8.0
+## What a landmark's "variant" can change: "skip" (part id prefixes left out: a
+## fallen deck, a missing radiator, the kicker), "ramp_width" (ramp id -> metres),
+## "stern_ramp_w" (where the stern ramp leaves the hold floor), "rail_gaps"
+## (railing id -> the panels knocked out), "shard_turn" (degrees the torn plating
+## is twisted) and "salvage" (how many boxes lie at the boarding plate).
+const VARIANT_KEYS := ["skip", "ramp_width", "stern_ramp_w", "rail_gaps", "shard_turn", "salvage"]
 
 
 static func add_to_ground(ground: WorldGround, landmark: Dictionary) -> void:
@@ -57,7 +66,8 @@ static func add_to_ground(ground: WorldGround, landmark: Dictionary) -> void:
 		base + up * float(landmark.get("bury_height", 58.0)))
 	var level := Transform3D(tangent, xf.origin)
 	var prefix := str(landmark.get("id", "starcruiser_wreck")) + "/"
-	for p in parts(pitch):
+	var variant: Dictionary = landmark.get("variant", {})
+	for p in parts(pitch, variant):
 		_register(ground, prefix + str(p.id), p.size, xf * p.xf, str(p.finish), base.y,
 			"floor" if bool(p.get("floor", false)) else "solid")
 		if bool(p.get("shard", false)):
@@ -77,12 +87,13 @@ static func add_to_ground(ground: WorldGround, landmark: Dictionary) -> void:
 	_register(ground, prefix + "fallen_boarding_plate", Vector3(10, 1.2, start.distance_to(end) + 1.0),
 		ramp, "hull", base.y, "floor")
 	# Familiar, human-scale salvage boxes at the approach make its size legible.
-	for i in 3:
+	for i in int(variant.get("salvage", 3)):
 		var pos := _on_sand(ground, start + x * (9.0 + i * 3.0))
 		var box_up := ground.up_at(pos)
 		_register(ground, prefix + "salvage_%d" % i, Vector3(1.6, 1.4, 2.0),
 			Transform3D(PlanetSphere.tilt_to(box_up), pos + box_up * 0.7), "scorch", base.y)
-	_add_kicker(ground, prefix, level, base.y)
+	if not _skipped("speeder_kicker", variant):
+		_add_kicker(ground, prefix, level, base.y)
 	for b in ground.boxes:
 		if str(b.id).begins_with(prefix):
 			b["wreck_frame"] = xf
@@ -158,8 +169,10 @@ static func _register(ground: WorldGround, id: String, size: Vector3, xf: Transf
 ## The +X flank loses 180 m of plating, with broken ribs above/below the opening.
 ## Issue #148: one stern section's dorsal plates (facets 1 and 2) are torn away
 ## where the bridge ramp comes up through the hull.
-static func parts(pitch_deg: float = PITCH_DEG) -> Array:
+## Wreck field: `variant` (a landmark's, VARIANT_KEYS) makes one barely different.
+static func parts(pitch_deg: float = PITCH_DEG, variant: Dictionary = {}) -> Array:
 	var out: Array = []
+	var turn := deg_to_rad(float(variant.get("shard_turn", 0.0)))
 	for section in 20:
 		var z := -285.0 + section * 30.0
 		var width := lerpf(28.0, 48.0, clampf((z + 285.0) / 120.0, 0.0, 1.0))
@@ -202,11 +215,11 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 		var roll := deg_to_rad(-28.0 + float((i * 37) % 81))
 		_shard(out, "torn_upper_%d" % i, Vector3(12 + i % 3 * 4, 1.2, 17 + i % 4 * 3),
 			Vector3(40 + i % 3 * 2, 27 + i % 2 * 3, -92 + i * 23), "rib",
-			Basis(Vector3.BACK, roll) * Basis(Vector3.UP, deg_to_rad(-21.0 + i * 5.0)))
+			Basis(Vector3.BACK, roll) * Basis(Vector3.UP, deg_to_rad(-21.0 + i * 5.0) + turn))
 	for i in 7:
 		_shard(out, "torn_lower_%d" % i, Vector3(8 + i % 3 * 3, 1.0, 15 + i % 2 * 8),
 			Vector3(39 + i % 2 * 4, -31, -85 + i * 28), "scorch",
-			Basis(Vector3.BACK, deg_to_rad(-18.0 - i * 4.0)))
+			Basis(Vector3.BACK, deg_to_rad(-18.0 - i * 4.0) - turn))
 	for end in [-1, 1]:
 		for i in 3:
 			_shard(out, "torn_end_%d_%d" % [end, i], Vector3(14, 1.3, 19 + i * 4),
@@ -214,7 +227,7 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 				Basis(Vector3.BACK, deg_to_rad(72.0 + i * 19)) * Basis(Vector3.UP, end * 0.38))
 	# A raised stern bridge and radiator comb make the distant profile distinct.
 	# Issue #148: the bridge stands level on struts, over the torn dorsal plates.
-	_interior(out, pitch_deg)
+	_interior(out, pitch_deg, variant)
 	for i in 6:
 		if i == 3:
 			continue                 # issue #148: the bridge platform stands where it was
@@ -251,7 +264,17 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 				center + radial * 12.5 + Vector3(0, 0, -6), "nozzle", rot)
 			_box(out, prefix + "vane_%d" % i, Vector3(4.3, 0.6, 0.9),
 				center + radial * 5.3 + Vector3(0, 0, -10), "rib", Basis(Vector3.BACK, a + 0.3))
+	if variant.has("skip"):
+		return out.filter(func(p): return not _skipped(str(p.id), variant))
 	return out
+
+
+## Whether part `id` is one this variant leaves out (its "skip" prefixes).
+static func _skipped(id: String, variant: Dictionary) -> bool:
+	for s in variant.get("skip", []):
+		if id.begins_with(str(s)):
+			return true
+	return false
 
 
 ## Issue #148: the level interior (all positions in the level frame, x, v, w).
@@ -266,7 +289,7 @@ static func parts(pitch_deg: float = PITCH_DEG) -> Array:
 ##     sides to the mid catwalk and the wall ledges off it.
 ##   - Low tier (LOW_V): from each ledge's stern end a ramp drops back aft under
 ##     the upper decks to a balcony on the plating.
-static func _interior(out: Array, pitch_deg: float) -> void:
+static func _interior(out: Array, pitch_deg: float, variant: Dictionary = {}) -> void:
 	var u := INTERIOR_V
 	var m := MID_V
 	var l := LOW_V
@@ -287,7 +310,9 @@ static func _interior(out: Array, pitch_deg: float) -> void:
 	]:
 		_deck(out, str(d[0]), d[1], d[2], float(d[3]), str(d[4]), pitch_deg)
 	# Ramps: id, from, to (their tops, level frame), width, rails ([toward x, t from, t to]).
-	var top := Vector3(31, floor_v(STERN_RAMP_W, pitch_deg), STERN_RAMP_W)
+	var stern_w := float(variant.get("stern_ramp_w", STERN_RAMP_W))
+	var top := Vector3(31, floor_v(stern_w, pitch_deg), stern_w)
+	var widths: Dictionary = variant.get("ramp_width", {})
 	for r in [
 		["stern_ramp", top, Vector3(33, u, 232), 8.0, [[-1, 0.4, 1.0]]],
 		["gallery_ramp", gallery, Vector3(-20, u, 218.5), 10.0, [[1, 0.0, 1.0]]],
@@ -297,11 +322,12 @@ static func _interior(out: Array, pitch_deg: float) -> void:
 		["starboard_drop", Vector3(39, m, 176), Vector3(36, l, 200), 8.0, [[-1, 0.0, 1.0]]],
 		["port_drop", Vector3(-39, m, 176), Vector3(-36, l, 200), 8.0, [[1, 0.0, 1.0]]],
 	]:
-		_ramp(out, str(r[0]), r[1], r[2], float(r[3]), pitch_deg)
+		var width := float(widths.get(str(r[0]), r[3]))
+		_ramp(out, str(r[0]), r[1], r[2], width, pitch_deg)
 		for rail in r[4]:
 			var a: Vector3 = r[1]
 			var b: Vector3 = r[2]
-			var side := _ramp_side(a, b, float(rail[0])) * (float(r[3]) * 0.5 - 0.2)
+			var side := _ramp_side(a, b, float(rail[0])) * (width * 0.5 - 0.2)
 			_railing(out, "%s_rail_%s" % [r[0], "s" if float(rail[0]) > 0 else "p"],
 				a.lerp(b, float(rail[1])) + side, a.lerp(b, float(rail[2])) + side, [], pitch_deg)
 	_slab(out, "bridge_platform", Vector2(-14, 14), Vector2(112, 151), BRIDGE_V, pitch_deg, "pad")
@@ -345,7 +371,8 @@ static func _interior(out: Array, pitch_deg: float) -> void:
 		["bridge_stern_rail_a", Vector3(-14, BRIDGE_V, 151), Vector3(-6, BRIDGE_V, 151), []],
 		["bridge_stern_rail_b", Vector3(6, BRIDGE_V, 151), Vector3(14, BRIDGE_V, 151), [0]],
 	]:
-		_railing(out, str(r[0]), r[1], r[2], r[3], pitch_deg)
+		var gaps: Array = variant.get("rail_gaps", {}).get(str(r[0]), r[3])
+		_railing(out, str(r[0]), r[1], r[2], gaps.map(func(i): return int(i)), pitch_deg)
 
 
 ## The level frame's height and stern-ward distance of a hull-frame point

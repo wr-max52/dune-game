@@ -1289,6 +1289,10 @@ func _tow_home() -> void:
 func _sync_visual() -> void:
 	if visual != null and is_instance_valid(visual):
 		visual.global_transform = atmo.transform() * _jolt_xf
+		# The engines light with the throttle while you fly her; out the moment you're not.
+		var up := piloting and atmo.state == AtmoFlight.State.FLYING
+		ShipKit.throttle_flames(visual, _throttle if up else 0.0, _boost and up,
+			get_physics_process_delta_time() if piloting else 0.0)
 
 
 func _update_hud(agl_now: float) -> void:

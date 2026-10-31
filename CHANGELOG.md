@@ -11,6 +11,8 @@ Plain English, newest on top. One entry per milestone.
 - **Brushed silver, not white.** The prep step repaints its light panels
   silver and gives them a metal finish, so it reads as metal in the desert
   light too. The blue bands stay blue.
+- **Its engine flames** come out of the big main nozzle and the four booster
+  pods beside it.
 - **T-89's upgrades show on the ship.** Each upgrade bolts parts onto the
   Lanner, and they stack:
   - **Boosted shields:** glowing cyan emitter rings on the wingtip pods and a
@@ -22,6 +24,41 @@ Plain English, newest on top. One entry per milestone.
   The parts appear on the parked ship as soon as T-89 fits them, and on your
   ship in a dogfight. The frigate shows its upgrades as paint jobs instead (see
   below); any look can add parts under `upgrades` in `content/look/ships.json`.
+## The wreck field (2026-10-31)
+
+- **Three more crashed starcruisers** lie out east, under the Remnant's cruiser and
+  most of the way round to the far side of the ball (map 3.5 km, 5.6 km and 7.7 km
+  east). Each is about 2.2 km from the last, so from one you can see the next
+  one's stern over the sand.
+- **Each one is barely different**: its own heading, a fallen deck and drop ramp
+  (port on one, starboard on another), a missing stair on the last, other ramp
+  widths, other railings knocked out, a radiator or two gone, the torn plating
+  twisted another way, no speeder kicker on the last. A landmark's `variant`
+  (`StarcruiserWreck.VARIANT_KEYS`) says what changes.
+- **Every wreck has the same Remnant crew** (less the droids for a deck it lost).
+  The red saber's hauler stays on the first wreck.
+- **Wreck droids come back** three minutes after they fall, or as soon as you are
+  500 ft (152 m) from where one fell. Droids more than 900 m from you stand still,
+  so four crews cost little.
+- **A supply crate on every wreck's bridge platform**, the first wreck's too,
+  under a beacon. `[E]` opens it for one random prize: 300 or 600 credits, 10 sand
+  pig, 5 refined quantonium or 3 holocrystals. An opened crate stays open (saved).
+- Small wreck parts (railings, vents, braces) are not drawn past 1.5 km.
+## The round port (issue #237, 2026-10-31)
+## Brighter star cruiser (2026-10-31)
+
+- **Every area aboard the Remnant cruiser is lit properly.** The bay, the
+  corridor, the armoury and crew room, the ramp shaft and the bridge were all
+  too dark to see in; the corridor, shaft and crew room were close to black.
+  There are more lamps now and they are brighter: floods and a low fill over
+  the bay's pads, a lamp every 15 m down the corridor, two per side room, one
+  on every landing of the shaft plus side fills, and extra lamps over the
+  bridge. The colours are the same as before.
+## Tab cycles weapons (2026-10-31)
+
+- **Tab steps through your weapons**: pistol, blade, rifle, then empty hands,
+  then back to the pistol. It skips any weapon you don't have yet. T-89's
+  tutorial now mentions it.
 
 ## The new frigate (2026-10-31)
 
@@ -110,6 +147,7 @@ Plain English, newest on top. One entry per milestone.
   one plays (ClubMusic).
 - Trace: scenes/barge_trace.gd (in CI), tests/test_barge_trace.gut.gd. Stills:
   docs/lookdev/barge/.
+
 ## The round port (issue #237, parts 1 and 2, 2026-10-31)
 
 - **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)
@@ -144,8 +182,19 @@ Plain English, newest on top. One entry per milestone.
 - The overlap check (V5) now treats round boxes (round huts, the stair tower,
   the lookout, the round roof) as circles, not squares. A stair tower's door can
   face any way (`door_deg`).
-- **The home planet still uses the square port** until the round one is done.
-  F11 > World > Town builds it to the round one for the rest of the run.
+- **The home planet is the round port now** (part 5). F11 > World > Town builds
+  it to the square one for the rest of the run.
+- **Skrugs moved out** to about 90 m past the back gate, straight out from it,
+  so a speeder starts to make sense. The near outpost is off the barracks side
+  (0, 250) and the far outpost moved to (700, 300): straight out of the front
+  gate you see only the crashed cruiser and the desert.
+- Oda's town briefing and Skrugs's card tell it the round way.
+- **The round port is fuller**: crates, barrels and water tanks against a share
+  of the houses (never walling a door in), a cargo yard with a container and
+  crate stacks in every gap between the landing pads with a dock hand by each,
+  more towers on the barracks side, and three more locals walking the lanes.
+- New stills of the round port in `docs/town/look/port_round/`, and the frame
+  time against the square port in `docs/town/round_port_perf.md`.
 - **New box kind `ring`**: a round wall cut open at gates, which any layout can
   use. The validators check it (V9).
 - `tools/town/gen_port_round.py` makes the round port from the numbers in

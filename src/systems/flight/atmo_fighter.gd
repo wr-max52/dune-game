@@ -398,6 +398,9 @@ func _set_solid(on: bool) -> void:
 func _sync_visual() -> void:
 	if visual != null:
 		visual.global_transform = atmo.transform()
+		var up := atmo.state == AtmoFlight.State.FLYING
+		ShipKit.throttle_flames(visual, atmo.flight.throttle if up else 0.0, atmo.flight.boosting,
+			get_physics_process_delta_time())
 
 
 func _toast(text: String) -> void:

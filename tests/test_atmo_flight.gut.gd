@@ -25,7 +25,7 @@ func before_each() -> void:
 	content = CoreScript.new()
 	content.load_from()
 	var town = TownLayout.new()
-	town.load_town("port_town")
+	town.load_town("port_town", "port_square")   # issue #237: flights over the square port's main street
 	ground = WorldGround.new()
 	ground.setup(content.get_world("port_desert"), town, content)
 	a = AtmoFlight.new()
@@ -124,7 +124,7 @@ func test_land_only_when_low_and_settles_on_what_is_below() -> void:
 func test_can_land_reuses_the_current_clearance_when_supplied() -> void:
 	var counted := CountingGround.new()
 	var town := TownLayout.new()
-	town.load_town("port_town")
+	town.load_town("port_town", "port_square")   # issue #237: flights over the square port's main street
 	counted.setup(content.get_world("port_desert"), town, content)
 	a.setup(content.get_ship("interceptor"), counted)
 	a.place_flying(Vector3(40.0, 20.0, 0.0), Vector3.FORWARD, 0.0, 0.0)

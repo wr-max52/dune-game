@@ -13,6 +13,8 @@ extends Node3D
 
 const LOOK_PATH := "res://content/look/world.json"
 const WRECK_SHADER := preload("res://src/systems/look/shaders/wreck_metal.gdshader")
+const SMALL_PART := 6.0          ## metres corner to corner: a wreck plate this small is detail
+const SMALL_PART_RANGE := 1500.0
 
 var ground: WorldGround
 var terrain: WorldTerrain
@@ -170,6 +172,10 @@ func _build_wreck_plate(root: Node3D, b: Dictionary) -> void:
 			"deck": 5, "grate": 6, "ramp": 7, "pad": 8 }.get(finish, 0))
 		_wreck_mats[key] = material
 	mi.material_override = _wreck_mats[key]
+	# Wreck field: four wrecks in sight of each other. Their small parts (railings,
+	# vents, braces) are a pixel or two past SMALL_PART_RANGE; stop drawing them.
+	if size.length() < SMALL_PART:
+		mi.visibility_range_end = SMALL_PART_RANGE
 	mi.transform = WorldGround.box_xf(b) * Transform3D(Basis.IDENTITY,
 		((b.min as Vector3) + (b.max as Vector3)) * 0.5)
 	root.add_child(mi)

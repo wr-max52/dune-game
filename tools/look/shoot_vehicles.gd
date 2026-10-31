@@ -12,7 +12,8 @@ extends SceneTree
 ##   views: [ "front34", "side", "rear34", "top", "front", "back" ] (default: the first four)
 ##   cells: [ { name, label, and one of:
 ##              ship_look: a look id in content/look/ships.json (built by ShipKit;
-##                         "fits" lists the ShipUpgrades ids to show on it),
+##                         "fits" lists the ShipUpgrades ids to show on it,
+##                         "throttle" 0..1 lights its engine flames),
 ##              speeder:   a vehicle id in content/core/vehicles (built by SpeederNode;
 ##                         "paint" picks one of its look.paints),
 ##              model:     a .glb path (loaded as-is),
@@ -95,6 +96,7 @@ func _build(cell: Dictionary) -> Node3D:
 		var kit := ShipKit.new()
 		v = kit.build(str(cell.ship_look))
 		kit.dress(v, cell.get("fits", []))
+		ShipKit.throttle_flames(v, float(cell.get("throttle", 0.0)))
 	elif cell.has("speeder"):
 		# Just its look: the node itself wants a town to ride in.
 		var s := SpeederNode.new()

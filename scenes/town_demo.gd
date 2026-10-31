@@ -1326,7 +1326,16 @@ func _load_shots() -> Dictionary:
 	if f == null:
 		return {}
 	var data = JSON.parse_string(f.get_as_text())
-	return data.get("shots", {}) if data is Dictionary else {}
+	if not data is Dictionary:
+		return {}
+	var out: Dictionary = data.get("shots", {}).duplicate(true)
+	# Issue #237: a layout's own cameras ("layouts": { <layout>: { shot: ... } }) replace or add to these.
+	var layout := str(town.data.get("layout", "")) if town != null else ""
+	var own: Dictionary = data.get("layouts", {}).get(layout, {})
+	for id in own:
+		if own[id] is Dictionary:
+			out[id] = own[id]
+	return out
 
 
 func shot_ids() -> Array:

@@ -712,6 +712,8 @@ static func visual_aabb(root: Node3D) -> AABB:
 
 static func _merge_aabb(n: Node, xf: Transform3D, acc: Array) -> void:
 	for c in n.get_children():
+		if c.has_meta("no_bounds"):      # a ship's engine flames (ShipKit), only there under throttle
+			continue
 		var t := xf
 		if c is Node3D:
 			t = xf * (c as Node3D).transform

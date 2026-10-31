@@ -232,6 +232,16 @@ func get_pickups(location_id: String, layout: String = "") -> Array:
 	return out
 
 
+## Wreck field: the supply crates out on the wrecks the place's planet holds
+## ({ id, site, site_point }), and the prizes they roll from.
+func get_site_crates(location_id: String) -> Array:
+	return pickups.get(location_id, {}).get("site_crates", [])
+
+
+func get_crate_prizes(location_id: String) -> Array:
+	return pickups.get(location_id, {}).get("crate_prizes", [])
+
+
 func get_world(id: String) -> Dictionary:
 	return worlds.get(id, {})
 
