@@ -96,6 +96,11 @@
       "shell": "#b59a6a", "trim": "#5a4a36", "glow": "#d8b878", "tint": 0.75,
       "note": "Issue #209: quantonium armour, boxed."
     },
+    "prize_crate": {
+      "frame": "case", "scene": "res://assets/gear/cargo_case.glb", "width": 1.2, "height": 0.7, "depth": 0.8,
+      "shell": "#55603e", "trim": "#2c2a24", "glow": "#ffd24a", "tint": 0.7,
+      "note": "Wreck field: the supply crate on each wreck's bridge platform (pickups/port_town.json, site_crates)."
+    },
     "red_saber": {
    "frame": "saber",
    "hilt_model": "res://assets/gear/saber_hilt_dark.glb",

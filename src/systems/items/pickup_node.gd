@@ -25,6 +25,10 @@ func setup(kit: ItemKit, entry: Dictionary, item_cfg: Dictionary, at: Vector3) -
 	_visual = kit.build(str(item_cfg.get("look", item_cfg.get("id", ""))))
 	add_child(_visual)
 	position = at
+	if bool(entry.get("still", false)):
+		_spin = 0.0              # a crate out on a wreck sits on the deck, glowing
+		_bob = 0.0
+		_lift = 0.0
 	if bool(entry.get("marked", false)):
 		_beacon(Color(str(style.get("beacon", "#ff8a2a"))))
 	if bool(entry.get("hidden", false)):
@@ -94,8 +98,11 @@ func _beacon(c: Color) -> void:
 	add_child(ring)
 
 
+## Within `reach` across and 2 m up or down, in the pickup's own frame (turned to
+## the ground's up out on the ball).
 func in_reach(p: Vector3) -> bool:
-	return Vector2(p.x - base.x, p.z - base.z).length() <= reach and absf(p.y - base.y) <= 2.0
+	var l := basis.inverse() * (p - base)
+	return Vector2(l.x, l.z).length() <= reach and absf(l.y) <= 2.0
 
 
 func _process(dt: float) -> void:

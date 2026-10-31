@@ -20,12 +20,14 @@ func setup(kit: ShipKit, look_id: String, id: int, team_name: String) -> void:
 	_engines = visual.get_node_or_null("Engines")
 
 
-## Copy the flight model onto this node; engine glow follows speed and boost.
+## Copy the flight model onto this node; engine glow follows speed and boost, the
+## flames the throttle.
 func sync(flight, alive: bool) -> void:
 	visible = alive
 	if not alive:
 		return
 	global_transform = flight.transform()
+	ShipKit.throttle_flames(visual, flight.throttle, flight.boosting, get_process_delta_time())
 	if _engines != null:
 		var top: float = maxf(flight.max_speed(), 0.001)
 		var glow := clampf(flight.speed / top, 0.25, 1.6)

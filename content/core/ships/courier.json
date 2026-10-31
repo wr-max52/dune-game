@@ -68,7 +68,7 @@
     "body_radius": 2.0,
     "clearance": 1.0
   },
-  "note": "IP-neutral (issue #43). A twin-boom racer: the fastest ship in the port and the lightest, two small cannons, and a long boost on Shift.",
+  "note": "IP-neutral (issue #43). A rocket with wings for private travel and fast executive deliveries: the fastest small ship in the port and the lightest, two small cannons, and a long boost on Shift.",
   "naming": {
     "kind": "person_drift",
     "callsign": true,

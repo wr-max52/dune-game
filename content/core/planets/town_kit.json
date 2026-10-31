@@ -169,12 +169,13 @@
         }
       ],
       "wobble": 4.0,
-      "gap": 1.2,
-      "reach": 9.0,
-      "attempts": 20000,
+      "gap": 0.9,
+      "reach": 14.0,
+      "attempts": 40000,
       "residents": {
         "resident_w": [100.0, -128.0],
-        "resident_w_2": [124.0, -112.0]
+        "resident_w_2": [124.0, -112.0],
+        "resident_w_3": [113.0, -146.0]
       },
       "well": [112.0, -150.0]
     },
@@ -215,11 +216,13 @@
         }
       ],
       "wobble": 5.0,
-      "gap": 3.0,
-      "reach": 7.0,
-      "attempts": 12000,
+      "gap": 2.2,
+      "reach": 10.0,
+      "attempts": 30000,
       "residents": {
-        "resident_e": [98.0, 114.0]
+        "resident_e": [98.0, 114.0],
+        "resident_e_2": [122.0, 142.0],
+        "resident_e_3": [98.0, 150.0]
       },
       "well": [110.0, 139.0]
     },
@@ -429,13 +432,49 @@
         "gap_half": 1.0
       },
       "inset": 1.4
+    },
+    "fill": {
+      "note": "Issue #237: what makes the round port lived in. clutter: a share of the houses get crates, barrels or a water tank against a side wall (never the door side; never where it would wall a door in: the walk check takes it away again). yards: crate stacks and a container in every gap between the surface pads (deg: centre angles, r: their middle), a dock worker by each, clear of the ramps (keep_deg: angles left open, the spawn walk and the gate road).",
+      "clutter": {
+        "share": 0.55,
+        "seed": 2374,
+        "crates": [
+          [1.2, 2.0],
+          [1.0, 1.4],
+          [0.9, 1.4]
+        ],
+        "tank": {
+          "size": 1.9,
+          "height": 1.1
+        },
+        "tank_share": 0.25
+      },
+      "yards": {
+        "first_deg": 42.5,
+        "step_deg": 45.0,
+        "r": 53.0,
+        "keep_deg": [0.0, 180.0],
+        "keep_half": 12.0,
+        "seed": 2375,
+        "stacks": 4,
+        "stack_size": [
+          [1.4, 2.4],
+          [1.2, 2.0],
+          [0.9, 1.5]
+        ],
+        "spread": 5.0,
+        "container": {
+          "size": [6.0, 2.5],
+          "height": 2.6
+        }
+      }
     }
   },
   "bay_ships": ["freighter", "courier", "gunship"],
   "ship_boxes": {
     "pad": [8.82, 2.36, 7.8],
     "freighter": [8.26, 2.75, 8.0],
-    "courier": [8.4, 2.4, 6.28],
+    "courier": [8.4, 2.2, 7.2],
     "gunship": [7.68, 3.06, 7.8]
   },
   "huts": [

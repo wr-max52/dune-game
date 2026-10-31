@@ -684,6 +684,7 @@ func park_ship(ship_id: String, box: Dictionary) -> Node3D:
 ## Belly on the box base, centred on its footprint; the greybox stand-in hidden.
 func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> Node3D:
 	var ship := ship_kit.build(ShipUpgrades.look(ship_id, look_id))      # in its upgrade's paint
+	ship_kit.dress(ship, ShipUpgrades.fitted(ship_id))      # and its upgrade parts
 	ship.name = node_name
 	ship.set_meta("ship_id", ship_id)
 	ship.set_meta("box_id", str(box.id))
@@ -711,6 +712,8 @@ static func visual_aabb(root: Node3D) -> AABB:
 
 static func _merge_aabb(n: Node, xf: Transform3D, acc: Array) -> void:
 	for c in n.get_children():
+		if c.has_meta("no_bounds"):      # a ship's engine flames (ShipKit), only there under throttle
+			continue
 		var t := xf
 		if c is Node3D:
 			t = xf * (c as Node3D).transform

@@ -350,12 +350,13 @@ func test_the_remnant_patrols_the_wreck_and_a_cargo_droid_carries_the_saber() ->
 	root.add_child(scenery)
 	var p := FakePlayer.new()
 	root.add_child(p)
+	p.global_position = _hull(30.0, StarcruiserWreck.DECK_Y, -35.0)   # aboard: they idle when nobody is near
 	var ctl := DroidController.new()
 	ctl.setup(null, p, null)
 	ctl.ground = g
 	root.add_child(ctl)
 	await wait_physics_frames(2)
-	var mine: Array = ctl.remnant.filter(func(u): return u.spec.has("site"))
+	var mine: Array = ctl.remnant.filter(func(u): return str(u.spec.get("site", "")) == ID)
 	assert_eq(mine.size(), (DroidRoster.config().wreck.units as Array).size(), "every wreck unit is out")
 	for u in mine:
 		assert_eq(u.faction, "imperial_remnant")
@@ -373,7 +374,7 @@ func test_the_remnant_patrols_the_wreck_and_a_cargo_droid_carries_the_saber() ->
 	assert_eq(ctl.wreck_hauler.faction, "", "nobody's")
 	assert_eq(str(DroidRoster.config().wreck.hauler.carries), "wreck_red_saber")
 	ctl.withdraw_town_remnant()
-	assert_eq(ctl.remnant.filter(func(u): return u.spec.has("site")).size(), mine.size(), "they stay after the fleet falls")
+	assert_eq(ctl.remnant.filter(func(u): return str(u.spec.get("site", "")) == ID).size(), mine.size(), "they stay after the fleet falls")
 
 
 # ---- the red saber -------------------------------------------------------------------

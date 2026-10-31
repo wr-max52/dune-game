@@ -407,21 +407,7 @@ func _build_shield() -> void:
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	var sh := Shader.new()
-	sh.code = """shader_type spatial;
-render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
-uniform vec4 tint : source_color = vec4(0.25, 0.65, 1.0, 1.0);
-varying vec3 lp;
-void vertex() { lp = VERTEX; }
-void fragment() {
-	float lines = 0.5 + 0.5 * sin(lp.y * 3.0 - TIME * 2.0);
-	float edge = smoothstep(11.0, 14.0, abs(lp.y)) + smoothstep(80.0, 86.0, abs(lp.z));
-	ALBEDO = tint.rgb;
-	ALPHA = 0.012 + 0.018 * lines + 0.3 * clamp(edge, 0.0, 1.0);
-}"""
-	var m := ShaderMaterial.new()
-	m.shader = sh
-	mi.material_override = m
+	mi.material_override = LookMaterials.energy_shield(size, Vector3(0, 3, 6))
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_hull.add_child(mi)
 	mi.position = at
@@ -555,39 +541,11 @@ func _engines() -> void:
 		light.position = c + Vector3(0, 0, r * 1.5)
 
 
-## A flame out of a bell's mouth at `at`, aft: the jetpack's flame (ItemKit._flame)
-## grown to the cruiser's size and burning blue. `nr` is its radius at the mouth,
-## `fh` its length. Layered and additive: a white-hot mouth and core, a pale blue
-## body, a blue outer cone, a faint violet plume, and shock diamonds down the
-## middle. Its -y runs aft; _flicker() makes its length waver.
+## A flame out of a bell's mouth at `at`, aft: the jetpack's flame grown to the
+## cruiser's size and burning blue (EngineFlame, which the ships' engines share).
+## `nr` is its radius at the mouth, `fh` its length; _flicker() makes it waver.
 func _flame(at: Vector3, nr: float, fh: float) -> void:
-	var fl := Node3D.new()
-	fl.name = "Flame"
-	_hull.add_child(fl)
-	fl.transform = Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), at)
-	_flames.append(fl)
-	var hot := Color("#d9f3ff")
-	var body := Color("#5cb6ff")
-	var outer := Color("#2b6cff")
-	var tail := Color("#5b3dff")
-	var parts := [
-		[_cyl(nr * 0.95, nr * 0.95, 0.3, 32), _plume(hot.lerp(Color.WHITE, 0.5), 6.0, 1.0), -0.15],
-		[_cyl(nr * 0.55, 0.0, fh * 0.4, 24), _plume(hot.lerp(Color.WHITE, 0.3), 5.0, 0.9), -fh * 0.2],
-		[_cyl(nr * 0.85, nr * 0.1, fh * 0.75, 24), _plume(hot.lerp(body, 0.5), 3.0, 0.6), -fh * 0.375],
-		[_cyl(nr * 1.05, 0.0, fh, 24), _plume(body.lerp(outer, 0.5), 2.2, 0.45), -fh * 0.5],
-		[_cyl(nr * 1.4, nr * 0.3, fh * 0.85, 24), _plume(tail, 1.4, 0.16), -fh * 0.5],
-	]
-	for i in 4:
-		var s := SphereMesh.new()
-		s.radius = nr * (0.32 - i * 0.06)
-		s.height = s.radius * 2.0
-		s.radial_segments = 16
-		s.rings = 8
-		parts.append([s, _plume(hot.lerp(Color.WHITE, 0.6), 6.0, 0.8), -fh * (0.16 + i * 0.15)])
-	for p in parts:
-		var mi := _mesh(p[0], p[1], Transform3D(Basis.IDENTITY, Vector3(0, float(p[2]), 0)), fl)
-		if p[0] is SphereMesh:
-			mi.scale = Vector3(1.0, 1.8, 1.0)
+	_flames.append(EngineFlame.build(_hull, Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), at), nr, fh, EngineFlame.ION))
 
 
 ## The flames waver, each out of step with the others (as the jetpack's do).
@@ -597,16 +555,6 @@ func _flicker() -> void:
 		var k := 1.0 + 0.07 * sin(t * 17.0 + i * 2.1) + 0.04 * sin(t * 43.0 + i * 0.7)
 		var w := 1.0 + 0.025 * sin(t * 29.0 + i * 1.3)
 		(_flames[i] as Node3D).scale = Vector3(w, k, w)
-
-
-## An unshaded, additive flame layer: `alpha` sets how much it adds.
-static func _plume(color: Color, energy: float, alpha: float) -> StandardMaterial3D:
-	var m := _emissive(color, energy)
-	m.albedo_color.a = alpha
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	return m
 
 
 static func _cyl(top: float, bottom: float, h: float, seg: int, caps := true) -> CylinderMesh:
@@ -663,20 +611,31 @@ func _lights() -> void:
 	var list: Array = []
 	for x: float in [-20.0, 24.0]:
 		for z: float in [-120.0, -64.0, -8.0]:
-			list.append([Vector3(x, CruiserHull.BAY_TOP - 6.0, z), "#e4edff", 5.0, 64.0])
+			list.append([Vector3(x, CruiserHull.BAY_TOP - 6.0, z), "#e4edff", 11.0, 80.0])
+	for x: float in [-24.0, 20.0]:
+		for z: float in [-128.0, -92.0, -56.0, -20.0, 14.0]:
+			list.append([Vector3(x, d + 12.0, z), "#dbe7ff", 5.0, 40.0])     # low fill over the pads
 	for z in [-110.0, -40.0, 10.0]:
-		list.append([Vector3(-38.0, d + 8.0, z), "#ffcf9a", 2.0, 30.0])      # warm fill along the cargo
-	for i in 8:
-		list.append([Vector3(0, CruiserHull.HALL_TOP - 1.5, 44.0 + i * 30.0), "#cfe6ff", 2.6, 21.0])
-	list.append([Vector3(16, CruiserHull.HALL_TOP - 1.5, 122), "#ffd9a8", 2.2, 17.0])
-	list.append([Vector3(-16, CruiserHull.HALL_TOP - 1.5, 188), "#ffd9a8", 2.2, 17.0])
-	for y in [d + 8.0, d + 32.0, d + 56.0, d + 80.0]:
-		list.append([Vector3(0, y, 298), "#c3dbff", 3.4, 40.0])
-	list.append([Vector3(0, 12, 318), "#7fc8ff", 4.0, 42.0])
-	for z: float in [226.0, 242.0, 258.0]:
-		list.append([Vector3(0, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 1.7, 30.0])
+		list.append([Vector3(-38.0, d + 8.0, z), "#ffcf9a", 3.5, 32.0])      # warm fill along the cargo
+	for i in 16:
+		list.append([Vector3(0, CruiserHull.HALL_TOP - 1.5, 36.0 + i * 15.0), "#cfe6ff", 3.5, 20.0])
+	for z: float in [116.0, 128.0]:
+		list.append([Vector3(16, CruiserHull.HALL_TOP - 1.5, z), "#ffd9a8", 5.0, 20.0])
+	for z: float in [182.0, 194.0]:
+		list.append([Vector3(-16, CruiserHull.HALL_TOP - 1.5, z), "#ffd9a8", 5.0, 20.0])
+	for i in CruiserHull.FLIGHTS:
+		list.append([Vector3(0, d + 6.0 + i * CruiserHull.FLIGHT_RISE, 298), "#c3dbff", 6.0, 36.0])
 	for x: float in [-18.0, 18.0]:
-		list.append([Vector3(x, CruiserHull.PIT_Y + 2.0, 242), "#38c8ff", 1.0, 14.0])
+		for y in [d + 14.0, d + 38.0, d + 62.0]:
+			list.append([Vector3(x, y, 298), "#c3dbff", 4.0, 30.0])         # fill on the landings
+	list.append([Vector3(0, 12, 318), "#7fc8ff", 5.0, 42.0])
+	for z: float in [226.0, 242.0, 258.0]:
+		list.append([Vector3(0, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 3.5, 30.0])
+	for x: float in [-16.0, 16.0]:
+		for z: float in [228.0, 256.0]:
+			list.append([Vector3(x, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 2.5, 26.0])
+	for x: float in [-18.0, 18.0]:
+		list.append([Vector3(x, CruiserHull.PIT_Y + 2.0, 242), "#38c8ff", 2.0, 16.0])
 	for l in list:
 		var o := OmniLight3D.new()
 		o.position = l[0]

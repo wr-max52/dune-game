@@ -310,12 +310,14 @@ func remove_last_berth() -> bool:
 
 ## Issue #207: T-89 fitted an upgrade: the parked ship you fly takes it now
 ## (in the air it waits for the next landing), and an upgrade with a paint job
-## repaints its ship (ShipUpgrades.look).
+## repaints its ship (ShipUpgrades.look). Every owned ship shows its parts at once.
 func refit() -> void:
 	for b in berths:
 		if not bool(b.get("destroyed", false)) and is_instance_valid(b.visual):
 			var base := str(content.get_ship(str(b.ship_id)).get("look", ""))
 			kit.repaint(b.visual, ShipUpgrades.look(str(b.ship_id), base))
+			if b.visual.has_meta("look_id"):
+				kit.dress(b.visual, ShipUpgrades.fitted(str(b.ship_id)))
 	if not piloting and not berths.is_empty():
 		_use_berth(berth)
 
@@ -1287,6 +1289,10 @@ func _tow_home() -> void:
 func _sync_visual() -> void:
 	if visual != null and is_instance_valid(visual):
 		visual.global_transform = atmo.transform() * _jolt_xf
+		# The engines light with the throttle while you fly her; out the moment you're not.
+		var up := piloting and atmo.state == AtmoFlight.State.FLYING
+		ShipKit.throttle_flames(visual, _throttle if up else 0.0, _boost and up,
+			get_physics_process_delta_time() if piloting else 0.0)
 
 
 func _update_hud(agl_now: float) -> void:

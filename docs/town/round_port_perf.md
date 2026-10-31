@@ -30,3 +30,27 @@ stages the handoff the same way (`HANDOFF_STATION_STAGED=true`, ready in 29.5 ms
 Not covered: a rendered on-foot walk through the town. `scenes/m14_flight_trace.gd`
 did not compile as an `-s` script on either layout (the NpcVoice autoload is not
 registered yet when a `-s` script compiles), so it gave no numbers.
+
+## With the fill: a quiet re-run of all three (2026-10-31)
+
+The three layouts back to back, twice each, interleaved (square, round, round
+with the fill, then again), with no other Godot running. Same machine and trace.
+port_round here is part 5's (374 boxes); with the fill it is 454 boxes and nine
+more people. Grit Station is the control: nothing here touches it.
+
+| frame time (ms), run 1 / run 2  | port_square   | port_round    | round + fill  |
+|---------------------------------|--------------:|--------------:|--------------:|
+| all frames p50                  | 8.33 / 8.33   | 8.33 / 8.33   | 8.33 / 8.33   |
+| all frames p99                  | 9.72 / 9.72   | 10.61 / 10.61 | 11.11 / 11.67 |
+| port to station p95             | 9.72 / 9.52   | 10.42 / 10.42 | 11.11 / 11.11 |
+| port to station p99             | 10.06 / 10.00 | 11.04 / 11.11 | 11.67 / 11.67 |
+| port to station max             | 137.9 / 138.5 | 135.2 / 145.6 | 133.3 / 133.3 |
+| station p99 (control)           | 9.09 / 8.44   | 8.35 / 9.09   | 9.09 / 9.09   |
+| physics process p99             | 25.5 / 25.6   | 25.0 / 25.3   | 26.3 / 24.4   |
+
+The fill costs about 0.7 ms at p95 and p99 in the port, on top of the round
+port's 0.8 to 1 ms over the square one: under 2 ms in all, against a 16.7 ms
+60 Hz frame. The median stays on vsync, spikes are no worse, and the control
+does not move, so these differences are the town's. (Two earlier runs of the
+fill, taken while ten other Godot processes were running, gave 12.1 and 13.3 ms
+port p95; that was the machine, not the town.)
