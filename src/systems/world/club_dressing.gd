@@ -14,8 +14,9 @@ extends Node3D
 ##         own, warm and blue stage spots through the haze, a neon sign over the
 ##         door and an upright piano and a saxophone on a stand by the stage.
 ##   rave  the moon: the whole dome is the club (no building). A round stage
-##         under a truss with moving heads, sweeping lasers and strobes, an LED
-##         wall behind the DJ, rave speaker stacks, an LED dance floor that
+##         with a laser droid hovering over it (shoot it and the lasers stop),
+##         moving heads behind it, a hologram wall behind the DJ, rave speaker
+##         stacks with strobes on top, an LED dance floor that
 ##         ripples on the beat, neon rings round the dome wall, a mirror ball
 ##         and a lit canopy over the bar. The dome's own lights are turned down
 ##         (AsteroidWorld.club_dim).
@@ -430,7 +431,7 @@ func _rave(town, scene: Node) -> void:
 	var side := fwd.cross(Vector3.UP).normalized()
 	var face := Basis(Vector3.UP, atan2(fwd.x, fwd.z))
 	_rave_stage(fwd, side)
-	_rave_truss(fwd, side, face, floor_mid)
+	_rave_rig(fwd, side, face, floor_mid)
 	_rave_floor(fmin, fmax)
 	_rave_speakers(fwd, side, face)
 	_rave_walls(centre, radius, wall_h)
@@ -470,44 +471,37 @@ func _rave_stage(fwd: Vector3, _side: Vector3) -> void:
 		step.rotation.y = atan2(fwd.x, fwd.z)
 
 
-## The truss over the stage: two towers and a beam, moving heads that sweep the
-## floor, lasers that fan over the crowd, and strobes; an LED wall behind the DJ.
-func _rave_truss(fwd: Vector3, side: Vector3, face: Basis, floor_mid: Vector3) -> void:
-	var top := 7.0
-	var back := stage_c - Vector3(0, stage_c.y, 0) - fwd * (stage_r * 0.55)
+## Over and behind the stage, with no truss: the laser droid (RaveDroid) hovering
+## over the DJ with a fan of lasers under it, moving heads on the floor behind the
+## stage throwing beams up over the crowd, and a hologram wall floating over its
+## emitter behind the DJ. The strobes stand on the speaker stacks.
+func _rave_rig(fwd: Vector3, side: Vector3, face: Basis, floor_mid: Vector3) -> void:
+	var ground := stage_c - Vector3(0, stage_c.y, 0)
+	var back := ground - fwd * (stage_r + 0.4)
 	var span := stage_r + 1.4
-	var metal := ClubTextures.brushed(Color("#b8b8bc"), 0.9)
-	var ends: Array = []
-	for s in [-1.0, 1.0]:
-		var foot: Vector3 = back + side * s * span
-		ends.append(foot + Vector3(0, top, 0))
-		for c in 4:     # a square tower of four chords with cross bracing
-			var o := Vector3(0.2 if c % 2 == 0 else -0.2, 0, 0.2 if c < 2 else -0.2)
-			props._rod(props, foot + o, foot + o + Vector3(0, top, 0), 0.025, metal)
-		for y in range(0, int(top), 1):
-			props._rod(props, foot + Vector3(-0.2, y, 0.2), foot + Vector3(0.2, y + 1.0, 0.2), 0.012, metal)
-			props._rod(props, foot + Vector3(-0.2, y, -0.2), foot + Vector3(0.2, y + 1.0, -0.2), 0.012, metal)
-	for o in [Vector3(0, 0.2, 0.2), Vector3(0, -0.2, 0.2), Vector3(0, 0.2, -0.2), Vector3(0, -0.2, -0.2)]:
-		props._rod(props, ends[0] + face * o, ends[1] + face * o, 0.025, metal)
-	# Moving heads along the beam, sweeping the floor.
+	# Moving heads in a row on the floor behind the stage, sweeping beams over the crowd.
 	var hues := [Color("#ff2bd6"), Color("#2bd9ff"), Color("#ffffff"), Color("#7aff5a"), Color("#ff2bd6"), Color("#2bd9ff")]
 	for i in 6:
 		var u := lerpf(-span + 0.8, span - 0.8, i / 5.0)
-		var at: Vector3 = back + side * u + Vector3(0, top - 0.35, 0)
-		var aim := floor_mid + side * (u * 1.3) + fwd * randf_range(-3.0, 3.0)
+		var at: Vector3 = back + fwd * 0.5 + side * u + Vector3(0, 0.15, 0)
+		var aim := floor_mid + side * (u * 1.3) + fwd * randf_range(-3.0, 3.0) + Vector3(0, randf_range(6.0, 9.0), 0)
 		var l := props.spot(at, aim, hues[i], 14.0, 22.0)
 		props.lights.append([l, 4.0, 16.0, 1.0, i * 0.25])
-	# Lasers: a fan of beams from the middle of the beam out over the crowd.
-	var src: Vector3 = back + Vector3(0, top - 0.1, 0)
-	var laser_root := Node3D.new()
-	laser_root.name = "Lasers"
-	laser_root.position = src
-	props.add_child(laser_root)
+	# The laser droid: a fan of beams under it, out over the crowd.
+	var droid := RaveDroid.new()
+	droid.home = ground + fwd * 0.5 + Vector3(0, 6.6, 0)
+	droid.fwd = fwd
+	droid.side = side
+	var deck := stage_c
+	var deck_r := stage_r
+	droid.floor_at = func(p: Vector3) -> float:
+		return deck.y if Vector2(p.x - deck.x, p.z - deck.z).length() < deck_r else 0.0
+	props.add_child(droid)
 	for i in 18:      # two tiers: one dipping to the floor, one flat over the heads
 		var a := lerpf(-0.75, 0.75, (i % 9) / 8.0)
 		var dir := (face * Vector3(sin(a), -0.32 if i < 9 else -0.13, cos(a))).normalized()
 		var beam := Node3D.new()
-		laser_root.add_child(beam)
+		droid.lasers.add_child(beam)
 		beam.basis = Basis.looking_at(dir, Vector3.UP)
 		var col: Color = [Color("#3aff4a"), Color("#ff2a3a"), Color("#2bd9ff")][i % 3]
 		var core := props._cyl(beam, 0.01, 34.0, Vector3(0, 0, -17.0), ClubTextures.glow(col, 7.0), Vector3(90, 0, 0))
@@ -516,36 +510,60 @@ func _rave_truss(fwd: Vector3, side: Vector3, face: Basis, floor_mid: Vector3) -
 		halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		props.fades.append([halo.material_override, 0.05, 0.3, 0.5, i * 0.11])
 		props.sweeps.append([beam, beam.basis, Vector3.UP, 18.0, 3.2, i * 0.07])
-	props._box(props, Vector3(0.5, 0.3, 0.4), src, ClubTextures.brushed(Color("#18181a"), 0.5))
-	# Strobes at the ends of the beam.
-	for e in ends:
-		var strobe := ClubTextures.glow(Color("#ffffff"), 1.0)
-		props._box(props, Vector3(0.5, 0.18, 0.12), e + Vector3(0, -0.35, 0) + fwd * 0.2, strobe)
-		props.pulses.append([strobe, 0.0, 30.0, 2.0, 0.0])
-		var flash := OmniLight3D.new()
-		flash.light_color = Color("#e8f0ff")
-		flash.omni_range = 18.0
-		flash.shadow_enabled = false
-		flash.position = e + Vector3(0, -0.6, 0) + fwd * 0.6
-		props.add_child(flash)
-		props.lights.append([flash, 0.0, 6.0, 2.0, 0.0])
-	# The LED wall behind the DJ: a grid of panels whose colours roll across it.
-	var wall_c: Vector3 = back - fwd * 0.6 + Vector3(0, 0.6, 0)
+	var lens := ClubTextures.glow(Color("#3aff4a"), 6.0)
+	props._sphere(droid.lasers, 0.09, Vector3.ZERO, lens)
+	props.cycles.append([lens, 0.2, 0.0])
+	_rave_hologram(back, side, face, span)
+
+
+## The hologram wall behind the DJ: a grid of see-through panels of light whose
+## colours roll across it like the old LED wall's, flickering, with faint scan lines
+## and a bright band climbing it, over a glowing emitter on the floor. No frame.
+func _rave_hologram(back: Vector3, side: Vector3, face: Basis, span: float) -> void:
+	var width := span * 2.0 - 0.8
+	var y0 := 1.0
+	var height := 4.6
+	var emitter := ClubTextures.glow(Color("#2bd9ff"), 5.0)
+	var strip := props._box(props, Vector3(width, 0.06, 0.18), back + Vector3(0, 0.03, 0), emitter)
+	strip.basis = face
+	props.cycles.append([emitter, 0.1, 0.0])
+	props.pulses.append([emitter, 2.0, 7.0, 1.0, 0.0])
+	var rise := ClubTextures.beam(Color("#2bd9ff"), 0.05)    # the light rising off the emitter
+	var sheet := props._box(props, Vector3(width, y0, 0.01), back + Vector3(0, y0 * 0.5, 0), rise)
+	sheet.basis = face
+	sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	props.cycles.append([rise, 0.1, 0.0])
 	var cols := 14
 	var rows := 6
-	var pw := (span * 2.0 - 0.8) / cols
-	var ph := 4.6 / rows
+	var pw := width / cols
+	var ph := height / rows
 	for cx in cols:
 		for cy in rows:
-			var m := ClubTextures.glow(Color.from_hsv(0.0, 0.85, 1.0), 2.0)
-			m.albedo_color = Color("#0a0a0c")
-			var p: Vector3 = wall_c + side * ((cx - (cols - 1) * 0.5) * pw) + Vector3(0, (cy + 0.5) * ph, 0)
-			var tile := props._box(props, Vector3(pw - 0.04, ph - 0.04, 0.08), p, m)
+			var m := ClubTextures.beam(Color.from_hsv(0.0, 0.85, 1.0), 0.3)
+			var p: Vector3 = back + side * ((cx - (cols - 1) * 0.5) * pw) + Vector3(0, y0 + (cy + 0.5) * ph, 0)
+			var tile := props._box(props, Vector3(pw - 0.09, ph - 0.09, 0.01), p, m)
 			tile.basis = face
+			tile.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			props.cycles.append([m, 0.1, cx * 0.035 + cy * 0.06])
-			props.pulses.append([m, 0.8, 3.5, 1.0, absf(cx - (cols - 1) * 0.5) * 0.06])
-	var frame := props._box(props, Vector3(span * 2.0, 4.9, 0.25), wall_c + Vector3(0, 2.3, 0) - fwd * 0.12, ClubTextures.brushed(Color("#141416"), 0.5))
-	frame.basis = face
+			props.fades.append([m, 0.05, 0.3, 1.0, absf(cx - (cols - 1) * 0.5) * 0.06])
+	var lines := ClubTextures.beam(Color("#bff4ff"), 0.08)
+	var n := int(height / 0.16)
+	for k in n:
+		var line := props._box(props, Vector3(width, 0.012, 0.012), back + Vector3(0, y0 + (k + 0.5) * height / n, 0) + face.z * 0.01, lines)
+		line.basis = face
+		line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var band_mat := ClubTextures.beam(Color("#e8fbff"), 0.35)
+	var band := props._box(props, Vector3(width, 0.12, 0.02), back, band_mat)
+	band.basis = face
+	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	props.scans.append([band, back + Vector3(0, y0, 0) + face.z * 0.02, back + Vector3(0, y0 + height, 0) + face.z * 0.02, 2.4, 0.0])
+	var wash := OmniLight3D.new()    # its colour on the DJ and the deck
+	wash.omni_range = 9.0
+	wash.light_energy = 1.2
+	wash.shadow_enabled = false
+	wash.position = back + face.z * 1.5 + Vector3(0, y0 + height * 0.5, 0)
+	props.add_child(wash)
+	props.cycles.append([wash, 0.1, 0.2])
 
 
 ## The LED dance floor: square tiles in a black grid, each cycling through the
@@ -569,7 +587,8 @@ func _rave_floor(fmin: Vector2, fmax: Vector2) -> void:
 		x += 1.0
 
 
-## Stacks of rave speakers either side of the stage, facing the floor.
+## Stacks of rave speakers either side of the stage, facing the floor, a strobe
+## on each.
 func _rave_speakers(fwd: Vector3, side: Vector3, face: Basis) -> void:
 	for s in [-1.0, 1.0]:
 		var foot: Vector3 = stage_c - Vector3(0, stage_c.y, 0) + side * s * (stage_r + 2.6) + fwd * 0.6
@@ -577,6 +596,17 @@ func _rave_speakers(fwd: Vector3, side: Vector3, face: Basis) -> void:
 		props.speaker(Transform3D(yaw, foot), Vector3(1.4, 1.2, 1.0))
 		props.speaker(Transform3D(yaw, foot + Vector3(0, 1.2, 0)), Vector3(1.4, 1.2, 1.0))
 		props.speaker(Transform3D(yaw, foot + Vector3(0, 2.4, 0)), Vector3(1.0, 0.9, 0.8))
+		var strobe := ClubTextures.glow(Color("#ffffff"), 1.0)     # a strobe on top
+		var bar := props._box(props, Vector3(0.5, 0.18, 0.12), foot + Vector3(0, 3.42, 0), strobe)
+		bar.basis = yaw
+		props.pulses.append([strobe, 0.0, 30.0, 2.0, 0.0])
+		var flash := OmniLight3D.new()
+		flash.light_color = Color("#e8f0ff")
+		flash.omni_range = 18.0
+		flash.shadow_enabled = false
+		flash.position = foot + Vector3(0, 3.6, 0) + yaw.z * 0.4
+		props.add_child(flash)
+		props.lights.append([flash, 0.0, 6.0, 2.0, 0.0])
 
 
 ## Neon rings round the inside of the dome wall, cyan low and magenta high, the
