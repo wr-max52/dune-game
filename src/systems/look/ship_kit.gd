@@ -85,6 +85,25 @@ func build(look_id: String) -> Node3D:
 	return root
 
 
+## Swap a built ship's model for look `look_id`'s: the same airframe in another paint
+## (an upgraded frigate, ShipUpgrades.look). The root keeps everything else hung on
+## it (its hull, its place). A stand-in (no "Model") stays as it is.
+func repaint(root: Node3D, look_id: String) -> void:
+	var old := root.get_node_or_null("Model")
+	if old == null or str(root.get_meta("look_id", "")) == look_id:
+		return
+	var fresh := build(look_id)
+	var model := fresh.get_node_or_null("Model")
+	if model != null:
+		root.remove_child(old)
+		old.queue_free()
+		fresh.remove_child(model)
+		root.add_child(model)
+		root.move_child(model, 0)
+		root.set_meta("look_id", look_id)
+	fresh.free()
+
+
 ## The upgrades T-89 fitted (ShipUpgrades ids), shown on a built ship: each id in
 ## the look's "upgrades" is a list of parts bolted onto the model, so they stack.
 ## Re-dressing replaces the last set; a ship whose look has none stays as built.

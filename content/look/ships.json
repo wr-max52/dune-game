@@ -49,6 +49,9 @@
       "canopy": "#1f2a33",
       "engine": "#8fd8ff"
     },
+    "freighter_shields": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_shields.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff"},
+    "freighter_hull": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_hull.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff"},
+    "freighter_boost": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_boost.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff"},
     "courier": {
       "frame": "dart",
       "scene": "res://assets/vehicles/courier.glb",

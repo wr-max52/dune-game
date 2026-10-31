@@ -614,6 +614,8 @@ func _look_stair_tower(b: Dictionary, _lx: float, _lz: float, _h: float) -> void
 	var y := c.y + float(t.rise)
 	while y < top - 0.5:
 		part(ring(r - 0.05, r + 0.25, y - 0.1, y + 0.1, 32), trim, Vector3(c.x, 0, c.z))
+		# Issue #237: a lit band under each ledge, so the climb reads from the square at night.
+		part(ring(r - 0.02, r + 0.06, y - 0.2, y - 0.12, 32), window_glow, Vector3(c.x, 0, c.z))
 		y += float(t.rise)
 	# Slit windows that climb with the ramp, and lights on the core at head height.
 	var th: float = t.th0 + 0.6
@@ -625,7 +627,7 @@ func _look_stair_tower(b: Dictionary, _lx: float, _lz: float, _h: float) -> void
 			_at(at, box(0.3, 0.9, 0.28), trim, Vector3(-0.02, 0, 0))
 			_at(at, box(0.3, 0.7, 0.14), window_glow, Vector3(-0.06, 0, 0))
 		var lp := StairTower.ramp_point(t, float(t.rc) + 0.03, th) + Vector3(0, 1.9, 0)
-		put(ball(0.07, 0.14, false, 8), window_glow, Transform3D(Basis.IDENTITY, lp))
+		put(ball(0.12, 0.2, false, 10), window_glow, Transform3D(Basis.IDENTITY, lp))      # issue #237: brighter lamps up the core
 		th += PI * 0.5
 	# The doorway: same frame and light as every door in town, left open.
 	var dth: float = t.door_th

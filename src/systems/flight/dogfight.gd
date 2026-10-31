@@ -23,11 +23,17 @@ const LeadSolver := preload("res://src/systems/flight/lead_solver.gd")
 
 enum State { IDLE, RUNNING, COMPLETE, FAILED }
 
+## How much faster and bigger a space fight is than the ships', pilots' and guns'
+## own numbers (speed_scale, range_scale, ...). See its note.
+const TUNE_PATH := "res://content/core/flow/space_fight.json"
+static var _tune_cache: Dictionary = {}
+
 const TEAM_PLAYER := "player"
 const TEAM_HOSTILE := "hostile"
 
 var content
 var encounter: Dictionary = {}
+var tune: Dictionary = {}        ## space_fight.json, or every scale 1.0 (set before start())
 var state := State.IDLE
 var t := 0.0
 var rng_seed := 1
@@ -67,6 +73,7 @@ var _player_secondary := false
 func _init(content_ref = null, encounter_id: String = "", seed_value: int = 1) -> void:
 	content = content_ref
 	rng_seed = seed_value
+	tune = load_tune()
 	if content != null and encounter_id != "":
 		encounter = content.get_encounter(encounter_id)
 		if encounter.is_empty():
@@ -79,7 +86,7 @@ func _init(content_ref = null, encounter_id: String = "", seed_value: int = 1) -
 func start() -> void:
 	var arena: Dictionary = encounter.get("arena", {})
 	arena_center = _vec(arena.get("center", [0, 0, 0]))
-	arena_radius = float(arena.get("radius", 1500.0))
+	arena_radius = float(arena.get("radius", 1500.0)) * scale("range_scale")
 	var pl: Dictionary = encounter.get("player", {})
 	if not pl.is_empty():
 		player_id = spawn_ship(str(pl.get("ship", "")), TEAM_PLAYER, _vec(pl.get("spawn", [0, 0, 0])),
@@ -106,9 +113,16 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 	var id := _next_id
 	_next_id += 1
 	var flight = FlightModel.new(cfg.get("flight", {}))
+	flight.speed_scale = scale("speed_scale")
+	flight.accel_scale = scale("accel_scale")
+	flight.turn_mult = scale("turn_scale")
+	flight.speed = flight.cruise_speed(flight.throttle)
 	flight.position = pos
 	flight.face(facing)
 	var loadout = ShipLoadout.new(cfg, content)
+	loadout.convergence *= scale("range_scale")
+	for h in loadout.hardpoints:
+		h.cfg = _space_weapon(h.cfg)
 	var lock = MissileLock.new()
 	lock.configure(loadout.group_config("secondary"))
 	var pid := pilot_id if pilot_id != "" else str(cfg.get("pilot", ""))
@@ -128,7 +142,7 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 		"brain": null,
 		"target_id": -1,
 		"retarget_left": 0.0,
-		"radius": float(cfg.get("hit_radius", 3.0)),
+		"radius": float(cfg.get("hit_radius", 3.0)) * scale("hit_radius_scale"),
 		"kills": 0,
 		"pilot_name": "",
 		"callsign": "",
@@ -151,7 +165,36 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 
 func _make_brain(pilot_id: String, flight, id: int):
 	var prof: Dictionary = content.get_pilot(pilot_id) if content != null else {}
-	return FighterBrain.new(prof, flight, rng_seed * 7919 + id * 104729)
+	var b = FighterBrain.new(prof, flight, rng_seed * 7919 + id * 104729)
+	b.reach = scale("range_scale")
+	return b
+
+
+## One of tune's scales (1.0 when it is not there).
+func scale(key: String) -> float:
+	return float(tune.get(key, 1.0))
+
+
+## A copy of a gun's or seeker's data blown up to the fight's speeds and distances.
+func _space_weapon(cfg: Dictionary) -> Dictionary:
+	var out := cfg.duplicate()
+	for k in ["range", "lock_range"]:
+		if out.has(k):
+			out[k] = float(out[k]) * scale("range_scale")
+	if out.has("bolt_speed"):
+		out["bolt_speed"] = float(out["bolt_speed"]) * scale("bolt_speed_scale")
+	if out.has("turn_rate"):
+		out["turn_rate"] = float(out["turn_rate"]) * scale("turn_scale")
+	return out
+
+
+## space_fight.json (read once).
+static func load_tune() -> Dictionary:
+	if _tune_cache.is_empty():
+		var f := FileAccess.open(TUNE_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f != null else null
+		_tune_cache = d if d is Dictionary else { "loaded": false }
+	return _tune_cache
 
 
 ## Let the AI fly the player ship (the headless trace's "bot pilot").
@@ -284,7 +327,8 @@ func step(dt: float) -> Array:
 			var uid: int = projectiles.add(sp, s.id, s.team)
 			if sp.kind == "missile":
 				stats.missiles += 1
-				s.lock.reset()
+				if not s.is_player:
+					s.lock.reset()     # the player holds a lock through a salvo; pilots lock afresh each seeker
 				events.append({ "type": "missile", "id": s.id, "uid": uid, "target": sp.target_id, "at": flight.position })
 				var mark = get_ship(int(sp.target_id))
 				if not mark.is_empty() and mark.brain != null:
@@ -323,7 +367,7 @@ func _spawn_wave(idx: int) -> void:
 	if idx < 0 or idx >= waves.size():
 		return
 	var w: Dictionary = waves[idx]
-	var dist := float(w.get("spawn_distance", 800.0))
+	var dist := float(w.get("spawn_distance", 800.0)) * scale("range_scale")
 	var anchor := arena_center
 	var me = get_ship(player_id)
 	if not me.is_empty() and me.alive:
