@@ -9,8 +9,9 @@ extends SceneTree
 ## Reads content/look/vehicle_models.json:
 ##   { id: { source, out, yaw_deg (turns the raw model so its nose faces -Z),
 ##           length (metres, nose to tail), max_span (metres; shrinks it further if
-##           wider), max_height, paint ({ body, trim, glow, glow_energy }: a
-##           paint job on the albedo and a lit core; see _paint) } }
+##           wider), max_height, paint ({ body, trim, glow, glow_energy,
+##           metallic, roughness }: a paint job on the albedo, a lit core and
+##           the finish; see _paint) } }
 ## Hyper3D models come out about 2 units long, facing any way; the numbers here are
 ## the only fix-up, so a re-generation is one source path and one yaw.
 
@@ -77,10 +78,13 @@ func _prep(id: String, c: Dictionary) -> void:
 ## Issue #82: one Hyper3D model, several paint jobs. The albedo's light panels
 ## take `body`, its mid greys (pads, frame, trim) take `trim`, near-black (glass,
 ## underside) stays as it is. The blue plasma core is lit by an emission map made
-## from its own pixels, recoloured to `glow` when there is one. `bands` [trim from,
+## from its own pixels, recoloured to `glow` when there is one; glow_energy 0
+## leaves the blue unlit (the Lanner's blue bands are paint, not a core). `bands` [trim from,
 ## trim to, body from, body to] moves the luminance split, and `refs` [body, trim] the
 ## luminance each colour is matched at, for a darker albedo (the frigate's: mostly
-## 0.2 to 0.3, all of it "trim" on the defaults).
+## 0.2 to 0.3, all of it "trim" on the defaults). `metallic` / `roughness` replace the
+## model's own finish (Hyper3D's de-lit textures come out chalky: the Lanner's were
+## metallic 0.01, roughness 0.86).
 static func _paint(root: Node, paint: Dictionary) -> void:
 	var body := Color(str(paint.get("body", "#0000")))      # alpha 0 = leave it
 	var trim := Color(str(paint.get("trim", "#0000")))
@@ -117,10 +121,17 @@ static func _paint(root: Node, paint: Dictionary) -> void:
 					img.set_pixel(x, y, out)
 			mat = mat.duplicate() as BaseMaterial3D
 			mat.albedo_texture = ImageTexture.create_from_image(img)
-			mat.emission_enabled = true
-			mat.emission = Color.WHITE
-			mat.emission_texture = ImageTexture.create_from_image(em)
-			mat.emission_energy_multiplier = float(paint.get("glow_energy", 3.0))
+			if float(paint.get("glow_energy", 3.0)) > 0.0:
+				mat.emission_enabled = true
+				mat.emission = Color.WHITE
+				mat.emission_texture = ImageTexture.create_from_image(em)
+				mat.emission_energy_multiplier = float(paint.get("glow_energy", 3.0))
+			if paint.has("metallic"):
+				mat.metallic_texture = null
+				mat.metallic = float(paint.metallic)
+			if paint.has("roughness"):
+				mat.roughness_texture = null
+				mat.roughness = float(paint.roughness)
 			mi.mesh.surface_set_material(s, mat)
 
 

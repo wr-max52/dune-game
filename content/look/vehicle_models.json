@@ -15,11 +15,17 @@
     "max_span": 8.0
   },
   "courier": {
-    "source": "res://assets/vehicles/source/courier2.glb",
+    "source": "res://assets/vehicles/source/courier3.glb",
     "out": "res://assets/vehicles/courier.glb",
     "yaw_deg": 180,
     "length": 8.4,
-    "max_span": 7.6
+    "max_span": 7.6,
+    "paint": {
+      "body": "#a6adb7",
+      "glow_energy": 0.0,
+      "metallic": 0.55,
+      "roughness": 0.4
+    }
   },
   "gunship": {
     "source": "res://assets/vehicles/source/gunship.glb",
@@ -125,6 +131,7 @@
     "interceptor_ref.glb": "reference-led copy of the primitive stand-in",
     "freighter.glb": "long oval barge freighter, bone and rust, very greebled",
     "courier.glb": "yellow and blue cartoon racer with wing pods",
+    "courier2.glb": "the Lanner until the rocket-muscle redo: white and orange twin-boom racer (4fa39cfb)",
     "speeder_text.glb": "teal and sand hover car (has wheels; would need trimming)",
     "speeder_ref.glb": "reference-led copy of the primitive speeder",
     "speeder_text2.glb": "text-only hover sled, second try (2130a072); not reviewed",
@@ -133,7 +140,7 @@
   "generations": {
     "interceptor": "b173bc6a-9d84-4c6b-8007-5c06d23a24a2 (agentic, refs: stand-in crops)",
     "freighter": "cfed8b67-470b-4e63-b573-aadc9dd2402c (Gen-2.5 Medium, delit, 30k; refs: front 3/4, rear and top crops of the user's frigate concept sheet: thick boxy disc, forked front, three rear engines, no wings). Comes out nose toward -Z, so yaw_deg 0. freighter_shields/_hull/_boost are paint jobs on it, one per T-89 upgrade (ShipUpgrades.look). The first freighter was 5f3e0858 (source/freighter2.glb)",
-    "courier": "4fa39cfb-2d25-4586-aac6-12fd0f584059",
+    "courier": "0885f5b8-4443-493c-8d52-31b926f596e1 (Gen-2.5 Medium, delit, 40k; refs: 3/4 front, top and rear crops of the user's rocket-muscle concept sheet). Was 4fa39cfb (courier2.glb, the white and orange racer, kept in source/)",
     "gunship": "b82e5ccf-faa8-4714-bb76-1564ffd446f3",
     "speeder": "895b349d-a78a-4094-bccc-f7acfb611e8c (agentic, refs: stand-in crops)",
     "runner_ups": "8042aad5 (interceptor_ref), afd8adcf (interceptor_text), 9f5deb82 (interceptor_text2), b3bf40dd (freighter), ce66b6d3 (courier), 79440b71 (speeder_ref), 3ecc12e5 (speeder_text), 2130a072 (speeder_text2), 12657846 (sandboxer.glb: first Sand-boxer, engine deck off centre)",

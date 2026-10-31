@@ -2,6 +2,28 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The Lanner is a rocket with wings (2026-10-31)
+
+- **New Lanner model.** The Valcourt Kinetics Lanner, the fastest small ship
+  in port, is now a wide silver and blue rocket with short swept wings: a long
+  needle nose, a teal canopy, one big engine at the back with booster pods on
+  each side, and blue pods on the wingtips. Made in Hyper3D from a concept sheet.
+- **Brushed silver, not white.** The prep step repaints its light panels
+  silver and gives them a metal finish, so it reads as metal in the desert
+  light too. The blue bands stay blue.
+- **Its engine flames** come out of the big main nozzle and the four booster
+  pods beside it.
+- **T-89's upgrades show on the ship.** Each upgrade bolts parts onto the
+  Lanner, and they stack:
+  - **Boosted shields:** glowing cyan emitter rings on the wingtip pods and a
+    shield dish on its back.
+  - **Reinforced hull:** gunmetal armour on the nose cheeks, the wings' leading
+    edges, the booster pods and the belly.
+  - **Booster speed:** a longer, flared main nozzle with a hot orange glow, lit
+    side boosters and orange heat stripes.
+  The parts appear on the parked ship as soon as T-89 fits them, and on your
+  ship in a dogfight. The frigate shows its upgrades as paint jobs instead (see
+  below); any look can add parts under `upgrades` in `content/look/ships.json`.
 ## The wreck field (2026-10-31)
 
 - **Three more crashed starcruisers** lie out east, under the Remnant's cruiser and
