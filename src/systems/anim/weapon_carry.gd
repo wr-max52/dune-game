@@ -28,6 +28,10 @@ const SPRINT := {
 	"rifle": [Vector3(-0.1, -0.16, 0.34), Vector3(-45, 62, -25)],
 }
 
+## Third person: how far aim_at() may turn a gun off where its pose points (a
+## crosshair on something right beside the camera would wrench it round).
+const AIM_TURN_MAX := 0.6
+
 var ready := 0.0               ## 0 = at rest, 1 = aimed (linear; see eased())
 var _hold := 0.0
 
@@ -71,3 +75,25 @@ static func rest_xf(kind: String, grip_r: Vector3, sprint := false) -> Transform
 ## Between rest and aim; `t` is eased().
 static func blend(rest: Transform3D, aim: Transform3D, t: float) -> Transform3D:
 	return rest.interpolate_with(aim, clampf(t, 0.0, 1.0))
+
+
+## Third person: the gun at `xf` (chest space) turned about `pivot` (gun space: the
+## stock on the shoulder) so its bore, parallel to the gun's +Z through `muzzle`,
+## runs through `target` (chest space). The camera sits off the right shoulder, so a
+## gun pointing straight out of the chest misses the crosshair. Keeps the gun's cant;
+## turns at most AIM_TURN_MAX; a target closer than the gun leaves `xf` as it is.
+static func aim_at(xf: Transform3D, pivot: Vector3, muzzle: Vector3, target: Vector3) -> Transform3D:
+	var b := xf.basis.orthonormalized()
+	var fwd := b.z
+	var up := b.y
+	var p := xf * pivot
+	for i in 3:   # the bore sits above the pivot: settle the parallax
+		var to := target - (p + b * (muzzle - pivot))
+		if to.length() < 0.5 or (target - p).dot(fwd) <= 0.0:
+			return xf
+		var dir := to.normalized()
+		var ang := fwd.angle_to(dir)
+		if ang > AIM_TURN_MAX:
+			dir = fwd.slerp(dir, AIM_TURN_MAX / ang)
+		b = Basis.looking_at(dir, up, true)
+	return Transform3D(b, p - b * pivot)

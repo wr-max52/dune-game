@@ -191,6 +191,8 @@ func _physics_process(dt: float) -> void:
 	# Guns tick every frame (cooldowns, reloads) whether or not the trigger is down.
 	# Issue #87: in third person a resting gun comes up first, then fires.
 	avatar.aim_wanted = enabled and not sprinting and (_fire_held or _alt_on)
+	# Third person: the gun points where the crosshair does, not straight out of the chest.
+	avatar.aim_target = aim_point() if not avatar.first_person and guns.has(cur) else Vector3.INF
 	for id in guns:
 		var g: Weapon = guns[id]
 		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held and avatar.gun_up() \

@@ -54,7 +54,7 @@
     "mag": [0.0, -0.14, 0.06],
     "reload_out": [0.24, -0.04, -0.06],
     "muzzle": [0.0, 0.11, 0.48],
-    "aim": { "pos": [-0.1, -0.02, 0.4], "rot": [0, 0, 0] },
+    "aim": { "pos": [-0.13, 0.17, 0.5], "rot": [0, 0, 0], "pivot": [0.0, -0.02, -0.475], "note": "Third person: shouldered, the butt (pivot) in the right shoulder pocket; the gun turns about it to the crosshair." },
     "aim_fpv": { "pos": [-0.19, 0.1, 0.47], "rot": [4, 13, 0] },
     "fpv_pose": { "r": "trigger", "l": "support" },
     "holster": "back",
