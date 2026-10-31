@@ -754,9 +754,9 @@ func _content() -> CoreContent:
 ## the town; they walk back to their post. A sentry up on a roof or the tower
 ## (profile combat.hold_ground) has no way up from there, so it comes back at its
 ## post on the same clock. Outpost troopers: at their post after a few minutes.
-## The bounty target never comes back. {} = stays dead.
+## The bounty target and the general's barracks squad never come back. {} = stays dead.
 func respawn_rule(g: NpcBody) -> Dictionary:
-	if g.has_meta("bounty") or g.has_meta("cruiser"):
+	if g.has_meta("bounty") or g.has_meta("cruiser") or g.has_meta("general_squad"):
 		return {}
 	var rc := Story.remnant_cfg()
 	var r := { "soldier": g.soldier_id, "post": g.post_id, "home": g.post_pos, "yaw": g.post_facing }

@@ -1,0 +1,15 @@
+{
+  "id": "general_guard",
+  "base": "cruiser_honour_guard",
+  "label": "General's guard",
+  "archetype": "remnant_commander",
+  "note": "The general's guard in the barracks yard (src/systems/npc/general_post.gd). Stands beside him, and on the town alarm fights there (hold_ground, from outpost_trooper.json). Does not come back while the general lives. Only the blocks below differ from cruiser_honour_guard.json.",
+  "outfit": {
+    "head": "guard:gunmetal",
+    "torso": "guard:gunmetal",
+    "legs": "guard:gunmetal"
+  },
+  "combat": {
+    "hold_radius": 4.0
+  }
+}
