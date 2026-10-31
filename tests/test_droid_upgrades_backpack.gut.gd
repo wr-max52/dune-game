@@ -180,3 +180,37 @@ func test_gun_droid_walks_ten_steps_then_comes_back() -> void:
 	c.target = foe
 	ctl._engage(c, [foe])
 	assert_null(c.engaged, "a cargo droid never goes after anyone")
+
+
+# ---- the shiny look ------------------------------------------------------------------
+
+func test_base_look_until_any_upgrade_then_shiny() -> void:
+	var r := WorldState.droids
+	var picks := { "floating": ["rust", "chrome"], "cargo": ["tan", "gold"], "assassin": ["gunmetal", "chrome"] }
+	for kind in picks:
+		var d := r.add(kind, DroidRoster.pick_variant(kind, RandomNumberGenerator.new()))
+		assert_eq(d.variant, picks[kind][0], "%s starts in its base look" % kind)
+		r.upgrade(int(d.uid), "health", 999)
+		assert_eq(d.variant, picks[kind][1], "%s: any upgrade makes it shiny" % kind)
+		assert_false(DroidRoster.variant_cfg(kind, d.variant).get("shine", {}).is_empty())
+		r.remove(int(d.uid))
+
+
+func test_old_saves_take_the_base_look() -> void:
+	WorldState.droids.from_save({ "owned": [{ "uid": 3, "kind": "cargo", "variant": "olive", "cargo": {} }] })
+	assert_eq(WorldState.droids.owned[0].variant, "tan")
+
+
+func test_first_upgrade_rebuilds_it_shiny() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var d := WorldState.droids.add("cargo", "tan")
+	var u = ctl._spawn_companion(d, Vector3(3, 0, 0))
+	WorldState.credits = 500
+	assert_eq(ctl.upgrade(int(d.uid), "cargo"), "upgraded")
+	var shiny = ctl.companions[int(d.uid)]
+	assert_ne(shiny, u, "a new body")
+	assert_eq(shiny.variant, "gold")
+	assert_almost_eq(shiny.global_position.x, 3.0, 0.01, "where it stood")
+	assert_eq(ctl.upgrade(int(d.uid), "health"), "upgraded")
+	assert_eq(ctl.companions[int(d.uid)], shiny, "already shiny: no rebuild")

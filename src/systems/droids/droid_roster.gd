@@ -15,6 +15,8 @@ extends RefCounted
 ## Upgrades: the droid merchant fits each droid with more health, a bigger hold
 ## (a cargo droid starts with cargo_slots kinds of item) or a harder-hitting gun
 ## (droids.json "upgrades"). Levels live on the droid ("up") and go with it.
+## A droid of yours wears its kind's base_variant until its first upgrade, then
+## the shiny upgraded_variant (look_variant).
 
 const DATA := "res://content/core/droids/droids.json"
 
@@ -72,6 +74,16 @@ static func pick_variant(kind: String, rng: RandomNumberGenerator) -> String:
 	return str(vs[rng.randi() % vs.size()]) if not vs.is_empty() else ""
 
 
+## How droid `d` of yours looks: its kind's base_variant, or once it has any
+## upgrade, the upgraded_variant. Falls back to its own variant.
+static func look_variant(d: Dictionary) -> String:
+	var kc := kind_cfg(str(d.get("kind", "")))
+	var upgraded := false
+	for key in (d.get("up", {}) as Dictionary):
+		upgraded = upgraded or int(d.up[key]) > 0
+	return str(kc.get("upgraded_variant" if upgraded else "base_variant", d.get("variant", "")))
+
+
 # ---- owning -------------------------------------------------------------------
 
 func is_full() -> bool:
@@ -91,6 +103,7 @@ func add(kind: String, variant: String) -> Dictionary:
 	if is_full() or kind_cfg(kind).is_empty():
 		return {}
 	var d := { "uid": next_uid, "kind": kind, "variant": variant, "cargo": {}, "up": {} }
+	d.variant = look_variant(d)          # yours start in the kind's base look
 	next_uid += 1
 	owned.append(d)
 	return d
@@ -208,6 +221,7 @@ func upgrade(uid: int, key: String, credits: int) -> Dictionary:
 	if not d.has("up"):
 		d["up"] = {}
 	d.up[key] = level(d, key) + 1
+	d.variant = look_variant(d)          # any upgrade: the shiny look
 	return { "cost": cost, "level": int(d.up[key]) }
 
 
@@ -389,8 +403,10 @@ func from_save(d: Dictionary) -> void:
 			var up := {}
 			for key in (o.get("up", {}) as Dictionary):
 				up[str(key)] = int(o.up[key])
-			owned.append({ "uid": int(o.uid), "kind": str(o.kind), "variant": str(o.get("variant", "")),
-				"cargo": (o.get("cargo", {}) as Dictionary).duplicate(), "up": up })
+			var mine := { "uid": int(o.uid), "kind": str(o.kind), "variant": str(o.get("variant", "")),
+				"cargo": (o.get("cargo", {}) as Dictionary).duplicate(), "up": up }
+			mine.variant = look_variant(mine)    # older saves: the random look becomes the base one
+			owned.append(mine)
 	wrecks = []
 	for w in d.get("wrecks", []):
 		wrecks.append({ "uid": int(w.uid), "kind": str(w.kind), "variant": str(w.get("variant", "")),

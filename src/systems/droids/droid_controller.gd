@@ -391,7 +391,15 @@ func upgrade(uid: int, key: String) -> String:
 			return ""
 	WorldState.credits -= int(r.cost)
 	var u: DroidUnit = companions.get(uid)
-	if u != null and not u.dead:
+	if u != null and not u.dead and u.variant != str(d.variant):
+		# Its first upgrade: it comes back from the merchant's bench in the shiny look.
+		var at := u.global_position
+		var yaw := u.yaw
+		_free_companion(uid)
+		u = _spawn_companion(d, at)
+		u.yaw = yaw
+		_orient(u)
+	elif u != null and not u.dead:
 		var was := u.max_hp
 		u.max_hp = DroidRoster.health(d)
 		u.hp += u.max_hp - was

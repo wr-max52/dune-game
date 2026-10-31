@@ -13,6 +13,8 @@
       "hover": 1.7,
       "hit_radius": 0.55,
       "hp": 40,
+      "base_variant": "rust",
+      "upgraded_variant": "chrome",
       "engage": {
         "advance": 7.5,
         "standoff": 3.0
@@ -49,6 +51,12 @@
           "trim": "#5a6470",
           "eye": "#4aff9a"
         },
+        "chrome": {
+          "body": "#e4e8ee",
+          "trim": "#c9a24a",
+          "eye": "#4ad0ff",
+          "shine": { "metallic": 0.95, "roughness": 0.25, "clearcoat": 1.0 }
+        },
         "remnant": {
           "body": "#1d1e22",
           "trim": "#5a5a60",
@@ -78,6 +86,8 @@
       "carries": true,
       "cargo_slots": 2,
       "hp": 60,
+      "base_variant": "tan",
+      "upgraded_variant": "gold",
       "follow": {
         "side": -1.2,
         "back": 1.8,
@@ -100,6 +110,12 @@
           "body": "#3d5a7a",
           "trim": "#c8c8c0",
           "eye": "#4ad0ff"
+        },
+        "gold": {
+          "body": "#f0c050",
+          "trim": "#3a3026",
+          "eye": "#ffe08a",
+          "shine": { "metallic": 0.95, "roughness": 0.3, "clearcoat": 1.0 }
         },
         "remnant": {
           "body": "#2a2b2f",
@@ -133,6 +149,8 @@
       "chirp_s": [11.0, 22.0],
       "height": 2.3,
       "hp": 120,
+      "base_variant": "gunmetal",
+      "upgraded_variant": "chrome",
       "engage": {
         "advance": 7.5,
         "standoff": 3.0
@@ -167,6 +185,12 @@
           "body": "#9a5a34",
           "trim": "#3a2a20",
           "eye": "#4aff9a"
+        },
+        "chrome": {
+          "body": "#e8ecf2",
+          "trim": "#c9a24a",
+          "eye": "#4ad0ff",
+          "shine": { "metallic": 0.95, "roughness": 0.25, "clearcoat": 1.0 }
         },
         "remnant": {
           "body": "#141416",
@@ -279,7 +303,7 @@
     "health": { "label": "Armour plating", "prices": [40, 80, 140], "per_level": 0.5 },
     "cargo": { "label": "Cargo racks", "prices": [30, 60, 100], "per_level": 2 },
     "damage": { "label": "Gun capacitor", "prices": [60, 110, 180], "per_level": 0.35 },
-    "note": "The droid merchant's upgrades, per droid (DroidRoster.upgrade). Each has one level per price. health: +per_level of the kind's 'hp' each level (every kind). cargo: +per_level hold slots each level on a droid that carries (a cargo droid starts with its kind's 'cargo_slots'; a slot is one kind of item, any number of it). damage: +per_level of its gun's damage each level (a droid with a gun). Your droids take hits from anyone you are fighting; at 0 hp one is knocked out for knocked_out_s, then reboots at full health."
+    "note": "The droid merchant's upgrades, per droid (DroidRoster.upgrade). Each has one level per price. health: +per_level of the kind's 'hp' each level (every kind). cargo: +per_level hold slots each level on a droid that carries (a cargo droid starts with its kind's 'cargo_slots'; a slot is one kind of item, any number of it). damage: +per_level of its gun's damage each level (a droid with a gun). Your droids look their kind's 'base_variant' until their first upgrade of any kind, then its 'upgraded_variant' (a polished one: its 'shine' makes the model all-over metal with a clear coat, DroidKit). Your droids take hits from anyone you are fighting; at 0 hp one is knocked out for knocked_out_s, then reboots at full health."
   },
   "knocked_out_s": 20.0,
   "engage_note": "Assassin and floating droids of yours ('engage' on their kind): when one sees an enemy (enemies()) it walks up to 'advance' metres (about ten steps) toward it from where it stood, stopping 'standoff' metres short, and shoots from there. Once that enemy is dead (and no other is in sight) it comes back to you. Walk off far enough and it jumps to you as it always did.",
