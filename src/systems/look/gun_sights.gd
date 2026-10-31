@@ -15,6 +15,7 @@ extends RefCounted
 
 const RETICLE_ENERGY := 3.0
 const SCOPE_METAL := preload("res://src/systems/look/shaders/scope_metal.gdshader")
+const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 
 static var _cut_cache: Dictionary = {}
 static var _noise: NoiseTexture2D
@@ -117,7 +118,10 @@ static func cut_mesh(m: ArrayMesh, xf: Transform3D, box: AABB) -> ArrayMesh:
 ## walls are see-through from inside, so the hardware round it (turrets, mounts,
 ## rail) and the gun below it (receiver, muzzle glow) would show through. Off
 ## puts them back. A gun without a scope is untouched.
-static func scope_view(weapon: Node3D, on: bool) -> void:
+## `barrel_from` (metres from the eye, hand_weapons scope "barrel_from"): the gun
+## past it stays, so the barrel runs out under the scope and it does not float.
+## That needs the gun's weapon_dark material (its near_clip); others just hide.
+static func scope_view(weapon: Node3D, on: bool, barrel_from := 0.0) -> void:
 	var scope := weapon.find_child("Scope", true, false) as Node3D
 	if scope == null:
 		return
@@ -126,11 +130,18 @@ static func scope_view(weapon: Node3D, on: bool) -> void:
 	# through the tube's side: it is only there aimed in.
 	(scope.get_node("Reticle") as Node3D).visible = on
 	for mi in weapon.find_children("*", "GeometryInstance3D", true, false):
-		if not scope.is_ancestor_of(mi) and mi.name != "Flash":
-			(mi as GeometryInstance3D).visible = not on
+		if scope.is_ancestor_of(mi) or mi.name == "Flash":
+			continue
+		var g := mi as GeometryInstance3D
+		var sm := g.material_override as ShaderMaterial
+		if barrel_from > 0.0 and sm != null and sm.shader == DARK:
+			g.visible = true
+			sm.set_shader_parameter("near_clip", barrel_from if on else 0.0)
+		else:
+			g.visible = not on
 
 
-static func _scope_mat(c: Color, rough: float, knurl := 0.0, groove := 0.0) -> ShaderMaterial:
+static func _scope_mat(c: Color, rough: float, knurl := 0.0, groove := 0.0, weave := 0.0) -> ShaderMaterial:
 	if _noise == null:
 		_noise = NoiseTexture2D.new()
 		_noise.seamless = true
@@ -142,6 +153,7 @@ static func _scope_mat(c: Color, rough: float, knurl := 0.0, groove := 0.0) -> S
 	m.set_shader_parameter("roughness", rough)
 	m.set_shader_parameter("knurl", knurl)
 	m.set_shader_parameter("groove", groove)
+	m.set_shader_parameter("weave", weave)
 	m.set_shader_parameter("noise_tex", _noise)
 	return m
 
@@ -170,7 +182,8 @@ static func build_scope(s: Dictionary) -> Node3D:
 	var r := float(s.get("radius", 0.024))
 	var r_oc := float(s.get("ocular", 0.029))
 	var r_ob := float(s.get("objective", 0.034))
-	var body := _scope_mat(Color(0.045, 0.045, 0.05), 0.42)
+	# Issue #229: the rifle's own blue-grey and twill, so the two read as one kit.
+	var body := _scope_mat(Color(0.05, 0.054, 0.062), 0.42, 0.0, 0.0, float(s.get("weave", 0.0)))
 	var ring := _scope_mat(Color(0.07, 0.07, 0.075), 0.35)
 	var knurled := _scope_mat(Color(0.06, 0.06, 0.065), 0.4, 48.0)
 	var grooved := _scope_mat(Color(0.05, 0.05, 0.055), 0.4, 0.0, 9.0)
@@ -194,6 +207,14 @@ static func build_scope(s: Dictionary) -> Node3D:
 	rim.rings = 64
 	rim.ring_segments = 8
 	_mesh(root, rim, ring, Vector3(0, 0, -length * 0.5), Vector3(90, 0, 0))
+	# Painted bands in the rifle's orange, lit like its panels: one behind the
+	# objective bell, one ahead of the eyepiece's power ring.
+	if s.has("accent"):
+		var paint := _scope_mat(Color.html(str(s.accent)), 0.5)
+		paint.set_shader_parameter("metallic", 0.0)
+		paint.set_shader_parameter("glow", float(s.get("accent_glow", 0.6)))
+		_tube(hw, r + 0.0008, r + 0.0008, 0.006, length * 0.5 - bell - 0.006, paint)
+		_tube(hw, r + 0.0008, r + 0.0008, 0.004, -length * 0.5 + bell + 0.008, paint)
 	# Turrets: elevation on top, windage on the shooter's right (-X), the parallax
 	# knob on the left; each a body and a knurled cap.
 	_knob(hw, r * 0.42, 0.02, Vector3(0, r + 0.008, 0.004), "y", body)
