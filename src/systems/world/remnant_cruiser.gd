@@ -407,21 +407,7 @@ func _build_shield() -> void:
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	var sh := Shader.new()
-	sh.code = """shader_type spatial;
-render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
-uniform vec4 tint : source_color = vec4(0.25, 0.65, 1.0, 1.0);
-varying vec3 lp;
-void vertex() { lp = VERTEX; }
-void fragment() {
-	float lines = 0.5 + 0.5 * sin(lp.y * 3.0 - TIME * 2.0);
-	float edge = smoothstep(11.0, 14.0, abs(lp.y)) + smoothstep(80.0, 86.0, abs(lp.z));
-	ALBEDO = tint.rgb;
-	ALPHA = 0.012 + 0.018 * lines + 0.3 * clamp(edge, 0.0, 1.0);
-}"""
-	var m := ShaderMaterial.new()
-	m.shader = sh
-	mi.material_override = m
+	mi.material_override = LookMaterials.energy_shield(size, Vector3(0, 3, 6))
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_hull.add_child(mi)
 	mi.position = at
