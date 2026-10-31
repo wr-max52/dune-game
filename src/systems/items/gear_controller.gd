@@ -161,7 +161,10 @@ func _lowest_floor() -> float:
 # ------------------------------------------------------------------ world
 
 func _build_pickups() -> void:
-	for entry in content.get_pickups(location_id):
+	var layout := ""
+	if town != null and "data" in town:
+		layout = str(town.data.get("layout", ""))
+	for entry in content.get_pickups(location_id, layout):
 		if inv().is_taken(str(entry.get("id", ""))):
 			continue
 		if bool(entry.get("story_only", false)) and not WorldState.story_mode():

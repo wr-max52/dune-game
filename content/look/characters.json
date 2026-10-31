@@ -129,6 +129,15 @@
         "parts": { "head": ["guard:desert"], "torso": ["player:sand"], "legs": ["cantina_owner:slate"] }
       }
     },
+    "club_band": {
+      "note": "Issue #261: the club performers (#104): full black variations of the player character with the white guard helmet. Pieces of the one kit model (parts.glb) on one skeleton, like the dancer. Only what differs from the player is listed.",
+      "base": "player_smuggler",
+      "height": 1.84,
+      "no_local_props": true,
+      "model": {
+        "parts": { "head": ["guard:white"], "torso": ["player:black"], "legs": ["player:black"] }
+      }
+    },
     "cantina_owner_station": {
       "note": "Issue #45: the asteroid station's cantina owner. Oda's body, model and height (base: cantina_owner), cooler: a steel-blue cast over her clothes and cyan goggles instead of amber. Only what differs is listed.",
       "base": "cantina_owner",

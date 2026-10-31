@@ -1,0 +1,8 @@
+{
+  "id": "club_drummer",
+  "base": "club_dj",
+  "label": "Club Drummer",
+  "note": "Issue #261: the band's drummer, standing at a hologram techno drum kit (ClubProps.drum_kit: glowing see-through hex pads, cymbal discs and a kick panel over a floor projector, flaring and swelling on each hit) with a stick in each hand ('sticks'). Plays ClubMoves 'drum': a groove, a fill across the pads, a crash, a stick in the air, a look round the room. Everything else is the DJ's (base).",
+  "sticks": true,
+  "perform": "drum"
+}

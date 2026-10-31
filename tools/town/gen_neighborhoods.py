@@ -4,7 +4,7 @@
     python3 tools/town/gen_neighborhoods.py          # rewrite the data in place
     python3 tools/town/gen_neighborhoods.py --check  # report only, write nothing
 
-Writes boxes into content/core/locations/port_town.json and the alley / rooftop
+Writes boxes into content/core/towns/port_square.json and the alley / rooftop
 hiding places into content/core/pickups/port_town.json. Fixed seed: the same town
 every run. Code never holds these numbers; this tool is how they were made.
 
@@ -16,11 +16,11 @@ door side (`face`). A building only goes where its door has a lane to open on to
 A walk check (0.25 m grid, player radius) proves every door and hiding place can
 be reached on foot from the district's resident marker.
 """
-import json, math, random, sys
+import json, math, random, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TOWN = ROOT / "content/core/locations/port_town.json"
+TOWN = ROOT / "content/core/towns/port_square.json"
 PICKUPS = ROOT / "content/core/pickups/port_town.json"
 
 GENERATED = ("house_", "bridge_", "well_", "barracks_bunk", "barracks_upper", "barracks_bridge")
@@ -40,6 +40,11 @@ TOWERS = {
 }
 TOWER_WEIGHTS = {"tower_block": 3, "tower_round": 4, "tower_wide": 2}
 ROUND = ("hut_round", "tower_round")
+
+
+def inline_numbers(text):
+	"""Short number lists on one line ([1.0, 0.0, -2.0]), as the hand-kept files have them."""
+	return re.sub(r"\[\s+(-?[\d.]+(?:,\s+-?[\d.]+)*)\s+\]", lambda m: "[" + ", ".join(re.split(r",\s+", m.group(1))) + "]", text)
 
 
 def seg_dist(p, a, b):
@@ -100,9 +105,11 @@ def door_side(r, lanes):
 	return best, lane_dist(steps[best], lanes), steps[best]
 
 
-def pack(rng, zone, lanes, kit, weights, gap, reach, reserved, attempts, keep_out):
+def pack(rng, zone, lanes, kit, weights, gap, reach, reserved, attempts, keep_out, inside=None):
 	"""Buildings along both sides of every lane first (doors on the street), then
-	darts into what is left. Returns list of dicts with rect/look/h/face."""
+	darts into what is left. Returns list of dicts with rect/look/h/face.
+	inside (issue #237, tools/town/gen_port_round.py): an extra test a rect must
+	pass, for a district that is not a rectangle."""
 	(zx0, zz0), (zx1, zz1) = zone
 	looks = [k for k in kit for _ in range(weights[k])]
 	placed = []
@@ -114,6 +121,8 @@ def pack(rng, zone, lanes, kit, weights, gap, reach, reserved, attempts, keep_ou
 		if any(rect_gap(r, p["rect"]) < gap for p in placed):
 			return False
 		if not rect_lane_clear(r, lanes, 0.0):
+			return False
+		if inside is not None and not inside(r):
 			return False
 		return not any(rect_dist(px, pz, r) < pr for (px, pz, pr) in reserved)
 
@@ -408,7 +417,7 @@ def main():
 		sys.exit(1)
 	if not check:
 		TOWN.write_text(json.dumps(town, indent=1, ensure_ascii=False) + "\n")
-		PICKUPS.write_text(json.dumps(pickups, indent=2, ensure_ascii=False) + "\n")
+		PICKUPS.write_text(inline_numbers(json.dumps(pickups, indent=2, ensure_ascii=False)) + "\n")
 		print("wrote", TOWN.relative_to(ROOT), "and", PICKUPS.relative_to(ROOT))
 
 

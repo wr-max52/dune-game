@@ -17,6 +17,7 @@ const KIND_COLORS := {
 	"spiral":   Color(0.55, 0.50, 0.42),
 	"lookout":  Color(0.55, 0.50, 0.42),
 	"bowl":     Color(0.45, 0.42, 0.38),
+	"ring":     Color(0.45, 0.42, 0.38),
 }
 
 

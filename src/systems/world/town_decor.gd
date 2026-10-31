@@ -96,7 +96,7 @@ func material_for(town, b: Dictionary) -> Material:
 		"floor":
 			if zone == "ground":
 				return mats.paving(2.4) if _inside_bounds(town, b) else mats.flat(LookMaterials.CLOTH_SAND)
-		"wall":
+		"wall", "ring":
 			if zone == "perimeter":
 				return mats.plaster(0.0, 5.2, LookMaterials.REMNANT_OXBLOOD.darkened(0.1))
 			if zone == "spaceport":
@@ -115,7 +115,7 @@ func material_for(town, b: Dictionary) -> Material:
 				return mats.plaster(0.0, h * 0.35, BANDS[_rng.randi() % BANDS.size()])
 			if zone == "market":
 				return mats.plaster(0.0, 1.4, LookMaterials.CLOTH_SAFFRON)
-			if zone == "barracks":
+			if zone == "barracks" or zone == "perimeter":      # issue #237: the round port's gate towers
 				return mats.plaster(0.0, 2.0, LookMaterials.REMNANT_OXBLOOD)
 		"ship":
 			return mats.hull(-6.0, 4.0)

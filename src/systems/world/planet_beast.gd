@@ -1,7 +1,8 @@
 class_name PlanetBeast
 extends StaticBody3D
-## A planet's beast (issue #220's purple blob, made the beast): a big purple blob
-## that rolls about the desert. Every planet may have one, named in its own file
+## A planet's beast (issue #220; a monstrosity since #266): a giant armoured
+## beetle-centipede that crawls about the desert, its long body of legged
+## segments following its head's own path over the dunes. Every planet may have one, named in its own file
 ## (content/core/planets/<id>.json, a "beast" block: name, home, what the locals
 ## say of it); the numbers every beast shares are content/core/hazards/beast.json,
 ## and the planet's block may override any of them.
@@ -16,11 +17,11 @@ extends StaticBody3D
 ##   dead     it sinks into a puddle and stays dead: WorldState flag
 ##            beast_slain_<planet id>, so it is not built again and the locals know
 ##
-## Now and then it farts: a sound, a puff and a squash.
+## Now and then it farts: a sound and a puff from its tail end.
 ##
 ## It rides the ground (WorldGround: the home planet's ball), moved here rather
-## than by physics. Its ball is solid to bolts and blades (layer 4, "enemies") but
-## nothing collides with it: touching it is what kills.
+## than by physics. Its head and every segment are solid to bolts and blades
+## (layer 4, "enemies") but nothing collides with it: touching any of it kills.
 
 signal killed_player
 signal farted
@@ -30,6 +31,7 @@ signal slain
 
 const DATA := "res://content/core/hazards/beast.json"
 const LAYER_ENEMIES := 1 << 3
+const TRAIL_STEP := 0.5
 
 var demo                              ## town_demo.gd
 var ground: WorldGround
@@ -48,10 +50,20 @@ var speed := 2.0
 var kills := 0
 var farts := 0
 var hits_taken := 0
-var travelled := 0.0                  ## metres rolled (traces)
+var travelled := 0.0                  ## metres crawled (traces)
 var _rng := RandomNumberGenerator.new()
-var _ball: Node3D                     ## the rolling, wobbling body
-var _mat: StandardMaterial3D
+var _ball: Node3D                     ## the head
+var _mat: StandardMaterial3D          ## the carapace (armour plates)
+var _shell_mat: StandardMaterial3D
+var _leg_mat: StandardMaterial3D
+var _eye_mat: StandardMaterial3D
+var segments: Array = []              ## { node, r, shape }: the body, head to tail
+var _legs: Array = []                 ## every leg's hip
+var _mandibles: Array = []
+var _antennae: Array = []
+var _trail: Array[Vector3] = []       ## ground points the head has walked, newest first
+var _head_ground := Vector3.ZERO
+var _sink := 0.0                      ## 0 alive .. 1 slumped dead
 var _shape: CollisionShape3D
 var _speed_left := 0.0
 var _fart_left := 10.0
@@ -115,8 +127,8 @@ static func brief(planet: Dictionary) -> String:
 	var nm := str(c.get("name", "the beast"))
 	var said := " ".join(PackedStringArray(lore(planet)))
 	if is_slain(str(planet.get("id", ""))):
-		return "THIS PLANET'S BEAST: %s, a huge purple blob that rolled about the desert and killed anyone it touched. Word is someone killed it. What people say: %s" % [nm, said]
-	return "THIS PLANET'S BEAST: %s, a huge purple blob that rolls about the desert. Anyone it touches dies; hurt it and it chases you a long way. Everyone here knows of it. What people say: %s" % [nm, said]
+		return "THIS PLANET'S BEAST: %s, a giant armoured beetle-centipede that crawled about the desert and killed anyone it touched. Word is someone killed it. What people say: %s" % [nm, said]
+	return "THIS PLANET'S BEAST: %s, a giant armoured beetle-centipede, long as a street, that crawls about the desert on dozens of legs. Anyone it touches dies; hurt it and it chases you a long way. Everyone here knows of it. What people say: %s" % [nm, said]
 
 
 func setup(town_demo, world_ground: WorldGround, planet: Dictionary) -> void:
@@ -148,6 +160,7 @@ func _ready() -> void:
 	_shape.shape = sph
 	add_child(_shape)
 	_place(home)
+	_pose()
 	var path := str(cfg.get("fart_sound", ""))
 	_sfx = AudioStreamPlayer3D.new()
 	if path != "" and ResourceLoader.exists(path):
@@ -193,46 +206,213 @@ func _ground_at(at: Vector3) -> Vector3:
 
 # ------------------------------------------------------------------ look
 
-## A glossy purple ball with a soft inner glow; it squashes and jiggles.
+## Issue #266: a giant armoured beetle-centipede. A beetle's head (horn, curved
+## mandibles, antennae, glowing eyes) and a long body of armoured segments, each
+## with a pair of walking legs, that follows the head's own path over the dunes.
 func _build_look() -> void:
+	var lk: Dictionary = cfg.get("look", {})
+	_mat = _chitin(Color(str(lk.get("carapace", cfg.get("color", "#5a4632")))), 0.3, 0.35)
+	_shell_mat = _chitin(Color(str(lk.get("shell", "#a07f55"))), 0.0, 0.7)
+	_leg_mat = _chitin(Color(str(lk.get("legs", "#3a2d22"))), 0.2, 0.45)
+	_eye_mat = StandardMaterial3D.new()
+	_eye_mat.albedo_color = Color(str(cfg.get("glow", "#c07aff")))
+	_eye_mat.emission_enabled = true
+	_eye_mat.emission = _eye_mat.albedo_color
+	_eye_mat.emission_energy_multiplier = 2.0
+	var bone := _chitin(Color(str(lk.get("mandibles", "#d8c7a0"))), 0.0, 0.3)
+	var r := radius
+	# ---- the head (forward is -Z)
 	_ball = Node3D.new()
-	_ball.name = "Body"
+	_ball.name = "Head"
 	add_child(_ball)
-	var mesh := SphereMesh.new()
-	mesh.radius = radius
-	mesh.height = radius * 2.0
-	mesh.radial_segments = 40
-	mesh.rings = 20
-	_mat = StandardMaterial3D.new()
-	_mat.albedo_color = Color(str(cfg.get("color", "#8a3fc8")))
-	_mat.roughness = 0.18
-	_mat.metallic = 0.0
-	_mat.rim_enabled = true
-	_mat.rim = 0.7
-	_mat.rim_tint = 0.6
-	_mat.emission_enabled = true
-	_mat.emission = Color(str(cfg.get("glow", "#c07aff")))
-	_mat.emission_energy_multiplier = 0.35
+	_ball.top_level = true
+	_sphere(_ball, r * 0.95, Vector3(1.15, 0.75, 1.0), Vector3.ZERO, _mat)
+	_sphere(_ball, r * 0.62, Vector3(1.2, 0.8, 1.0), Vector3(0, -0.2 * r, -0.62 * r), _shell_mat)
+	for sx in [-1.0, 1.0]:
+		_sphere(_ball, r * 0.17, Vector3.ONE, Vector3(sx * 0.5 * r, 0.12 * r, -0.72 * r), _eye_mat)
+		_sphere(_ball, r * 0.1, Vector3.ONE, Vector3(sx * 0.3 * r, 0.3 * r, -0.8 * r), _eye_mat)
+		# Mandibles: curved pincers that open and close.
+		var m := Node3D.new()
+		m.name = "Mandible"
+		m.position = Vector3(sx * 0.45 * r, -0.35 * r, -0.85 * r)
+		_ball.add_child(m)
+		_mandibles.append(m)
+		var pts := [Vector3.ZERO, Vector3(sx * 0.35 * r, 0, -0.6 * r), Vector3(sx * 0.18 * r, 0, -1.2 * r), Vector3(-sx * 0.25 * r, -0.05 * r, -1.5 * r)]
+		for i in 3:
+			_limb(m, pts[i], pts[i + 1], r * (0.16 - 0.045 * i), r * (0.12 - 0.045 * i), bone)
+		for i in 3:
+			var at: Vector3 = (pts[1] as Vector3).lerp(pts[2], i / 2.0)
+			_limb(m, at, at + Vector3(-sx * 0.22 * r, 0, -0.05 * r), r * 0.05, 0.0, bone)
+		# Antennae: long, jointed, swaying.
+		var a := Node3D.new()
+		a.name = "Antenna"
+		a.position = Vector3(sx * 0.35 * r, 0.45 * r, -0.6 * r)
+		_ball.add_child(a)
+		_antennae.append(a)
+		var ap := [Vector3.ZERO, Vector3(sx * 0.5 * r, 0.9 * r, -0.6 * r), Vector3(sx * 1.1 * r, 1.4 * r, -1.6 * r), Vector3(sx * 1.6 * r, 1.3 * r, -2.6 * r)]
+		for i in 3:
+			_limb(a, ap[i], ap[i + 1], r * (0.06 - 0.015 * i), r * (0.045 - 0.015 * i), _leg_mat)
+	_limb(_ball, Vector3(0, 0.45 * r, -0.5 * r), Vector3(0, 1.3 * r, -1.5 * r), r * 0.2, 0.0, bone)   # the horn
+	# ---- the body: segments, each with a pair of legs
+	var n := int(cfg.get("segments", 14))
+	for i in n:
+		var f := float(i) / maxf(1.0, n - 1.0)
+		var sr := r * lerpf(0.85, float(cfg.get("tail_scale", 0.45)), f)
+		var seg := Node3D.new()
+		seg.name = "Seg%d" % i
+		add_child(seg)
+		seg.top_level = true
+		_sphere(seg, sr, Vector3(1.35, 0.7, 1.15), Vector3.ZERO, _shell_mat)
+		_sphere(seg, sr * 1.05, Vector3(1.4, 0.4, 0.95), Vector3(0, 0.32 * sr, 0.1 * sr), _mat)
+		for sx in [-0.45, 0.45]:
+			_limb(seg, Vector3(sx * sr, 0.6 * sr, 0), Vector3(sx * sr * 1.2, 1.15 * sr, 0.45 * sr), sr * 0.12, 0.0, _mat)
+		for sx in [-1.0, 1.0]:
+			var hip := Node3D.new()
+			hip.name = "Leg%d" % (0 if sx < 0 else 1)
+			hip.position = Vector3(sx * 1.1 * sr, -0.1 * sr, 0)
+			hip.set_meta("side", sx)
+			seg.add_child(hip)
+			var knee := Vector3(sx * 0.8 * sr, 0.75 * sr, 0)
+			var foot := Vector3(sx * 1.35 * sr, -0.9 * sr, -0.15 * sr)
+			_limb(hip, Vector3.ZERO, knee, sr * 0.13, sr * 0.1, _leg_mat)
+			_limb(hip, knee, foot, sr * 0.1, sr * 0.03, _leg_mat)
+			_legs.append(hip)
+		if i == n - 1:
+			for sx in [-1.0, 1.0]:     # tail spikes
+				_limb(seg, Vector3(sx * 0.3 * sr, 0.1 * sr, 0.6 * sr), Vector3(sx * 0.9 * sr, 0.4 * sr, 2.4 * sr), sr * 0.12, 0.0, _mat)
+		var cs := CollisionShape3D.new()
+		var sph := SphereShape3D.new()
+		sph.radius = sr * 1.1
+		cs.shape = sph
+		add_child(cs)
+		segments.append({ "node": seg, "r": sr, "shape": cs })
+	_seed_trail()
+
+
+static func _chitin(c: Color, metal: float, rough: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.metallic = metal
+	m.roughness = rough
+	m.rim_enabled = true
+	m.rim = 0.35
+	m.rim_tint = 0.4
+	return m
+
+
+static func _sphere(parent: Node3D, r: float, sc: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.name = "Blob"
-	mi.mesh = mesh
-	mi.material_override = _mat
-	_ball.add_child(mi)
-	# A few darker spots so you can see it roll.
-	var spot := StandardMaterial3D.new()
-	spot.albedo_color = Color(str(cfg.get("color", "#8a3fc8"))).darkened(0.35)
-	spot.roughness = 0.3
-	for i in 7:
-		var s := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = radius * _rng.randf_range(0.12, 0.22)
-		sm.height = sm.radius * 0.6
-		s.mesh = sm
-		s.material_override = spot
-		var d := Vector3(_rng.randfn(), _rng.randfn(), _rng.randfn()).normalized()
-		s.position = d * radius * 0.97
-		s.basis = Basis.looking_at(d, Vector3.UP if absf(d.y) < 0.95 else Vector3.RIGHT).rotated(d, 0.0) * Basis(Vector3.RIGHT, PI * 0.5)
-		_ball.add_child(s)
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2.0
+	sm.radial_segments = 24
+	sm.rings = 12
+	mi.mesh = sm
+	mi.material_override = mat
+	mi.position = at
+	mi.scale = sc
+	parent.add_child(mi)
+	return mi
+
+
+## A tapered rod from a to b (r0 at a, r1 at b).
+static func _limb(parent: Node3D, a: Vector3, b: Vector3, r0: float, r1: float, mat: Material) -> MeshInstance3D:
+	var d := b - a
+	var mi := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.height = maxf(d.length(), 0.001)
+	cm.bottom_radius = r0
+	cm.top_radius = r1
+	cm.radial_segments = 8
+	cm.rings = 1
+	mi.mesh = cm
+	mi.material_override = mat
+	mi.position = (a + b) * 0.5
+	if d.length() > 0.0001:
+		var dir := d.normalized()
+		mi.basis = Basis(Quaternion(Vector3.UP, dir)) if dir.dot(Vector3.UP) > -0.999 else Basis(Vector3.RIGHT, PI)
+	parent.add_child(mi)
+	return mi
+
+
+# ------------------------------------------------------------------ the body follows the head
+
+## The path the head has walked (ground points, newest first), straight out
+## behind it at the start.
+func _seed_trail() -> void:
+	_trail.clear()
+	for i in int(_body_len() / TRAIL_STEP) + 6:
+		_trail.append(_ground_at(home - heading * (i + 1) * TRAIL_STEP))
+	_head_ground = home
+
+
+func _body_len() -> float:
+	return float(cfg.get("segment_gap", 3.2)) * (int(cfg.get("segments", 14)) + 1) + radius
+
+
+func _push_trail(g: Vector3) -> void:
+	_head_ground = g
+	if _trail.is_empty() or g.distance_to(_trail[0]) >= TRAIL_STEP:
+		_trail.push_front(g)
+		var keep := int(_body_len() / TRAIL_STEP) + 6
+		if _trail.size() > keep:
+			_trail.resize(keep)
+
+
+## Lay the segments along the trail, legs stepping in a wave; the head turns to
+## its heading, mandibles working, antennae swaying.
+func _pose() -> void:
+	if _ball == null:
+		return
+	var up := _up(global_position)
+	var pitch := 0.08 * sin(_t * 1.7) - 0.5 * _sink
+	var fwd := (heading * cos(pitch) + up * sin(pitch)).normalized()
+	_ball.global_transform = Transform3D(Basis.looking_at(fwd, up), global_position)
+	var open := 1.0 if dead else 0.5 + 0.5 * sin(_t * (3.0 if chasing else 1.3))
+	for m in _mandibles:
+		(m as Node3D).rotation = Vector3(0, signf((m as Node3D).position.x) * (-0.15 + 0.55 * open), 0)
+	for i in _antennae.size():
+		(_antennae[i] as Node3D).rotation = Vector3(0.2 * sin(_t * 1.1 + i), 0.15 * sin(_t * 0.7 + i * 2.0), 0) * (1.0 - _sink)
+	# Walk the trail once, placing each segment its gap further back.
+	var gap := float(cfg.get("segment_gap", 3.2))
+	var want := radius * 0.9
+	var prev := _head_ground
+	var acc := 0.0
+	var ti := 0
+	var pts: Array[Vector3] = []
+	for s in segments:
+		var p := prev
+		while ti < _trail.size():
+			var q: Vector3 = _trail[ti]
+			var d := prev.distance_to(q)
+			if acc + d >= want:
+				p = prev.lerp(q, (want - acc) / maxf(d, 0.0001))
+				break
+			acc += d
+			prev = q
+			p = q
+			ti += 1
+		pts.append(p + _up(p) * float(s.r) * (1.0 - 0.65 * _sink))
+		want += gap
+	var stride := float(cfg.get("stride_m", 4.0))
+	for i in segments.size():
+		var s: Dictionary = segments[i]
+		var ahead: Vector3 = global_position if i == 0 else pts[i - 1]
+		var tan := ahead - pts[i]
+		var u := _up(pts[i])
+		if tan.length() < 0.01 or absf(tan.normalized().dot(u)) > 0.95:
+			tan = heading
+		var node: Node3D = s.node
+		node.global_transform = Transform3D(Basis.looking_at(tan.normalized(), u), pts[i])
+		if i == segments.size() - 1:
+			node.scale = Vector3.ONE * (1.0 + 0.25 * _squash)
+		(s.shape as CollisionShape3D).position = pts[i] - global_position
+		for leg in node.get_children():
+			if str(leg.name).begins_with("Leg"):
+				var side: float = leg.get_meta("side", 1.0)
+				var ph := travelled / stride * TAU + i * 0.9 + (PI if side < 0 else 0.0)
+				var lift := side * (0.18 * maxf(0.0, cos(ph)) + 0.9 * _sink)
+				(leg as Node3D).rotation = Vector3(0, 0.4 * sin(ph) * (1.0 - _sink), lift)
 
 
 # ------------------------------------------------------------------ frame
@@ -241,9 +421,12 @@ func _physics_process(dt: float) -> void:
 	_t += dt
 	_tick_wake(dt)
 	if dead:
+		_place(_head_ground)
+		_pose()
 		return
 	_wander(dt)
-	_wobble(dt)
+	_squash = move_toward(_squash, 0.0, dt * 1.6)
+	_pose()
 	_touch()
 	_tick_fart(dt)
 
@@ -269,11 +452,7 @@ func _wander(dt: float) -> void:
 	var next := _ground_at(at + step)
 	travelled += step.length()
 	_place(next)
-	# Roll: turn about the axis across its path by the distance over its radius.
-	var axis := _up(next).cross(heading).normalized()
-	if axis.length() > 0.5 and _ball != null:
-		_ball.basis = Basis(axis, step.length() / radius) * _ball.basis
-		_ball.basis = _ball.basis.orthonormalized()
+	_push_trail(next)
 
 
 ## After the player: steer at them; give up once they are far enough away (or dead).
@@ -305,26 +484,7 @@ func _new_pace() -> void:
 
 func _place(ground_point: Vector3) -> void:
 	var u := _up(ground_point)
-	global_position = ground_point + u * radius * (1.0 - 0.12 * _squash)
-
-
-## Jiggle as it goes, and a squash when it farts (look only).
-func _wobble(dt: float) -> void:
-	_squash = move_toward(_squash, 0.0, dt * 1.6)
-	if _ball == null:
-		return
-	var w := 0.04 * sin(_t * 3.1) + 0.025 * sin(_t * 5.3 + 1.0)
-	var mi := _ball.get_node_or_null("Blob") as Node3D
-	var s := Vector3(1.0 + w + 0.12 * _squash, 1.0 - w - 0.18 * _squash, 1.0 + w + 0.12 * _squash)
-	# The squash is along the ground's up, whichever way the body has rolled.
-	var up_local := _ball.global_basis.inverse() * _up(global_position)
-	if mi != null:
-		mi.basis = _scale_along(up_local.normalized(), s)
-
-
-static func _scale_along(up: Vector3, s: Vector3) -> Basis:
-	var b := Basis.looking_at(up.cross(Vector3.RIGHT if absf(up.x) < 0.9 else Vector3.FORWARD).normalized(), up)
-	return b * Basis.from_scale(Vector3(s.x, s.y, s.z)) * b.inverse()
+	global_position = ground_point + u * radius * (1.0 - 0.6 * _sink)
 
 
 # ------------------------------------------------------------------ hurt, dead
@@ -368,7 +528,7 @@ func _hurt(amount: float, by_player: bool) -> void:
 		provoked.emit()
 
 
-## It sinks into a purple puddle and stays dead (the flag keeps it from being built
+## It slumps, legs curling, and stays dead (the flag keeps it from being built
 ## again, and the locals hear of it).
 func _die() -> void:
 	hp = 0.0
@@ -380,13 +540,9 @@ func _die() -> void:
 		WorldState.set_flag(slain_flag(planet_id))
 	WorldState.log_event("Killed %s, the beast." % beast_name)
 	_toast(line("slain"))
-	if _ball != null:
-		var mi := _ball.get_node_or_null("Blob") as Node3D
-		var tw := create_tween().set_parallel(true)
-		tw.tween_property(self, "global_position", global_position - _up(global_position) * radius * 0.85, 2.5)
-		if mi != null:
-			var up_local := (_ball.global_basis.inverse() * _up(global_position)).normalized()
-			tw.tween_property(mi, "basis", _scale_along(up_local, Vector3(1.6, 0.15, 1.6)), 2.5)
+	for s in segments:
+		(s.shape as CollisionShape3D).set_deferred("disabled", true)
+	create_tween().tween_property(self, "_sink", 1.0, 2.5)       # it slumps and its legs curl
 	slain.emit()
 
 
@@ -395,16 +551,24 @@ func _die() -> void:
 func _touch() -> void:
 	if player == null or not is_instance_valid(player) or bool(player.get("is_downed")):
 		return
-	var c := global_position
+	var parts := [[global_position, radius]]          # the head, then every segment
+	for s in segments:
+		parts.append([(s.node as Node3D).global_position, float(s.r) * 1.2])
 	if bool(player.get("piloting")):
 		var v = player.get("vehicle")
-		if v is SpeederNode and (v as SpeederNode).model.position.distance_to(c) <= radius + float(cfg.get("speeder_margin", 1.4)):
-			(v as SpeederNode).dismount()
-			_kill()
+		if v is SpeederNode:
+			var at: Vector3 = (v as SpeederNode).model.position
+			for p in parts:
+				if at.distance_to(p[0]) <= float(p[1]) + float(cfg.get("speeder_margin", 1.4)):
+					(v as SpeederNode).dismount()
+					_kill()
+					return
 		return
 	var chest := player.global_position + _up(player.global_position) * 0.9
-	if chest.distance_to(c) <= radius + float(cfg.get("kill_margin", 0.35)):
-		_kill()
+	for p in parts:
+		if chest.distance_to(p[0]) <= float(p[1]) + float(cfg.get("kill_margin", 0.35)):
+			_kill()
+			return
 
 
 ## Dead on the spot. Whoever handles a downed player (the town's garrison) wakes
@@ -451,7 +615,7 @@ func _tick_fart(dt: float) -> void:
 		fart()
 
 
-## Pfffrt: a sound, a puff behind it and a squash.
+## Pfffrt: a sound, a puff from its tail end and a twitch of the tail.
 func fart() -> void:
 	farts += 1
 	_fart_left = _range("fart_every_s", 9.0, 26.0)
@@ -466,7 +630,8 @@ func fart() -> void:
 
 func _puff() -> void:
 	var c := Color(str(cfg.get("puff", "#9a8a4a")))
-	var base := global_position - heading * radius * 1.05 - _up(global_position) * radius * 0.5
+	var tail: Node3D = segments[-1].node if not segments.is_empty() else self
+	var base := tail.global_position + tail.global_basis.z * (float(segments[-1].r) * 1.4 if not segments.is_empty() else radius)
 	for i in 6:
 		var mi := MeshInstance3D.new()
 		var sm := SphereMesh.new()

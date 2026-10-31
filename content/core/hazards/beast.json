@@ -1,10 +1,14 @@
 {
   "id": "beast",
   "label": "the beast",
-  "note": "IP-neutral. Issue #220: a planet's beast, a big purple blob that rolls about its desert. These are the defaults every beast shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"beast\" block, which gives it a name, a home spot, what the locals say of it, and may override any number here. Touch it (on foot, or ride a speeder into it) and you die on the spot. It wanders with no pull toward or away from the town: its heading drifts at random, and only a loose leash round its home spot turns it back. Hurt it and it chases you until you are chase_give_up_m away; it has hp health and stays dead once killed (WorldState flag beast_slain_<planet id>). Now and then it farts. The town's locals know it: walk close by one, calm, and now and then they say one of the planet's lore lines (every locals_say_every_s at most, read by src/systems/npc/townsfolk.gd); every AI character is briefed on it (PlanetBeast.brief). {name} in a line is the planet's name for it. Read by src/systems/world/planet_beast.gd.",
+  "note": "IP-neutral. Issue #220: a planet's beast, a giant armoured beetle-centipede (issue #266) that crawls about its desert: a beetle's head with mandibles, horn, antennae and glowing eyes, and a long body of segments, each with a pair of legs, that follows the head's path. Touching the head or any segment kills. These are the defaults every beast shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"beast\" block, which gives it a name, a home spot, what the locals say of it, and may override any number here. Touch it (on foot, or ride a speeder into it) and you die on the spot. It wanders with no pull toward or away from the town: its heading drifts at random, and only a loose leash round its home spot turns it back. Hurt it and it chases you until you are chase_give_up_m away; it has hp health and stays dead once killed (WorldState flag beast_slain_<planet id>). Now and then it farts. The town's locals know it: walk close by one, calm, and now and then they say one of the planet's lore lines (every locals_say_every_s at most, read by src/systems/npc/townsfolk.gd); every AI character is briefed on it (PlanetBeast.brief). {name} in a line is the planet's name for it. Read by src/systems/world/planet_beast.gd.",
   "hp": 1000,
   "leash_m": 1400.0,
   "radius": 3.6,
+  "segments": 14,
+  "segment_gap": 3.2,
+  "tail_scale": 0.45,
+  "stride_m": 4.0,
   "speed": [1.2, 3.4],
   "chase_speed": 5.5,
   "chase_turn": 2.5,
@@ -18,14 +22,15 @@
   "locals_say_every_s": 30.0,
   "locals_say_first_s": 6.0,
   "fart_sound": "res://assets/audio/npc/blob_fart.wav",
-  "color": "#8a3fc8",
+  "color": "#5a4632",
+  "look": { "carapace": "#5a4632", "shell": "#a07f55", "legs": "#3a2d22", "mandibles": "#d8c7a0" },
   "glow": "#c07aff",
   "puff": "#9a8a4a",
   "lines": {
-    "killed": "{name} rolled right over you.",
-    "woke": "You wake up in the pit, smelling faintly of {name}.",
-    "provoked": "{name} turns toward you.",
+    "killed": "{name} crushed you under its legs.",
+    "woke": "You wake up in the pit, still smelling {name}.",
+    "provoked": "{name} swings its mandibles toward you.",
     "gave_up": "{name} has lost interest in you.",
-    "slain": "{name} is dead. The locals won't believe it."
+    "slain": "{name} curls up and goes still. The locals won't believe it."
   }
 }

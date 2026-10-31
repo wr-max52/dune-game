@@ -35,11 +35,13 @@ func dress(town, materials: LookMaterials) -> void:
 	mats = materials
 	var counter: Dictionary = town.get_box("bar_counter")
 	var wall_w: Dictionary = town.get_box("cantina_wall_w")
-	if counter.is_empty() or wall_w.is_empty():
+	if counter.is_empty():
 		return
 	var cmin := Vector3(counter.min[0], counter.min[1], counter.min[2])
 	var cmax := Vector3(counter.max[0], counter.max[1], counter.max[2])
-	var back_x := float(wall_w.max[0]) + 0.05
+	# Issue #261: with no building (the moon's dome rave) the back bar stands on
+	# its own behind her, on a panel of its own.
+	var back_x := float(wall_w.max[0]) + 0.05 if not wall_w.is_empty() else cmin.x - 3.4
 	counter_min = cmin
 	counter_max = cmax
 	shelf_x = back_x + 0.2
@@ -73,6 +75,8 @@ func dress(town, materials: LookMaterials) -> void:
 			z += rng.randf_range(0.14, 0.3)
 	# Back bar cabinet under the shelves.
 	_box(Vector3(back_x + 0.35, 0.5, 0.0), Vector3(0.7, 1.0, shelf_z * 2.0), wood)
+	if wall_w.is_empty():
+		_box(Vector3(back_x - 0.08, 1.9, 0.0), Vector3(0.16, 3.8, shelf_z * 2.0 + 0.6), dark_wood)
 	# The framed card deck: her famous cursed deck.
 	_box(Vector3(back_x + 0.03, 2.95, 0.0), Vector3(0.04, 0.5, 0.8), brass)
 	_box(Vector3(back_x + 0.06, 2.95, 0.0), Vector3(0.02, 0.42, 0.72), mats.flat(Color("#1c1816"), 0.9))
@@ -89,7 +93,9 @@ func dress(town, materials: LookMaterials) -> void:
 		_cyl(Vector3(sx, 0.78, z), 0.2, 0.07, mats.flat(Color("#6a2a24"), 0.8))
 	# Warm hanging lamps over the counter and the room, on cords from the ceiling.
 	var roof: Dictionary = town.get_box("cantina_roof")
-	var ceiling := float(roof.min[1]) if not roof.is_empty() else 5.0
+	var ceiling := float(roof.min[1]) if not roof.is_empty() else 4.2     # issue #261: the rave's canopy over the bar
+	# Issue #261: a club can turn the house lights down ("club": { "dim" }).
+	var dim := float(town.data.get("club", {}).get("dim", 1.0))
 	var lamp_glow := mats.glow(Color("#ffb060"))
 	lamp_glow.emission_energy_multiplier = 3.0
 	var lamps := [Vector3(cmin.x + 0.5, 3.3, -4.0), Vector3(cmin.x + 0.5, 3.3, 0.0), Vector3(cmin.x + 0.5, 3.3, 3.5)]
@@ -110,18 +116,18 @@ func dress(town, materials: LookMaterials) -> void:
 		add_child(bulb)
 		var l := OmniLight3D.new()
 		l.light_color = Color("#ffb070")
-		l.light_energy = LAMP_ENERGY
+		l.light_energy = LAMP_ENERGY * dim
 		l.omni_range = 10.0
 		l.omni_attenuation = 1.0
 		l.shadow_enabled = false
 		l.position = p + Vector3(0, -0.25, 0)
 		add_child(l)
-	_add_fill(town, back_x, ceiling)
+	_add_fill(town, back_x, ceiling, dim)
 
 
 ## Soft warm light from under the roof over the four quarters of the room, so the
 ## corners and tables read without lifting the bar's pools of light.
-func _add_fill(town, west_x: float, ceiling: float) -> void:
+func _add_fill(town, west_x: float, ceiling: float, dim := 1.0) -> void:
 	var east: Dictionary = town.get_box("cantina_wall_e_s")
 	var north: Dictionary = town.get_box("cantina_wall_n")
 	var south: Dictionary = town.get_box("cantina_wall_s")
@@ -136,7 +142,7 @@ func _add_fill(town, west_x: float, ceiling: float) -> void:
 			var l := OmniLight3D.new()
 			l.name = "CantinaFill"
 			l.light_color = Color("#ffc890")
-			l.light_energy = FILL_ENERGY
+			l.light_energy = FILL_ENERGY * dim
 			l.omni_range = maxf(x1 - x0, z1 - z0) * 0.6
 			l.omni_attenuation = 0.8
 			l.shadow_enabled = false
@@ -157,6 +163,11 @@ func take_color() -> Color:
 
 ## A bottle (body and neck), origin at its base, in `color`.
 func make_bottle(color: Color) -> Node3D:
+	return bottle_mesh(color)
+
+
+## The same bottle for anyone (issue #261: the club crowd holds one).
+static func bottle_mesh(color: Color) -> Node3D:
 	var root := Node3D.new()
 	root.name = "ServedBottle"
 	var glass := StandardMaterial3D.new()
