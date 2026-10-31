@@ -143,6 +143,24 @@ func test_the_port_is_unchanged() -> void:
 	assert_eq(PlanetGen.home_id(), "port_desert")
 
 
+## Issue #237: the port is built to a saved layout, picked by id and size, and
+## keeps its id (port_town) whichever layout it is.
+func test_the_port_picks_a_saved_layout() -> void:
+	var p := PlanetGen.build("port_desert", cc)
+	assert_eq(str(p.town.layout), str(cc.planets.port_desert.town_layout), "the layout its file names")
+	assert_eq(int(p.town.size), int(p.size), "at the layout's size")
+	assert_eq(str(p.town.id), "port_town", "the place keeps its id")
+	assert_true("port_square" in PlanetGen.layouts(cc), "today's port is saved as port_square")
+	var sq: Dictionary = cc.town_from_layout("port_square", "port_town")
+	assert_eq(int(sq.size), 50, "port_square is size 50")
+	assert_eq(str(cc.towns.port_square.id), "port_square", "the saved layout itself is untouched")
+	PlanetGen.set_layout("port_desert", "port_square")
+	var o := PlanetGen.build("port_desert", cc)
+	assert_eq(str(o.town.layout), "port_square", "F11 builds it to another layout")
+	PlanetGen.set_layout("port_desert", "")
+	assert_false(PlanetGen.layout_override.has("port_desert"), "and back")
+
+
 func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
 	var station := PlanetGen.build("grit_station", cc)
 	var station_town := TownLayout.new()

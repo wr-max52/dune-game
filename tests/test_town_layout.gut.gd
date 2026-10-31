@@ -12,6 +12,18 @@ func _town() -> TownLayout:
 	return t
 
 
+## Issue #237: port_town is its planet's saved layout, and either layout loads.
+func test_port_town_is_a_saved_layout() -> void:
+	var t := _town()
+	assert_eq(str(t.data.id), "port_town")
+	assert_ne(str(t.data.get("layout", "")), "", "built to a named layout")
+	var sq := TownLayout.new()
+	assert_true(sq.load_town("port_town", "port_square"), "port_square loads by name")
+	assert_eq(int(sq.data.size), 50)
+	assert_eq(sq.validate(), [], "port_square is valid")
+	assert_false(TownLayout.new().load_town("port_town", "no_such_layout"), "an unknown layout is no town")
+
+
 ## Deep-copy the real town, break one thing, return the validator errors.
 func _bad(mutator: Callable) -> Array:
 	var t := _town()

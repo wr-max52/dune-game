@@ -1,9 +1,10 @@
 {
   "id": "port_desert",
-  "note": "The home planet: the hand-built port town on the sand. town names an authored location instead of a generated one, and world an authored world (content/core/worlds/), so nothing about the port changes. See docs/planets/PLANETS.md.",
+  "note": "The home planet: the hand-built port town on the sand. town names an authored town instead of a generated one, laid out by town_layout (issue #237: a saved layout in content/core/towns/, at its town_size), and world an authored world (content/core/worlds/), so nothing about the port changes. See docs/planets/PLANETS.md.",
   "name": "",
   "type": "sand",
   "town": "port_town",
+  "town_layout": "port_square",
   "town_size": 50,
   "world": "port_desert",
   "style": "desert",

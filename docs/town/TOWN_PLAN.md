@@ -20,7 +20,7 @@ coordinates.** You copy the data and write code that reads it.
 3. After every task, run `./scripts/ci.sh`. If anything fails, fix it before moving on.
    Never weaken or delete an existing test to make CI pass.
 4. **Never type coordinates into GDScript.** Every number about the town lives in
-   `content/core/locations/port_town.json`. Code reads them by id.
+   `content/core/towns/port_square.json`. Code reads them by id.
 5. IP rule still applies: generic words only. Do not add franchise names anywhere.
    `tests/test_ip_neutral.gut.gd` must keep passing.
 6. GDScript only, Godot 4.7.2 (see `scripts/pin.txt`). Use tabs for indentation in
@@ -114,7 +114,7 @@ use a sensible default and can be changed later by editing data.
 Boxes in zone `ground` (floor slabs) or `perimeter` (town wall) are exempt from
 the "inside your zone" rule.
 
-## A6. Data schema (`content/core/locations/port_town.json`)
+## A6. Data schema (`content/core/towns/port_square.json`)
 
 ```jsonc
 {
@@ -182,7 +182,7 @@ cantina_to_gate: 234.5 m, walk 59s, sprint 34s
 backgap_to_cantina: 140.0 m, walk 35s, sprint 20s
 OK, 0 errors
 ```
-Run it yourself: `python3 docs/town/validate_town.py content/core/locations/port_town.json`
+Run it yourself: `python3 docs/town/validate_town.py content/core/towns/port_square.json`
 
 ## A8. Done means (acceptance criteria for M9)
 
@@ -218,7 +218,7 @@ Run it yourself: `python3 docs/town/validate_town.py content/core/locations/port
 
 | Task | File | New/Modify |
 |---|---|---|
-| T1 | `content/core/locations/port_town.json` | New (copy of `docs/town/port_town.json`) |
+| T1 | `content/core/towns/port_square.json` | New (copy of `docs/town/port_town.json`) |
 | T1 | `content/core/manifest.json` | Modify (add `"port_town"` to `locations`) |
 | T2 | `src/systems/world/greybox.gd` | New |
 | T3 | `src/systems/world/town_layout.gd` | New |
@@ -236,11 +236,11 @@ Run it yourself: `python3 docs/town/validate_town.py content/core/locations/port
 
 **Steps**
 1. `git checkout main && git pull && git checkout -b feature/m9-port-town`
-2. Copy `docs/town/port_town.json` to `content/core/locations/port_town.json`
+2. Copy `docs/town/port_town.json` to `content/core/towns/port_square.json`
    **byte for byte**. Do not reformat or "tidy" numbers.
 3. In `content/core/manifest.json`, change
    `"locations": ["outpost"]` → `"locations": ["outpost", "port_town"]`.
-4. Run `python3 docs/town/validate_town.py content/core/locations/port_town.json`.
+4. Run `python3 docs/town/validate_town.py content/core/towns/port_square.json`.
 
 **Done when:** the Python validator prints `OK, 0 errors` and `./scripts/ci.sh` is green
 (the existing data-layer tests still pass).
@@ -1003,4 +1003,4 @@ confirm, then CI:
 - Make the walk shorter: shrink `bounds` and shift zones; routes must stay clear (V8).
 - Add a building: add a box in the right zone with a unique id.
 - Add an NPC spot: add a marker with role `npc` and an `npc` id that exists in `content/core/npcs/`.
-- See your change from above: `python3 docs/town/render_town.py content/core/locations/port_town.json out.png`
+- See your change from above: `python3 docs/town/render_town.py content/core/towns/port_square.json out.png`

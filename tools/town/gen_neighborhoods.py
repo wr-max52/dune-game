@@ -4,7 +4,7 @@
     python3 tools/town/gen_neighborhoods.py          # rewrite the data in place
     python3 tools/town/gen_neighborhoods.py --check  # report only, write nothing
 
-Writes boxes into content/core/locations/port_town.json and the alley / rooftop
+Writes boxes into content/core/towns/port_square.json and the alley / rooftop
 hiding places into content/core/pickups/port_town.json. Fixed seed: the same town
 every run. Code never holds these numbers; this tool is how they were made.
 
@@ -20,7 +20,7 @@ import json, math, random, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TOWN = ROOT / "content/core/locations/port_town.json"
+TOWN = ROOT / "content/core/towns/port_square.json"
 PICKUPS = ROOT / "content/core/pickups/port_town.json"
 
 GENERATED = ("house_", "bridge_", "well_", "barracks_bunk", "barracks_upper", "barracks_bridge")

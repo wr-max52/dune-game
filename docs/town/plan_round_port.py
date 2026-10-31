@@ -6,7 +6,7 @@
 A sketch, not data: it shows where each district goes, roughly how big it is and
 how it bends round the pit. The real boxes still come from content data and the
 town tools when the issue is built. Today's port is drawn from
-content/core/locations/port_town.json at the same scale, and the world panel
+content/core/towns/port_square.json at the same scale, and the world panel
 reads content/core/worlds/port_desert.json, with the moves from the issue
 applied. Town frame as everywhere else: +X is the front gate side, and +Z is
 drawn downward (the barracks side), matching docs/town/render_town.py.
@@ -116,7 +116,7 @@ class View:
 
 
 def draw_today(svg, v):
-	town = json.loads((ROOT / "content/core/locations/port_town.json").read_text())
+	town = json.loads((ROOT / "content/core/towns/port_square.json").read_text())
 	look = {"wall": COL["wall"], "solid": "#c9b089", "cover": "#b59a74", "floor": None,
 		"overhead": COL["wall"], "ramp": COL["pit"], "ship": "#58646d", "roof": None,
 		"counter": "#7d6a55", "pad": COL["pad"], "bowl": COL["pit"], "spiral": COL["cantina"], "lookout": None}

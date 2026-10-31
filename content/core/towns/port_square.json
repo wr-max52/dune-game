@@ -1,8 +1,9 @@
 {
- "id": "port_town",
+ "id": "port_square",
+ "size": 50,
  "kind": "town",
  "units": "meters",
- "note": "IP-neutral greybox layout. +X is the gate side (toward the desert and outpost). Boxes are axis-aligned min/max corners. Edit numbers here, never in code.",
+ "note": "Issue #237: the square port, kept as a town layout (planets pick one by town_layout; the place it is stays port_town). IP-neutral greybox layout. +X is the gate side (toward the desert and outpost). Boxes are axis-aligned min/max corners. Edit numbers here, never in code.",
  "bounds": {
   "min": [
    -100,

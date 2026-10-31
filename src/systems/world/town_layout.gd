@@ -1,5 +1,6 @@
 extends RefCounted
-## Town layout (M9). Reads port_town from the data layer and validates it.
+## Town layout (M9). Reads port_town from the data layer and validates it. Issue
+## #237: the town is built to a saved layout (content/core/towns/: port_square).
 ## Pure: no nodes. The scene builder (town_demo.gd) and the walk trace use it.
 ## The validator mirrors docs/town/validate_town.py rule for rule (V1 to V8).
 
@@ -8,11 +9,13 @@ const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 var data: Dictionary = {}
 
 
-func load_town(town_id: String = "port_town") -> bool:
+## `layout` (issue #237): build the town to that saved layout (content/core/towns/)
+## instead of the one its planet picks, e.g. load_town("port_town", "port_square").
+func load_town(town_id: String = "port_town", layout: String = "") -> bool:
 	var cc := CoreContent.new()
 	if not cc.load_from():
 		return false
-	data = cc.get_location(town_id)
+	data = cc.town_from_layout(layout, town_id) if layout != "" else cc.get_location(town_id)
 	return not data.is_empty()
 
 

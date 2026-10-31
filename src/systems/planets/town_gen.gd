@@ -1,7 +1,7 @@
 class_name TownGen
 extends RefCounted
 ## A town of any size, from data (issue #45). Pure: returns the same layout
-## dictionary content/core/locations/port_town.json holds (boxes, markers,
+## dictionary content/core/towns/port_square.json holds (boxes, markers,
 ## routes, zones, garrison, locals), so TownLayout loads it, validates it rule for
 ## rule, and town_demo builds, dresses and populates it exactly like the port.
 ##
