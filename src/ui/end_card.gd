@@ -5,9 +5,12 @@ extends CanvasLayer
 ## general lived (content/core/story/main.json "end_card"). Closing it ends the
 ## chapter and Oda has her last word (the "free" chapter). Never in a headless
 ## run (tests call text() and close()).
+##
+## It waits for nothing else to be pausing the game (the AI notice on launch, the
+## new game menu, the dev settings): opened behind one of those it took their
+## pause for the game's own, and Carry on left the game paused for good.
 
 var _panel: Control
-var _was_paused := false
 
 
 static func text() -> String:
@@ -28,7 +31,8 @@ func _ready() -> void:
 
 
 func _process(_dt: float) -> void:
-	if _panel == null and Story.chapter() == "end" and DisplayServer.get_name() != "headless":
+	if _panel == null and Story.chapter() == "end" and not get_tree().paused \
+			and DisplayServer.get_name() != "headless":
 		_open()
 
 
@@ -69,14 +73,13 @@ func _open() -> void:
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.pressed.connect(_done)
 	v.add_child(b)
-	_was_paused = get_tree().paused
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	b.grab_focus()
 
 
 func _done() -> void:
-	get_tree().paused = _was_paused
+	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	close()
 	_panel.queue_free()
