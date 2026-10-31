@@ -299,8 +299,13 @@ func remove_last_berth() -> bool:
 
 
 ## Issue #207: T-89 fitted an upgrade: the parked ship you fly takes it now
-## (in the air it waits for the next landing).
+## (in the air it waits for the next landing), and an upgrade with a paint job
+## repaints its ship (ShipUpgrades.look).
 func refit() -> void:
+	for b in berths:
+		if not bool(b.get("destroyed", false)) and is_instance_valid(b.visual):
+			var base := str(content.get_ship(str(b.ship_id)).get("look", ""))
+			kit.repaint(b.visual, ShipUpgrades.look(str(b.ship_id), base))
 	if not piloting and not berths.is_empty():
 		_use_berth(berth)
 

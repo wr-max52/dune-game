@@ -8,9 +8,9 @@
     "max_span": 7.8
   },
   "freighter": {
-    "source": "res://assets/vehicles/source/freighter2.glb",
+    "source": "res://assets/vehicles/source/frigate.glb",
     "out": "res://assets/vehicles/freighter.glb",
-    "yaw_deg": 180,
+    "yaw_deg": 0,
     "length": 9.0,
     "max_span": 8.0
   },
@@ -79,6 +79,45 @@
       "trim": "#ece7dc"
     }
   },
+  "freighter_shields": {
+    "source": "res://assets/vehicles/source/frigate.glb",
+    "out": "res://assets/vehicles/freighter_shields.glb",
+    "yaw_deg": 0,
+    "length": 9.0,
+    "max_span": 8.0,
+    "paint": {
+      "body": "#2a5594",
+      "trim": "#1c2a40",
+      "bands": [0.04, 0.12, 0.12, 0.2],
+      "refs": [0.3, 0.1]
+    }
+  },
+  "freighter_hull": {
+    "source": "res://assets/vehicles/source/frigate.glb",
+    "out": "res://assets/vehicles/freighter_hull.glb",
+    "yaw_deg": 0,
+    "length": 9.0,
+    "max_span": 8.0,
+    "paint": {
+      "body": "#5e646c",
+      "trim": "#2c2f34",
+      "bands": [0.04, 0.12, 0.12, 0.2],
+      "refs": [0.3, 0.1]
+    }
+  },
+  "freighter_boost": {
+    "source": "res://assets/vehicles/source/frigate.glb",
+    "out": "res://assets/vehicles/freighter_boost.glb",
+    "yaw_deg": 0,
+    "length": 9.0,
+    "max_span": 8.0,
+    "paint": {
+      "body": "#952a16",
+      "trim": "#3a1a12",
+      "bands": [0.04, 0.12, 0.12, 0.2],
+      "refs": [0.3, 0.1]
+    }
+  },
   "options": {
     "note": "Runner-up generations, kept for later (more ships to buy, or swaps). All in assets/vehicles/source/, nose toward +Z. Not loaded by the game.",
     "interceptor_text.glb": "text-only interceptor, white and teal, detailed jet (8042... ref copy is interceptor_ref.glb)",
@@ -93,7 +132,7 @@
   },
   "generations": {
     "interceptor": "b173bc6a-9d84-4c6b-8007-5c06d23a24a2 (agentic, refs: stand-in crops)",
-    "freighter": "5f3e0858-7e46-4100-b623-8d34a5ee078f",
+    "freighter": "cfed8b67-470b-4e63-b573-aadc9dd2402c (Gen-2.5 Medium, delit, 30k; refs: front 3/4, rear and top crops of the user's frigate concept sheet: thick boxy disc, forked front, three rear engines, no wings). Comes out nose toward -Z, so yaw_deg 0. freighter_shields/_hull/_boost are paint jobs on it, one per T-89 upgrade (ShipUpgrades.look). The first freighter was 5f3e0858 (source/freighter2.glb)",
     "courier": "4fa39cfb-2d25-4586-aac6-12fd0f584059",
     "gunship": "b82e5ccf-faa8-4714-bb76-1564ffd446f3",
     "speeder": "895b349d-a78a-4094-bccc-f7acfb611e8c (agentic, refs: stand-in crops)",
