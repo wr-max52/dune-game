@@ -38,6 +38,9 @@ extends Node3D
 
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const DROID_LAYER := 2              ## bolts' sweep rays find them; bodies walk through them
+const TRAIL_STEP_S := 0.25          ## how often your trail drops a point
+const REJOIN_LAG_S := 5.0           ## a lost droid turns up where you were this long ago...
+const REJOIN_MAX := 25.0            ## ...or nearer, if that is further back than this (m)
 
 var demo                            ## the town scene (town, terrain, garrison, npcs, training_range)
 var player: CharacterBody3D
@@ -63,6 +66,7 @@ var stranded := 0                   ## issue #76: outpost cargo droids that ran 
 var _wreck_clock := 0.0
 var _heading := Vector3.FORWARD
 var _follow_t := 0.0
+var _trail: Array = []              ## [[_follow_t, player position], ...], newest last: where a lost droid rejoins
 var _mats: LookMaterials
 var _was_locked := false
 
@@ -133,6 +137,7 @@ func _physics_process(dt: float) -> void:
 		return
 	if player.piloting:
 		_despawn_companions()          # they wait while you fly
+		_trail.clear()
 		fixing = {}
 		focus = {}
 	else:
@@ -663,8 +668,9 @@ func _despawn_companions() -> void:
 
 ## Each droid holds its ground until the player gets `leash` metres away (its
 ## kind's "follow"), then walks to its slot beside / behind the player and stops
-## there (within `settle` m). It catches up faster when far behind, and jumps to
-## the slot if it was left a long way back (a jetpack hop, a speeder ride).
+## there (within `settle` m). It catches up faster when far behind, and if it was
+## left a long way back (a jetpack hop, a speeder ride) it turns up on your trail
+## some seconds back (_rejoin_point), not at your side, and runs the rest.
 func _follow(dt: float) -> void:
 	var pup := _up(player.global_position)
 	var v := _flat(player.velocity, pup)
@@ -676,6 +682,10 @@ func _follow(dt: float) -> void:
 		_heading = h.normalized() if h.length() > 0.01 else _flat(-player.global_basis.z, pup).normalized()
 	var right := _heading.cross(pup).normalized()
 	_follow_t += dt
+	if _trail.is_empty() or _follow_t - float(_trail[-1][0]) >= TRAIL_STEP_S:
+		_trail.append([_follow_t, player.global_position])
+		while _follow_t - float(_trail[0][0]) > REJOIN_LAG_S + TRAIL_STEP_S:
+			_trail.pop_front()
 	var of_kind := {}                  # kind -> how many placed so far
 	for uid in companions:
 		var u: DroidUnit = companions[uid]
@@ -711,7 +721,9 @@ func _follow(dt: float) -> void:
 		var pos: Vector3 = u.global_position
 		var speed := 0.0
 		if dist > 40.0 and u.via.is_empty():
-			pos = slot
+			var back := _rejoin_point()
+			# Keep its place in the group (slot's offset from you) so they do not land in a heap.
+			pos = slot if back == Vector3.INF else back + (slot - player.global_position)
 		elif u.following:
 			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
 			pos += to / dist * minf(speed * dt, dist)
@@ -721,6 +733,20 @@ func _follow(dt: float) -> void:
 		pos += _separation(u, pos) * dt
 		_put(u, pos)
 		u.walk(dt, u.following, speed, u.target != null)
+
+
+## Where a droid left far behind rejoins: the oldest point of your trail at most
+## REJOIN_LAG_S old and within REJOIN_MAX m of you (so it does not land past the
+## jump distance and jump again next frame). INF when even the newest point is
+## too far (you were moved), and the droid takes its slot beside you as before.
+func _rejoin_point() -> Vector3:
+	var at := Vector3.INF
+	for i in range(_trail.size() - 1, -1, -1):
+		var e: Array = _trail[i]
+		if _follow_t - float(e[0]) > REJOIN_LAG_S or _flat_dist(e[1], player.global_position) > REJOIN_MAX:
+			break
+		at = e[1]
+	return at
 
 
 ## A push away from any other droid of yours closer than a body's width.

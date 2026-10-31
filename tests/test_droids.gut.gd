@@ -236,6 +236,28 @@ func test_controller_buy_sell_follow_and_ship() -> void:
 	assert_eq(ctl.companions.size(), 0, "the sold droid de-spawns")
 
 
+func test_lost_droid_rejoins_on_your_trail_not_at_your_side() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	WorldState.credits = 200
+	assert_eq(ctl.buy("assassin"), "bought")
+	p.global_position = Vector3(-60, 0, 0)
+	await wait_physics_frames(2)
+	# Walk 60 m along x in five seconds (12 m/s).
+	for i in 300:
+		p.global_position.x += 0.2
+		await wait_physics_frames(1)
+	var u: Node3D = ctl.companions.values()[0]
+	u.global_position = Vector3(90, 0, 90)          # left far behind
+	await wait_physics_frames(1)
+	var gap := DroidController._flat_dist(u.global_position, p.global_position)
+	assert_gt(gap, 10.0, "not dropped at the player's side")
+	assert_lt(gap, DroidController.REJOIN_MAX + 3.0, "most of the gap closed")
+	assert_lt(u.global_position.x, p.global_position.x, "back along the way the player came")
+	assert_lt(absf(u.global_position.z), 3.0, "on the trail")
+
+
 func test_chirp_timer_uses_droid_quirk() -> void:
 	var s := _scene()
 	var ctl: DroidController = s[0]
