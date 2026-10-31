@@ -23,8 +23,9 @@ enum { LEFT, RIGHT, CENTER }
 
 const GUARD := { "pos": Vector3(-0.1, -0.1, 0.32), "dir": Vector3(0.22, 0.86, 0.46), "twist": 0.0 }
 ## First person: the guard sits low on the right so the blade frames the view
-## instead of crossing it, high enough that the hilt and the right hand show (the
-## left, on the pommel, comes into view as soon as it swings or blocks).
+## instead of crossing it, high enough that the hilt and the right hand show. The
+## sword is one-handed from the eye (hand_weapons.json aim_fpv "one_hand"): two
+## hands on a short hilt overlapped through the level cuts.
 const GUARD_FPV := { "pos": Vector3(-0.15, 0.01, 0.44), "dir": Vector3(-0.26, 0.88, 0.4), "twist": 0.0 }
 const BLOCK := { "pos": Vector3(-0.04, 0.06, 0.4), "dir": Vector3(0.92, 0.36, 0.12), "twist": 12.0 }
 ## Issue #229: a level block across the view crossed the arms (the left hand sits
@@ -341,25 +342,3 @@ static func pose_transform(p: Dictionary) -> Transform3D:
 	var x := hint.cross(y).normalized()
 	var z := x.cross(y).normalized()
 	return Transform3D(Basis(x, y, z), p.pos)
-
-
-## First person: the back (left) hand tucks under the front one like a batter's
-## grip. With the blade up the pommel already hangs below the right hand; as it
-## comes level (or past) the left hand slides up the hilt against the right and
-## drops under the hilt, so the hands stack instead of spreading side by side.
-## slide = fraction of the way to the right grip, drop = metres under the hilt,
-## from = blade rise (dir.y) below which the tuck starts.
-const FPV_TUCK := { "slide": 0.45, "drop": 0.05, "from": 0.7 }
-
-
-## Chest-space target for the left hand on a sword at `xf` (pose_transform), its
-## grips `r` and `l` in the sword's space.
-static func fpv_left_grip(xf: Transform3D, r: Vector3, l: Vector3) -> Vector3:
-	var along := xf.basis.y.normalized()
-	var u := clampf(1.0 - along.y / float(FPV_TUCK.from), 0.0, 1.0)
-	u = u * u * (3.0 - 2.0 * u)
-	var at := xf * l.lerp(r, float(FPV_TUCK.slide) * u)
-	var under := Vector3.DOWN - along * along.dot(Vector3.DOWN)
-	if under.length() < 0.2:            # blade straight down: under is toward the eye
-		under = Vector3.FORWARD
-	return at + under.normalized() * float(FPV_TUCK.drop) * u
