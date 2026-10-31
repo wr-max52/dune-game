@@ -460,3 +460,37 @@ func test_respawns_wait_for_the_alarm_and_do_not_remember_you() -> void:
 	assert_true(t.garrison.alarm.remembers(), "the garrison still remembers the fight")
 	var back: NpcBody = t.garrison.members[t.garrison.members.size() - 1]
 	assert_true(back.has_meta("fresh"), "but the new trooper never saw your face")
+
+
+## Dying ends it: you wake in the pit to a calm town, not a spawn camp. Every
+## garrison's alarm (and the klaxon) stops, they forget your face, a droid you
+## shot lets it go, and Remnant standing comes up to the lowest they tolerate,
+## whoever landed the last shot.
+func test_dying_calms_the_remnant() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	WorldState.standing["imperial_remnant"] = -80
+	var og: Garrison = t.outposts.garrisons.values()[0]
+	t.garrison._raise("attacked")
+	og._raise("attacked")
+	var bots: Array = t.droids.remnant if t.droids != null else []
+	for u in bots:
+		u.provoked = true
+	await wait_physics_frames(2)
+	assert_true(t.garrison.alarm.active(), "the town is fighting")
+	t._player.invulnerable_left = 0.0
+	t._player.apply_damage(99999.0)
+	await wait_physics_frames(2)
+	t.garrison._ko_left = 0.001          # skip the blackout
+	await wait_physics_frames(3)
+	assert_false(t._player.is_downed, "back on your feet in the pit")
+	for g in [t.garrison, og]:
+		assert_false(g.alarm.active(), "%s stood down" % g.name)
+		assert_false(g.alarm.remembers(), "%s forgot your face" % g.name)
+		assert_eq(g.checkpoint.memory_left, 0.0)
+	assert_eq(t.garrison.klaxon_left, 0.0, "the klaxon is off")
+	for u in bots:
+		assert_false(u.provoked, "the droids let it go")
+	assert_eq(int(WorldState.standing.imperial_remnant), t.garrison.checkpoint.lowest_tolerated())
+	await wait_physics_frames(60)
+	assert_false(t.garrison.alarm.active(), "and nobody starts it again at the pit")

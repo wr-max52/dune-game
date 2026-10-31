@@ -303,8 +303,9 @@ func _physics_process(_dt: float) -> void:
 		open_menu()
 
 
-## [E]: talk (his AI), ask for work, hand over droids.
-func open_menu() -> void:
+## [E]: talk (his AI), ask for work, hand over droids. keep_cursor: open again
+## after a hand-over, the cursor where it was.
+func open_menu(keep_cursor := false) -> void:
 	var opts: Array = []
 	if spot != null:
 		opts.append({ "id": "chat", "text": _l("chat") })
@@ -312,7 +313,7 @@ func open_menu() -> void:
 		opts.append({ "id": "work", "text": _l("work") })
 	for d in droids_to_hand_over():
 		opts.append({ "id": "hand:%d" % int(d.uid), "text": _l("hand_over") % [DroidRoster.label(str(d.kind)), droid_pay()] })
-	menu.open(_l("menu_title") % [npc_name(), int(WorldState.standing.get("imperial_remnant", 0))], opts, _on_menu)
+	menu.open(_l("menu_title") % [npc_name(), int(WorldState.standing.get("imperial_remnant", 0))], opts, _on_menu, "", keep_cursor)
 	if player != null and not player.locked:
 		player.locked = true
 		_was_locked = true
@@ -327,6 +328,8 @@ func _on_menu(id: String) -> void:
 		take_job()
 	elif id.begins_with("hand:"):
 		hand_over(int(id.substr(5)))
+		if _can_talk():
+			open_menu(true)     # a sale leaves the menu open (Esc walks away)
 
 
 func _say(text: String) -> void:

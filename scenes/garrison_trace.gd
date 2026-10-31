@@ -279,10 +279,13 @@ func _smuggle() -> void:
 	await _frames(10)
 	var credits0 := WorldState.credits
 	var sold := 0
-	for i in 3:
-		if gear.interact() == "sold":
-			sold += 1
-		await _frames(5)
+	if gear.interact() == "menu":
+		for i in 3:
+			gear.menu.choose("sell:unmarked_cells")
+			if gear.last_trade == "sold":
+				sold += 1
+			await _frames(5)
+		gear.menu.choose("")
 	kv("SOLD", sold)
 	kv("EARNED", WorldState.credits - credits0)
 	kv("CELLS_AFTER", WorldState.inventory.count("unmarked_cells"))

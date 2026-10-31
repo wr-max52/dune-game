@@ -43,7 +43,7 @@ static func load_settings() -> void:
 		accent = cfg.get_value("hud", "color", DEFAULT)
 		text_scale = float(cfg.get_value("hud", "text_scale", -1.0))
 	if text_scale <= 0.0:
-		text_scale = float(ui().get("text_scale", 1.25))
+		text_scale = float(ui().get("text_scale", 1.75))
 	text_scale = clamp_scale(text_scale)
 
 

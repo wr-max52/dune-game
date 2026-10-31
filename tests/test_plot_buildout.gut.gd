@@ -108,10 +108,10 @@ func test_droid_jobs_pay_three_times_and_raise_standing() -> void:
 	assert_eq(WorldState.credits, c0 + 3 * DroidRoster.resale("assassin"))
 	assert_eq(int(WorldState.standing.imperial_remnant), 5)
 	assert_false(g.job_active(), "open again for the next droid")
-	WorldState.standing.imperial_remnant = -49
-	assert_true(g.take_job(), "-49 still gets jobs")
+	WorldState.standing.imperial_remnant = -39
+	assert_true(g.take_job(), "-39 still gets jobs")
 	WorldState.jobs_taken.erase(GeneralPost.job_id())
-	WorldState.standing.imperial_remnant = -50
+	WorldState.standing.imperial_remnant = -40
 	assert_false(g.take_job(), "hostile: no work")
 
 

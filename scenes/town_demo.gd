@@ -1335,8 +1335,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and not lookdev_mode \
 			and not (bar != null and bar.is_talking()):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	elif event is InputEventKey and event.pressed and event.keycode == KEY_F4:
-		NpcBody.show_debug = not NpcBody.show_debug   # what each guard sees and hears
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_F4 and not WorldState.story_mode():
+		NpcBody.show_debug = not NpcBody.show_debug   # what each guard sees and hears (free roam only)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_L:
 		# L cycles the lighting (1/2/3 are weapons since M11).
 		var ids := ["golden", "noon", "dusk"]

@@ -54,6 +54,7 @@ var _recoil := 0.0                 ## 1 right after a shot, decays to 0
 ## weapons sets aim_wanted; first person always holds the gun up.
 var carry := WeaponCarry.new(1.0)
 var aim_wanted := false
+var aim_target := Vector3.INF      ## third person: where the crosshair points (weapons sets it; INF = along the pose)
 ## Issue #133: sprinting. The gun drops to rest (first person too), the body faces
 ## where it runs, and gun_up() stays false so nothing fires.
 var sprint_lowered := false
@@ -619,6 +620,8 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	var w: Node3D = weapons[current]
 	var grips: Dictionary = w.get_meta("grips", {})
 	var ready := _ready_xf(current, pitch)
+	if not first_person and current != "energy_blade" and aim_target != Vector3.INF:
+		ready = _aimed_at_target(ready, current, grips)
 	var holster := _holster_xf(current)
 	var up := 1.0 if (first_person and not _sprint_raise) or current == "energy_blade" else carry.eased()
 	if up < 1.0:
@@ -837,6 +840,18 @@ func _ready_xf(id: String, _pitch: float) -> Transform3D:
 	var a: Dictionary = spec.get("aim_fpv" if first_person else "aim", {})
 	var rot := _v3(a.get("rot", [0, 0, 0]))
 	return Transform3D(Basis.from_euler(rot * PI / 180.0), _v3(a.get("pos", [0, 0, 0.4])))
+
+
+## Third person: the gun turned about its aim pivot (the rifle's stock on the
+## shoulder; else the right grip) so the barrel points at aim_target.
+func _aimed_at_target(xf: Transform3D, id: String, grips: Dictionary) -> Transform3D:
+	var spec: Dictionary = look.get(id, {})
+	var a: Dictionary = spec.get("aim", {})
+	var sc := float(spec.get("scale", 1.0))
+	var pivot: Vector3 = _v3(a.pivot) * sc if a.has("pivot") else grips.get("r", Vector3.ZERO)
+	var muzzle := _v3(spec.get("muzzle", [0, 0, 1])) * sc
+	var target := (joints.chest as Node3D).global_transform.affine_inverse() * aim_target
+	return WeaponCarry.aim_at(xf, pivot, muzzle, target)
 
 
 func _holster_xf(id: String) -> Transform3D:
