@@ -2,6 +2,16 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Brighter star cruiser (2026-10-31)
+
+- **Every area aboard the Remnant cruiser is lit properly.** The bay, the
+  corridor, the armoury and crew room, the ramp shaft and the bridge were all
+  too dark to see in; the corridor, shaft and crew room were close to black.
+  There are more lamps now and they are brighter: floods and a low fill over
+  the bay's pads, a lamp every 15 m down the corridor, two per side room, one
+  on every landing of the shaft plus side fills, and extra lamps over the
+  bridge. The colours are the same as before.
+
 ## The new frigate (2026-10-31)
 
 - **The Frigatebird has a new model.** It is the strongest ship and the big
