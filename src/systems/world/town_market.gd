@@ -3,7 +3,8 @@ extends RefCounted
 ## dressed table, a shade canopy over the vendor's side and wares on top; its back
 ## panel (`<id>_back`, look "stall_back") gets planks and a shelf of the same
 ## wares, and carries the back of the canopy. Visual only: posts stand on the
-## counter or the panel, canopies are above head height.
+## counter or the panel, canopies are above head height. Issue #237: a stall's
+## "canopy_lift" (metres) raises its canopy, for the round port's taller stalls.
 ##
 ## No two neighbours match: the canopy shape (slanted, peaked tent, twin parasols),
 ## its colour, and the wares (pottery, produce, cloth, tech, water, spice) all
@@ -30,6 +31,8 @@ var _wood: Material
 var _wood_top: Material
 var _back_x := 0.0            ## local x of the back panel's near face (negative), this stall
 var _panel_top := 0.0         ## its top; 0 when the stall has no back panel
+var _face := "+z"             ## this stall's customer side
+var _lift := 0.0              ## issue #237: how much higher this stall's canopy is (its box's "canopy_lift")
 
 
 func _init(building_kit: TownBuildings) -> void:
@@ -61,6 +64,8 @@ func _stall(parent: Node3D, b: Dictionary, i: int, back: Dictionary) -> void:
 	var h := size.y
 	_rng.seed = hash(str(b.id))
 	var id := str(b.id)
+	_lift = float(b.get("canopy_lift", 0.0))
+	_face = face
 	# Where the back panel is, in this stall's frame (+X is the aisle).
 	_back_x = -lx * 0.5 - 1.7
 	_panel_top = 0.0
@@ -136,17 +141,17 @@ func _valance(parent: Node3D, top: Vector3, w: float, color: Color) -> void:
 
 
 func _anchor(id: String, front: Vector3, back: Vector3) -> void:
-	anchors[id] = { "front": kit._xf * front, "back": kit._xf * back }
+	anchors[id] = { "front": kit._xf * front, "back": kit._xf * back, "face": _face }
 
 
 ## One sheet, high over the vendor, sloping down past the customer's side.
 func _slant(parent: Node3D, id: String, lx: float, lz: float, h: float, color: Color) -> void:
-	var top := maxf(2.95, _panel_top + 0.3)
+	var top := maxf(2.95 + _lift, _panel_top + 0.3)
 	var back := Vector3(_back_x - 0.25, top, 0)
-	var front := Vector3(lx * 0.5 + 0.9, 2.4, 0)
+	var front := Vector3(lx * 0.5 + 0.9, 2.4 + _lift, 0)
 	_panel(parent, back, front, lz + 0.8, color)
 	_valance(parent, front + Vector3(0, -0.02, 0), lz + 0.8, color)
-	var at := func(x: float) -> float: return lerpf(top, 2.4, (x - back.x) / (front.x - back.x)) - 0.08
+	var at := func(x: float) -> float: return lerpf(top, 2.4 + _lift, (x - back.x) / (front.x - back.x)) - 0.08
 	for s in [-1.0, 1.0]:
 		var z: float = s * (lz * 0.5 - 0.06)
 		_post(lx * 0.5 - 0.06, z, h, at.call(lx * 0.5 - 0.06))
@@ -159,15 +164,15 @@ func _slant(parent: Node3D, id: String, lx: float, lz: float, h: float, color: C
 
 ## A tent: ridge over the counter's back edge, eaves both sides.
 func _peak(parent: Node3D, id: String, lx: float, lz: float, h: float, color: Color) -> void:
-	var ridge := Vector3((_back_x - lx * 0.5) * 0.5 if _panel_top > 0.0 else -0.3, 3.3, 0)
-	var front := Vector3(lx * 0.5 + 0.9, 2.45, 0)
-	var back := Vector3(_back_x - 0.25, _panel_top + 0.05, 0) if _panel_top > 0.0 else Vector3(-lx * 0.5 - 1.5, 2.45, 0)
+	var ridge := Vector3((_back_x - lx * 0.5) * 0.5 if _panel_top > 0.0 else -0.3, 3.3 + _lift, 0)
+	var front := Vector3(lx * 0.5 + 0.9, 2.45 + _lift, 0)
+	var back := Vector3(_back_x - 0.25, _panel_top + 0.05, 0) if _panel_top > 0.0 else Vector3(-lx * 0.5 - 1.5, 2.45 + _lift, 0)
 	_panel(parent, ridge, front, lz + 0.6, color, 0.12)
 	_panel(parent, ridge, back, lz + 0.6, color, 0.12)
 	_valance(parent, front + Vector3(0, -0.02, 0), lz + 0.6, color)
 	for s in [-1.0, 1.0]:
 		var z: float = s * (lz * 0.5 - 0.06)
-		_post(ridge.x, z, h if ridge.x > -lx * 0.5 else 0.0, 3.22)
+		_post(ridge.x, z, h if ridge.x > -lx * 0.5 else 0.0, 3.22 + _lift)
 	kit.part(kit.cyl(0.04, 0.04, lz + 0.6, 6), kit.metal, ridge + Vector3(0, -0.04, 0), kit.AXIS_Z)
 	_anchor(id, front, back)
 
@@ -176,8 +181,8 @@ func _peak(parent: Node3D, id: String, lx: float, lz: float, h: float, color: Co
 func _parasols(parent: Node3D, id: String, lx: float, lz: float, h: float, a: Color, b: Color) -> void:
 	for k in 2:
 		var z := (lz * 0.25) * (1.0 if k == 0 else -1.0)
-		var c := Vector3(-0.3, 2.75, z)
-		_post(-0.3, z, h, 2.9)
+		var c := Vector3(-0.3, 2.75 + _lift, z)
+		_post(-0.3, z, h, 2.9 + _lift)
 		var cone := CylinderMesh.new()
 		cone.top_radius = 0.06
 		cone.bottom_radius = 1.75
@@ -193,7 +198,7 @@ func _parasols(parent: Node3D, id: String, lx: float, lz: float, h: float, a: Co
 		parent.add_child(mi)
 		awnings.append(mi)
 		kit.part(kit.ball(0.07, 0.14, false, 8), kit.metal, c + Vector3(0, 0.34, 0))
-	_anchor(id, Vector3(lx * 0.5 + 1.0, 2.45, 0), Vector3(-lx * 0.5 - 1.2, 2.45, 0))
+	_anchor(id, Vector3(lx * 0.5 + 1.0, 2.45 + _lift, 0), Vector3(-lx * 0.5 - 1.2, 2.45 + _lift, 0))
 
 
 # ---------------------------------------------------------------- wares
@@ -294,7 +299,12 @@ func _string_lights(parent: Node3D, _stalls: Array) -> void:
 				continue          # each pair once
 			var b: Dictionary = anchors[b_id]
 			var d: float = (a.front as Vector3).distance_to(b.front)
-			if d < best_d and absf((a.front as Vector3).x - (b.front as Vector3).x) < 1.0:
+			# Facing each other across the aisle, lined up along the counters.
+			var fa := str(a.get("face", "+z"))
+			var across_z := fa.ends_with("z")
+			var lateral := absf((a.front as Vector3).x - (b.front as Vector3).x) if across_z \
+				else absf((a.front as Vector3).z - (b.front as Vector3).z)
+			if d < best_d and str(b.get("face", "")) == ("-" if fa.begins_with("+") else "+") + fa.substr(1) and lateral < 1.0:
 				best_d = d
 				best = b_id
 		if best == "" or best_d > 16.0:

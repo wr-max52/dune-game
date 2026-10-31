@@ -2,6 +2,26 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #269, the party barge (2026-10-31)
+
+**Checked:** one headless trace run (`scenes/barge_trace.gd`, every step
+passed) and three rendered stills. The full test suite was not run. Walking up
+the gangplank and down the inside ramps was **not** tried by hand; the trace
+puts the player on each deck directly.
+
+- **The partygoers are look-only.** You walk through them, they can't be hurt
+  and they don't talk. Only the boss can be hit.
+- **The guards don't fight.** Hurting the boss doesn't make anyone hostile.
+- **The barge goes back home on a reload.** Ownership is saved; where you
+  parked it is not.
+- **It floats level along the planet's up, not the dunes.** Big dunes poke
+  through the hull, and the gangplank's foot can hang above the sand or sink
+  into it.
+- **The hull is plain boxes** in flat colours (no planks, no shader yet).
+- **Driving: the player is pinned at the wheel.** You can't walk around the deck
+  while it moves.
+- **The cantina still has no on-stage band.** The barge's band is built in
+  party_barge.gd and isn't shared with the cantina yet.
 ## After issue #266, the beetle-centipede beast (2026-10-31)
 
 **Checked:** the headless beast trace (`scenes/beast_trace.gd`, every step

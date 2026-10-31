@@ -4,13 +4,17 @@ extends RefCounted
 ## guns follow the same rules as the hand blasters. Weapons are grouped by their
 ## data "fire_group": "primary" (cannons) and "secondary" (seekers).
 ##
+## A weapon with "reload_each" (seconds) never reloads the whole mag at once: it
+## gets one round back every reload_each seconds while it is short (the seeker
+## rack), so you can fire the rack off in a salvo and it trickles back.
+##
 ## fire() returns projectile spawns; it never creates nodes. The dogfight director
 ## feeds them to the projectile field, and the scene draws them. A new weapon is a
 ## weapons/*.json entry plus a hardpoint line, with no code change.
 
 const Weapon := preload("res://src/systems/combat/weapon.gd")
 
-var hardpoints: Array = []   ## each: { weapon_id, cfg, weapon, mount: Vector3, group }
+var hardpoints: Array = []   ## each: { weapon_id, cfg, weapon, mount: Vector3, group, refill }
 var convergence := 300.0     ## metres ahead where fixed guns cross
 var power := 1.0             ## the ship's "blaster_power": every bolt's damage times this
 
@@ -31,6 +35,7 @@ func _init(ship_cfg: Dictionary = {}, content = null) -> void:
 			"weapon": Weapon.new(wcfg),
 			"mount": Vector3(float(m[0]), float(m[1]), float(m[2])),
 			"group": str(wcfg.get("fire_group", "primary")),
+			"refill": 0.0,           ## seconds toward the next round (reload_each weapons)
 		})
 
 
@@ -80,9 +85,13 @@ func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secon
 	for h in hardpoints:
 		var w = h.weapon
 		var pull := primary if h.group == "primary" else (secondary and not fired_secondary)
+		var each := float(h.cfg.get("reload_each", 0.0))
+		if each > 0.0:
+			_trickle(h, dt, each)
+			pull = pull and w.ammo > 0
 		var result: int = w.start_firing(dt, pull)
 		# Ship weapons recharge on their own once empty (heat / rack reload).
-		if w.ammo <= 0 and not w.is_reloading():
+		if each <= 0.0 and w.ammo <= 0 and not w.is_reloading():
 			w.start_reloading()
 		if result != Weapon.Result.SHOT:
 			continue
@@ -106,3 +115,16 @@ func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secon
 		if h.group == "secondary":
 			fired_secondary = true
 	return out
+
+
+## One round back into a reload_each weapon every `each` seconds it is short.
+func _trickle(h: Dictionary, dt: float, each: float) -> void:
+	var w = h.weapon
+	var mag := int(w.config.get("mag", 10))
+	if w.ammo >= mag:
+		h.refill = 0.0
+		return
+	h.refill += dt
+	if h.refill >= each:
+		h.refill -= each
+		w.ammo = mini(mag, w.ammo + 1)

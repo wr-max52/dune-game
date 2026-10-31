@@ -53,8 +53,12 @@ func test_ship_files_match_manifest() -> void:
 
 # ---- director -----------------------------------------------------------------
 
-func _start(seed: int = 1):
+## `stock`: the ships' own numbers, not a space fight's scales (space_fight.json),
+## for tests laid out in metres at those speeds.
+func _start(seed: int = 1, stock := false):
 	var df = Dogfight.new(content, "orbital_skirmish", seed)
+	if stock:
+		df.tune = {}
 	df.start()
 	return df
 
@@ -106,7 +110,7 @@ func test_player_seekers_need_a_lock() -> void:
 
 
 func test_hits_damage_and_kills_are_reported() -> void:
-	var df = _start()
+	var df = _start(1, true)
 	var foe: int = df.spawn_ship("remnant_fighter", Dogfight.TEAM_HOSTILE, Vector3(0, 0, -150),
 		Vector3(0, 0, 1))
 	df.set_player_command(0, 0, 0, 0.0, false, true, false)
@@ -204,3 +208,40 @@ func test_a_new_ship_and_fight_need_only_data() -> void:
 	assert_eq(df.stats.waves, 1, "the new encounter's wave spawned")
 	assert_gt(df.stats.shots, 0, "the new gun fired")
 	assert_ne(df.state, Dogfight.State.RUNNING, "the new fight reached an outcome")
+
+
+# ---- space-fight scales and seekers ---------------------------------------------
+
+func test_space_fight_flies_at_the_edge_of_space_speed() -> void:
+	var df = _start()
+	var me: Dictionary = df.get_ship(df.player_id)
+	var ship: Dictionary = content.get_ship("interceptor")
+	var edge := float(ship.atmosphere.max_speed) * float(ship.atmosphere.edge_speed_mult)
+	assert_almost_eq(me.flight.max_speed(), edge, edge * 0.05,
+		"full throttle in a fight is about the edge-of-space speed, so nothing jumps as it starts")
+	assert_almost_eq(me.radius, float(ship.hit_radius) * df.scale("hit_radius_scale"), 0.001)
+	assert_almost_eq(float(me.loadout.group_config("primary").range),
+		float(content.get_weapon("ship_cannon").range) * df.scale("range_scale"), 0.001, "gun range scales")
+
+
+func test_locked_player_fires_a_seeker_salvo_that_trickles_back() -> void:
+	var df = _start()
+	var me: Dictionary = df.get_ship(df.player_id)
+	var foe: int = df.spawn_ship("remnant_heavy", Dogfight.TEAM_HOSTILE, me.flight.position + Vector3(0, 0, -1500),
+		Vector3(0, 0, -1))
+	me.target_id = foe
+	me.lock.update(0.0, foe, me.flight.forward(), Vector3(0, 0, -1500))
+	me.lock.progress = me.lock.lock_time
+	df.set_player_command(0, 0, 0, 1.0, false, false, true)
+	var mag := int(content.get_weapon("ship_missile").mag)
+	for i in 66:                                  # 1.1 s: the rack fires off before the first one is back
+		df.step(1.0 / 60.0)
+		me.target_id = foe
+		me.retarget_left = 10.0
+	assert_eq(df.stats.missiles, mag, "one lock fires the whole rack, one after another")
+	assert_eq(me.loadout.group_ammo("secondary"), 0, "the rack is empty")
+	df.set_player_command(0, 0, 0, 1.0, false, false, false)
+	var each := float(content.get_weapon("ship_missile").reload_each)
+	for i in int(each * 60.0) + 2:
+		df.step(1.0 / 60.0)
+	assert_eq(me.loadout.group_ammo("secondary"), 1, "one seeker back per reload_each seconds")
