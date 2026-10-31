@@ -15,6 +15,13 @@ extends CanvasLayer
 ## Everything writes to the same places the game does (WorldState, the npc's
 ## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
 ## it had happened in play.
+##
+## A story save earns what free roam hands out: there the controls that would give
+## it (credits, the space fight switch, standing and trust, god mode, heal, the
+## jetpack, endless fuel, teleport, guard senses, flags) are greyed out, each page
+## saying why. Game speed, the look, HUD, sound, the AI brain and the smuggler's
+## own outfit stay the player's. A stuck player may still skip ahead a chapter,
+## after a warning that points them at the characters first.
 
 const MOODS := ["wary", "warm", "amused", "irritated"]
 const SPEEDS := [0.25, 0.5, 1.0, 2.0, 4.0]
@@ -31,6 +38,12 @@ var _flag_new: LineEdit
 var builder: CharacterBuilder
 var _god := false
 var _endless_fuel := false
+var _cheats: Array[Control] = []       ## greyed out in a story save (_lock_for_story)
+var _story_notes: Array[Control] = []  ## shown only in a story save
+var skip_confirm: ConfirmationDialog   ## a story save asks before skipping a chapter
+var _skip_to := ""
+
+const STUCK_WARNING := "If you are stuck, ask the interactive NPCs for advice, they may have a hint.\n\nAre you sure?"
 
 
 func _ready() -> void:
@@ -112,6 +125,8 @@ func _physics_process(_dt: float) -> void:
 	var p = _player()
 	if p == null:
 		return
+	if WorldState.story_mode():
+		return
 	if _god:
 		p.invulnerable_left = maxf(p.invulnerable_left, 1.0)
 	if _endless_fuel and p.jetpack != null:
@@ -160,6 +175,37 @@ func refresh() -> void:
 	for r in _refreshers:
 		r.call()
 	_rebuild_flags()
+	_lock_for_story()
+
+
+## Grey out every control a story save has to earn in play, and show each page's
+## note saying so; free roam gets them all back.
+func _lock_for_story() -> void:
+	var locked := WorldState.story_mode()
+	for c in _cheats:
+		if c is BaseButton:
+			c.disabled = locked
+		else:
+			c.set("editable", not locked)   # sliders, spin boxes, line edits
+	for n in _story_notes:
+		n.visible = locked
+
+
+## Register a control _lock_for_story greys out in a story save. Returns it.
+func _cheat(c: Control) -> Control:
+	_cheats.append(c)
+	return c
+
+
+## A page's line on what a story save keeps for play, hidden in free roam.
+func _story_note(v: VBoxContainer, text: String) -> void:
+	var l := Label.new()
+	l.text = "Story save: " + text
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+	l.visible = false
+	v.add_child(l)
+	_story_notes.append(l)
 
 
 # ------------------------------------------------------------------ world
@@ -196,18 +242,19 @@ func _world_tab() -> Control:
 		_show_hour())
 
 	_section(v, "Game")
+	_story_note(v, "credits are earned and the Remnant fleet always meets you in orbit.")
 	var speed := OptionButton.new()
 	for s in SPEEDS:
 		speed.add_item("%sx" % str(s))
 	speed.item_selected.connect(func(i): Engine.time_scale = SPEEDS[i])
 	_row(v, "Game speed", speed)
 	_refreshers.append(func(): speed.select(maxi(0, SPEEDS.find(Engine.time_scale))))
-	var credits := _spin(0, 99999, 10)
+	var credits: SpinBox = _cheat(_spin(0, 99999, 10))
 	credits.value_changed.connect(func(x): WorldState.credits = int(x))
 	_row(v, "Credits", credits)
 	_refreshers.append(func(): credits.set_value_no_signal(WorldState.credits))
 	# Issue #46: whether flying out of the atmosphere starts the pad's space fight.
-	var dogfight := CheckBox.new()
+	var dogfight: CheckBox = _cheat(CheckBox.new())
 	dogfight.text = "Flying to space starts a dogfight"
 	dogfight.toggled.connect(func(on): GameFlow.set_space_dogfight(on))
 	_row(v, "", dogfight)
@@ -225,9 +272,10 @@ func _show_hour() -> void:
 
 func _standing_tab() -> Control:
 	var v := _tab("Standing")
+	_story_note(v, "where you stand with each faction and person is earned in play. Shown here, not set.")
 	_section(v, "Factions  (-100 hostile .. 100 allied)")
 	for fac in WorldState.FACTIONS:
-		var s := _slider(-100, 100)
+		var s: HSlider = _cheat(_slider(-100, 100))
 		var lab := Label.new()
 		lab.custom_minimum_size = Vector2(120, 0)
 		var paint := func(x): lab.text = "%d  %s" % [int(x), WorldState.standing_label(int(x))]
@@ -239,7 +287,7 @@ func _standing_tab() -> Control:
 			var x := int(WorldState.standing.get(fac, 0))
 			s.set_value_no_signal(x)
 			paint.call(x))
-	var reset := Button.new()
+	var reset: Button = _cheat(Button.new())
 	reset.text = "Reset to defaults"
 	reset.pressed.connect(func():
 		WorldState.standing = WorldState.DEFAULT_STANDING.duplicate()
@@ -262,7 +310,7 @@ func _individuals() -> Array:
 
 func _individual(v: VBoxContainer, label: String, rel: Relationship) -> void:
 	_section(v, label + "  (trust 0 .. 100)")
-	var trust := _slider(0, 100)
+	var trust: HSlider = _cheat(_slider(0, 100))
 	var lab := Label.new()
 	lab.custom_minimum_size = Vector2(120, 0)
 	var paint := func(x): lab.text = "%d  %s" % [int(x), Relationship.tier_for(int(x))]
@@ -270,12 +318,12 @@ func _individual(v: VBoxContainer, label: String, rel: Relationship) -> void:
 		rel.trust = int(x)
 		paint.call(x))
 	_row(v, "Trust", trust).add_child(lab)
-	var mood := OptionButton.new()
+	var mood: OptionButton = _cheat(OptionButton.new())
 	for m in MOODS:
 		mood.add_item(m)
 	mood.item_selected.connect(func(i): rel.mood = MOODS[i])
 	_row(v, "Mood", mood)
-	var tab := _spin(0, 9999, 1)
+	var tab: SpinBox = _cheat(_spin(0, 9999, 1))
 	tab.value_changed.connect(func(x): rel.tab = int(x))
 	var h := _row(v, "Tab owed", tab)
 	var unban := Button.new()
@@ -289,7 +337,7 @@ func _individual(v: VBoxContainer, label: String, rel: Relationship) -> void:
 		paint.call(rel.trust)
 		mood.select(maxi(0, MOODS.find(rel.mood)))
 		tab.set_value_no_signal(rel.tab)
-		unban.disabled = rel.banned_until <= WorldState.clock)
+		unban.disabled = WorldState.story_mode() or rel.banned_until <= WorldState.clock)
 
 
 func _faction_label(id: String) -> String:
@@ -302,8 +350,9 @@ func _faction_label(id: String) -> String:
 
 func _player_tab() -> Control:
 	var v := _tab("Player")
+	_story_note(v, "no god mode, free gear, teleports or guard x-ray; you live by your wits. How you look is on the Character page.")
 	_section(v, "Body")
-	var god := CheckBox.new()
+	var god: CheckBox = _cheat(CheckBox.new())
 	god.text = "God mode (no damage)"
 	god.toggled.connect(func(on):
 		_god = on
@@ -311,7 +360,7 @@ func _player_tab() -> Control:
 		if p != null and not on:
 			p.invulnerable_left = 0.0)
 	v.add_child(god)
-	var heal := Button.new()
+	var heal: Button = _cheat(Button.new())
 	heal.text = "Heal / revive"
 	heal.pressed.connect(func():
 		var p = _player()
@@ -320,24 +369,24 @@ func _player_tab() -> Control:
 	_row(v, "", heal)
 
 	_section(v, "Jetpack")
-	var give := Button.new()
+	var give: Button = _cheat(Button.new())
 	give.text = "Give and wear jetpack"
 	give.pressed.connect(_give_jetpack)
 	_row(v, "", give)
-	var fuel := CheckBox.new()
+	var fuel: CheckBox = _cheat(CheckBox.new())
 	fuel.text = "Endless fuel"
 	fuel.toggled.connect(func(on): _endless_fuel = on)
 	v.add_child(fuel)
 
 	_section(v, "Teleport")
-	var where := OptionButton.new()
+	var where: OptionButton = _cheat(OptionButton.new())
 	var ids: Array = []
 	if demo != null:
 		for m in demo.town.markers():
 			if str(m.role) in ["spawn", "waypoint", "interact"]:
 				ids.append(str(m.id))
 				where.add_item(str(m.id).replace("_", " "))
-	var go := Button.new()
+	var go: Button = _cheat(Button.new())
 	go.text = "Go"
 	go.pressed.connect(func():
 		if where.selected >= 0:
@@ -345,7 +394,7 @@ func _player_tab() -> Control:
 	_row(v, "Marker", where).add_child(go)
 
 	_section(v, "Debug")
-	var npc_dbg := CheckBox.new()
+	var npc_dbg: CheckBox = _cheat(CheckBox.new())
 	npc_dbg.text = "Guard senses (F4)"
 	npc_dbg.toggled.connect(func(on): NpcBody.show_debug = on)
 	v.add_child(npc_dbg)
@@ -365,6 +414,7 @@ func _player():
 ## The builder saves each pick itself; the player's body wears it at once.
 func _character_tab() -> Control:
 	var v := _tab("Character")
+	_story_note(v, "you play the smuggler; every piece and colour of their own kit is yours to pick.")
 	builder = CharacterBuilder.new()
 	builder.outfit_changed.connect(func(o):
 		var a = _avatar()
@@ -395,10 +445,10 @@ func _give_jetpack() -> void:
 	demo.gear.sync_gear()
 
 
-## Stand on a town marker (not while flying).
+## Stand on a town marker (not while flying, nor in a story save).
 func teleport(marker_id: String) -> bool:
 	var p = _player()
-	if p == null or p.piloting or demo.town.get_marker(marker_id).is_empty():
+	if p == null or p.piloting or WorldState.story_mode() or demo.town.get_marker(marker_id).is_empty():
 		return false
 	p.global_position = demo.town.marker_pos(marker_id) + Vector3(0, 0.05, 0)
 	if p.has_method("align_to_ground"):
@@ -416,12 +466,13 @@ func _flags_tab() -> Control:
 	note.text = "World flags the content reads (rumors, jobs, moods). Changes apply at once."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
+	_story_note(v, "the story sets these as you play. Shown here, not set.")
 	_flags_box = VBoxContainer.new()
 	v.add_child(_flags_box)
-	_flag_new = LineEdit.new()
+	_flag_new = _cheat(LineEdit.new())
 	_flag_new.placeholder_text = "custom_flag"
 	_flag_new.custom_minimum_size = Vector2(260, 0)
-	var add := Button.new()
+	var add: Button = _cheat(Button.new())
 	add.text = "Set"
 	add.pressed.connect(func():
 		var n := _flag_new.text.strip_edges()
@@ -440,6 +491,7 @@ func _rebuild_flags() -> void:
 		var cb := CheckBox.new()
 		cb.text = flag
 		cb.button_pressed = WorldState.has_flag(flag)
+		cb.disabled = WorldState.story_mode()   # made fresh each refresh, so not a _cheat
 		cb.toggled.connect(func(on): WorldState.set_flag(flag, on))
 		_flags_box.add_child(cb)
 
@@ -478,12 +530,22 @@ func _story_tab() -> Control:
 	for id in Story.chapter_ids():
 		pick.add_item(str(id).replace("_", " "))
 	var go := Button.new()
-	go.text = "Skip to it"
 	go.pressed.connect(func():
 		if pick.selected >= 0:
-			Story.skip_to(str(Story.chapter_ids()[pick.selected]))
-			refresh())
+			skip_chapter(str(Story.chapter_ids()[pick.selected])))
 	_row(v, "Chapter", pick).add_child(go)
+	_story_note(v, "chapters are there to be played, but if you are truly stuck you can skip ahead (never back).")
+	skip_confirm = ConfirmationDialog.new()
+	skip_confirm.title = "Skip ahead?"
+	skip_confirm.dialog_text = STUCK_WARNING
+	skip_confirm.dialog_autowrap = true
+	skip_confirm.min_size = Vector2i(420, 0)
+	skip_confirm.ok_button_text = "Yes"
+	skip_confirm.cancel_button_text = "No"
+	skip_confirm.confirmed.connect(func():
+		Story.skip_to(_skip_to)
+		refresh())
+	v.add_child(skip_confirm)
 	_section(v, "New game")
 	var note := Label.new()
 	note.text = "Starts again as on a first play: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you. Names are kept. The town reloads.\nStory: the story from the start, every faction neutral, the pistol only, locked to the smuggler.\nFree roam: drops and bounties on repeat, any character."
@@ -500,8 +562,29 @@ func _story_tab() -> Control:
 		var b := WorldState.bounty
 		now.text = "Now: %s save, %s%s" % ["story" if WorldState.story_mode() else "free roam", Story.chapter().replace("_", " "),
 			("   ·   bounty on %s (%s)" % [b.name, b.state]) if str(b.get("state", "")) in ["out", "dead"] else ""]
-		pick.select(maxi(0, Story.index(Story.chapter()))))
+		var at := Story.index(Story.chapter())
+		pick.select(maxi(0, at))
+		for i in pick.item_count:
+			pick.set_item_disabled(i, WorldState.story_mode() and (i <= at or not Story.applies(Story.chapters()[i])))
+		go.text = "Skip ahead" if WorldState.story_mode() else "Skip to it")
 	return v.get_parent()
+
+
+## Move the main story to chapter `id`. Free roam: at once, any chapter. A story
+## save: only ahead, and only after the player says yes to STUCK_WARNING (the
+## characters may have a hint first). Returns false when it will not skip.
+func skip_chapter(id: String) -> bool:
+	if Story.index(id) < 0:
+		return false
+	if not WorldState.story_mode():
+		Story.skip_to(id)
+		refresh()
+		return true
+	if Story.index(id) <= Story.index(Story.chapter()) or not Story.applies(Story.chapter_cfg(id)):
+		return false
+	_skip_to = id
+	skip_confirm.popup_centered()
+	return true
 
 
 ## Issue #64: back to the start, as on a first play. Everything the player has or
@@ -515,6 +598,10 @@ func new_game(mode: String, reload := true) -> void:
 	WorldState.new_game(mode)
 	WorldState.names = kept
 	ShipSalesman.greeted = false
+	if WorldState.story_mode():
+		# what free roam may have switched, which outlives the town reloading
+		GameFlow.dogfight_override = null
+		NpcBody.show_debug = false
 	if demo != null and demo.bar != null:
 		for s in demo.bar.spots:
 			s.brain.rel = Relationship.new()
@@ -556,7 +643,7 @@ func _llm_tab() -> Control:
 const KEYS := [
 	["F1", "Info: planet, town, time, credits, standing"],
 	["F3", "AI debug overlay"],
-	["F4", "Guard debug (what each guard sees and hears)"],
+	["F4", "Guard debug (what each guard sees and hears; free roam only)"],
 	["F10", "AI model settings: the LLM tab here (Shift+F10: next model)"],
 	["F11", "These settings"],
 	["E", "Interact: talk, board, ride, pick up"],
