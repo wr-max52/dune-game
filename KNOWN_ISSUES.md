@@ -83,6 +83,17 @@ boot. Five stacked PRs: arms, scope, sword, feel and sprint, animations.
 - `test_sword_combo`'s `test_early_press_does_not_buffer` and
   `test_pose_keys_are_continuous` fail, on main too.
 
+**Follow-up polish (2026-10-31):** the sword hilt now sits in the closed fingers
+(`fist_seat`), an upper arm that shows only near the elbow ends the floating
+forearms when you look down, the muzzle light no longer turns the arm flat
+orange, aimed in the rifle's barrel stays under the scope, and the scope has the
+rifle's twill and an orange band. Checked from stills and the smoke test only.
+- **The hilt is thicker than the closed fingers' hollow**, so the fingers sink a
+  little into it; from the eye only the knuckles show, which is the intent.
+- **The muzzle flash still tints the hand** warm for its few frames; that is meant.
+- **Aimed in, the top of the barrel and rail reach into the bottom of the scope's
+  front lens**, under the reticle; through the open tube they fill the lower ring.
+
 ## After issue #96, desert pack camps (2026-10-29)
 
 **Checked:** headless only. `scenes/natives_trace.gd` (real physics, the real

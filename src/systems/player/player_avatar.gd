@@ -552,7 +552,8 @@ func _process(delta: float) -> void:
 	var t := maxf(0.01, float(Ads.spec(look, current).blend_s))
 	ads_blend = move_toward(ads_blend, 1.0 if want else 0.0, delta / t)
 	if current != "" and weapons.has(current):
-		GunSights.scope_view(weapons[current], ads_blend > 0.85)
+		var scope: Dictionary = (look.get(current, {}) as Dictionary).get("scope", {})
+		GunSights.scope_view(weapons[current], ads_blend > 0.85, float(scope.get("barrel_from", 0.0)))
 	if ads_blend > 0.0 and current != "" and weapons.has(current):
 		_place_weapon(_last_upper, _last_pitch)
 		if skin != null:
@@ -678,7 +679,8 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), pole_r)
 		if in_fist:
 			var fist := SwordCombo.fpv_fist(w.transform, grips.r, kit.chest_space(body, joints.r_elbow),
-				CharacterKit.FOREARM + CharacterKit.HAND_REACH)
+				CharacterKit.FOREARM + CharacterKit.HAND_REACH,
+				_v2(_fpv._hand().get("fist_seat", [])) if _fpv != null else Vector2.ZERO)
 			w.transform = fist[0]
 			(joints.r_wrist as Node3D).basis = Basis(Vector3.UP, float(fist[1]))
 	# Issue #229: aimed in, the left hand joins even a one-handed gun.
@@ -880,3 +882,9 @@ static func _v3(a) -> Vector3:
 	if a is Vector3:
 		return a
 	return Vector3.ZERO
+
+
+static func _v2(a) -> Vector2:
+	if a is Array and a.size() >= 2:
+		return Vector2(float(a[0]), float(a[1]))
+	return Vector2.ZERO
