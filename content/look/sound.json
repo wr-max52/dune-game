@@ -45,6 +45,48 @@
     "slide_scuff":  { "stream": "res://assets/audio/sfx/slide_scuff.wav", "volume_db": -10.0, "pitch": [0.94, 1.06] }
   },
   "max_one_shots": 24,
+  "club": {
+    "note": "Issue #104: the cantina club mix. One playlist per planet (the planet's \"club\"; \"default\" when it names none). Each track: a stream and a few mood tags Oda can pick from. 'hear' metres from the walls you start to hear it, up to 'outside' of full volume at the wall, muffled to 'muffle_hz'; inside it opens up to 'open_hz'. Songs blend over 'fade' seconds. Tracks are free (CC0 / CC-BY / Pixabay) in the taste of the artists in the issue, not their releases.",
+    "default": "dust_lounge",
+    "volume_db": -10.0,
+    "fade": 10.0,
+    "hear": 40.0,
+    "outside": 0.5,
+    "muffle_hz": 500.0,
+    "open_hz": 20000.0,
+    "ease": 2.0,
+    "stop_fade": 1.5,
+    "moods": ["chill", "warm", "dreamy", "hypnotic", "uplifting", "energetic", "bright", "hard", "dark", "gritty"],
+    "playlists": {
+      "dust_lounge": [
+        { "stream": "res://assets/audio/music/club/dust_lounge/01_hakuna_matata.mp3", "moods": ["uplifting", "warm"], "source": "https://pixabay.com/music/afrobeat-hakuna-matata-afro-house-copyright-free-music-play-house-322660/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/02_we.mp3", "moods": ["energetic", "warm"], "source": "https://pixabay.com/music/upbeat-we-play-house-afro-house-music-313255/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/03_tribal_groove.mp3", "moods": ["hypnotic", "energetic"], "source": "https://pixabay.com/music/upbeat-play-house-tribal-groove-337745/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/04_la_nuit.mp3", "moods": ["chill", "warm"], "source": "https://pixabay.com/music/upbeat-la-nuit-play-house-afro-house-music-469491/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/05_satisfaction.mp3", "moods": ["chill", "uplifting"], "source": "https://pixabay.com/music/soft-house-play-house-satisfaction-482648/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/06_deep_house_whispers.mp3", "moods": ["hypnotic", "chill"], "source": "https://pixabay.com/music/dance-deep-house-whispers-play-house-no-copyright-music-play-house-206943/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/07_on_my_mind.mp3", "moods": ["warm", "uplifting"], "source": "https://pixabay.com/music/afrobeat-play-house-on-my-mind-ala-bali-afro-house-music-559722/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/08_messy.mp3", "moods": ["energetic", "warm"], "source": "https://pixabay.com/music/upbeat-play-house-messy-afro-house-version-306948/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/09_hold_me_close.mp3", "moods": ["chill", "dreamy"], "source": "https://pixabay.com/music/deep-house-josh-hook-amp-play-house-hold-me-close-448217/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/10_my_love.mp3", "moods": ["dreamy", "uplifting"], "source": "https://pixabay.com/music/upbeat-my-love-melodic-afro-deep-house-343626/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/11_dirty_house.mp3", "moods": ["energetic", "dark"], "source": "https://pixabay.com/music/electronic-dirty-house-afro-house-music-459542/" },
+        { "stream": "res://assets/audio/music/club/dust_lounge/12_afro_time.mp3", "moods": ["hypnotic", "warm"], "source": "https://freemusicarchive.org/music/play-house/single/afro-time" }
+      ],
+      "salvage_rave": [
+        { "stream": "res://assets/audio/music/club/salvage_rave/01_deep_melodic_garage.mp3", "moods": ["chill", "dreamy"], "source": "https://pixabay.com/music/electronic-deep-melodic-garage-465157/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/02_uk_garage_vibe.mp3", "moods": ["energetic", "uplifting"], "source": "https://pixabay.com/music/upbeat-uk-garage-vibe-402489/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/03_uk_garage.mp3", "moods": ["energetic", "bright"], "source": "https://pixabay.com/music/upbeat-uk-garage-123271/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/04_uk_garage_2.mp3", "moods": ["dark", "energetic"], "source": "https://pixabay.com/music/upbeat-uk-garage-2-123272/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/05_breakbeat_monda.mp3", "moods": ["energetic", "uplifting"], "source": "https://pixabay.com/music/dance-breakbeat-512908/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/06_rave_under_highway.mp3", "moods": ["gritty", "hard"], "source": "https://pixabay.com/music/upbeat-techsonik-rave-under-highway-405095/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/07_instrumental_rave_2.mp3", "moods": ["hard", "dark"], "source": "https://pixabay.com/music/techno-trance-instrumental-rave-music-2-199103/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/08_crave_the_rave.mp3", "moods": ["hard", "energetic"], "source": "https://pixabay.com/music/electro-crave-the-rave-456081/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/09_90s_clubbing.mp3", "moods": ["uplifting", "energetic"], "source": "https://pixabay.com/music/dance-90s-clubbing-205897/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/10_breakbeat_mountain.mp3", "moods": ["hard", "gritty"], "source": "https://pixabay.com/music/upbeat-breakbeat-137024/" },
+        { "stream": "res://assets/audio/music/club/salvage_rave/11_funk_breakbeat.mp3", "moods": ["energetic", "warm"], "source": "https://pixabay.com/music/funk-funk-breakbeat-266615/" }
+      ]
+    }
+  },
   "music": {
     "volume_db": -12.0,
     "ambient": [

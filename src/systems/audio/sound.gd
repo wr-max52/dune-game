@@ -8,12 +8,22 @@ extends Node
 ##                                      plays, stops and pitches it
 ##   Sound.battle()                     an NPC just fired at the player
 ##   Sound.set_space(true)              a fight in orbit started
+##   Sound.set_club(id, near, inside)   issue #104: where you are from a cantina
+##   Sound.set_club_live(false)         the band is dead: the club goes quiet
+##   Sound.club_vibe("hard")            Oda changes the song to one with that mood
 ##
 ## The music is three ambient tracks that cycle with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
 ## after, and a space track during a fight in orbit (not for being up there:
 ## nothing marks where space starts). Space beats battle beats
 ## ambient. Credits going up or down make a coin sound wherever they changed.
+##
+## Issue #104: the club mix is a layer of its own (two more decks on the Club
+## bus) over the score (the decks above, on the Score bus). Near a cantina it
+## fades in muffled through the wall (a low-pass on the Club bus) and the score
+## ducks under it; inside the door it is the only music, so gunfire in the club
+## does not cut it. Each planet's club has its own playlist, shuffled, and songs
+## blend into each other over `club.fade` seconds.
 ##
 ## Static and lazy, like GameFlow and WorldState (no autoload): the first call
 ## puts one node under the tree root, where it outlives scene changes, so the
@@ -24,6 +34,8 @@ const DATA := "res://content/look/sound.json"
 const SETTINGS_PATH := "user://settings/sound.cfg"
 const MUSIC_BUS := "Music"
 const SFX_BUS := "SFX"
+const SCORE_BUS := "Score"     ## ambient, battle and space (sends to Music)
+const CLUB_BUS := "Club"       ## the club mix, with its low-pass (sends to Music)
 const SILENT_DB := -60.0
 
 static var _lib: Sound
@@ -41,6 +53,19 @@ var _spare: AudioStreamPlayer  ## the last one, fading out
 var _tw: Tween
 var _credits := -1
 var _carried: Dictionary = {}  ## key -> AudioStreamPlayer (carried_loop)
+var club := ""                 ## issue #104: the playlist of the club you are near ("" = none)
+var club_near := 0.0           ## 0 out of earshot .. 1 at the wall
+var club_inside := false
+var club_live := true          ## false once a band member is killed
+var club_mood := ""            ## what Oda was last asked for ("" = anything)
+var club_level := 0.0          ## the club layer now, 0..1, eased toward its target
+var club_open := 0.0           ## 0 muffled through the wall .. 1 inside, eased
+var club_track := ""           ## the path playing on the club deck
+var _club_deck: AudioStreamPlayer
+var _club_spare: AudioStreamPlayer
+var _club_tw: Tween
+var _club_bag: Array = []      ## paths still to play before the playlist reshuffles
+var _club_playing := ""        ## the playlist the club deck is playing from
 
 
 # ------------------------------------------------------------------ the calls
@@ -118,6 +143,33 @@ static func set_space(on: bool) -> void:
 	lib().in_space = on
 
 
+## Issue #104: the town says where the player is from its cantina each frame:
+## `id` the club's playlist ("" when there is no club), `near` 0 out of earshot
+## .. 1 at the wall, `inside` past the door.
+static func set_club(id: String, near: float, inside: bool) -> void:
+	var s := lib()
+	s.club = id
+	s.club_near = clampf(near, 0.0, 1.0)
+	s.club_inside = inside
+
+
+## A band member was killed (false): the club music stops. A new band (true).
+static func set_club_live(on: bool) -> void:
+	lib().club_live = on
+
+
+## Oda puts on a song with this mood tag (any song when none has it). False when
+## the club has nothing to play.
+static func club_vibe(mood: String) -> bool:
+	return lib().vibe(mood)
+
+
+func vibe(mood: String) -> bool:
+	club_mood = mood
+	_club_bag.clear()
+	return _club_next()
+
+
 ## Start the music if it is not already going (each playable scene calls this).
 static func start_music() -> void:
 	lib().music_on = true
@@ -163,6 +215,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_deck = _music_player()
 	_spare = _music_player()
+	_club_deck = _music_player(CLUB_BUS)
+	_club_spare = _music_player(CLUB_BUS)
 
 
 func _process(dt: float) -> void:
@@ -170,6 +224,7 @@ func _process(dt: float) -> void:
 	_watch_credits()
 	if not music_on:
 		return
+	_club_process(dt)
 	var want := want_mode()
 	if want != mode:
 		_switch(want)
@@ -237,6 +292,135 @@ func _switch(to: String) -> void:
 		_tw.chain().tween_callback(old.stop)
 
 
+# ------------------------------------------------------------------ the club (issue #104)
+
+func _club_cfg() -> Dictionary:
+	return cfg.get("club", {})
+
+
+## The tracks of playlist `id` that exist: the ones tagged `mood` when any are,
+## else all of them.
+func club_tracks(id: String, mood := "") -> Array:
+	var all: Array = []
+	var tagged: Array = []
+	for t in _club_cfg().get("playlists", {}).get(id, []):
+		var path := str(t.get("stream", "")) if t is Dictionary else str(t)
+		if path == "" or not ResourceLoader.exists(path):
+			continue
+		all.append(path)
+		if mood != "" and t is Dictionary and (t.get("moods", []) as Array).has(mood):
+			tagged.append(path)
+	return tagged if not tagged.is_empty() else all
+
+
+## How loud the club layer should be, 0..1: nothing in space or away from a
+## club, up to `outside` at the wall, all of it inside.
+func club_target() -> float:
+	if club == "" or in_space:
+		return 0.0
+	if club_inside:
+		return 1.0
+	return club_near * float(_club_cfg().get("outside", 0.5))
+
+
+func _club_process(dt: float) -> void:
+	var c := _club_cfg()
+	var target := club_target()
+	var k := clampf(dt * float(c.get("ease", 2.0)), 0.0, 1.0)
+	club_level = lerpf(club_level, target, k)
+	club_open = lerpf(club_open, 1.0 if club_inside else 0.0, k)
+	if target == 0.0 and club_level < 0.002:
+		club_level = 0.0
+	_club_mix()
+	if club_level == 0.0:
+		# Out of earshot: stop, so the next walk past starts a new song.
+		if _club_deck.playing:
+			_club_stop(0.0)
+	elif not club_live:
+		# The band is dead: the music stops (the score stays ducked inside).
+		if _club_playing != "":
+			_club_stop(float(c.get("stop_fade", 1.5)))
+	elif _club_playing != club or not _club_deck.playing:
+		_club_next()
+	elif _club_deck.stream != null and _club_deck.get_playback_position() >= _club_deck.stream.get_length() - _club_fade():
+		_club_next()
+
+
+## The bus levels: the club layer up by `club_level`, the score down by it, and
+## the wall's muffle opening as you come in.
+func _club_mix() -> void:
+	var c := _club_cfg()
+	var ci := AudioServer.get_bus_index(CLUB_BUS)
+	var si := AudioServer.get_bus_index(SCORE_BUS)
+	if ci >= 0:
+		AudioServer.set_bus_volume_db(ci, linear_to_db(maxf(club_level, 0.0001)))
+		var lp := AudioServer.get_bus_effect(ci, 0) as AudioEffectLowPassFilter
+		if lp != null:
+			var lo := log(float(c.get("muffle_hz", 500.0)))
+			var hi := log(float(c.get("open_hz", 20000.0)))
+			lp.cutoff_hz = exp(lerpf(lo, hi, club_open))
+	if si >= 0:
+		AudioServer.set_bus_volume_db(si, linear_to_db(maxf(1.0 - club_level, 0.0001)))
+
+
+## The next song: from a shuffled bag of the playlist, never the same twice in a
+## row. False when there is nothing to play.
+func _club_next() -> bool:
+	if club == "" or not club_live:
+		return false
+	if _club_bag.is_empty() or _club_playing != club:
+		_club_bag = club_tracks(club, club_mood)
+		_club_bag.shuffle()
+		if _club_bag.size() > 1 and _club_bag.back() == club_track:
+			_club_bag.push_front(_club_bag.pop_back())
+	if _club_bag.is_empty():
+		return false
+	var path: String = _club_bag.pop_back()
+	var stream := _load(path)
+	if stream == null:
+		return false
+	# A blend when a song is already going; a quick start when walking up
+	# (the layer's own level fades it in then).
+	var fade := _club_fade() if _club_deck.playing else 0.5
+	_club_playing = club
+	club_track = path
+	var old := _club_deck
+	_club_deck = _club_spare
+	_club_spare = old
+	if _club_tw != null:
+		_club_tw.kill()
+	_club_deck.stream = stream
+	_club_deck.volume_db = SILENT_DB
+	_club_deck.play()
+	_club_tw = create_tween().set_parallel(true)
+	_club_tw.tween_property(_club_deck, "volume_db", float(_club_cfg().get("volume_db", -10.0)), fade)
+	if old.playing:
+		_club_tw.tween_property(old, "volume_db", SILENT_DB, fade)
+		_club_tw.chain().tween_callback(old.stop)
+	return true
+
+
+func _club_stop(fade: float) -> void:
+	_club_playing = ""
+	club_track = ""
+	_club_bag.clear()
+	if _club_tw != null:
+		_club_tw.kill()
+	for p: AudioStreamPlayer in [_club_deck, _club_spare]:
+		if not p.playing:
+			continue
+		if fade <= 0.0:
+			p.stop()
+		else:
+			_club_tw = create_tween()
+			_club_tw.tween_property(p, "volume_db", SILENT_DB, fade)
+			_club_tw.tween_callback(p.stop)
+
+
+func _club_fade() -> float:
+	return float(_club_cfg().get("fade", 10.0))
+
+
 func _watch_credits() -> void:
 	var now: int = WorldState.credits
 	if _credits >= 0 and now != _credits:
@@ -248,9 +432,9 @@ func _fade() -> float:
 	return float(cfg.get("music", {}).get("fade", 4.0))
 
 
-func _music_player() -> AudioStreamPlayer:
+func _music_player(bus := SCORE_BUS) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
-	p.bus = MUSIC_BUS
+	p.bus = bus
 	p.volume_db = SILENT_DB
 	add_child(p)
 	return p

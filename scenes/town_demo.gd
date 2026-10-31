@@ -224,6 +224,7 @@ func build_plan(staged_build: bool) -> Array:
 		return plan
 	add.call("music", SHELL, func(): Sound.start_music(); return true)      # issue #16: carries on across launches and landings
 	add.call("player", SHELL, func(): _spawn_player(); return true)
+	add.call("club", SHELL, func(): _add_club_music(); return true)    # issue #104: the cantina's club mix
 	add.call("pads", SHELL, func(): _build_launch_pads(); return true)
 	add.call("world_flags", SHELL, func(): _world_from_scene(); return true)
 	if use_look and with_body:
@@ -515,6 +516,15 @@ func _flat_mats() -> LookMaterials:
 	if _mats == null:
 		_mats = LookMaterials.new()
 	return _mats
+
+
+## Issue #104: the club mix of this planet's cantina, heard by distance from it.
+func _add_club_music() -> void:
+	for z in town.zones():
+		if str(z.get("id", "")) == "cantina":
+			var id := str(planet.get("cfg", {}).get("club", Sound.lib().cfg.get("club", {}).get("default", "")))
+			add_child(ClubMusic.new().setup(id, z, _player))
+			return
 
 
 func _spawn_player() -> void:
