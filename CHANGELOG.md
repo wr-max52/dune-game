@@ -2,6 +2,7 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The round port (issue #237, parts 1 to 3, 2026-10-31)
 ## Eject from the ship in flight (issue #271: #274, #275, #276, 2026-10-31)
 
 - **Falls hurt (#274).** Landing faster than 16 m/s (a drop of about 6 m) costs
@@ -61,8 +62,15 @@ Plain English, newest on top. One entry per milestone.
   about twice the floor space (61,600 m² inside), two manned gate towers, a
   76 m bowl with eight surface pads round it, and huts and towers that wrap
   round the back until they nearly meet behind the cantina, with only the back
-  lane to the back gate between them. The market, barracks and cantina are
-  today's for now; they grow in the next parts.
+  lane to the back gate between them.
+- **The round port's market is three times today's** (part 3): 48 stalls along
+  three curved aisles, with two aisles cutting across them and six shops on the
+  far side. Every stall is taller (a 3.4 m back panel, its canopy 0.9 m higher,
+  from the stall's `canopy_lift`). Twelve merchants (the four traders as before)
+  and six shoppers walking the aisles.
+- **Its barracks are about twice the size**: a bigger hall with the riflemen on
+  its roof, the bunk tower and upper block bridged as before, a second block,
+  an armoury, and a yard with the Remnant's pad and a drill ground.
 - **The home planet still uses the square port** until the round one is done.
   F11 > World > Town builds it to the round one for the rest of the run.
 - **New box kind `ring`**: a round wall cut open at gates, which any layout can
