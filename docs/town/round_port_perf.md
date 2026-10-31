@@ -30,3 +30,13 @@ stages the handoff the same way (`HANDOFF_STATION_STAGED=true`, ready in 29.5 ms
 Not covered: a rendered on-foot walk through the town. `scenes/m14_flight_trace.gd`
 did not compile as an `-s` script on either layout (the NpcVoice autoload is not
 registered yet when a `-s` script compiles), so it gave no numbers.
+
+## With the fill (issue #237, filling the round port)
+
+The fill adds 80 boxes (house clutter, six cargo yards; 454 in all) and nine
+more people (six dock workers, three residents). Two rendered runs of the same
+trace gave port-phase p95 12.1 and 13.3 ms. Those runs are **not** a clean
+comparison: ten other Godot processes were running on the machine at the time,
+and the Grit Station phase, which the fill does not touch, got worse by the same
+amount or more (p99 9.1 -> 33.3 ms). Re-run the three traces back to back on a
+quiet machine before reading anything into them.

@@ -2138,6 +2138,486 @@
    "note": "Issue #237: a surface pad on the ring round the bowl. No collision: you walk across it."
   },
   {
+   "id": "yard_1_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    38.99,
+    0.0,
+    32.94
+   ],
+   "max": [
+    41.49,
+    2.6,
+    38.94
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_1_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    42.4,
+    0.0,
+    34.7
+   ],
+   "max": [
+    44.6,
+    1.0,
+    36.45
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_1_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    42.55,
+    0.0,
+    39.55
+   ],
+   "max": [
+    44.5,
+    1.45,
+    41.0
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_1_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    41.5,
+    0.0,
+    30.1
+   ],
+   "max": [
+    43.5,
+    0.93,
+    31.75
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_1_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    39.4,
+    0.0,
+    40.0
+   ],
+   "max": [
+    41.55,
+    1.03,
+    41.6
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_2_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    1.05,
+    0.0,
+    53.49
+   ],
+   "max": [
+    7.05,
+    2.6,
+    55.99
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_2_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -2.65,
+    0.0,
+    48.4
+   ],
+   "max": [
+    -1.0,
+    1.09,
+    49.75
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_2_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    4.3,
+    0.0,
+    50.3
+   ],
+   "max": [
+    5.8,
+    0.99,
+    51.6
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_2_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    0.9,
+    0.0,
+    47.4
+   ],
+   "max": [
+    3.15,
+    0.98,
+    48.95
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_2_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -2.5,
+    0.0,
+    53.05
+   ],
+   "max": [
+    -0.65,
+    1.32,
+    54.25
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_3_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    -39.8,
+    0.0,
+    38.88
+   ],
+   "max": [
+    -33.8,
+    2.6,
+    41.38
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_3_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -37.85,
+    0.0,
+    43.3
+   ],
+   "max": [
+    -35.65,
+    1.49,
+    44.65
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_3_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -41.3,
+    0.0,
+    33.2
+   ],
+   "max": [
+    -38.95,
+    1.21,
+    35.15
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_3_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -32.5,
+    0.0,
+    42.3
+   ],
+   "max": [
+    -30.7,
+    1.27,
+    43.95
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_3_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -32.45,
+    0.0,
+    39.85
+   ],
+   "max": [
+    -30.2,
+    1.04,
+    41.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_4_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    -41.33,
+    0.0,
+    -37.09
+   ],
+   "max": [
+    -38.83,
+    2.6,
+    -31.09
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_4_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -43.95,
+    0.0,
+    -40.75
+   ],
+   "max": [
+    -41.65,
+    1.12,
+    -38.9
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_4_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -44.6,
+    0.0,
+    -34.95
+   ],
+   "max": [
+    -42.45,
+    1.21,
+    -33.1
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_4_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -37.8,
+    0.0,
+    -41.2
+   ],
+   "max": [
+    -35.9,
+    1.35,
+    -39.6
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_4_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -44.6,
+    0.0,
+    -31.9
+   ],
+   "max": [
+    -42.75,
+    0.9,
+    -29.95
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_5_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    -5.28,
+    0.0,
+    -52.31
+   ],
+   "max": [
+    0.72,
+    2.6,
+    -49.81
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_5_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -2.85,
+    0.0,
+    -58.35
+   ],
+   "max": [
+    -1.15,
+    1.18,
+    -57.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_5_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -6.15,
+    0.0,
+    -56.5
+   ],
+   "max": [
+    -3.85,
+    1.14,
+    -54.5
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_5_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    1.5,
+    0.0,
+    -58.5
+   ],
+   "max": [
+    3.55,
+    0.91,
+    -56.9
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_5_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    -0.1,
+    0.0,
+    -55.7
+   ],
+   "max": [
+    1.4,
+    1.23,
+    -54.25
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_6_container",
+   "zone": "spaceport",
+   "kind": "solid",
+   "min": [
+    32.59,
+    0.0,
+    -41.46
+   ],
+   "max": [
+    38.59,
+    2.6,
+    -38.96
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_6_crates_1",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    39.75,
+    0.0,
+    -37.6
+   ],
+   "max": [
+    41.55,
+    0.99,
+    -36.2
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_6_crates_2",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    39.45,
+    0.0,
+    -40.8
+   ],
+   "max": [
+    41.4,
+    1.04,
+    -39.55
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_6_crates_3",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    39.6,
+    0.0,
+    -35.0
+   ],
+   "max": [
+    41.65,
+    1.25,
+    -33.5
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "yard_6_crates_4",
+   "zone": "spaceport",
+   "kind": "cover",
+   "min": [
+    39.5,
+    0.0,
+    -44.7
+   ],
+   "max": [
+    41.35,
+    1.01,
+    -43.0
+   ],
+   "look": "crates"
+  },
+  {
    "id": "cantina_stage",
    "zone": "cantina",
    "kind": "cover",
@@ -4341,11 +4821,11 @@
     -131.5
    ],
    "max": [
-    -23.5,
+    -24.5,
     4.0,
-    -127.5
+    -123.5
    ],
-   "look": "hut_block",
+   "look": "hut_long",
    "face": "+z"
   },
   {
@@ -4353,37 +4833,20 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -39.5,
+    -41.0,
     0.0,
-    -127.5
+    -130.0
    ],
    "max": [
-    -35.5,
-    4.0,
-    -122.5
+    -33.0,
+    3.5,
+    -126.0
    ],
-   "look": "hut_block",
+   "look": "hut_long",
    "face": "+z"
   },
   {
    "id": "house_w_03",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -33.0,
-    0.0,
-    -126.0
-   ],
-   "max": [
-    -28.0,
-    3.5,
-    -122.0
-   ],
-   "look": "hut_block",
-   "face": "+z"
-  },
-  {
-   "id": "house_w_04",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4400,20 +4863,37 @@
    "face": "+z"
   },
   {
+   "id": "house_w_04",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -41.5,
+    0.0,
+    -124.0
+   ],
+   "max": [
+    -35.5,
+    4.5,
+    -119.0
+   ],
+   "look": "hut_block",
+   "face": "+z"
+  },
+  {
    "id": "house_w_05",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
     -48.0,
     0.0,
-    -124.0
+    -123.0
    ],
    "max": [
-    -41.0,
-    4.0,
+    -43.0,
+    3.5,
     -119.0
    ],
-   "look": "hut_stepped",
+   "look": "hut_block",
    "face": "+z"
   },
   {
@@ -4421,17 +4901,17 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -69.0,
+    -66.5,
     0.0,
-    -118.0
+    -114.0
    ],
    "max": [
-    -64.0,
-    3.5,
-    -113.0
+    -60.5,
+    5.0,
+    -108.0
    ],
    "look": "hut_round",
-   "face": "+x",
+   "face": "+z",
    "shape": "round"
   },
   {
@@ -4439,16 +4919,16 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -26.0,
+    -49.0,
     0.0,
-    -115.5
+    -114.0
    ],
    "max": [
-    -21.0,
-    4.5,
-    -109.5
+    -42.0,
+    4.0,
+    -109.0
    ],
-   "look": "hut_block",
+   "look": "hut_stepped",
    "face": "-z"
   },
   {
@@ -4456,16 +4936,16 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -33.0,
+    -30.5,
     0.0,
-    -115.0
+    -114.0
    ],
    "max": [
-    -28.0,
-    4.0,
+    -25.5,
+    4.5,
     -108.0
    ],
-   "look": "hut_stepped",
+   "look": "hut_block",
    "face": "-z"
   },
   {
@@ -4473,14 +4953,14 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -48.0,
+    -40.5,
     0.0,
-    -114.0
+    -113.5
    ],
    "max": [
-    -42.0,
-    3.5,
-    -109.0
+    -34.5,
+    4.5,
+    -108.5
    ],
    "look": "hut_block",
    "face": "-z"
@@ -4490,30 +4970,30 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -40.5,
+    -24.0,
     0.0,
-    -114.0
+    -112.0
    ],
    "max": [
-    -35.5,
-    4.0,
-    -110.0
+    -20.0,
+    3.5,
+    -107.0
    ],
    "look": "hut_block",
-   "face": "-z"
+   "face": "+z"
   },
   {
    "id": "house_w_11",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -74.5,
+    -75.5,
     0.0,
     -111.0
    ],
    "max": [
-    -67.5,
-    4.0,
+    -68.5,
+    4.5,
     -106.0
    ],
    "look": "hut_stepped",
@@ -4524,21 +5004,37 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
+    -49.5,
+    0.0,
+    -108.0
+   ],
+   "max": [
+    -42.5,
+    4.0,
+    -103.0
+   ],
+   "look": "hut_stepped",
+   "face": "-x"
+  },
+  {
+   "id": "house_w_13",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
     -28.5,
     0.0,
     -105.5
    ],
    "max": [
-    -23.5,
-    3.5,
+    -22.5,
+    4.5,
     -100.5
    ],
-   "look": "hut_round",
-   "face": "+z",
-   "shape": "round"
+   "look": "hut_block",
+   "face": "+z"
   },
   {
-   "id": "house_w_13",
+   "id": "house_w_14",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4555,24 +5051,24 @@
    "face": "+x"
   },
   {
-   "id": "house_w_14",
+   "id": "house_w_15",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -62.0,
+    -60.0,
     0.0,
-    -103.5
+    -104.0
    ],
    "max": [
     -55.0,
-    4.5,
-    -98.5
+    5.0,
+    -100.0
    ],
-   "look": "hut_stepped",
+   "look": "hut_block",
    "face": "-z"
   },
   {
-   "id": "house_w_15",
+   "id": "house_w_16",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4590,7 +5086,24 @@
    "shape": "round"
   },
   {
-   "id": "house_w_16",
+   "id": "house_w_17",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -69.0,
+    0.0,
+    -101.5
+   ],
+   "max": [
+    -62.0,
+    4.0,
+    -96.5
+   ],
+   "look": "hut_stepped",
+   "face": "-z"
+  },
+  {
+   "id": "house_w_18",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4607,7 +5120,7 @@
    "face": "+z"
   },
   {
-   "id": "house_w_17",
+   "id": "house_w_19",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4625,24 +5138,7 @@
    "shape": "round"
   },
   {
-   "id": "house_w_18",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -71.0,
-    0.0,
-    -101.0
-   ],
-   "max": [
-    -64.0,
-    4.0,
-    -96.0
-   ],
-   "look": "hut_stepped",
-   "face": "-z"
-  },
-  {
-   "id": "house_w_19",
+   "id": "house_w_20",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4659,68 +5155,67 @@
    "face": "+z"
   },
   {
-   "id": "house_w_20",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -61.5,
-    0.0,
-    -97.0
-   ],
-   "max": [
-    -56.5,
-    3.5,
-    -93.0
-   ],
-   "look": "hut_block",
-   "face": "+x"
-  },
-  {
    "id": "house_w_21",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -23.0,
+    -75.5,
     0.0,
-    -96.0
+    -97.0
    ],
    "max": [
-    -18.0,
-    3.5,
-    -92.0
+    -70.5,
+    4.0,
+    -93.0
    ],
    "look": "hut_block",
-   "face": "-z"
+   "face": "-x"
   },
   {
    "id": "house_w_22",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -54.5,
+    -55.0,
     0.0,
-    -94.0
+    -96.0
    ],
    "max": [
-    -49.5,
+    -50.0,
     4.5,
-    -89.0
+    -90.0
    ],
-   "look": "hut_round",
-   "face": "+x",
-   "shape": "round"
+   "look": "hut_block",
+   "face": "+x"
   },
   {
    "id": "house_w_23",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -33.0,
+    -24.5,
+    0.0,
+    -95.5
+   ],
+   "max": [
+    -18.5,
+    4.5,
+    -90.5
+   ],
+   "look": "hut_block",
+   "face": "-z"
+  },
+  {
+   "id": "house_w_24",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -33.5,
     0.0,
     -93.0
    ],
    "max": [
-    -25.0,
+    -25.5,
     4.0,
     -89.0
    ],
@@ -4728,7 +5223,24 @@
    "face": "-z"
   },
   {
-   "id": "house_w_24",
+   "id": "house_w_25",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -74.5,
+    0.0,
+    -92.0
+   ],
+   "max": [
+    -66.5,
+    4.0,
+    -88.0
+   ],
+   "look": "hut_long",
+   "face": "-x"
+  },
+  {
+   "id": "house_w_26",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4745,7 +5257,7 @@
    "face": "-z"
   },
   {
-   "id": "house_w_25",
+   "id": "house_w_27",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4762,7 +5274,7 @@
    "face": "-x"
   },
   {
-   "id": "house_w_26",
+   "id": "house_w_28",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4779,95 +5291,24 @@
    "face": "+z"
   },
   {
-   "id": "house_w_27",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -21.0,
-    0.0,
-    -89.0
-   ],
-   "max": [
-    -16.0,
-    3.5,
-    -84.0
-   ],
-   "look": "hut_round",
-   "face": "-z",
-   "shape": "round"
-  },
-  {
-   "id": "house_w_28",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -33.0,
-    0.0,
-    -87.0
-   ],
-   "max": [
-    -28.0,
-    4.0,
-    -82.0
-   ],
-   "look": "hut_round",
-   "face": "-z",
-   "shape": "round"
-  },
-  {
    "id": "house_w_29",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -42.5,
+    -99.5,
     0.0,
-    -86.0
+    -85.0
    ],
    "max": [
-    -37.5,
-    4.0,
-    -81.0
+    -95.5,
+    5.0,
+    -80.0
    ],
-   "look": "hut_round",
-   "face": "-x",
-   "shape": "round"
+   "look": "hut_block",
+   "face": "+x"
   },
   {
    "id": "house_w_30",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -26.5,
-    0.0,
-    -85.5
-   ],
-   "max": [
-    -22.5,
-    3.5,
-    -77.5
-   ],
-   "look": "hut_long",
-   "face": "-z"
-  },
-  {
-   "id": "house_w_31",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -107.5,
-    0.0,
-    -84.0
-   ],
-   "max": [
-    -103.5,
-    4.0,
-    -79.0
-   ],
-   "look": "hut_block",
-   "face": "-z"
-  },
-  {
-   "id": "house_w_32",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4884,24 +5325,7 @@
    "face": "+z"
   },
   {
-   "id": "house_w_33",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -101.5,
-    0.0,
-    -82.5
-   ],
-   "max": [
-    -97.5,
-    3.5,
-    -77.5
-   ],
-   "look": "hut_block",
-   "face": "+x"
-  },
-  {
-   "id": "house_w_34",
+   "id": "house_w_31",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4919,7 +5343,24 @@
    "shape": "round"
   },
   {
-   "id": "house_w_35",
+   "id": "house_w_32",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -39.5,
+    0.0,
+    -82.5
+   ],
+   "max": [
+    -35.5,
+    5.0,
+    -77.5
+   ],
+   "look": "hut_block",
+   "face": "-x"
+  },
+  {
+   "id": "house_w_33",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4936,42 +5377,25 @@
    "face": "+x"
   },
   {
-   "id": "house_w_36",
+   "id": "house_w_34",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -34.5,
+    -102.5,
     0.0,
-    -80.5
+    -78.5
    ],
    "max": [
-    -29.5,
-    4.0,
-    -75.5
+    -97.5,
+    3.5,
+    -73.5
    ],
    "look": "hut_round",
-   "face": "-x",
+   "face": "+x",
    "shape": "round"
   },
   {
-   "id": "house_w_37",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -91.5,
-    0.0,
-    -78.0
-   ],
-   "max": [
-    -86.5,
-    4.0,
-    -71.0
-   ],
-   "look": "hut_stepped",
-   "face": "-x"
-  },
-  {
-   "id": "house_w_38",
+   "id": "house_w_35",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -4989,16 +5413,16 @@
    "shape": "round"
   },
   {
-   "id": "house_w_39",
+   "id": "house_w_36",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -59.5,
+    -60.0,
     0.0,
     -76.0
    ],
    "max": [
-    -53.5,
+    -54.0,
     5.0,
     -70.0
    ],
@@ -5007,7 +5431,77 @@
    "shape": "round"
   },
   {
+   "id": "house_w_37",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -92.5,
+    0.0,
+    -75.5
+   ],
+   "max": [
+    -86.5,
+    5.0,
+    -69.5
+   ],
+   "look": "hut_round",
+   "face": "-x",
+   "shape": "round"
+  },
+  {
+   "id": "house_w_38",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -85.5,
+    0.0,
+    -75.0
+   ],
+   "max": [
+    -81.5,
+    3.5,
+    -70.0
+   ],
+   "look": "hut_block",
+   "face": "-z"
+  },
+  {
+   "id": "house_w_39",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -47.0,
+    0.0,
+    -74.5
+   ],
+   "max": [
+    -43.0,
+    3.5,
+    -69.5
+   ],
+   "look": "hut_block",
+   "face": "+x"
+  },
+  {
    "id": "house_w_40",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -53.0,
+    0.0,
+    -74.0
+   ],
+   "max": [
+    -48.0,
+    4.5,
+    -69.0
+   ],
+   "look": "hut_round",
+   "face": "-z",
+   "shape": "round"
+  },
+  {
+   "id": "house_w_41",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -5024,58 +5518,7 @@
    "face": "-z"
   },
   {
-   "id": "house_w_41",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -48.5,
-    0.0,
-    -72.0
-   ],
-   "max": [
-    -43.5,
-    5.0,
-    -68.0
-   ],
-   "look": "hut_block",
-   "face": "+x"
-  },
-  {
    "id": "house_w_42",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -95.5,
-    0.0,
-    -69.5
-   ],
-   "max": [
-    -91.5,
-    4.0,
-    -61.5
-   ],
-   "look": "hut_long",
-   "face": "-z"
-  },
-  {
-   "id": "house_w_43",
-   "zone": "residential_w",
-   "kind": "solid",
-   "min": [
-    -87.5,
-    0.0,
-    -69.5
-   ],
-   "max": [
-    -83.5,
-    3.5,
-    -61.5
-   ],
-   "look": "hut_long",
-   "face": "+x"
-  },
-  {
-   "id": "house_w_44",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -5093,7 +5536,25 @@
    "shape": "round"
   },
   {
-   "id": "house_w_45",
+   "id": "house_w_43",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -90.0,
+    0.0,
+    -67.5
+   ],
+   "max": [
+    -84.0,
+    4.5,
+    -61.5
+   ],
+   "look": "hut_round",
+   "face": "+x",
+   "shape": "round"
+  },
+  {
+   "id": "house_w_44",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -5110,24 +5571,24 @@
    "face": "-x"
   },
   {
-   "id": "house_w_46",
+   "id": "house_w_45",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -120.5,
+    -98.0,
     0.0,
-    -64.5
+    -66.0
    ],
    "max": [
-    -115.5,
-    4.0,
-    -60.5
+    -94.0,
+    5.0,
+    -61.0
    ],
    "look": "hut_block",
-   "face": "+x"
+   "face": "-x"
   },
   {
-   "id": "house_w_47",
+   "id": "house_w_46",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
@@ -5142,6 +5603,23 @@
    ],
    "look": "hut_block",
    "face": "-x"
+  },
+  {
+   "id": "house_w_47",
+   "zone": "residential_w",
+   "kind": "solid",
+   "min": [
+    -121.0,
+    0.0,
+    -61.0
+   ],
+   "max": [
+    -117.0,
+    5.0,
+    -56.0
+   ],
+   "look": "hut_block",
+   "face": "+x"
   },
   {
    "id": "house_w_48",
@@ -5182,35 +5660,35 @@
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -121.5,
+    -78.5,
     0.0,
-    -57.0
+    -56.5
    ],
    "max": [
-    -116.5,
-    4.0,
-    -52.0
+    -70.5,
+    3.5,
+    -52.5
    ],
-   "look": "hut_round",
-   "face": "+x",
-   "shape": "round"
+   "look": "hut_long",
+   "face": "-x"
   },
   {
    "id": "house_w_51",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -81.0,
+    -122.0,
     0.0,
-    -54.5
+    -53.5
    ],
    "max": [
-    -77.0,
+    -117.0,
     3.5,
-    -49.5
+    -48.5
    ],
-   "look": "hut_block",
-   "face": "-x"
+   "look": "hut_round",
+   "face": "+x",
+   "shape": "round"
   },
   {
    "id": "house_w_52",
@@ -5219,50 +5697,51 @@
    "min": [
     -67.5,
     0.0,
-    -53.5
+    -52.5
    ],
    "max": [
     -62.5,
-    3.5,
+    4.0,
     -47.5
    ],
-   "look": "hut_block",
-   "face": "+x"
+   "look": "hut_round",
+   "face": "+x",
+   "shape": "round"
   },
   {
    "id": "house_w_53",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -75.0,
+    -81.5,
     0.0,
-    -51.0
+    -51.5
    ],
    "max": [
-    -70.0,
-    4.5,
-    -46.0
+    -76.5,
+    3.5,
+    -47.5
    ],
-   "look": "hut_round",
-   "face": "-x",
-   "shape": "round"
+   "look": "hut_block",
+   "face": "-x"
   },
   {
    "id": "house_w_54",
    "zone": "residential_w",
    "kind": "solid",
    "min": [
-    -123.0,
+    -124.5,
     0.0,
-    -50.5
+    -47.0
    ],
    "max": [
-    -118.0,
-    4.0,
-    -43.5
+    -118.5,
+    5.0,
+    -41.0
    ],
-   "look": "hut_stepped",
-   "face": "+x"
+   "look": "hut_round",
+   "face": "+x",
+   "shape": "round"
   },
   {
    "id": "well_w",
@@ -5286,17 +5765,17 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -130.0,
+    -134.0,
     0.0,
-    -18.5
+    -21.5
    ],
    "max": [
-    -122.0,
+    -126.0,
     17.0,
-    -10.5
+    -13.5
    ],
    "look": "tower_round",
-   "face": "+x",
+   "face": "-z",
    "shape": "round"
   },
   {
@@ -5304,16 +5783,16 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -129.0,
+    -130.0,
     0.0,
-    -6.5
+    -10.0
    ],
    "max": [
     -122.0,
-    10.0,
-    3.5
+    12.0,
+    -2.0
    ],
-   "look": "tower_wide",
+   "look": "tower_block",
    "face": "+x"
   },
   {
@@ -5321,39 +5800,72 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -131.5,
+    -130.0,
     0.0,
-    8.0
+    0.5
    ],
    "max": [
-    -123.5,
-    20.0,
-    16.0
+    -123.0,
+    12.0,
+    10.5
    ],
-   "look": "tower_round",
-   "face": "+x",
-   "shape": "round"
+   "look": "tower_wide",
+   "face": "+x"
   },
   {
    "id": "house_e_04",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -131.5,
+    -130.0,
     0.0,
-    19.0
+    13.0
+   ],
+   "max": [
+    -124.0,
+    10.0,
+    20.0
+   ],
+   "look": "tower_block",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_05",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -129.5,
+    0.0,
+    22.5
    ],
    "max": [
     -123.5,
-    17.0,
-    27.0
+    14.0,
+    29.5
+   ],
+   "look": "tower_block",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_06",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -103.5,
+    0.0,
+    28.0
+   ],
+   "max": [
+    -95.5,
+    13.0,
+    36.0
    ],
    "look": "tower_round",
    "face": "+x",
    "shape": "round"
   },
   {
-   "id": "house_e_05",
+   "id": "house_e_07",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5370,7 +5882,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_06",
+   "id": "house_e_08",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5387,7 +5899,7 @@
    "face": "-x"
   },
   {
-   "id": "house_e_07",
+   "id": "house_e_09",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5405,41 +5917,24 @@
    "shape": "round"
   },
   {
-   "id": "house_e_08",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -131.0,
-    0.0,
-    30.0
-   ],
-   "max": [
-    -123.0,
-    18.0,
-    38.0
-   ],
-   "look": "tower_block",
-   "face": "+x"
-  },
-  {
-   "id": "house_e_09",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -102.0,
-    0.0,
-    30.5
-   ],
-   "max": [
-    -96.0,
-    10.0,
-    37.5
-   ],
-   "look": "tower_block",
-   "face": "+x"
-  },
-  {
    "id": "house_e_10",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -128.5,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -122.5,
+    14.0,
+    39.0
+   ],
+   "look": "tower_block",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_11",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5457,60 +5952,76 @@
    "shape": "round"
   },
   {
-   "id": "house_e_11",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -124.5,
-    0.0,
-    48.5
-   ],
-   "max": [
-    -116.5,
-    20.0,
-    56.5
-   ],
-   "look": "tower_round",
-   "face": "+x",
-   "shape": "round"
-  },
-  {
    "id": "house_e_12",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -71.0,
+    -125.5,
     0.0,
-    48.5
+    43.0
    ],
    "max": [
-    -65.0,
-    14.0,
-    55.5
+    -119.5,
+    10.0,
+    50.0
    ],
    "look": "tower_block",
-   "face": "-z"
+   "face": "+x"
   },
   {
    "id": "house_e_13",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -62.5,
+    -74.0,
     0.0,
-    57.5
+    52.0
    ],
    "max": [
-    -54.5,
-    13.0,
-    65.5
+    -68.0,
+    14.0,
+    59.0
    ],
-   "look": "tower_round",
-   "face": "+x",
-   "shape": "round"
+   "look": "tower_block",
+   "face": "+z"
   },
   {
    "id": "house_e_14",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -65.5,
+    0.0,
+    52.0
+   ],
+   "max": [
+    -57.5,
+    20.0,
+    60.0
+   ],
+   "look": "tower_round",
+   "face": "+z",
+   "shape": "round"
+  },
+  {
+   "id": "house_e_15",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -122.5,
+    0.0,
+    54.5
+   ],
+   "max": [
+    -115.5,
+    10.0,
+    60.5
+   ],
+   "look": "tower_block",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_16",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5527,7 +6038,24 @@
    "face": "-x"
   },
   {
-   "id": "house_e_15",
+   "id": "house_e_17",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -62.0,
+    0.0,
+    62.5
+   ],
+   "max": [
+    -55.0,
+    10.0,
+    68.5
+   ],
+   "look": "tower_block",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_18",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5544,7 +6072,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_16",
+   "id": "house_e_19",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5561,7 +6089,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_17",
+   "id": "house_e_20",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5579,7 +6107,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_18",
+   "id": "house_e_21",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5596,7 +6124,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_19",
+   "id": "house_e_22",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5613,7 +6141,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_20",
+   "id": "house_e_23",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5630,7 +6158,7 @@
    "face": "-x"
   },
   {
-   "id": "house_e_21",
+   "id": "house_e_24",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5647,7 +6175,25 @@
    "face": "+z"
   },
   {
-   "id": "house_e_22",
+   "id": "house_e_25",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -99.0,
+    0.0,
+    85.5
+   ],
+   "max": [
+    -91.0,
+    17.0,
+    93.5
+   ],
+   "look": "tower_round",
+   "face": "-z",
+   "shape": "round"
+  },
+  {
+   "id": "house_e_26",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5664,7 +6210,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_23",
+   "id": "house_e_27",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5682,7 +6228,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_24",
+   "id": "house_e_28",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5699,7 +6245,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_25",
+   "id": "house_e_29",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5717,7 +6263,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_26",
+   "id": "house_e_30",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5734,7 +6280,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_27",
+   "id": "house_e_31",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5751,24 +6297,24 @@
    "face": "-z"
   },
   {
-   "id": "house_e_28",
+   "id": "house_e_32",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -55.0,
+    -45.5,
     0.0,
-    100.0
+    100.5
    ],
    "max": [
-    -47.0,
-    18.0,
-    108.0
+    -35.5,
+    12.0,
+    107.5
    ],
-   "look": "tower_block",
+   "look": "tower_wide",
    "face": "+z"
   },
   {
-   "id": "house_e_29",
+   "id": "house_e_33",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5785,24 +6331,24 @@
    "face": "+x"
   },
   {
-   "id": "house_e_30",
+   "id": "house_e_34",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -44.0,
+    -55.0,
     0.0,
-    101.0
+    102.5
    ],
    "max": [
-    -37.0,
+    -48.0,
     14.0,
-    107.0
+    108.5
    ],
    "look": "tower_block",
    "face": "+z"
   },
   {
-   "id": "house_e_31",
+   "id": "house_e_35",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5819,33 +6365,33 @@
    "face": "-z"
   },
   {
-   "id": "house_e_32",
+   "id": "house_e_36",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -75.5,
+    -69.0,
     0.0,
-    106.0
+    107.0
    ],
    "max": [
-    -69.5,
+    -63.0,
     10.0,
-    113.0
+    114.0
    ],
    "look": "tower_block",
-   "face": "-z"
+   "face": "+x"
   },
   {
-   "id": "house_e_33",
+   "id": "house_e_37",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -18.0,
+    -17.5,
     0.0,
     110.0
    ],
    "max": [
-    -11.0,
+    -10.5,
     14.0,
     116.0
    ],
@@ -5853,7 +6399,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_34",
+   "id": "house_e_38",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5871,86 +6417,18 @@
    "shape": "round"
   },
   {
-   "id": "house_e_35",
+   "id": "house_e_39",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -49.5,
+    -48.5,
     0.0,
     114.0
    ],
    "max": [
     -41.5,
-    18.0,
-    122.0
-   ],
-   "look": "tower_block",
-   "face": "-z"
-  },
-  {
-   "id": "house_e_36",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -62.0,
-    0.0,
-    115.5
-   ],
-   "max": [
-    -55.0,
     14.0,
-    121.5
-   ],
-   "look": "tower_block",
-   "face": "-z"
-  },
-  {
-   "id": "house_e_37",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -33.0,
-    0.0,
-    123.0
-   ],
-   "max": [
-    -26.0,
-    10.0,
-    129.0
-   ],
-   "look": "tower_block",
-   "face": "+x"
-  },
-  {
-   "id": "house_e_38",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -13.5,
-    0.0,
-    123.5
-   ],
-   "max": [
-    -5.5,
-    18.0,
-    131.5
-   ],
-   "look": "tower_block",
-   "face": "-z"
-  },
-  {
-   "id": "house_e_39",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    19.0,
-    0.0,
-    125.5
-   ],
-   "max": [
-    26.0,
-    10.0,
-    131.5
+    120.0
    ],
    "look": "tower_block",
    "face": "-z"
@@ -5960,14 +6438,99 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    5.0,
+    -58.5,
     0.0,
-    128.5
+    115.0
    ],
    "max": [
+    -51.5,
+    10.0,
+    121.0
+   ],
+   "look": "tower_block",
+   "face": "-z"
+  },
+  {
+   "id": "house_e_41",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    6.0,
+    0.0,
+    116.0
+   ],
+   "max": [
+    13.0,
+    10.0,
+    122.0
+   ],
+   "look": "tower_block",
+   "face": "+z"
+  },
+  {
+   "id": "house_e_42",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -36.0,
+    0.0,
+    122.5
+   ],
+   "max": [
+    -26.0,
     12.0,
-    14.0,
-    134.5
+    129.5
+   ],
+   "look": "tower_wide",
+   "face": "+x"
+  },
+  {
+   "id": "house_e_43",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    -14.5,
+    0.0,
+    123.5
+   ],
+   "max": [
+    -6.5,
+    12.0,
+    131.5
+   ],
+   "look": "tower_block",
+   "face": "-z"
+  },
+  {
+   "id": "house_e_44",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    13.0,
+    0.0,
+    127.0
+   ],
+   "max": [
+    20.0,
+    10.0,
+    133.0
+   ],
+   "look": "tower_block",
+   "face": "-z"
+  },
+  {
+   "id": "house_e_45",
+   "zone": "residential_e",
+   "kind": "solid",
+   "min": [
+    3.0,
+    0.0,
+    130.0
+   ],
+   "max": [
+    10.0,
+    10.0,
+    136.0
    ],
    "look": "tower_block",
    "face": "-z"
@@ -5994,6 +6557,108 @@
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
+    -48.0,
+    11.4,
+    103.9
+   ],
+   "max": [
+    -45.5,
+    12.0,
+    106.1
+   ],
+   "look": "bridge",
+   "axis": "x"
+  },
+  {
+   "id": "bridge_e_02",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -68.0,
+    13.4,
+    54.9
+   ],
+   "max": [
+    -65.5,
+    14.0,
+    57.1
+   ],
+   "look": "bridge",
+   "axis": "x"
+  },
+  {
+   "id": "bridge_e_03",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -128.1,
+    9.4,
+    10.5
+   ],
+   "max": [
+    -125.9,
+    10.0,
+    13.0
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_04",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -127.6,
+    11.4,
+    -2.0
+   ],
+   "max": [
+    -125.4,
+    12.0,
+    0.5
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_05",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -127.1,
+    13.4,
+    29.5
+   ],
+   "max": [
+    -124.9,
+    14.0,
+    32.0
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_06",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -127.85,
+    9.4,
+    20.0
+   ],
+   "max": [
+    -125.65,
+    10.0,
+    22.5
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_07",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
     -44.5,
     13.4,
     74.15
@@ -6007,75 +6672,41 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_02",
+   "id": "bridge_e_08",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -128.6,
-    16.4,
-    27.0
+    10.0,
+    9.4,
+    130.4
    ],
    "max": [
-    -126.4,
-    17.0,
-    30.0
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_03",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -128.6,
-    16.4,
-    16.0
-   ],
-   "max": [
-    -126.4,
-    17.0,
-    19.0
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_04",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -47.0,
-    13.4,
-    102.9
-   ],
-   "max": [
-    -44.0,
-    14.0,
-    105.1
+    13.0,
+    10.0,
+    132.6
    ],
    "look": "bridge",
    "axis": "x"
   },
   {
-   "id": "bridge_e_05",
+   "id": "bridge_e_09",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -24.85,
+    -51.5,
     9.4,
-    82.0
+    116.4
    ],
    "max": [
-    -22.65,
+    -48.5,
     10.0,
-    85.5
+    118.6
    ],
    "look": "bridge",
-   "axis": "z"
+   "axis": "x"
   },
   {
-   "id": "bridge_e_06",
+   "id": "bridge_e_10",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6092,75 +6723,92 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_07",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -127.1,
-    9.4,
-    -10.5
-   ],
-   "max": [
-    -124.9,
-    10.0,
-    -6.5
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_08",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -128.6,
-    9.4,
-    3.5
-   ],
-   "max": [
-    -126.4,
-    10.0,
-    8.0
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_09",
+   "id": "bridge_e_11",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
     -107.0,
-    9.4,
+    12.4,
     32.4
    ],
    "max": [
-    -102.0,
-    10.0,
+    -103.5,
+    13.0,
     34.6
    ],
    "look": "bridge",
    "axis": "x"
   },
   {
-   "id": "bridge_e_10",
+   "id": "bridge_e_12",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -21.0,
-    13.4,
-    89.4
+    -24.85,
+    9.4,
+    82.0
    ],
    "max": [
-    -16.0,
-    14.0,
-    91.6
+    -22.65,
+    10.0,
+    85.5
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_13",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -125.1,
+    9.4,
+    39.0
+   ],
+   "max": [
+    -122.9,
+    10.0,
+    43.0
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_14",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -35.5,
+    11.4,
+    102.9
+   ],
+   "max": [
+    -31.5,
+    12.0,
+    105.1
    ],
    "look": "bridge",
    "axis": "x"
   },
   {
-   "id": "bridge_e_11",
+   "id": "bridge_e_15",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -122.1,
+    9.4,
+    50.0
+   ],
+   "max": [
+    -119.9,
+    10.0,
+    54.5
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_16",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6177,41 +6825,41 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_12",
+   "id": "bridge_e_17",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -55.0,
+    -21.0,
     13.4,
-    117.4
+    89.4
    ],
    "max": [
-    -49.5,
+    -16.0,
     14.0,
-    119.6
+    91.6
    ],
    "look": "bridge",
    "axis": "x"
   },
   {
-   "id": "bridge_e_13",
+   "id": "bridge_e_18",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -37.0,
-    11.4,
-    102.9
+    -54.35,
+    9.4,
+    108.5
    ],
    "max": [
-    -31.5,
-    12.0,
-    105.1
+    -52.15,
+    10.0,
+    115.0
    ],
    "look": "bridge",
-   "axis": "x"
+   "axis": "z"
   },
   {
-   "id": "bridge_e_14",
+   "id": "bridge_e_19",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6228,58 +6876,75 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_15",
+   "id": "bridge_e_20",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    12.0,
-    9.4,
-    128.9
-   ],
-   "max": [
-    19.0,
-    10.0,
-    131.1
-   ],
-   "look": "bridge",
-   "axis": "x"
-  },
-  {
-   "id": "bridge_e_16",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -96.0,
-    9.4,
-    31.9
-   ],
-   "max": [
-    -88.5,
-    10.0,
-    34.1
-   ],
-   "look": "bridge",
-   "axis": "x"
-  },
-  {
-   "id": "bridge_e_17",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -123.0,
+    -102.1,
     12.4,
-    32.4
+    36.0
    ],
    "max": [
-    -115.0,
+    -99.9,
     13.0,
-    34.6
+    42.5
    ],
    "look": "bridge",
-   "axis": "x"
+   "axis": "z"
   },
   {
-   "id": "bridge_e_18",
+   "id": "bridge_e_21",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -13.6,
+    11.4,
+    116.0
+   ],
+   "max": [
+    -11.4,
+    12.0,
+    123.5
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_22",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    6.9,
+    9.4,
+    122.0
+   ],
+   "max": [
+    9.1,
+    10.0,
+    130.0
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_23",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    9.65,
+    9.4,
+    107.5
+   ],
+   "max": [
+    11.85,
+    10.0,
+    116.0
+   ],
+   "look": "bridge",
+   "axis": "z"
+  },
+  {
+   "id": "bridge_e_24",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6296,7 +6961,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_19",
+   "id": "bridge_e_25",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6311,6 +6976,638 @@
    ],
    "look": "bridge",
    "axis": "x"
+  },
+  {
+   "id": "clutter_w_01",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -24.35,
+    0.0,
+    -126.35
+   ],
+   "max": [
+    -23.2,
+    1.39,
+    -124.75
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_02",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -40.0,
+    0.0,
+    -125.3
+   ],
+   "max": [
+    -38.5,
+    1.32,
+    -124.15
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_03",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -42.85,
+    0.0,
+    -121.55
+   ],
+   "max": [
+    -41.85,
+    1.09,
+    -119.9
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_04",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -64.0,
+    0.0,
+    -115.4
+   ],
+   "max": [
+    -62.6,
+    1.15,
+    -114.15
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_05",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -30.55,
+    0.0,
+    -102.65
+   ],
+   "max": [
+    -28.65,
+    1.1,
+    -100.75
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_w_06",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -84.45,
+    0.0,
+    -103.4
+   ],
+   "max": [
+    -83.15,
+    1.12,
+    -101.6
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_07",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -35.8,
+    0.0,
+    -104.65
+   ],
+   "max": [
+    -34.05,
+    1.23,
+    -103.65
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_08",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -61.85,
+    0.0,
+    -100.95
+   ],
+   "max": [
+    -60.6,
+    1.38,
+    -99.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_09",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -94.85,
+    0.0,
+    -98.8
+   ],
+   "max": [
+    -93.65,
+    1.16,
+    -97.65
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_10",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -70.35,
+    0.0,
+    -96.6
+   ],
+   "max": [
+    -69.0,
+    1.33,
+    -95.2
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_11",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -39.85,
+    0.0,
+    -87.35
+   ],
+   "max": [
+    -37.95,
+    0.94,
+    -86.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_12",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -77.35,
+    0.0,
+    -88.25
+   ],
+   "max": [
+    -76.2,
+    1.01,
+    -86.95
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_13",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -58.35,
+    0.0,
+    -86.7
+   ],
+   "max": [
+    -56.95,
+    1.18,
+    -85.2
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_14",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -74.85,
+    0.0,
+    -81.1
+   ],
+   "max": [
+    -72.95,
+    1.1,
+    -79.2
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_w_15",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -66.35,
+    0.0,
+    -80.7
+   ],
+   "max": [
+    -65.2,
+    1.38,
+    -78.95
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_16",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -38.55,
+    0.0,
+    -77.35
+   ],
+   "max": [
+    -36.65,
+    1.1,
+    -75.45
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_w_17",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -50.0,
+    0.0,
+    -82.35
+   ],
+   "max": [
+    -48.3,
+    1.38,
+    -81.15
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_18",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -112.9,
+    0.0,
+    -74.55
+   ],
+   "max": [
+    -111.65,
+    1.16,
+    -73.3
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_19",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -62.85,
+    0.0,
+    -71.25
+   ],
+   "max": [
+    -61.75,
+    1.09,
+    -69.4
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_20",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -108.35,
+    0.0,
+    -65.65
+   ],
+   "max": [
+    -107.1,
+    1.27,
+    -64.3
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_21",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -56.7,
+    0.0,
+    -67.65
+   ],
+   "max": [
+    -54.7,
+    1.06,
+    -66.65
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_22",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -67.2,
+    0.0,
+    -55.85
+   ],
+   "max": [
+    -65.8,
+    1.22,
+    -54.55
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_w_23",
+   "zone": "residential_w",
+   "kind": "cover",
+   "min": [
+    -70.35,
+    0.0,
+    -54.8
+   ],
+   "max": [
+    -69.1,
+    1.3,
+    -53.55
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_01",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -125.85,
+    0.0,
+    -17.35
+   ],
+   "max": [
+    -124.55,
+    0.92,
+    -15.55
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_02",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -67.85,
+    0.0,
+    57.1
+   ],
+   "max": [
+    -66.65,
+    1.33,
+    58.75
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_03",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -90.8,
+    0.0,
+    58.25
+   ],
+   "max": [
+    -89.2,
+    1.08,
+    59.35
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_04",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -64.05,
+    0.0,
+    65.0
+   ],
+   "max": [
+    -62.15,
+    1.1,
+    66.9
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_e_05",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -51.9,
+    0.0,
+    74.4
+   ],
+   "max": [
+    -50.65,
+    1.26,
+    75.7
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_06",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -68.35,
+    0.0,
+    79.35
+   ],
+   "max": [
+    -67.25,
+    1.0,
+    81.0
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_07",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -104.2,
+    0.0,
+    83.15
+   ],
+   "max": [
+    -102.85,
+    1.14,
+    84.2
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_08",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    14.75,
+    0.0,
+    83.75
+   ],
+   "max": [
+    16.25,
+    1.23,
+    84.85
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_09",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -85.1,
+    0.0,
+    100.65
+   ],
+   "max": [
+    -83.55,
+    1.21,
+    102.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_10",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    12.25,
+    0.0,
+    107.65
+   ],
+   "max": [
+    13.8,
+    1.14,
+    108.8
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_11",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -44.65,
+    0.0,
+    98.45
+   ],
+   "max": [
+    -42.75,
+    1.1,
+    100.35
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_e_12",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -33.55,
+    0.0,
+    101.0
+   ],
+   "max": [
+    -31.65,
+    1.1,
+    102.9
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_e_13",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -68.0,
+    0.0,
+    114.15
+   ],
+   "max": [
+    -66.1,
+    1.1,
+    116.05
+   ],
+   "look": "cistern",
+   "shape": "round"
+  },
+  {
+   "id": "clutter_e_14",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -41.35,
+    0.0,
+    115.35
+   ],
+   "max": [
+    -40.35,
+    1.07,
+    117.0
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_15",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -51.35,
+    0.0,
+    118.75
+   ],
+   "max": [
+    -50.2,
+    1.32,
+    120.05
+   ],
+   "look": "crates"
+  },
+  {
+   "id": "clutter_e_16",
+   "zone": "residential_e",
+   "kind": "cover",
+   "min": [
+    -6.35,
+    0.0,
+    124.3
+   ],
+   "max": [
+    -4.45,
+    1.1,
+    126.2
+   ],
+   "look": "cistern",
+   "shape": "round"
   }
  ],
  "markers": [
@@ -6853,6 +8150,138 @@
    ],
    "role": "waypoint",
    "note": "Issue #64: behind the barracks hall, between it and the north wall. A Remnant trooper killed in town comes back here a minute later (while the garrison still holds the town) and walks back to its post."
+  },
+  {
+   "id": "dock_worker_1",
+   "pos": [
+    39.97,
+    0,
+    27.47
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    39.08,
+    0,
+    35.81
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "dock_worker_2",
+   "pos": [
+    -1.23,
+    0,
+    46.98
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    2.31,
+    0,
+    52.95
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "dock_worker_3",
+   "pos": [
+    -27.47,
+    0,
+    39.97
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    -35.81,
+    0,
+    39.08
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "dock_worker_4",
+   "pos": [
+    -39.97,
+    0,
+    -27.47
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    -39.08,
+    0,
+    -35.81
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "dock_worker_5",
+   "pos": [
+    -2.05,
+    0,
+    -46.96
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    -2.31,
+    0,
+    -52.95
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "dock_worker_6",
+   "pos": [
+    27.47,
+    0,
+    -39.97
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "face": [
+    35.81,
+    0,
+    -39.08
+   ],
+   "note": "Issue #237: a dock hand by the cargo between the surface pads."
+  },
+  {
+   "id": "resident_e_2",
+   "pos": [
+    -94.9,
+    0,
+    76.54
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_e",
+   "note": "Issue #237: another local walking the lanes."
+  },
+  {
+   "id": "resident_e_3",
+   "pos": [
+    -85.46,
+    0,
+    45.44
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_e",
+   "note": "Issue #237: another local walking the lanes."
+  },
+  {
+   "id": "resident_w_3",
+   "pos": [
+    -95.88,
+    0,
+    -72.25
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_resident_w",
+   "note": "Issue #237: another local walking the lanes."
   },
   {
    "id": "shopper_3",
@@ -8259,6 +9688,105 @@
     ]
    ],
    "note": "Issue #237: a shopper up and down an aisle."
+  },
+  {
+   "id": "stroll_resident_e_2",
+   "points": [
+    [
+     -94.9,
+     76.54
+    ],
+    [
+     -105.57,
+     67.98
+    ],
+    [
+     -111.14,
+     55.82
+    ],
+    [
+     -115.89,
+     43.46
+    ],
+    [
+     -111.14,
+     55.82
+    ],
+    [
+     -105.57,
+     67.98
+    ],
+    [
+     -94.9,
+     76.54
+    ]
+   ]
+  },
+  {
+   "id": "stroll_resident_e_3",
+   "points": [
+    [
+     -85.46,
+     45.44
+    ],
+    [
+     -82.29,
+     55.51
+    ],
+    [
+     -74.48,
+     62.49
+    ],
+    [
+     -66.92,
+     69.3
+    ],
+    [
+     -74.48,
+     62.49
+    ],
+    [
+     -82.29,
+     55.51
+    ],
+    [
+     -85.46,
+     45.44
+    ]
+   ]
+  },
+  {
+   "id": "stroll_resident_w_3",
+   "points": [
+    [
+     -95.88,
+     -72.25
+    ],
+    [
+     -91.09,
+     -84.95
+    ],
+    [
+     -81.64,
+     -93.91
+    ],
+    [
+     -71.91,
+     -102.69
+    ],
+    [
+     -81.64,
+     -93.91
+    ],
+    [
+     -91.09,
+     -84.95
+    ],
+    [
+     -95.88,
+     -72.25
+    ]
+   ]
   }
  ],
  "chunks": [

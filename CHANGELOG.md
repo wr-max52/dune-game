@@ -43,6 +43,10 @@ Plain English, newest on top. One entry per milestone.
   (0, 250) and the far outpost moved to (700, 300): straight out of the front
   gate you see only the crashed cruiser and the desert.
 - Oda's town briefing and Skrugs's card tell it the round way.
+- **The round port is fuller**: crates, barrels and water tanks against a share
+  of the houses (never walling a door in), a cargo yard with a container and
+  crate stacks in every gap between the landing pads with a dock hand by each,
+  more towers on the barracks side, and three more locals walking the lanes.
 - New stills of the round port in `docs/town/look/port_round/`, and the frame
   time against the square port in `docs/town/round_port_perf.md`.
 - **New box kind `ring`**: a round wall cut open at gates, which any layout can
