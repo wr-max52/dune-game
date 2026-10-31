@@ -318,7 +318,7 @@ func _shoot(id: String) -> void:
 		rig_node.kick(float(c.get("recoil", 2.0)) * (0.5 if aiming else 1.0))
 		rig_node.shake(0.15)
 	_play("shot_" + id)
-	_muzzle_flash(origin, b.color)
+	_muzzle_flash(origin, dir, b.color)
 	avatar.fire_kick()
 	var in_range: bool = in_range_zone.is_valid() and bool(in_range_zone.call(player.global_position))
 	WorldState.on_player_fired(in_range)
@@ -327,17 +327,20 @@ func _shoot(id: String) -> void:
 	fired.emit(id)
 
 
-func _muzzle_flash(at: Vector3, col: Color) -> void:
+## A short orange light at the muzzle. At the muzzle itself it was ~0.35 m from
+## the grip hand and turned the whole glove and sleeve flat orange (issue #229).
+func _muzzle_flash(at: Vector3, dir: Vector3, col: Color) -> void:
 	if not is_inside_tree():
 		return
+	var ml: Dictionary = look.get("muzzle_light", {})
 	var l := OmniLight3D.new()
 	l.light_color = col
-	l.light_energy = 6.0
-	l.omni_range = 4.5
+	l.light_energy = float(ml.get("energy", 6.0))
+	l.omni_range = float(ml.get("range", 4.5))
 	l.shadow_enabled = false
 	var host: Node = bolt_parent if bolt_parent != null else self
 	host.add_child(l)
-	l.global_position = at
+	l.global_position = at + dir * float(ml.get("ahead", 0.0))
 	var tw := l.create_tween()
 	tw.tween_property(l, "light_energy", 0.0, 0.08)
 	tw.tween_callback(l.queue_free)

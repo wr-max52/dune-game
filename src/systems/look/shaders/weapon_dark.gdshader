@@ -17,8 +17,14 @@ uniform vec3 body_tint : source_color = vec3(0.85, 0.9, 1.0);
 // a flat silhouette. A rim keeps its outline; fill lifts the body a touch.
 uniform float rim : hint_range(0.0, 1.0) = 0.0;
 uniform float fill : hint_range(0.0, 1.0) = 0.0;
+// Aimed in through a scope (GunSights.scope_view): nearer than this to the eye is
+// cut, so the receiver round the open tube goes but the barrel ahead stays. 0 = off.
+uniform float near_clip = 0.0;
 
 void fragment() {
+	if (-VERTEX.z < near_clip) {
+		discard;
+	}
 	vec3 c = texture(albedo_tex, UV).rgb;
 	float sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
 	float is_accent = smoothstep(0.2, 0.45, sat);

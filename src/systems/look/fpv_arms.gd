@@ -8,7 +8,9 @@ extends RefCounted
 ##   for every outfit; third person never sees them.
 ## - Forearm: one lathed mesh through the profile rings (smooth muscle belly, taper
 ##   to the wrist, a rounded cap at the elbow so its end never shows as a disc) and
-##   a folded cuff. Hand: one mesh for the gauntlet, a rounded palm, the thumb's
+##   a folded cuff. Upper arm: a lathed sleeve from the shoulder down into the
+##   elbow, so looking down the arm runs out of the view instead of ending in mid
+##   air. Hand: one mesh for the gauntlet, a rounded palm, the thumb's
 ##   pad and the knuckle ridge; four two-segment tapered fingers and a thumb. Real
 ##   proportions (hand ~0.19 m, palm ~0.086 m wide). Issue #229.
 ## - Materials: fpv_glove.gdshader (leather grain, knit sleeve, stitched seams,
@@ -25,10 +27,12 @@ extends RefCounted
 const PATH := "res://content/look/fpv_arms.json"
 const META := "fpv_arm"
 const GLOVE := preload("res://src/systems/look/shaders/fpv_glove.gdshader")
+const GLOVE_FADE := preload("res://src/systems/look/shaders/fpv_glove_fade.gdshader")
 
 var spec: Dictionary = {}
 var joints: Dictionary = {}
 var roots: Dictionary = {}       ## side -> forearm node (child of the elbow)
+var uppers: Dictionary = {}      ## side -> upper arm node (child of the shoulder)
 var hands: Dictionary = {}       ## side -> hand node (child of the wrist)
 var fingers: Dictionary = {}     ## side -> [{seg1, seg2, k, thumb}]
 var grip: Dictionary = { "l": 0.0, "r": 0.0 }
@@ -71,6 +75,7 @@ func set_visible(on: bool) -> void:
 	visible = on
 	for side in roots:
 		(roots[side] as Node3D).visible = on
+		(uppers[side] as Node3D).visible = on
 		(hands[side] as Node3D).visible = on
 
 
@@ -78,6 +83,7 @@ func meshes() -> Array:
 	var out: Array = []
 	for side in roots:
 		out.append_array(PlayerAvatar._meshes_under(roots[side]))
+		out.append_array(PlayerAvatar._meshes_under(uppers[side]))
 		out.append_array(PlayerAvatar._meshes_under(hands[side]))
 	return out
 
@@ -150,6 +156,10 @@ func _s_in(side: String) -> float:
 	return -1.0 if side == "l" else 1.0
 
 
+static func _v2(a) -> Vector2:
+	return Vector2(float(a[0]), float(a[1])) if a is Array and a.size() >= 2 else Vector2.ZERO
+
+
 func _col(key: String, fallback: String) -> Color:
 	return Color.html(str(spec.get(key, fallback)))
 
@@ -171,9 +181,11 @@ var _mats: Dictionary = {}
 
 
 func _build_side(side: String) -> void:
+	var shoulder: Node3D = joints[side + "_shoulder"]
 	var elbow: Node3D = joints[side + "_elbow"]
 	var wrist: Node3D = joints[side + "_wrist"]
-	for old in [elbow.get_node_or_null("FpvArm"), wrist.get_node_or_null("FpvHand")]:
+	for old in [shoulder.get_node_or_null("FpvUpper"), elbow.get_node_or_null("FpvArm"),
+			wrist.get_node_or_null("FpvHand")]:
 		if old != null:
 			old.get_parent().remove_child(old)
 			old.free()
@@ -207,6 +219,29 @@ func _build_side(side: String) -> void:
 		prof.append(Vector2(r0 * cos(a), y0 + r0 * 0.7 * sin(a)))
 	prof.append_array(_smooth(rings, 4))
 	_mi(arm, _lathe(prof, seg, true), sleeve, Vector3.ZERO)
+	# Upper arm: rounded at the shoulder, ending in a round tip inside the elbow cap.
+	# Only its elbow end shows (len_fade): near the shoulder it is at the lens.
+	var upper := Node3D.new()
+	upper.name = "FpvUpper"
+	upper.set_meta(META, true)
+	shoulder.add_child(upper)
+	uppers[side] = upper
+	var up_rings: Array = (spec.get("upper_arm", {}) as Dictionary).get("rings", [])
+	if up_rings.size() >= 2:
+		var uprof: Array = []
+		var u0 := float(up_rings[0][1])
+		var uy := float(up_rings[0][0])
+		for c in range(5, 0, -1):
+			var a := PI * 0.5 * float(c) / 5.0
+			uprof.append(Vector2(u0 * cos(a), uy + u0 * 0.7 * sin(a)))
+		uprof.append_array(_smooth(up_rings, 4))
+		if not _mats.has("upper"):
+			var um := sleeve.duplicate() as ShaderMaterial
+			um.shader = GLOVE_FADE
+			um.set_shader_parameter("near_fade", _v2(spec.get("near_fade", [])))
+			um.set_shader_parameter("len_fade", _v2((spec.get("upper_arm", {}) as Dictionary).get("fade", [])))
+			_mats["upper"] = um
+		_mi(upper, _lathe(uprof, seg, true), _mats["upper"], Vector3.ZERO)
 	# The cuff: a fold ring proud of the band, the band, a slight flare at the hem.
 	var top := -length + cuff_len + 0.012
 	var cuff_prof := [

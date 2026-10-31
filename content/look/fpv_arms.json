@@ -10,6 +10,12 @@
     "cuff_len": 0.04,
     "cuff_r": 0.0335
   },
+  "near_fade": [0.16, 0.3],
+  "upper_arm": {
+    "note": "Shoulder space: the elbow is 0.29 down -Y. Ends inside the forearm's elbow cap. fade: whole below y[0], gone above y[1], so only the elbow end shows.",
+    "fade": [-0.2, -0.1],
+    "rings": [[0.0, 0.05], [-0.08, 0.052], [-0.2, 0.047], [-0.285, 0.043]]
+  },
   "hand": {
     "palm": [0.032, 0.098, 0.086],
     "offset": 0.022,
@@ -21,7 +27,8 @@
     "relaxed": 0.35,
     "curl1": [8, 80],
     "curl2": [14, 96],
-    "thumb_curl": [12, 40]
+    "thumb_curl": [12, 40],
+    "fist_seat": [0.020, 0.020]
   },
   "stance": { "l": [-0.06, -0.07, 0.15], "r": [0.02, -0.05, 0.02] },
   "poses": {
