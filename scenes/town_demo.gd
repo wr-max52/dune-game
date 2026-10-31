@@ -87,6 +87,7 @@ var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, play
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
 var mechanic: MechanicYard            ## issue #95: Dorrin's speeder yard out in the desert
+var beast: PlanetBeast                ## issue #220: the planet's beast (a deadly purple blob), if it has one
 var natives: NativesDirector          ## issue #96: the planet's native packs and wild animals
 var gate_speeders: Array = []         ## issue #82: the Remnant's Sand-boxers parked outside the front gate
 var planet: Dictionary = {}           ## issue #45: the planet this scene is (PlanetGen.build), from GameFlow
@@ -99,6 +100,7 @@ var droids: DroidController
 var droid_merchant_outposts: DroidMerchantOutposts
 @export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
 var salesman: ShipSalesman
+@export var with_beast := true        ## issue #220: the planet's beast that rolls about the desert (touch = death)
 var general_post: GeneralPost         ## issue #203: the Remnant general (story saves)
 @export var with_natives := true      ## issue #96: native packs and wild animals (when the planet has any)
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
@@ -274,6 +276,12 @@ func build_plan(staged_build: bool) -> Array:
 	add.call("mechanic", LATER, func():
 		if speeder_post != null and gear != null:
 			_build_mechanic()
+		return true)
+	add.call("beast", LATER, func():
+		if with_beast and pilot != null and terrain != null and PlanetBeast.lives_on(planet):
+			beast = PlanetBeast.new()
+			beast.setup(self, pilot.ground, planet)
+			add_child(beast)
 		return true)
 	add.call("natives", LATER, func():
 		if with_natives and pilot != null and gear != null and terrain != null:

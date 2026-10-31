@@ -18,5 +18,6 @@
   "names": ["config", "people", "craft", "places", "tongues", "kinds"],
   "notes": "All names and labels live in this layer only. Code references entries by id.",
   "species": ["dune_nomads", "desert_folk", "frost_folk"],
-  "fauna": ["sand_pig"]
+  "fauna": ["sand_pig"],
+  "hazards": ["beast"]
 }

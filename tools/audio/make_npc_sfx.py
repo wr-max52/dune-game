@@ -10,6 +10,7 @@ line on screen says what was said.
   radio_shout_N.wav  higher, louder, harder clipped ("Halt!", "Contact!")
   klaxon_loop.wav    the town alarm: saw-wave beep beep beep, pause (issue #80)
   battle_horn.wav    a desert pack's battle horn: one long, rough, falling blast (issue #96)
+  blob_fart.wav      the desert blob's fart: a low, wet, flapping raspberry (issue #220)
 
 Run: python3 tools/audio/make_npc_sfx.py [name.wav ...]   (needs numpy and scipy;
 names given = only those)
@@ -150,6 +151,26 @@ def horn():
     return bandpass(x + breath, 70, 3000, 2) * env
 
 
+def fart():
+    # Issue #220: a low buzzing flap (a pulse train whose rate sputters and falls),
+    # a wet noisy edge, and a trailing squeak at the end.
+    dur = 1.3
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    rate = 62.0 * (1.0 - 0.35 * t / dur) * (1.0 + 0.18 * np.sin(2 * np.pi * 7.0 * t) + 0.05 * rng.standard_normal(n).cumsum() / np.sqrt(np.arange(1, n + 1)))
+    phase = np.cumsum(rate / SR)
+    flap = (np.diff(np.floor(phase), prepend=0) > 0).astype(float)
+    x = lfilter([1], [1, -0.96], flap)
+    x = resonate(x, 180, 120) + 0.5 * resonate(x, 420, 200)
+    x = x / (np.max(np.abs(x)) + 1e-9)
+    wet = bandpass(rng.standard_normal(n), 200, 1800, 2) * 0.35 * (0.5 + 0.5 * np.sin(2 * np.pi * rate * t) ** 2)
+    x = np.tanh((x + wet) * 2.2)
+    env = np.minimum(t / 0.03, 1.0) * np.clip(1.0 - (t - 0.95) / 0.35, 0.0, 1.0)
+    sq_t = np.clip(t - 1.0, 0.0, None)
+    squeak = np.sin(2 * np.pi * np.cumsum(330.0 + 400.0 * sq_t) / SR) * np.where(t > 1.0, np.exp(-sq_t * 10.0), 0.0) * 0.4
+    return bandpass(x * env + squeak, 50, 2500, 2)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     import sys
@@ -166,6 +187,8 @@ def main():
         save("klaxon_loop.wav", klaxon(), 0.7)
     if want("battle_horn.wav"):
         save("battle_horn.wav", horn(), 0.8)
+    if want("blob_fart.wav"):
+        save("blob_fart.wav", fart(), 0.85)
 
 
 if __name__ == "__main__":

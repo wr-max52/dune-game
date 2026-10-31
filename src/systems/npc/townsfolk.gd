@@ -22,6 +22,9 @@ extends Node
 ## Who does what comes from the profile's "role": "local" (walks a loop),
 ## "merchant" (holds a stall). Numbers: content/core/soldiers/local_*.json and
 ## the town's "locals" block; barks: content/core/dialogue/locals_lines.json.
+##
+## They know the planet's beast (PlanetBeast): calm, a local you walk close by now
+## and then says something about it, by name (its "lore" in the planet's file).
 
 const LINES_PATH := "res://content/core/dialogue/locals_lines.json"
 
@@ -37,6 +40,7 @@ var claimed: Dictionary = {}      ## NpcBody -> Vector3 its cover spot
 
 ## Numbers the traces read.
 var barks_said: Array = []
+var beast_said: Array = []        ## what the locals have said about the beast (traces)
 var alarm_t := -1.0               ## game seconds when the alarm last went up
 var kills := 0
 
@@ -45,6 +49,8 @@ var _attacked := false
 var _clock := 0.0
 var _last_key := ""
 var _last_key_t := -100.0
+var _beast_cfg: Dictionary = {}   ## PlanetBeast.config of this planet ({} if it has no beast)
+var _beast_next := 0.0            ## game seconds before a local may talk of the beast again
 
 
 ## `all` = every local NpcBody in town.
@@ -57,6 +63,8 @@ func setup(town_demo, all: Array) -> void:
 	cfg = town.data.get("locals", {}) if town.data is Dictionary else {}
 	alarm = TownAlarm.new(cfg.get("alarm", {}))
 	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
+	_beast_cfg = PlanetBeast.config(demo.get("planet") if demo.get("planet") is Dictionary else {})
+	_beast_next = float(_beast_cfg.get("locals_say_first_s", 6.0))
 	for g in members:
 		if not g.has_meta("outpost") or not is_same(members, demo.locals):
 			_adopt(g)              # (issue #187: the town's leaves the outposts' locals to theirs)
@@ -122,6 +130,8 @@ func _physics_process(dt: float) -> void:
 		else:
 			b.alarm_pos = Vector3.INF
 		_run_brain(g, dt, ppos)
+	if not alarm.active():
+		_beast_talk(alive, ppos)
 
 
 func _run_brain(g: NpcBody, dt: float, ppos: Vector3) -> void:
@@ -301,6 +311,22 @@ func _nearest(among: Array, at: Vector3) -> NpcBody:
 			bd = d
 			best = g
 	return best
+
+
+## Calm, a local the player walks close by now and then talks of the beast.
+func _beast_talk(alive: Array, ppos: Vector3) -> void:
+	if _beast_cfg.is_empty() or ppos == Vector3.INF or _clock < _beast_next:
+		return
+	var g := _nearest(alive, ppos)
+	if g == null or g.global_position.distance_to(ppos) > float(_beast_cfg.get("locals_say_m", 4.0)):
+		return
+	var said := PlanetBeast.lore(demo.planet)
+	if said.is_empty():
+		return
+	var text := str(said[_rng.randi() % said.size()])
+	_beast_next = _clock + float(_beast_cfg.get("locals_say_every_s", 30.0))
+	beast_said.append(text)
+	g.say(text, 4.0, false)
 
 
 func _say(g: NpcBody, key: String) -> void:

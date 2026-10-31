@@ -2,6 +2,31 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #220, the beast (2026-10-30)
+
+**Checked:** the smoke test, a headless boot of the town, and the beast trace
+(`scenes/beast_trace.gd`, all 38 lines true; `tests/test_beast_trace.gut.gd` 8/8:
+named from the planet, rolls, farts, kills on touch, chases when hurt, gives up
+at 1 km, 1000 health, stays dead, the locals talk of it). The rest of the suite
+was not run for this PR. The trace drives hits and the chase directly (no bolts
+are fired), and runs the locals itself since it turns the NPC brains off.
+
+- **It goes through things.** The beast is moved by hand along the ground, not by
+  physics. It rolls through rocks, wrecks, packs and buildings, and a chase can
+  take it straight through the town walls.
+- **Only the player dies.** NPCs, packs and sand pigs it rolls over are not hurt.
+- **No health bar.** You can't see how hurt it is; it only squashes when hit.
+- **Who hurt it is a guess for blades.** A blade hit (or anything that doesn't
+  say who) counts as the player's.
+- **Speeder touch uses a simple distance check** (the speeder's centre against the
+  beast's radius plus a margin), so a glancing pass at the craft's nose or tail
+  may miss.
+- **The puff is a few fading spheres**, not real particles, and is skipped in
+  headless runs.
+- **One beast so far.** Only `port_desert` has a `beast` block. Generated
+  planets get none unless their file adds one, and every beast is the same purple
+  blob (only its numbers and colours can change per planet).
+
 ## After issue #229, first person graphics (2026-10-30)
 
 **Checked:** rendered stills and frame strips (`tools/fpv/shoot_fpv.sh`, HUD

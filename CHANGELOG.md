@@ -2,6 +2,39 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The beast (issue #220, 2026-10-30)
+
+- **Every planet can have a beast.** A planet's file
+  (content/core/planets/<id>.json) may have a `beast` block: its name, its home
+  spot, and what the locals say of it. The home planet's is **Old Murk**, a
+  glossy purple blob about 7 m across that rolls about the desert about 900 m
+  from town. The numbers every beast shares are content/core/hazards/beast.json;
+  a planet's block can override any of them.
+- **It has nowhere to be.** Its heading drifts at random. It is not drawn toward
+  the town and does not avoid it. A loose leash, about 1.4 km round its own home
+  spot, turns it back only if it strays very far.
+- **Touch it and you die.** On foot, or riding a speeder into it, you die on the
+  spot, whatever your health. You wake as from any other death (the garrison's
+  pit). If nothing else wakes you within a few seconds, the beast does it.
+- **Hurt it and it comes for you.** It has 1000 health and takes bolts, speeder
+  lasers and blades. Once the player hurts it, it rolls after them at 5.5 m/s
+  (faster than a run, a little slower than a sprint) until they are 1 km away or
+  dead, then goes back to wandering. Stray bolts from anyone else only hurt it.
+- **Kill it and it stays dead.** It sinks into a purple puddle. The flag
+  `beast_slain_<planet id>` keeps it from being built again, it goes in the event
+  log, and the locals' talk changes.
+- **The locals know it.** Walk close by a calm local and now and then they say
+  something about it by name (the planet's `lore` lines, at most once every 30 s).
+  Every AI character (the cantina owner, Skrugs, T-89...) is briefed on it by
+  name each turn, so they can talk about it if asked.
+- **It farts.** Every 9 to 26 seconds: a wet noise
+  (assets/audio/npc/blob_fart.wav, made by tools/audio/make_npc_sfx.py), a
+  yellowish puff behind it, and a squash.
+- **Code:** src/systems/world/planet_beast.gd (`PlanetBeast`). The town scene
+  adds it as a late build stage (`with_beast`) on planets that have one.
+- **Trace:** scenes/beast_trace.gd (in CI), read by tests/test_beast_trace.gut.gd.
+  Still: docs/lookdev/hazards/desert_blob.jpg.
+
 ## The locals forget you when you die, like the guards (2026-10-30)
 
 - **Waking in the pit wipes the locals' grudge.** After you get away from a
