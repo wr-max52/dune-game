@@ -2,6 +2,28 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The club mix (issue #104, part 1: the music, 2026-10-31)
+
+- **Every cantina is a club now.** Walk toward one and its music fades in from
+  about 40 m out, muffled through the walls; the town's own music fades down
+  under it. Step through the door and it opens up to full volume and is the only
+  music playing.
+- **Two playlists, one per planet.** The desert port's **Dust Lounge** is afro
+  and organic house (12 tracks, about 48 min). Grit Station's **Salvage Rave** is
+  UK garage, breaks and rave (11 tracks, about 37 min). Other planets play Dust
+  Lounge. A planet's file picks its playlist with `"club"`.
+- **Songs shuffle and blend.** Never the same song twice in a row; each blends
+  into the next over 10 s. Walk away and back and a new song starts.
+- **Gunfire does not cut the club.** Battle music only plays outside it.
+- **If the band is killed the music stops**, until the next visit's new band.
+  (The band itself comes in part 2; the hook is `Sound.set_club_live(false)`.)
+- **Oda can change the vibe** (`Sound.club_vibe("hard")`): every track has mood
+  tags. Her dialogue action for it comes in part 2.
+- **The tracks are free**: 22 from Pixabay (Pixabay Content License) and one CC0
+  from Free Music Archive, in the taste of the artists in the issue, not their
+  releases. Each entry in content/look/sound.json links its source page.
+  `tools/audio/rip_club.py` brings downloads in at the music's one loudness.
+
 ## The beast (issue #220, 2026-10-30)
 
 - **Every planet can have a beast.** A planet's file

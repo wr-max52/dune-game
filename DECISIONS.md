@@ -1165,3 +1165,27 @@ Every significant technical choice, the alternative, and why. Newest on top.
   frame cost don't depend on geometry; a 1-D coordinate (player position east) is enough
   to prove the window/coverage/amortization invariants without a 3D level. The visible 3D
   greybox is M8.
+
+## 2026-10-31 — The club mix (issue #104)
+
+- **The club is a layer over the score, not a fourth music mode.** Two more
+  decks on a new Club bus play the playlist; ambient, battle and space moved to a
+  new Score bus. Both send to Music, so the one Music slider still sets it all.
+  Walking up raises the Club bus and lowers the Score bus by the same amount, so
+  the blend by distance is two bus volumes, and gunfire inside cannot cut the
+  club (the score is fully down there). Alternative: a "club" mode in the
+  existing priority list. Rejected: modes swap, they do not blend by distance.
+- **The wall's muffle is a low-pass on the Club bus**, its cutoff eased from
+  500 Hz outside to 20 kHz inside the door. No geometry or raycasts: inside or
+  outside is the cantina's zone in the town layout.
+- **ClubMusic, a small node per town, reports where you are.** It measures the
+  player to the cantina zone's rectangle each frame and calls
+  `Sound.set_club(playlist, near, inside)`. Sound knows nothing about towns.
+- **A dead band stops the club until the next visit.** One of the issue's open
+  questions; the town is rebuilt every landing, and ClubMusic sets a new band
+  live then. Easy to change to "never" with a WorldState flag.
+- **Tracks: Pixabay and CC0, chosen against the issue's taste list, approved by
+  the owner, downloaded once.** Each playlist entry keeps its source page, so the
+  licence of every file is on record. Re-encoded like the score (160 kb/s MP3,
+  one loudness) by `tools/audio/rip_club.py`, which finds downloads by the
+  Pixabay id in their file names.
