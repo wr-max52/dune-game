@@ -58,7 +58,7 @@ func test_the_pointer_follows_the_story() -> void:
 	assert_eq(_target(), "remote", "then the sparring droid")
 	Story.skip_to("fleet")
 	WorldState.story.told = true
-	assert_eq(_target(), "pad", "the fleet: take a ship from the pit")
+	assert_eq(_target(), "cruiser", "the fleet: the general on the cruiser")
 
 
 func test_a_smuggling_run_points_at_the_drop_area_then_the_fence() -> void:

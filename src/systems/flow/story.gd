@@ -8,9 +8,10 @@ extends RefCounted
 ##   come back, on your honour) -> two smuggling runs
 ##   (the first with her old jetpack if she is amused or warm) -> Skrugs and a
 ##   bounty at a Remnant outpost -> the Remnant fleet in orbit (the port's ships
-##   unlock; winning pays 5000) -> issue #193: the Remnant's star cruiser far out
-##   east in orbit (company on the way up; kill its general on the bridge) -> free
-##   play: smuggling runs and bounty contracts on repeat.
+##   unlock): one mission, the general on the bridge of their star cruiser far out
+##   east (issue #193; the fleet's fighters meet you on the way up, and beating
+##   them is not the mission) -> the end card -> free play: smuggling runs and
+##   bounty contracts on repeat.
 ##
 ## Chapters and every line: content/core/story/main.json. Systems report what
 ## happened with event() (WorldState does most of it); a teller asks beat() when
@@ -124,11 +125,20 @@ static func event(name: String) -> bool:
 			break
 	WorldState.story = { "chapter": next, "told": false }
 	WorldState.log_event("Story: " + next.replace("_", " ") + ".")
-	# Issue #193: done before it was asked (the cruiser taken before Oda sent you).
-	var flag := str(chapter_cfg(next).get("done_flag", ""))
-	if flag != "" and WorldState.has_flag(flag):
-		event(str(chapter_cfg(next).get("done_on", "")))
+	if reached("end") and not remnant_hostile():
+		WorldState.set_flag("remnant_fleet_beaten")
+		WorldState.log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
+	catch_up()
 	return true
+
+
+## Issue #193: the chapter is done before it was asked (the cruiser taken before
+## Oda sent you, or in a save from before the general ended the fleet chapter).
+static func catch_up() -> void:
+	var c := chapter_cfg()
+	var flag := str(c.get("done_flag", ""))
+	if flag != "" and WorldState.has_flag(flag):
+		event(str(c.get("done_on", "")))
 
 
 # ------------------------------------------------------------------ tellers
@@ -272,17 +282,14 @@ static func cruiser_taken() -> bool:
 	return WorldState.has_flag("cruiser_taken")
 
 
-## Oda has sent you to the cruiser and it is not taken yet: climbing out meets its escort.
+## Oda has sent you after the general and the cruiser is not taken yet: climbing
+## out meets its escort, the fleet's fighters.
 static func cruiser_mission() -> bool:
-	return chapter() == "cruiser" and not cruiser_taken()
+	return chapter() == "fleet" and not cruiser_taken()
 
 
 static func remnant_cfg() -> Dictionary:
 	return data().get("remnant", {})
-
-
-static func fleet_reward() -> int:
-	return int(data().get("fleet_reward", 5000))
 
 
 static func line(key: String) -> String:
