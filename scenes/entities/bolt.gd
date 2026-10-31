@@ -22,6 +22,10 @@ var friends: Array = []        ## issue #64: never hits these either (your droid
 ## (ground_at: (x, z) -> height; the desert's collider is not where a ship flies).
 var splash_radius := 0.0
 var splash_damage := 0.0
+## A ship's cannon is built to hurt ships: `damage` is what a hit does to a ship's hull
+## (ShipHull, the same in the air as in space), soft_damage what it does to anything
+## else it hits (a trooper, a droid, a beast, a speeder). 0 = `damage` to everything.
+var soft_damage := 0.0
 var ground_at: Callable
 ## Issue #93: on the home planet's ball the ground is not a function of (x, z) (past the
 ## equator the same x, z is under the planet), so a ship's bolt there asks how high it is over
@@ -101,14 +105,15 @@ func _splash(direct: Object) -> void:
 func handle_hit(target: Object) -> void:
 	if target == null:
 		return
+	var amount := damage if soft_damage <= 0.0 or target is ShipHull else soft_damage
 	# A target that cares who shot it (an NPC: no friendly fire, and "the player
 	# shot me" starts a fight) gets the shooter too.
 	if target.has_method("apply_damage_from"):
-		target.apply_damage_from(damage, shooter)
+		target.apply_damage_from(amount, shooter)
 	elif target.has_method("apply_damage"):
-		target.apply_damage(damage)
+		target.apply_damage(amount)
 	elif target.get_parent() != null and target.get_parent().has_method("apply_damage"):
-		target.get_parent().apply_damage(damage)
+		target.get_parent().apply_damage(amount)
 	on_hit.emit(target)
 
 

@@ -97,6 +97,7 @@ func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secon
 			"velocity": dir * spd + ship_vel,
 			"speed": spd,
 			"damage": float(h.cfg.get("damage", 10.0)) * power,
+			"personnel_damage": float(h.cfg.get("personnel_damage", 0.0)) * power,
 			"range": float(h.cfg.get("range", 800.0)),
 			"homing": homing,
 			"turn_rate": float(h.cfg.get("turn_rate", 0.0)),

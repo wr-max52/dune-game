@@ -34,6 +34,48 @@ func test_cannon_has_splash() -> void:
 	assert_gt(float(w.splash_damage), float(w.damage), "a burst hurts more than a graze")
 
 
+func test_a_direct_hit_kills_a_trooper_but_only_scratches_a_hull() -> void:
+	# The same cannon shot in the air and in space: a ship's hull takes `damage`,
+	# anything else (the cruiser's troopers too) takes personnel_damage.
+	var cc = preload("res://src/systems/dataload/core_content.gd").new()
+	cc.load_from()
+	var w: Dictionary = cc.weapons.ship_cannon
+	var weakest := 1.0
+	for id in cc.ships:
+		weakest = minf(weakest, float(cc.ships[id].get("blaster_power", 1.0)))
+	for who in ["cruiser_trooper", "cruiser_sentry", "outpost_trooper", "yard_trooper"]:
+		assert_gte(float(w.personnel_damage) * weakest, float(cc.soldiers[who].hp), "any ship one-shots a " + who)
+	var t = _town()
+	await wait_physics_frames(2)
+	var g = t.npc("trooper_yard_a")
+	assert_not_null(g)
+	var shooter := ShipHull.new()
+	t.add_child(shooter)
+	var hull := ShipHull.new()
+	var took := []
+	hull.on_damage = func(amount: float, _by: Node) -> void: took.append(amount)
+	t.add_child(hull)
+	for target in [g, hull]:
+		var b = BoltScene.instantiate()
+		b.shooter = shooter
+		b.damage = float(w.damage)
+		b.soft_damage = float(w.personnel_damage)
+		t.add_child(b)
+		b.apply_to(target)
+	assert_true(g.dead, "one hit kills a trooper")
+	assert_eq(took, [float(w.damage)], "a hull takes the ship-to-ship damage")
+
+
+func test_personnel_damage_scales_with_blaster_power() -> void:
+	var cc = preload("res://src/systems/dataload/core_content.gd").new()
+	cc.load_from()
+	var gun = preload("res://src/systems/flight/ship_loadout.gd").new(cc.get_ship("gunship"), cc)
+	var shots: Array = gun.fire(0.1, Transform3D.IDENTITY, Vector3.ZERO, true, false)
+	assert_gt(shots.size(), 0)
+	var power := float(cc.get_ship("gunship").blaster_power)
+	assert_almost_eq(float(shots[0].personnel_damage), float(cc.weapons.ship_cannon.personnel_damage) * power, 0.01)
+
+
 func test_a_bolt_landing_beside_a_trooper_kills_them() -> void:
 	var t = _town()
 	await wait_physics_frames(2)

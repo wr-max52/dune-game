@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Ship guns hit people hard; one hull in the air and in space (2026-10-30)
+
+- **A ship's cannon kills a man in one hit.** A direct hit from a ship's guns
+  now does 130 damage to anything that is not a ship (times the ship's blaster
+  power): every trooper, sentry and guard, the cruiser's troopers and assassin
+  droids included, goes down to one bolt, in the atmosphere or aboard the
+  cruiser. Honour guards, bounty targets and the general take two or more.
+  Before, a direct hit did 9 (less than the 22 of a near miss's burst).
+- **Ship against ship is unchanged** and the same everywhere: 9 a bolt on a
+  hull, through the shield first, in the air as in space.
+- **Your ship keeps its damage between the air and space.** Climbing into an
+  orbital fight used to give you a fresh hull and shield, and coming back down
+  forgot what the fight did to you. Now it is the same hull and shield all the
+  way up and back.
+
 ## Who holds the desert: the Remnant or the locals (2026-10-30, issue #187)
 
 - **Seven Remnant outposts now.** Besides the three out the front gate, four new
