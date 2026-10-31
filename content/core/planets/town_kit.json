@@ -20,6 +20,18 @@
     "stage": { "small": 4.0, "full": 7.0, "height": 0.6, "at": 0.68, "note": "Issue #75: every cantina has a round stage (diameter in metres), at this fraction of its length from the back wall, against the side wall, off the door-to-bar path." },
     "patrons_from_size": 10
   },
+  "club_dome": {
+    "note": "Issue #261: a sealed station whose planet has \"club_dome\" has no cantina building: the whole dome is the club (zone 'cantina'), a rave. The bar and the merchant's stall stay where they were; the homes go. Metres from the ring's centre, +x toward the gate: the stage (round, the DJ alone on it, 'band'), the dancer on the floor beside it, the LED dance floor in front of it, the crowd standing on it and the loops some walk.",
+    "stage": { "at": [8.0, -23.0], "diameter": 9.0, "height": 0.9 },
+    "dancer": [14.5, -19.0],
+    "floor": { "min": [1.0, -16.5], "max": [15.0, -6.5] },
+    "standing": [[5.0, -14.0], [8.0, -13.5], [11.0, -14.2], [6.0, -11.0], [9.5, -10.8], [12.5, -11.5], [4.5, -8.5], [10.0, -8.2]],
+    "walks": [
+      [[2.0, -6.5], [16.0, -6.5], [16.0, -16.0], [2.0, -16.0], [2.0, -6.5]],
+      [[-12.0, -8.0], [0.0, -8.0], [0.0, -14.0], [-12.0, -14.0], [-12.0, -8.0]],
+      [[-14.0, 5.0], [-8.0, 5.0], [-8.0, 14.0], [-14.0, 14.0], [-14.0, 5.0]]
+    ]
+  },
   "barracks_from_size": 25,
   "tower_from_size": 35,
   "counts": {

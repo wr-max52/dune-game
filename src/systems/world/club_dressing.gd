@@ -13,6 +13,12 @@ extends Node3D
 ##         leather booths with candlelit tables, round tables over the cantina's
 ##         own, warm and blue stage spots through the haze, a neon sign over the
 ##         door and an upright piano and a saxophone on a stand by the stage.
+##   rave  the moon: the whole dome is the club (no building). A round stage
+##         under a truss with moving heads, sweeping lasers and strobes, an LED
+##         wall behind the DJ, rave speaker stacks, an LED dance floor that
+##         ripples on the beat, neon rings round the dome wall, a mirror ball
+##         and a lit canopy over the bar. The dome's own lights are turned down
+##         (AsteroidWorld.club_dim).
 ##
 ## Visual only (no collision): the town's boxes are what block. Positions come
 ## from the cantina's wall, stage, table and counter boxes.
@@ -39,6 +45,8 @@ func dress(town, scene: Node) -> void:
 	match props.style:
 		"jazz":
 			_jazz(town, scene)
+		"rave":
+			_rave(town, scene)
 
 
 ## The room's floor, ceiling and stage from the town's boxes.
@@ -313,3 +321,213 @@ func _piano_and_sax(_town) -> void:
 	for k in 3:
 		var a := TAU * k / 3.0
 		props._rod(sax, Vector3(0.0, 0.02, 0.0), Vector3(cos(a) * 0.22, 0.0, sin(a) * 0.22), 0.01, stand)
+
+
+# ------------------------------------------------------------------ rave
+
+func _rave(town, scene: Node) -> void:
+	if stage_r <= 0.0:
+		return
+	_hide_box(scene, "cantina_stage")
+	var st: Dictionary = town.data.get("station", {})
+	var centre := Vector3.ZERO
+	var radius := 36.0
+	var wall_h := 6.0
+	var dome_h := 30.0
+	if not st.is_empty():
+		centre = Vector3(float(st.center[0]), 0.0, float(st.center[2]))
+		radius = float(st.radius)
+		wall_h = float(st.wall_height)
+		dome_h = float(st.dome_height)
+	var k: Dictionary = TownGen.new().kit.get("club_dome", {})
+	var fmin := Vector2(centre.x, centre.z) + TownGen._v2(k.get("floor", {}).get("min", [0, 0]))
+	var fmax := Vector2(centre.x, centre.z) + TownGen._v2(k.get("floor", {}).get("max", [0, 0]))
+	var floor_mid := Vector3((fmin.x + fmax.x) * 0.5, 0.0, (fmin.y + fmax.y) * 0.5)
+	# The stage faces the dance floor: `fwd` from the stage toward it, `side` across.
+	var fwd := Vector3(floor_mid.x - stage_c.x, 0.0, floor_mid.z - stage_c.z).normalized()
+	var side := fwd.cross(Vector3.UP).normalized()
+	var face := Basis(Vector3.UP, atan2(fwd.x, fwd.z))
+	_rave_stage(fwd, side)
+	_rave_truss(fwd, side, face, floor_mid)
+	_rave_floor(fmin, fmax)
+	_rave_speakers(fwd, side, face)
+	_rave_walls(centre, radius, wall_h)
+	_rave_bar(town)
+	var ceil_at := func(p: Vector3) -> float:
+		var d := Vector2(p.x - centre.x, p.z - centre.z).length()
+		return wall_h + sqrt(maxf(0.0, 1.0 - pow(d / radius, 2.0))) * dome_h
+	props.mirror_ball(floor_mid + Vector3(0, 9.0, 0), ceil_at.call(floor_mid), 0.6)
+	for k2 in 4:     # high tables round the floor, a neon ring under each top
+		var a := TAU * k2 / 4.0 + 0.6
+		var p := floor_mid + Vector3(cos(a) * ((fmax.x - fmin.x) * 0.5 + 3.0), 0, sin(a) * ((fmax.y - fmin.y) * 0.5 + 3.0))
+		props.cocktail_table(p, 0.36, 1.08, false)
+		props.neon(_circle(p + Vector3(0, 1.02, 0), 0.34, 16), Color.from_hsv(k2 / 4.0, 0.8, 1.0), true, 0.012, 4.0)
+
+
+## The stage: a black deck with a diamond-plate top, a lit rim that cycles through
+## the colours, and steps down to the floor at the front.
+func _rave_stage(fwd: Vector3, _side: Vector3) -> void:
+	var h := stage_c.y
+	var base := stage_c - Vector3(0, h, 0)
+	props._cyl(props, stage_r, h - 0.04, base + Vector3(0, (h - 0.04) * 0.5, 0), ClubTextures.brushed(Color("#141418"), 0.6))
+	props._cyl(props, stage_r - 0.04, 0.04, base + Vector3(0, h - 0.02, 0), ClubTextures.plate(Color("#3a3c42")))
+	for y in [h - 0.06, 0.12]:
+		var rim := ClubTextures.glow(Color("#ff2bd6"), 4.0)
+		var t := TorusMesh.new()
+		t.inner_radius = stage_r - 0.02
+		t.outer_radius = stage_r + 0.03
+		t.ring_segments = 12
+		t.rings = 48
+		props._put(props, t, base + Vector3(0, y, 0), rim)
+		props.cycles.append([rim, 0.12, 0.0 if y > 0.5 else 0.5])
+		props.pulses.append([rim, 2.0, 7.0, 1.0, 0.0])
+	for i in 3:     # steps
+		var d := stage_r + 0.25 + i * 0.35
+		var sh := h - (i + 1) * h / 4.0
+		var step := props._box(props, Vector3(2.4, sh, 0.36), base + fwd * d + Vector3(0, sh * 0.5, 0), ClubTextures.plate(Color("#3a3c42")))
+		step.rotation.y = atan2(fwd.x, fwd.z)
+
+
+## The truss over the stage: two towers and a beam, moving heads that sweep the
+## floor, lasers that fan over the crowd, and strobes; an LED wall behind the DJ.
+func _rave_truss(fwd: Vector3, side: Vector3, face: Basis, floor_mid: Vector3) -> void:
+	var top := 7.0
+	var back := stage_c - Vector3(0, stage_c.y, 0) - fwd * (stage_r * 0.55)
+	var span := stage_r + 1.4
+	var metal := ClubTextures.brushed(Color("#b8b8bc"), 0.9)
+	var ends: Array = []
+	for s in [-1.0, 1.0]:
+		var foot: Vector3 = back + side * s * span
+		ends.append(foot + Vector3(0, top, 0))
+		for c in 4:     # a square tower of four chords with cross bracing
+			var o := Vector3(0.2 if c % 2 == 0 else -0.2, 0, 0.2 if c < 2 else -0.2)
+			props._rod(props, foot + o, foot + o + Vector3(0, top, 0), 0.025, metal)
+		for y in range(0, int(top), 1):
+			props._rod(props, foot + Vector3(-0.2, y, 0.2), foot + Vector3(0.2, y + 1.0, 0.2), 0.012, metal)
+			props._rod(props, foot + Vector3(-0.2, y, -0.2), foot + Vector3(0.2, y + 1.0, -0.2), 0.012, metal)
+	for o in [Vector3(0, 0.2, 0.2), Vector3(0, -0.2, 0.2), Vector3(0, 0.2, -0.2), Vector3(0, -0.2, -0.2)]:
+		props._rod(props, ends[0] + face * o, ends[1] + face * o, 0.025, metal)
+	# Moving heads along the beam, sweeping the floor.
+	var hues := [Color("#ff2bd6"), Color("#2bd9ff"), Color("#ffffff"), Color("#7aff5a"), Color("#ff2bd6"), Color("#2bd9ff")]
+	for i in 6:
+		var u := lerpf(-span + 0.8, span - 0.8, i / 5.0)
+		var at: Vector3 = back + side * u + Vector3(0, top - 0.35, 0)
+		var aim := floor_mid + side * (u * 1.3) + fwd * randf_range(-3.0, 3.0)
+		var l := props.spot(at, aim, hues[i], 14.0, 22.0)
+		props.lights.append([l, 4.0, 16.0, 1.0, i * 0.25])
+	# Lasers: a fan of beams from the middle of the beam out over the crowd.
+	var src: Vector3 = back + Vector3(0, top - 0.1, 0)
+	var laser_root := Node3D.new()
+	laser_root.name = "Lasers"
+	laser_root.position = src
+	props.add_child(laser_root)
+	for i in 18:      # two tiers: one dipping to the floor, one flat over the heads
+		var a := lerpf(-0.75, 0.75, (i % 9) / 8.0)
+		var dir := (face * Vector3(sin(a), -0.32 if i < 9 else -0.13, cos(a))).normalized()
+		var beam := Node3D.new()
+		laser_root.add_child(beam)
+		beam.basis = Basis.looking_at(dir, Vector3.UP)
+		var col: Color = [Color("#3aff4a"), Color("#ff2a3a"), Color("#2bd9ff")][i % 3]
+		var core := props._cyl(beam, 0.01, 34.0, Vector3(0, 0, -17.0), ClubTextures.glow(col, 7.0), Vector3(90, 0, 0))
+		core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var halo := props._cyl(beam, 0.04, 34.0, Vector3(0, 0, -17.0), ClubTextures.beam(col, 0.2), Vector3(90, 0, 0))
+		halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		props.fades.append([halo.material_override, 0.05, 0.3, 0.5, i * 0.11])
+		props.sweeps.append([beam, beam.basis, Vector3.UP, 18.0, 3.2, i * 0.07])
+	props._box(props, Vector3(0.5, 0.3, 0.4), src, ClubTextures.brushed(Color("#18181a"), 0.5))
+	# Strobes at the ends of the beam.
+	for e in ends:
+		var strobe := ClubTextures.glow(Color("#ffffff"), 1.0)
+		props._box(props, Vector3(0.5, 0.18, 0.12), e + Vector3(0, -0.35, 0) + fwd * 0.2, strobe)
+		props.pulses.append([strobe, 0.0, 30.0, 2.0, 0.0])
+		var flash := OmniLight3D.new()
+		flash.light_color = Color("#e8f0ff")
+		flash.omni_range = 18.0
+		flash.shadow_enabled = false
+		flash.position = e + Vector3(0, -0.6, 0) + fwd * 0.6
+		props.add_child(flash)
+		props.lights.append([flash, 0.0, 6.0, 2.0, 0.0])
+	# The LED wall behind the DJ: a grid of panels whose colours roll across it.
+	var wall_c: Vector3 = back - fwd * 0.6 + Vector3(0, 0.6, 0)
+	var cols := 14
+	var rows := 6
+	var pw := (span * 2.0 - 0.8) / cols
+	var ph := 4.6 / rows
+	for cx in cols:
+		for cy in rows:
+			var m := ClubTextures.glow(Color.from_hsv(0.0, 0.85, 1.0), 2.0)
+			m.albedo_color = Color("#0a0a0c")
+			var p: Vector3 = wall_c + side * ((cx - (cols - 1) * 0.5) * pw) + Vector3(0, (cy + 0.5) * ph, 0)
+			var tile := props._box(props, Vector3(pw - 0.04, ph - 0.04, 0.08), p, m)
+			tile.basis = face
+			props.cycles.append([m, 0.1, cx * 0.035 + cy * 0.06])
+			props.pulses.append([m, 0.8, 3.5, 1.0, absf(cx - (cols - 1) * 0.5) * 0.06])
+	var frame := props._box(props, Vector3(span * 2.0, 4.9, 0.25), wall_c + Vector3(0, 2.3, 0) - fwd * 0.12, ClubTextures.brushed(Color("#141416"), 0.5))
+	frame.basis = face
+
+
+## The LED dance floor: square tiles in a black grid, each cycling through the
+## colours a little behind its neighbour and flashing on the beat in rings out
+## from the middle.
+func _rave_floor(fmin: Vector2, fmax: Vector2) -> void:
+	var mid := (fmin + fmax) * 0.5
+	props._box(props, Vector3(fmax.x - fmin.x + 0.4, 0.03, fmax.y - fmin.y + 0.4), Vector3(mid.x, 0.015, mid.y), ClubTextures.brushed(Color("#0c0c0e"), 0.6))
+	var x := fmin.x + 0.5
+	while x < fmax.x:
+		var z := fmin.y + 0.5
+		while z < fmax.y:
+			var m := ClubTextures.glow(Color.from_hsv(0.0, 0.8, 1.0), 1.0)
+			m.albedo_color = Color("#101012")
+			m.roughness = 0.15
+			props._box(props, Vector3(0.92, 0.035, 0.92), Vector3(x, 0.02, z), m)
+			var d := Vector2(x, z).distance_to(mid)
+			props.cycles.append([m, 0.06, (x + z) * 0.03])
+			props.pulses.append([m, 0.25, 2.6, 1.0, -d * 0.09])
+			z += 1.0
+		x += 1.0
+
+
+## Stacks of rave speakers either side of the stage, facing the floor.
+func _rave_speakers(fwd: Vector3, side: Vector3, face: Basis) -> void:
+	for s in [-1.0, 1.0]:
+		var foot: Vector3 = stage_c - Vector3(0, stage_c.y, 0) + side * s * (stage_r + 2.6) + fwd * 0.6
+		var yaw := Basis(Vector3.UP, -s * 0.25) * face
+		props.speaker(Transform3D(yaw, foot), Vector3(1.4, 1.2, 1.0))
+		props.speaker(Transform3D(yaw, foot + Vector3(0, 1.2, 0)), Vector3(1.4, 1.2, 1.0))
+		props.speaker(Transform3D(yaw, foot + Vector3(0, 2.4, 0)), Vector3(1.0, 0.9, 0.8))
+
+
+## Neon rings round the inside of the dome wall, cyan low and magenta high, the
+## colours rolling round.
+func _rave_walls(centre: Vector3, radius: float, wall_h: float) -> void:
+	for ring in [[2.4, Color("#2bd9ff")], [wall_h - 0.6, Color("#ff2bd6")]]:
+		var pts := _circle(centre + Vector3(0, float(ring[0]), 0), radius - 0.45, 96)
+		var glow := ClubTextures.glow(ring[1], 4.0)
+		for i in pts.size():
+			props._rod(props, pts[i], pts[(i + 1) % pts.size()], 0.035, glow)
+		props.pulses.append([glow, 1.5, 5.0, 1.0, 0.0 if float(ring[0]) < 3.0 else 0.5])
+
+
+## A canopy over the bar for its lamps to hang from, edged in neon.
+func _rave_bar(town) -> void:
+	var counter: Dictionary = town.get_box("bar_counter")
+	if counter.is_empty():
+		return
+	var x0 := float(counter.min[0]) - 3.8
+	var x1 := float(counter.max[0]) + 1.2
+	var z0 := float(counter.min[2]) - 1.0
+	var z1 := float(counter.max[2]) + 1.0
+	var c := Vector3((x0 + x1) * 0.5, 4.3, (z0 + z1) * 0.5)
+	props._box(props, Vector3(x1 - x0, 0.2, z1 - z0), c, ClubTextures.brushed(Color("#1a1a1e"), 0.6))
+	for s in [-1.0, 1.0]:
+		props._rod(props, Vector3(x0 + 0.2, 0, c.z + s * (z1 - z0) * 0.45), Vector3(x0 + 0.2, 4.2, c.z + s * (z1 - z0) * 0.45), 0.06, ClubTextures.brushed(Color("#b8b8bc")))
+	var edge := PackedVector3Array([Vector3(x1, 4.18, z0), Vector3(x1, 4.18, z1), Vector3(x0, 4.18, z1), Vector3(x0, 4.18, z0)])
+	props.neon(edge, Color("#2bd9ff"), true, 0.025, 5.0)
+
+
+static func _circle(c: Vector3, r: float, n: int) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	for i in n:
+		var a := TAU * i / n
+		out.append(c + Vector3(cos(a) * r, 0, sin(a) * r))
+	return out

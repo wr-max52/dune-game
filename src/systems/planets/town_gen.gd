@@ -48,6 +48,9 @@ func _init(kit_data: Dictionary = {}) -> void:
 ##   bay                          -- "pit": the port's landing pit outside the gate
 ##   pit_clear                    -- how far past the walls (x their half-width) the
 ##                                   pit must start (the asteroid's dome)
+##   club_dome                    -- issue #261 (a round station only): no cantina
+##                                   building, the whole dome is the club, a rave
+##                                   ({ style, bpm, dim } becomes the town's "club")
 static func generate(town_id: String, size: int, seed: int = 1, opts: Dictionary = {}, kit_data: Dictionary = {}) -> Dictionary:
 	var g := TownGen.new(kit_data)
 	return g.build(town_id, size, seed, opts)
@@ -132,10 +135,11 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 	else:
 		_ground(town_id, xi0 - wt, xi1 + wt, zi0 - wt, zi1 + wt, wt, wall)
 	var x := xi0 + margin
+	var dome: Dictionary = opts.get("club_dome", {}) if round else {}
 	var cantina := _cantina(x, cl, cw, float(cdim.get("height", 5.5)), float(ccfg.get("door_half", 2.0)), opts,
-		size >= int(ccfg.get("patrons_from_size", 10)), full)
+		size >= int(ccfg.get("patrons_from_size", 10)), full, Rect2(rc.x - rw, rc.y - rw, rw * 2.0, rw * 2.0) if not dome.is_empty() else Rect2())
 	_front_stalls(cantina.end, square, front, sh)
-	if round:
+	if round and dome.is_empty():
 		_cantina_homes(cantina, sh)
 	x = cantina.end + square
 	if pit and round:
@@ -206,6 +210,7 @@ func build(town_id: String, size: int, seed: int, opts: Dictionary = {}) -> Dict
 		"locals": { "alarm": alarms.get("locals", {}) },
 		"counts": { "guards": guards, "residents": residents, "roamers": roamers, "stalls": stalls, "merchants": front,
 			"bays": 1 if pit else bays },
+		"club": dome.duplicate(),
 	}
 
 
@@ -234,10 +239,20 @@ func _ground(_town_id: String, x0: float, x1: float, z0: float, z1: float, wt: f
 	_marker("desert_exit", [x1 + 6.0, 0, 0], "waypoint")
 
 
-func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictionary, patrons: bool, full: bool = false) -> Dictionary:
+## `dome` (issue #261): the dome's floor when the whole dome is the club: no
+## building, the club's stage, DJ, dancer and crowd from the kit's "club_dome".
+func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictionary, patrons: bool, full: bool = false,
+		dome := Rect2()) -> Dictionary:
 	var x1 := x0 + l
 	var z0 := -w * 0.5
 	var z1 := w * 0.5
+	if dome.has_area():
+		_club_dome(dome)
+		_cantina_bar(x0, l, w, opts)
+		_marker("cantina_door", [x1 + 1.0, 0, 0], "waypoint")
+		_core.append(Rect2(x0, z0, l, w))
+		_zones.append({ "id": "cantina", "min": [dome.position.x, dome.position.y], "max": [dome.end.x, dome.end.y] })
+		return { "x0": x0, "end": x1, "z0": z0, "z1": z1 }
 	_box("cantina_wall_w", "cantina", "wall", [x0, 0, z0], [x0 + 0.5, h, z1])
 	_box("cantina_wall_n", "cantina", "wall", [x0 + 0.5, 0, z1 - 0.5], [x1 - 0.5, h, z1])
 	_box("cantina_wall_s", "cantina", "wall", [x0 + 0.5, 0, z0], [x1 - 0.5, h, z0 + 0.5])
@@ -245,18 +260,9 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 	_box("cantina_wall_e_n", "cantina", "wall", [x1 - 0.5, 0, door], [x1, h, z1])
 	_box("cantina_door_lintel", "cantina", "overhead", [x1 - 0.5, 3.0, -door], [x1, h, door])
 	_box("cantina_roof", "cantina", "roof", [x0, h, z0], [x1, h + 0.3, z1])
-	var cx0 := x0 + 0.5 + maxf(4.0, l * 0.25)
+	var cx0 := _cantina_bar(x0, l, w, opts)
 	var cz0 := snappedf(-w * 0.3, 0.1)
 	var cz1 := snappedf(w * 0.18, 0.1)
-	_box("bar_counter", "cantina", "counter", [cx0, 0, cz0], [cx0 + 2.0, 1.1, cz1])
-	var owner := { "id": "cantina_owner", "pos": [cx0 - 2.0, 0, 0], "role": "npc", "npc": "cantina_owner" }
-	if opts.has("cantina_card"):
-		owner["card"] = str(opts.cantina_card)
-	if opts.has("cantina_look"):
-		owner["look"] = str(opts.cantina_look)
-	if opts.has("cantina_planet"):
-		owner["planet"] = str(opts.cantina_planet)
-	_markers.append(owner)
 	# Issue #75: every cantina has a stage, off the path from the door to the bar.
 	var st: Dictionary = kit.get("cantina", {}).get("stage", {})
 	var sd := float(st.get("full" if full else "small", 4.0))
@@ -273,7 +279,6 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 			"role": "ambient", "soldier": "cantina_dancer",
 			"face": [dancer_x, 0.0, 0.0],
 		})
-	_marker("bar_front", [cx0 + 3.5, 0, 0], "interact")
 	_marker("cantina_door", [x1 + 1.0, 0, 0], "waypoint")
 	if patrons:
 		var n := 1
@@ -284,6 +289,68 @@ func _cantina(x0: float, l: float, w: float, h: float, door: float, opts: Dictio
 	_core.append(Rect2(x0, z0, l, w))
 	_zones.append({ "id": "cantina", "min": [x0, z0], "max": [x1, z1] })
 	return { "x0": x0, "end": x1, "z0": z0, "z1": z1 }
+
+
+## The bar: its counter, the owner behind it and the spot in front of it. Returns
+## the counter's back edge.
+func _cantina_bar(x0: float, l: float, w: float, opts: Dictionary) -> float:
+	var cx0 := x0 + 0.5 + maxf(4.0, l * 0.25)
+	var cz0 := snappedf(-w * 0.3, 0.1)
+	var cz1 := snappedf(w * 0.18, 0.1)
+	_box("bar_counter", "cantina", "counter", [cx0, 0, cz0], [cx0 + 2.0, 1.1, cz1])
+	var owner := { "id": "cantina_owner", "pos": [cx0 - 2.0, 0, 0], "role": "npc", "npc": "cantina_owner" }
+	if opts.has("cantina_card"):
+		owner["card"] = str(opts.cantina_card)
+	if opts.has("cantina_look"):
+		owner["look"] = str(opts.cantina_look)
+	if opts.has("cantina_planet"):
+		owner["planet"] = str(opts.cantina_planet)
+	_markers.append(owner)
+	_marker("bar_front", [cx0 + 3.5, 0, 0], "interact")
+	return cx0
+
+
+## Issue #261: the whole dome is the club, a rave (the kit's "club_dome", metres from
+## the ring's centre): a round stage with the DJ alone on it behind the desk, facing
+## the dance floor; the station's dancer on the floor beside it; ravers standing on
+## the dance floor and walking loops round the room, bottles in hand.
+func _club_dome(dome: Rect2) -> void:
+	var k: Dictionary = kit.get("club_dome", {})
+	var c := dome.get_center()
+	var st: Dictionary = k.get("stage", {})
+	var at := c + _v2(st.get("at", [0.0, 0.0]))
+	var r := float(st.get("diameter", 8.0)) * 0.5
+	var h := float(st.get("height", 0.9))
+	_box("cantina_stage", "cantina", "cover", [at.x - r, 0, at.y - r], [at.x + r, h, at.y + r],
+		{ "shape": "round", "standable": true, "band": true, "note": "Issue #261: the rave's stage; the DJ plays here alone." })
+	var floor_mid: Vector2 = c + (_v2(k.floor.min) + _v2(k.floor.max)) * 0.5
+	var dj := at + (floor_mid - at).normalized() * -0.6
+	_markers.append({ "id": "band_dj", "pos": [snappedf(dj.x, 0.01), h, snappedf(dj.y, 0.01)], "role": "ambient", "soldier": "club_dj_rave",
+		"prop": "dj_desk", "face": [floor_mid.x, h, floor_mid.y] })
+	var dz := c + _v2(k.get("dancer", [r + 2.0, 0.0]))
+	_markers.append({ "id": "cantina_dancer", "pos": [dz.x, 0.0, dz.y], "role": "ambient", "soldier": "cantina_dancer",
+		"face": [floor_mid.x, 0.0, floor_mid.y] })
+	var n := 1
+	for p in k.get("standing", []):
+		var q := c + _v2(p)
+		_markers.append({ "id": "raver_%d" % n, "pos": [q.x, 0, q.y], "role": "ambient", "soldier": "local_raver",
+			"face": [at.x, h, at.y] })
+		n += 1
+	var w := 1
+	for loop in k.get("walks", []):
+		var pts: Array = []
+		for p in loop:
+			var q := c + _v2(p)
+			pts.append([q.x, q.y])
+		var rid := "club_walk_%d" % w
+		_routes.append({ "id": rid, "points": pts })
+		_markers.append({ "id": "raver_walk_%d" % w, "pos": [pts[0][0], 0, pts[0][1]], "role": "ambient", "soldier": "local_raver",
+			"patrol": rid })
+		w += 1
+
+
+static func _v2(a) -> Vector2:
+	return Vector2(float(a[0]), float(a[1]))
 
 
 ## Issue #75: the merchants' stalls, in the square in front of the cantina, both

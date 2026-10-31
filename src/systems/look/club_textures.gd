@@ -60,6 +60,11 @@ static func panels(tint := Color("#4a2e1c"), panel := 1.2) -> StandardMaterial3D
 	return _mat("panels_%s_%s" % [tint.to_html(), panel], func(): return _paint_panels(tint), 1.0 / panel, 0.55, 0.0, 1.0)
 
 
+## Diamond plate: raised diamonds on steel, for a stage deck.
+static func plate(tint := Color("#5a5c62")) -> StandardMaterial3D:
+	return _mat("plate_" + tint.to_html(), func(): return _paint_plate(tint), 2.5, 0.38, 0.8, 1.2)
+
+
 ## Emission on top of any of these (a glowing edge, a lit sign), not cached.
 static func glow(color: Color, energy := 3.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -320,4 +325,26 @@ static func _paint_panels(tint: Color) -> Array:
 			c.a = 1.0
 			out[0].set_pixel(x, y, c)
 			out[1].set_pixel(x, y, _gray(h))
+	return out
+
+
+static func _paint_plate(tint: Color) -> Array:
+	var out := _pair()
+	var scuff := _noise(61, 0.05, 3)
+	var cell := TEX / 8
+	for y in TEX:
+		for x in TEX:
+			var row := y / cell
+			var ox := cell / 2 if row % 2 == 1 else 0
+			var u := float((x + ox) % cell) / cell - 0.5
+			var v := float(y % cell) / cell - 0.5
+			# A diamond leaning one way on even rows, the other on odd ones.
+			var a := u * 0.7 + v * 0.7 if row % 2 == 0 else u * 0.7 - v * 0.7
+			var b := -u * 0.7 + v * 0.7 if row % 2 == 0 else u * 0.7 + v * 0.7
+			var on := absf(a) < 0.32 and absf(b) < 0.07
+			var w := scuff.get_pixel(x, y).r
+			var c := tint * (0.85 + w * 0.25) * (1.25 if on else 1.0)
+			c.a = 1.0
+			out[0].set_pixel(x, y, c)
+			out[1].set_pixel(x, y, _gray(0.85 if on else 0.4))
 	return out
