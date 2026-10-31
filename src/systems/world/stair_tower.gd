@@ -15,8 +15,11 @@ const DOOR_H := 2.4           ## door gap height in the tower wall
 const DOOR_HALF := 0.32       ## door gap half angle (radians)
 const RAMP_T := 0.25          ## ramp slab thickness
 const FLOOR_T := 0.3          ## lookout floor thickness
-const ROOM_H := 2.5           ## lookout: floor to roof underside
-const PARAPET_H := 1.1
+## Issue #237: the lookout's windows are tall enough to jump out of. The sill
+## stops a walk (a body only steps 0.12 m) but a jump (feet 0.6 m up) clears it,
+## and the roof is high enough for a 1.8 m body at the top of that jump.
+const ROOM_H := 3.0           ## lookout: floor to roof underside
+const PARAPET_H := 0.45       ## lookout: the window sill
 const OPEN_SPAN := 0.75       ## of a turn: the stairwell left open under the room floor
 const SEG_PER_TURN := 36
 

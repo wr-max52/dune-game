@@ -5,6 +5,8 @@ extends GutTest
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const RingWall := preload("res://src/systems/world/ring_wall.gd")
+const StairTower := preload("res://src/systems/world/stair_tower.gd")
+const CharacterController := preload("res://src/systems/player/character_controller.gd")
 
 
 func _town() -> TownLayout:
@@ -127,6 +129,22 @@ func test_round_port_club_has_a_round_body() -> void:
 			var at := t.marker_pos(str(pk.marker)) + Vector3(float(pk.offset[0]), float(pk.offset[1]), float(pk.offset[2]))
 			assert_almost_eq(Vector2(at.x, at.z).distance_to(tc), 0.0, 0.05, "the blade is over the tower")
 			assert_almost_eq(at.y, float(tower.max[1]), 0.05, "on the lookout floor")
+
+
+## Issue #237: in both ports you can jump out of the lookout's windows: a jump
+## clears the sill, the opening fits a standing body at the top of that jump,
+## and the lookout box holds the taller room.
+func test_lookout_windows_are_tall_enough_to_jump_out() -> void:
+	var body := CharacterController.new()
+	var peak := 0.6                      # character_controller.gd: velocity.y = sqrt(2 g 0.6)
+	assert_lt(StairTower.PARAPET_H + 0.1, peak, "a jump clears the sill")
+	assert_gt(StairTower.PARAPET_H, 0.2, "but you don't walk off it")
+	assert_lt(peak + body.stand_height, StairTower.ROOM_H, "a body fits the opening at the top of the jump")
+	for layout in ["port_square", "port_round"]:
+		var t := TownLayout.new()
+		t.load_town("port_town", layout)
+		var lk := t.get_box("lookout")
+		assert_gte(float(lk.max[1]) - float(lk.min[1]), StairTower.ROOM_H + 0.3, layout + ": the lookout box holds the room and its roof")
 
 
 func test_round_port_is_round_and_twice_the_size() -> void:

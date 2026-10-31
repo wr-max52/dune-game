@@ -30,6 +30,9 @@ Plain English, newest on top. One entry per milestone.
   every turn of the ramp and in the lookout, brighter lamps on the core, and a
   glowing band under every ledge outside, so the climb reads at night and from
   the square.
+- **You can jump out of the lookout's windows**, in both ports. The sill is
+  0.45 m (was 1.1 m), so a walk stops at it but a jump clears it, and the roof
+  is 3 m up (was 2.5 m), so you fit through standing.
 - The overlap check (V5) now treats round boxes (round huts, the stair tower,
   the lookout, the round roof) as circles, not squares. A stair tower's door can
   face any way (`door_deg`).
