@@ -533,7 +533,8 @@ static func _bridge(out: Array) -> void:
 ## banks along the pits' outer edges, a screen on every rack in the corridor's two
 ## rooms and a terminal on each room's fore wall, terminals down the corridor's
 ## walls between the door frames, and one on every landing of the ramp shaft.
-## Casings are "console", their displays "screen" (drawn only, each a live picture).
+## Casings are "console" and solid (in the crew's navmesh too), their displays
+## "screen" (drawn only, flush on a casing, each a live picture).
 static func _computers(out: Array) -> void:
 	var pit_z := Vector2(BRIDGE_Z.x + 10.0, BRIDGE_Z.y - 8.0)
 	for side: float in [-1.0, 1.0]:
@@ -574,8 +575,8 @@ static func _computers(out: Array) -> void:
 	while z < SHAFT_Z.x - 4.0:
 		var side := 1.0 if i % 2 == 0 else -1.0
 		var wx := side * HALL_HALF
-		_box(out, "hall_terminal_%d" % i, Vector3(0.5, 1.6, 1.8), Vector3(wx - side * 0.25, DECK_Y + 1.7, z), "console")
-		out[-1]["kind"] = "decor"
+		_box(out, "hall_terminal_%d" % i, Vector3(0.5, 1.6, 1.8), Vector3(wx - side * 0.25, DECK_Y + 1.7, z), "console",
+			Basis.IDENTITY, true)
 		_box(out, "hall_terminal_%d_screen" % i, Vector3(0.06, 0.9, 1.4), Vector3(wx - side * 0.53, DECK_Y + 1.95, z), "screen",
 			Basis(Vector3.FORWARD, side * deg_to_rad(8.0)))
 		out[-1]["kind"] = "decor"

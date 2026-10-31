@@ -21,8 +21,6 @@ Nothing was played by hand; no fight against the new droids was tried.
 - **The holo map is not to scale off the ball.** Heights are squeezed so the orbit
   fits over the table, and the moon sits at a set distance in its true direction.
   It spins as a whole, so north turns with it.
-- **The corridor and shaft terminals are drawn only** (you walk through them);
-  the room terminals, the bridge banks and the landing terminals are solid.
 - **Screens are shader pictures**, four kinds picked per screen by where it is.
   They show nothing real (no live map, no alarms).
 - **The cruiser trace still builds no crew** when run with `-s` (the NpcVoice
