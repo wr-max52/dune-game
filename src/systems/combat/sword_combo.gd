@@ -342,3 +342,69 @@ static func pose_transform(p: Dictionary) -> Transform3D:
 	var x := hint.cross(y).normalized()
 	var z := x.cross(y).normalized()
 	return Transform3D(Basis(x, y, z), p.pos)
+
+
+
+## First person, one hand (issue #229): a real fist holds the hilt across the palm,
+## square to the forearm, the blade out past the thumb. Two steps: fpv_pole swings
+## the elbow round its circle so the forearm comes square to the blade (the swing
+## keeps its blade path), then fpv_fist turns the blade the rest of the way, at
+## most FIST_TURN degrees (more tips the level follow-through down), and rolls the
+## wrist so the thumb faces the blade.
+const FIST_TURN := 30.0
+## How far (degrees) the elbow may leave its usual side (the arm's pole) to get there.
+const FIST_POLE := 75.0
+## The elbow stays this far under the shoulder: raised higher, the sleeve's cut
+## end swings into view.
+const FIST_ELBOW_DROP := 0.12
+
+
+## The IK pole for the sword arm: `base` turned about the shoulder-hand line to put
+## the forearm square to blade direction `d` (or as near as the arm allows), the
+## elbow kept low. Same arm as CharacterKit._reach: upper arm `l1`, forearm plus
+## hand `l2`. Searches the elbow's circle in 2.5 degree steps.
+static func fpv_pole(shoulder: Vector3, hand: Vector3, d: Vector3, base: Vector3, l1: float, l2: float) -> Vector3:
+	var to := hand - shoulder
+	var dist := clampf(to.length(), absf(l1 - l2) + 0.01, l1 + l2 - 0.005)
+	var dn := to.normalized()
+	var a := acos(clampf((l1 * l1 + dist * dist - l2 * l2) / (2.0 * l1 * dist), -1.0, 1.0))
+	var p0 := (base - dn * base.dot(dn)).normalized()
+	var p1 := dn.cross(p0)
+	var c := shoulder + dn * l1 * cos(a)
+	var r := l1 * sin(a)
+	var at := hand if to.length() <= dist else shoulder + dn * dist
+	var best := INF
+	var pick := p0
+	var lim := int(FIST_POLE / 2.5)
+	for i in range(-lim, lim + 1):
+		var t := deg_to_rad(i * 2.5)
+		var p := p0 * cos(t) + p1 * sin(t)
+		var elbow := c + p * r
+		var square := absf((at - elbow).normalized().dot(d))
+		var high := maxf(0.0, elbow.y - (shoulder.y - FIST_ELBOW_DROP))
+		var cost := square + high * 8.0 + absf(t) * 0.05
+		if cost < best:
+			best = cost
+			pick = p
+	return pick
+
+
+## After the arm has reached the grip: the sword turned about the fist toward the
+## plane square to the forearm, and set in it. `elbow` = the elbow in chest space
+## (the forearm runs down its -Y, the thumb is +Z, the hand at `reach` along it).
+## Returns [the sword's transform, the wrist's roll about the forearm in radians].
+static func fpv_fist(xf: Transform3D, grip: Vector3, elbow: Transform3D, reach: float) -> Array:
+	var e := elbow.basis.orthonormalized()
+	var fore := -e.y
+	var hand := elbow.origin + fore * reach
+	var g := xf * grip
+	var d := xf.basis.y.normalized()
+	var across := d - fore * d.dot(fore)
+	if across.length() < 0.15:          # blade along the arm: keep the thumb where it is
+		across = e.z
+	across = across.normalized()
+	var turn := d.angle_to(across)
+	var to := d.slerp(across, minf(1.0, deg_to_rad(FIST_TURN) / turn)) if turn > 0.001 else d
+	var q := Basis(Quaternion(d, to.normalized()))
+	var out := Transform3D(q * xf.basis, hand + q * (xf.origin - g))
+	return [out, atan2(across.dot(e.x), across.dot(e.z))]

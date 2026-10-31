@@ -666,7 +666,18 @@ func _place_weapon(upper: String, pitch: float) -> void:
 	# alone: reaching across to a grip right of centre lays the forearm sideways
 	# through the view, reading as a second arm.
 	if grips.has("r"):
-		kit.reach(body, "r", w.transform * (grips.r as Vector3), POLE_R)
+		# Issue #229: from the eye the sword sits across the fist, square to the forearm.
+		var in_fist := first_person and current == "energy_blade"
+		var pole_r := POLE_R
+		if in_fist:
+			pole_r = SwordCombo.fpv_pole((joints.r_shoulder as Node3D).position, w.transform * (grips.r as Vector3),
+				w.transform.basis.y.normalized(), POLE_R, CharacterKit.UPPER_ARM, CharacterKit.FOREARM + CharacterKit.HAND_REACH)
+		kit.reach(body, "r", w.transform * (grips.r as Vector3), pole_r)
+		if in_fist:
+			var fist := SwordCombo.fpv_fist(w.transform, grips.r, kit.chest_space(body, joints.r_elbow),
+				CharacterKit.FOREARM + CharacterKit.HAND_REACH)
+			w.transform = fist[0]
+			(joints.r_wrist as Node3D).basis = Basis(Vector3.UP, float(fist[1]))
 	# Issue #229: aimed in, the left hand joins even a one-handed gun.
 	var one_hand := first_person and ads_blend < 0.4 \
 		and bool((look.get(current, {}) as Dictionary).get("aim_fpv", {}).get("one_hand", false))
