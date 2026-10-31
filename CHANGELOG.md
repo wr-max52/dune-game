@@ -2,6 +2,7 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The round port (issue #237, parts 1 to 4, 2026-10-31)
 ## The round port (issue #237, parts 1 to 3, 2026-10-31)
 ## Eject from the ship in flight (issue #271: #274, #275, #276, 2026-10-31)
 
@@ -71,6 +72,22 @@ Plain English, newest on top. One entry per milestone.
 - **Its barracks are about twice the size**: a bigger hall with the riflemen on
   its roof, the bunk tower and upper block bridged as before, a second block,
   an armoury, and a yard with the Remnant's pad and a drill ground.
+- **Its cantina is a round club** (part 4): a round body with the same floor
+  as the square room, a round roof with a parapet, and the arched door facing
+  the square. The jazz club inside is as before, its band, bar, tables and
+  patrons in their places: a round plank floor, panels and drapes following the
+  curve, booths against it. The stair tower is a turret outside the wall,
+  entered through a side door.
+- **The stair tower is lit all the way up**, in both ports: a warm light in
+  every turn of the ramp and in the lookout, brighter lamps on the core, and a
+  glowing band under every ledge outside, so the climb reads at night and from
+  the square.
+- **You can jump out of the lookout's windows**, in both ports. The sill is
+  0.45 m (was 1.1 m), so a walk stops at it but a jump clears it, and the roof
+  is 3 m up (was 2.5 m), so you fit through standing.
+- The overlap check (V5) now treats round boxes (round huts, the stair tower,
+  the lookout, the round roof) as circles, not squares. A stair tower's door can
+  face any way (`door_deg`).
 - **The home planet still uses the square port** until the round one is done.
   F11 > World > Town builds it to the round one for the rest of the run.
 - **New box kind `ring`**: a round wall cut open at gates, which any layout can

@@ -131,7 +131,8 @@ func validate() -> Array:
 					errs.append("V4 outside zone: " + str(b.id))
 
 	# V5 no 3D overlap (strict, so touching is fine). A "hollow" box (the round
-	# pit) is a shell other boxes sit inside, so it is left out.
+	# pit) is a shell other boxes sit inside, so it is left out. Issue #237: a round
+	# box (shape "round", a stair tower, a lookout) is its circle, not its square.
 	var bs := boxes()
 	for i in bs.size():
 		for j in range(i + 1, bs.size()):
@@ -201,7 +202,26 @@ func _aabb_overlap(a, b) -> bool:
 	for k in 3:
 		if not (float(a.min[k]) < float(b.max[k]) and float(b.min[k]) < float(a.max[k])):
 			return false
-	return true
+	var ra := _is_round(a)
+	var rb := _is_round(b)
+	if not ra and not rb:
+		return true
+	var ca := Vector2((float(a.min[0]) + float(a.max[0])) * 0.5, (float(a.min[2]) + float(a.max[2])) * 0.5)
+	var cb := Vector2((float(b.min[0]) + float(b.max[0])) * 0.5, (float(b.min[2]) + float(b.max[2])) * 0.5)
+	if ra and rb:
+		return ca.distance_to(cb) < _round_r(a) + _round_r(b) - 0.001
+	var c := ca if ra else cb
+	var r := _round_r(a) if ra else _round_r(b)
+	return _point_rect_dist(c.x, c.y, b if ra else a) < r - 0.001
+
+
+## Upright cylinders in their box: radius half the box's narrower side.
+static func _is_round(b) -> bool:
+	return str(b.get("shape", "")) == "round" or str(b.kind) in ["spiral", "lookout"]
+
+
+static func _round_r(b) -> float:
+	return minf(float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2])) * 0.5
 
 
 ## 2D distance from point (x, z) to a box footprint. 0 if inside.

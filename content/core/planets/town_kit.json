@@ -419,6 +419,16 @@
           [116.0, 32.0]
         ]
       }
+    },
+    "cantina": {
+      "note": "Issue #237 part 4: the cantina (the club, issue #261) gets a round body with the same floor area as the square port room, centred where that room was: a ring wall (thickness, open at the door on the square side and at the stair tower), a round roof at the old roof height, and the stair tower outside the wall as a turret at tower.deg, its door facing the room through the wall. Everything inside keeps its place against the bar; a marker or walk that the curve now leaves within inset of the wall is pulled in to that.",
+      "thickness": 0.5,
+      "door_half": 2.0,
+      "tower": {
+        "deg": 135.0,
+        "gap_half": 1.0
+      },
+      "inset": 1.4
     }
   },
   "bay_ships": ["freighter", "courier", "gunship"],

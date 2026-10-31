@@ -5,6 +5,8 @@ extends GutTest
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const RingWall := preload("res://src/systems/world/ring_wall.gd")
+const StairTower := preload("res://src/systems/world/stair_tower.gd")
+const CharacterController := preload("res://src/systems/player/character_controller.gd")
 
 
 func _town() -> TownLayout:
@@ -62,11 +64,87 @@ func test_round_port_carries_the_club_cantina() -> void:
 	for m in sq.markers():
 		if not (str(m.id).begins_with("band_") or str(m.id).begins_with("patron_")):
 			continue
-		assert_almost_eq(t.marker_pos(str(m.id)).distance_to(sq.marker_pos(str(m.id)) + shift), 0.0, 0.01, str(m.id) + " moved with the cantina")
+		# Issue #237 part 4: one the round wall now crowds is pulled in toward the middle.
+		var want := sq.marker_pos(str(m.id)) + shift
+		var got := t.marker_pos(str(m.id))
+		var c: Vector3 = RingWall.info(t.get_box("cantina_body")).c if not t.get_box("cantina_body").is_empty() else got
+		var pulled := got.distance_to(want) > 0.01 and Vector2(got.x - c.x, got.z - c.z).length() < Vector2(want.x - c.x, want.z - c.z).length() \
+			and got.distance_to(want) < 2.5
+		assert_true(got.distance_to(want) < 0.01 or pulled, str(m.id) + " moved with the cantina")
 		if m.has("face"):
 			var a := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2])) + shift
 			var f: Array = t.get_marker(str(m.id)).face
 			assert_almost_eq(Vector3(float(f[0]), float(f[1]), float(f[2])).distance_to(a), 0.0, 0.01, str(m.id) + " looks at the same thing")
+
+
+## Issue #237 part 4: the club in a round body of the same floor, everything in
+## it still inside, the door on the square, the stair tower a turret outside.
+func test_round_port_club_has_a_round_body() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	var body := t.get_box("cantina_body")
+	assert_eq(str(body.get("kind", "")), "ring", "a round body")
+	var info := RingWall.info(body)
+	var w := sq.get_box("cantina_wall_w")
+	var e := sq.get_box("cantina_wall_e_s")
+	var n := sq.get_box("cantina_wall_n")
+	var s_ := sq.get_box("cantina_wall_s")
+	var square := (float(e.min[0]) - float(w.max[0])) * (float(n.min[2]) - float(s_.max[2]))
+	assert_almost_eq(PI * float(info.ri) * float(info.ri), square, square * 0.05, "the same floor area")
+	assert_eq(str(t.get_box("cantina_roof").get("shape", "")), "round", "a round roof")
+	var c: Vector3 = info.c
+	for id in ["bar_counter", "cantina_stage", "fixer_table", "cantina_table_1", "cantina_table_2", "cantina_table_3"]:
+		var b := t.get_box(id)
+		for x in [float(b.min[0]), float(b.max[0])]:
+			for z in [float(b.min[2]), float(b.max[2])]:
+				assert_lt(Vector2(x - c.x, z - c.z).length(), float(info.ri), id + " is inside the round wall")
+	for id in ["bar_front", "cantina_owner", "fixer", "band_dj", "patron_1"]:
+		var p := t.marker_pos(id)
+		assert_lt(Vector2(p.x - c.x, p.z - c.z).length(), float(info.ri) - 0.6, id + " stands inside")
+	# The door faces the square.
+	var door_deg := 0.0
+	for g in body.gaps:
+		if str(g.id) == "door":
+			door_deg = float(g.deg)
+	var sqz: Dictionary = {}
+	for z in t.zones():
+		if str(z.id) == "cantina_square":
+			sqz = z
+	var to_sq := Vector2((float(sqz.min[0]) + float(sqz.max[0])) * 0.5 - c.x, (float(sqz.min[1]) + float(sqz.max[1])) * 0.5 - c.z)
+	assert_lt(absf(wrapf(to_sq.angle() - deg_to_rad(door_deg), -PI, PI)), 0.5, "the door opens on the square")
+	# The tower stands outside, its door facing the room, the lookout on it.
+	var tower := t.get_box("stair_tower")
+	var tc := Vector2((float(tower.min[0]) + float(tower.max[0])) * 0.5, (float(tower.min[2]) + float(tower.max[2])) * 0.5)
+	var tr := (float(tower.max[0]) - float(tower.min[0])) * 0.5
+	assert_gte(tc.distance_to(Vector2(c.x, c.z)) - tr, float(info.r), "the stair tower is outside the wall")
+	var to_room := (Vector2(c.x, c.z) - tc).angle()
+	assert_lt(absf(wrapf(deg_to_rad(float(tower.door_deg)) - to_room, -PI, PI)), 0.05, "its door faces the room")
+	assert_eq(str(t.get_box("lookout").get("stair", "")), "stair_tower", "the lookout is on it")
+	# The blade still lies on the lookout floor.
+	var cc := CoreContent.new()
+	cc.load_from()
+	for pk in cc.get_pickups("port_town", "port_round"):
+		if str(pk.id) == "tower_blade":
+			var at := t.marker_pos(str(pk.marker)) + Vector3(float(pk.offset[0]), float(pk.offset[1]), float(pk.offset[2]))
+			assert_almost_eq(Vector2(at.x, at.z).distance_to(tc), 0.0, 0.05, "the blade is over the tower")
+			assert_almost_eq(at.y, float(tower.max[1]), 0.05, "on the lookout floor")
+
+
+## Issue #237: in both ports you can jump out of the lookout's windows: a jump
+## clears the sill, the opening fits a standing body at the top of that jump,
+## and the lookout box holds the taller room.
+func test_lookout_windows_are_tall_enough_to_jump_out() -> void:
+	var body := CharacterController.new()
+	var peak := 0.6                      # character_controller.gd: velocity.y = sqrt(2 g 0.6)
+	assert_lt(StairTower.PARAPET_H + 0.1, peak, "a jump clears the sill")
+	assert_gt(StairTower.PARAPET_H, 0.2, "but you don't walk off it")
+	assert_lt(peak + body.stand_height, StairTower.ROOM_H, "a body fits the opening at the top of the jump")
+	for layout in ["port_square", "port_round"]:
+		var t := TownLayout.new()
+		t.load_town("port_town", layout)
+		var lk := t.get_box("lookout")
+		assert_gte(float(lk.max[1]) - float(lk.min[1]), StairTower.ROOM_H + 0.3, layout + ": the lookout box holds the room and its roof")
 
 
 func test_round_port_is_round_and_twice_the_size() -> void:
