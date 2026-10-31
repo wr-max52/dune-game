@@ -1013,6 +1013,12 @@ func start_fight() -> bool:
 		f.queue_free()
 		return false
 	fight = f
+	# One hull and shield in the air and in space: the fight's bolts land on the
+	# ship's own defense, so you climb out as damaged as you are and come back
+	# down as damaged as the fight left you.
+	var me: Dictionary = f.df.get_ship(f.df.player_id)
+	if not me.is_empty():
+		me.defense = defense
 	Sound.set_space(true)          # the space track is the orbital fight's music
 	fight_started.emit()
 	return true
@@ -1284,6 +1290,7 @@ static func ship_bolt(s: Dictionary, shooter: Node, content, ground: WorldGround
 	b.direction = vel.normalized()
 	b.speed = vel.length()
 	b.damage = float(s.damage)
+	b.soft_damage = float(s.get("personnel_damage", 0.0))
 	b.range_m = float(s.range)
 	b.shooter = shooter
 	b.sweep = true
