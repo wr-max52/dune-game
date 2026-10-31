@@ -2,6 +2,28 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Space fights at real speed, and a seeker rack (2026-10-31)
+
+- **No more slowing to a crawl when a fight starts.** Space fights used to run
+  at the ships' old dogfight speeds (48 m/s for an interceptor), so your speed
+  dropped from about 680 to 48 the moment the enemy showed up. Now a fight runs
+  at your edge-of-space speed, about 480 m/s, and nothing jumps as it starts or
+  ends.
+- **Top speed at the edge of space is down to 70%**: 2.8x the ship's speed near
+  the ground instead of 4x (an interceptor tops out at about 476 m/s instead of
+  680). Grit Station is still under half a minute away.
+- **Everything in a fight scales with the speed**, from one file,
+  `content/core/flow/space_fight.json`: speeds x10, distances x2 (the arena, where
+  waves arrive, how far pilots engage and break, gun and seeker range), bolts x3
+  faster, turning x1.3, and ships' hit spheres x1.5. The values come from
+  headless runs of both fights over 28 seeds: the player wins about as often as
+  before and lands about as many gun hits. Fights run longer (about 90 s
+  instead of 30-60).
+- **Seekers are a rack of four.** Hold the seeker key with a lock and all four
+  go, one every 0.3 s, and the lock holds through the salvo. The rack gets one
+  back every 1.5 s. Each seeker hits harder (85, was 55) and turns a little
+  tighter. AI pilots still lock afresh for each seeker.
+
 ## The club mix (issue #104, part 1: the music, 2026-10-31)
 
 - **Every cantina is a club now.** Walk toward one and its music fades in from

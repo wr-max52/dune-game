@@ -36,6 +36,9 @@ var bolt_speed := 300.0         ## primary weapon projectile speed, for the lead
 var weapon_range := 900.0
 var missile_locked := false
 var has_missiles := false
+## How much bigger this fight is than the profile's distances (a space fight's
+## range_scale, content/core/flow/space_fight.json); 1.0 in the air.
+var reach := 1.0
 
 ## Outputs the director reads after update().
 var command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.6, "boost": false }
@@ -60,6 +63,11 @@ func _init(pilot_profile: Dictionary = {}, flight_model = null, rng_seed: int = 
 
 func p(key: String, fallback: float) -> float:
 	return float(profile.get(key, fallback))
+
+
+## A profile distance (metres), times reach.
+func d(key: String, fallback: float) -> float:
+	return p(key, fallback) * reach
 
 
 ## Called by the director when this ship takes a hit.
@@ -98,7 +106,7 @@ func update(dt: float) -> int:
 
 	if not has_target:
 		state = Action.PATROL
-		_steer_to(arena_center + Vector3(0, 0, -200), 0.6, false)
+		_steer_to(arena_center + Vector3(0, 0, -200) * reach, 0.6, false)
 		return state
 
 	var dist := distance_to_target()
@@ -106,29 +114,29 @@ func update(dt: float) -> int:
 	match state:
 		Action.BREAK:
 			_break_left -= dt
-			_steer_to(pos + _break_dir * 400.0, 1.0, true)
+			_steer_to(pos + _break_dir * 400.0 * reach, 1.0, true)
 			if _break_left <= 0.0:
 				state = Action.EXTEND
 			return state
 		Action.EXTEND:
 			var away := (pos - target_pos).normalized()
-			_steer_to(pos + (away + flight.forward()).normalized() * 400.0, 1.0, false)
-			if dist >= p("extend_distance", 400.0):
+			_steer_to(pos + (away + flight.forward()).normalized() * 400.0 * reach, 1.0, false)
+			if dist >= d("extend_distance", 400.0):
 				state = Action.PURSUE
 			return state
 
 	# PURSUE / ATTACK / PATROL fall through to a fresh decision.
-	var too_close := dist < p("break_distance", 90.0)
+	var too_close := dist < d("break_distance", 90.0)
 	var spooked := hit and _rng.randf() < p("break_on_hit", 0.3)
 	var evading := missile and _rng.randf() < p("evade_missile", 0.5)
 	if too_close or spooked or evading:
 		_start_break()
-		_steer_to(pos + _break_dir * 400.0, 1.0, true)
+		_steer_to(pos + _break_dir * 400.0 * reach, 1.0, true)
 		return state
 
-	if dist > p("engage_range", 650.0):
+	if dist > d("engage_range", 650.0):
 		state = Action.PURSUE
-		_steer_to(target_pos + target_vel * 0.5, 1.0, dist > p("engage_range", 650.0) * 1.8)
+		_steer_to(target_pos + target_vel * 0.5, 1.0, dist > d("engage_range", 650.0) * 1.8)
 		return state
 
 	state = Action.ATTACK

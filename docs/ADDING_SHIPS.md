@@ -26,7 +26,10 @@ Every new id also goes in `content/core/manifest.json` under `ships`, `weapons`,
      in metres.
    - `flight`: `min_speed`, `max_speed`, `boost_speed` (m/s); `accel`; `pitch_rate`,
      `yaw_rate`, `roll_rate` (radians/s); `boost_time`, `boost_recharge`,
-     `boost_turn_scale`.
+     `boost_turn_scale`. A space fight multiplies these (and every distance in the
+     fight) by `content/core/flow/space_fight.json`: `speed_scale` 10 makes an
+     interceptor's 48 m/s cruise 480 m/s, its edge-of-space speed. Write the numbers
+     at the old slow scale and keep them in proportion to the other ships.
    - `hardpoints`: each is a weapon id and a `mount` point in the ship's own space
      (metres; forward is -Z, up is +Y, right is +X).
    - `convergence`: how far ahead the fixed guns cross.
@@ -115,6 +118,9 @@ Copy `content/core/weapons/ship_cannon.json` (fixed gun) or `ship_missile.json`
 - `bolt_speed` in m/s.
 - Seekers only: `homing: true`, `turn_rate` (radians/s), `lock_time`,
   `lock_cone_deg`, `lock_range`.
+- `reload_each` (seconds): instead of reloading the whole `mag` at once, one round
+  comes back every `reload_each` seconds while it is short. The seeker rack uses it:
+  four seekers fired off on one lock, one back every 1.5 s.
 
 ## A new pilot
 

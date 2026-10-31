@@ -50,6 +50,7 @@ const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const ChaseCamera := preload("res://src/systems/camera/chase_camera.gd")
 const ShipDefense := preload("res://src/systems/flight/ship_defense.gd")
 const ShipLoadout := preload("res://src/systems/flight/ship_loadout.gd")
+const Dogfight := preload("res://src/systems/flight/dogfight.gd")
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const SCENE_PATH := "res://scenes/town_demo.tscn"
@@ -1081,9 +1082,9 @@ func _bound_for_cruiser() -> bool:
 
 
 ## How fast normal flight may go by the cruiser: her space-fight speed (the ship's
-## "flight" block, a fraction of her atmosphere top speed) within the approach's
-## calm_radius, back to the full edge-of-space speed by calm_out. Otherwise a fight
-## broken off up here hands her from 48 m/s to 680, with the bay to line up with.
+## "flight" block times the fight's speed_scale, about her edge-of-space speed)
+## within the approach's calm_radius, back to the full edge-of-space speed by
+## calm_out, so a fight broken off up here hands her on at the speed she had.
 func _cruiser_air_cap() -> float:
 	var c = cruiser()
 	if c == null:
@@ -1093,8 +1094,10 @@ func _cruiser_air_cap() -> float:
 	var k := clampf((c.distance(atmo.position()) - inner) / maxf(float(ap.get("calm_out", 5000.0)) - inner, 1.0), 0.0, 1.0)
 	if k >= 1.0:
 		return INF
-	var calm := float(ship_cfg.get("flight", {}).get("max_speed", 48.0)) / maxf(atmo.p("max_speed", 170.0), 1.0)
-	return lerpf(minf(calm, 1.0), atmo.p("edge_speed_mult", 4.0), k)
+	var fight_top := float(ship_cfg.get("flight", {}).get("max_speed", 48.0)) * float(Dogfight.load_tune().get("speed_scale", 1.0))
+	var calm := fight_top / maxf(atmo.p("max_speed", 170.0), 1.0)
+	var edge := atmo.p("edge_speed_mult", 4.0)
+	return lerpf(minf(calm, edge), edge, k)
 
 
 ## Issue #181: a hit in the fight. Theirs on you flashes the screen's edge; yours on

@@ -1,0 +1,9 @@
+{
+  "speed_scale": 10.0,
+  "accel_scale": 10.0,
+  "turn_scale": 1.3,
+  "range_scale": 2.0,
+  "bolt_speed_scale": 3.0,
+  "hit_radius_scale": 1.5,
+  "note": "How a space fight (src/systems/flight/dogfight.gd) blows up the ships' 'flight' blocks and the pilots, guns and encounters to real speeds. speed_scale times every ship's flight min/max/boost/brake speed (an interceptor's 48 m/s cruise becomes 480, the same as the edge of space: 170 m/s x the ships' atmosphere edge_speed_mult of 2.8, so there is no jump when a fight starts), accel_scale times its accel. turn_scale times pitch, yaw and roll rates. range_scale times every distance: the arena, where waves spawn, the pilots' engage/break/extend distances, the guns' range and convergence, the seekers' range and lock range. bolt_speed_scale times every bolt's and seeker's speed (bolts also carry the ship's own speed). hit_radius_scale times every ship's hit sphere. All 1.0 is the original slow-speed fight. These values were picked from headless runs of both encounters over 28 seeds (player on autopilot): it wins about as often as before and lands about as many gun hits, at about twice the distances and ten times the speed."
+}
