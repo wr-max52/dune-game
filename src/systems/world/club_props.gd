@@ -27,6 +27,7 @@ var beam_alpha := 0.018       ## how thick the haze is in a spot's beam
 var cycles: Array = []        ## [material or Light3D, hue turns a second, hue offset]: colours that cycle
 var fades: Array = []         ## [StandardMaterial3D, low alpha, high alpha, beats a pulse, phase] (holograms)
 var pops: Array = []          ## [Node3D, swell, beats a pulse, phase]: grows on the hit, settles back
+var scans: Array = []         ## [Node3D, Vector3 from, Vector3 to, seconds a pass, phase]: glides from one to the other, again and again
 
 
 func _init(p_style := "jazz", p_bpm := 100.0) -> void:
@@ -57,6 +58,8 @@ func _process(dt: float) -> void:
 		m.albedo_color.a = lerpf(float(f[1]), float(f[2]), k) * (0.92 + 0.08 * sin(t * 47.0 + float(f[4]) * 9.0))
 	for o in pops:
 		(o[0] as Node3D).scale = Vector3.ONE * (1.0 + float(o[1]) * _pulse(beat / float(o[2]) + float(o[3])))
+	for c in scans:
+		(c[0] as Node3D).position = (c[1] as Vector3).lerp(c[2], fposmod(t / float(c[3]) + float(c[4]), 1.0))
 	for c in cycles:
 		var col := Color.from_hsv(fposmod(t * float(c[1]) + float(c[2]), 1.0), 0.85, 1.0)
 		if c[0] is Light3D:
