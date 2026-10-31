@@ -9,6 +9,11 @@ extends Node3D
 ##     (content/core/npcs/general_card.json). [E] beside him opens a menu, like
 ##     T-89's: talk, ask for work, hand over a droid.
 ##   - He, his guard and his droid face the front gate ("face": a town marker).
+##   - In the barracks yard (while the Remnant hold the moon) they are real: he and
+##     his guard are garrison troopers (NpcBody, "squad" soldier profiles) and the
+##     droid one of the Remnant's droids, so they can be shot, and they fight where
+##     they stand when the town alarm goes up. Killed there he is gone for good
+##     (WorldState.on_general_killed): Oda's bounty goes on someone else.
 ##   - The pit meeting is his to end: you cannot walk away (Esc) until he lets you
 ##     go (let_go) or has you searched (search). That verdict sets the Remnant
 ##     standing you start with. If his brain never gives one, the game does after
@@ -32,9 +37,9 @@ var demo                              ## town_demo.gd (or null in a test)
 var player: CharacterBody3D
 var gear: GearController
 var cfg: Dictionary = {}
-var body: Node3D                      ## MerchantNPC
+var body: Node3D                      ## MerchantNPC, or NpcBody in the barracks yard
 var guard: Node3D
-var droid: Node3D
+var droid: Node3D                     ## DroidKit look, or DroidUnit in the barracks yard
 var menu: DroidMenu
 var host: ConversationHost
 var spot: TalkSpot
@@ -103,8 +108,7 @@ func _place() -> void:
 	_where = want
 	_armoured = armour
 	for n in [body, guard, droid]:
-		if n != null and is_instance_valid(n):
-			n.queue_free()
+		_drop(n)
 	body = null
 	guard = null
 	droid = null
@@ -112,6 +116,10 @@ func _place() -> void:
 		_sync_spot()
 		return
 	var at := _spot(cfg.get(want, {}))
+	if want == "barracks" and not armour and _can_fight():
+		_place_squad(at)
+		_sync_spot()
+		return
 	var kit: CharacterKit = CharacterKit.new(demo._flat_mats(), 0.0) if demo != null and demo.get("use_look") else null
 	body = _person(kit, cfg.get("armour_outfit" if armour else "outfit", {}), at, "General")
 	if not armour:
@@ -129,17 +137,107 @@ func _place() -> void:
 
 ## He and his escort face the front gate. People face +Z, the droid's look -Z.
 func _face_gate() -> void:
-	var town = demo.town if demo != null and "town" in demo else null
-	var mk := str(cfg.get("face", "gate"))
-	if town == null or town.get_marker(mk).is_empty():
-		return
-	var gate: Vector3 = town.marker_pos(mk)
 	for n in [body, guard, droid]:
 		if n == null:
 			continue
-		var to: Vector3 = gate - n.global_position
-		if Vector2(to.x, to.z).length() > 0.01:
+		var to := _to_gate(n.global_position)
+		if to != Vector3.ZERO:
 			n.rotation.y = atan2(to.x, to.z) if n != droid else atan2(-to.x, -to.z)
+
+
+## From `from` to the marker they face (flat), or zero when the town has none.
+func _to_gate(from: Vector3) -> Vector3:
+	var town = demo.town if demo != null and "town" in demo else null
+	var mk := str(cfg.get("face", "gate"))
+	if town == null or town.get_marker(mk).is_empty():
+		return Vector3.ZERO
+	var to: Vector3 = town.marker_pos(mk) - from
+	to.y = 0.0
+	return to if to.length() > 0.01 else Vector3.ZERO
+
+
+func _yaw_to_gate(from: Vector3) -> float:
+	var to := _to_gate(from)
+	return atan2(to.x, to.z) if to != Vector3.ZERO else 0.0
+
+
+## The barracks squad can be real soldiers: the town has a garrison to put them in.
+func _can_fight() -> bool:
+	return demo != null and demo.has_method("make_soldier") and demo.get("garrison") != null
+
+
+## The barracks yard: he and his guard as garrison troopers, his droid as one of
+## the Remnant's droids. None of them come back from the dead.
+func _place_squad(at: Vector3) -> void:
+	var sq: Dictionary = cfg.get("squad", {})
+	body = _soldier(str(sq.get("general", "barracks_general")), at, "npc:general")
+	if body == null:
+		return
+	body.display_name = npc_name()
+	body.died.connect(_on_general_died)
+	guard = _soldier(str(sq.get("guard", "general_guard")), at + _v(cfg.get("guard_offset", [1.6, 0, -1.2])), "npc:general/guard")
+	var droids = demo.get("droids")
+	if droids != null and sq.has("droid"):
+		var here := at + _v(cfg.get("droid_offset", [-1.8, 0, -1.0]))
+		var spec: Dictionary = (sq.droid as Dictionary).duplicate()
+		spec["patrol"] = [here]
+		spec["respawn"] = false
+		spec["general_squad"] = true
+		droid = droids.spawn_site_unit(spec)
+		if droid != null and _to_gate(here) != Vector3.ZERO:
+			droids._face(droid, _to_gate(here))
+
+
+func _soldier(id: String, at: Vector3, key: String) -> NpcBody:
+	var s: NpcBody = demo.make_soldier(id, at, _yaw_to_gate(at), key.trim_prefix("npc:"), key)
+	if s == null:
+		return null
+	s.set_meta("general_squad", true)
+	demo.garrison.add_member(s)
+	return s
+
+
+## Take one of his party away (he moved, or is away). A dead soldier or droid
+## stays where it fell, and once he is dead the living ones stay on as troopers.
+func _drop(n: Node) -> void:
+	if n == null or not is_instance_valid(n):
+		return
+	if n is NpcBody:
+		if n.dead or WorldState.has_flag("general_dead"):
+			return
+		var g = demo.garrison_for(n) if demo != null else null
+		if g != null:
+			g.remove_member(n)
+		demo.npcs.erase(n)
+	elif n is DroidController.DroidUnit:
+		if n.dead or WorldState.has_flag("general_dead"):
+			return
+		demo.droids.remove_site_unit(n)
+		return
+	n.queue_free()
+
+
+## Shot dead in the barracks yard: gone for good, and the talk is over.
+func _on_general_died() -> void:
+	if _in_talk():
+		host.end_talk()
+	if menu.is_open():
+		menu.choose("")
+	if _was_locked and player != null:
+		player.locked = false
+		_was_locked = false
+	WorldState.on_general_killed()
+	_say(_line("killed") % npc_name())
+
+
+## Dead, or fighting: nobody talks to him then.
+func _can_talk() -> bool:
+	if body == null or not is_instance_valid(body):
+		return false
+	if body is NpcBody:
+		var g = demo.garrison_for(body) if demo != null else null
+		return not body.dead and not (g != null and g.alarm != null and g.alarm.active())
+	return true
 
 
 ## His TalkSpot follows his body: on the host while he stands somewhere, off it
@@ -148,7 +246,7 @@ func _sync_spot() -> void:
 	if spot == null or host == null:
 		return
 	spot.body = body
-	if body == null:
+	if body == null or (body is NpcBody and body.dead):
 		host.spots.erase(spot)
 		return
 	spot.stand = body.global_position
@@ -185,7 +283,7 @@ func _physics_process(_dt: float) -> void:
 	_place()
 	if host != null:
 		_watch_talk()
-	if player == null or body == null:
+	if player == null or not _can_talk():
 		return
 	if menu.is_open() or (host != null and host.is_talking()):
 		return

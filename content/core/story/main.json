@@ -169,6 +169,7 @@
     "target_title": "Remnant officer",
     "offer": "There's a price on %s, a Remnant officer at the %s. %s Kill them and the fence pays %d.",
     "event_killed": "%s, a Remnant officer, was found dead at an outpost in the desert.",
+    "event_general": "%s, the Remnant general, was shot dead in the barracks yard.",
     "crimes": [
       "They burned a water hauler's tanks so a whole street went dry for a week.",
       "They shot a fisherman's boy for walking past the gate after curfew.",

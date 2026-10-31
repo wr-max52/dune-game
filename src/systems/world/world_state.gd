@@ -550,6 +550,19 @@ static func on_bounty_killed() -> void:
 	log_event(str(Story.bounty_cfg().get("event_killed", "%s was found dead.")) % str(bounty.name))
 
 
+## The Remnant general was shot dead in the barracks yard (not as Oda's bounty):
+## he is gone for good. A contract on him not yet taken goes to an officer at an
+## outpost instead (rolled again when Oda next offers it), and his droid job closes.
+static func on_general_killed() -> void:
+	if has_flag("general_dead"):
+		return
+	set_flag("general_dead")
+	if bool(bounty.get("general", false)) and str(bounty.get("state", "")) == "rolled":
+		bounty = { "run": int(bounty.run), "outpost": str(bounty.outpost), "state": "" }
+	jobs_taken.erase(GeneralPost.job_id())
+	log_event(str(Story.bounty_cfg().get("event_general", "%s was shot dead at the barracks.")) % str(NpcBrain._read(GENERAL_CARD).get("name", "The general")))
+
+
 ## Issue #193: the general aboard the Remnant cruiser is dead. The cruiser is taken
 ## (nobody aboard from now on), the locals' purse is paid, and the port loves you
 ## for it. `reward`: { credits, locals, remnant, smuggler } (remnant_cruiser.json).
