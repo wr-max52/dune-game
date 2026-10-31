@@ -715,8 +715,10 @@ static func _conditions_hold(req: Dictionary, tier: String) -> bool:
 	return true
 
 
+## "hostile" is where the Remnant's troopers shoot on sight: below the gate's
+## "search" band (gate_guard.json), as the status HUD's standing_word says.
 static func standing_label(v: int) -> String:
-	if v <= -50:
+	if v <= -40:
 		return "hostile"
 	if v <= -15:
 		return "unfriendly"

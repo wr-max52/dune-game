@@ -36,6 +36,19 @@ func test_three_kinds_with_variants_and_prices() -> void:
 	assert_eq(Color(str(red.eye)).r > 0.9 and Color(str(red.body)).v < 0.15, true, "the Remnant's assassin is black with red eyes")
 
 
+## The pit is T-89's: the Remnant's street patrol walks round its rim, never
+## across the floor where the player wakes up.
+func test_remnant_patrol_stays_out_of_the_pit() -> void:
+	var cfg: Dictionary = CharacterKit._read_json("res://content/core/droids/droids.json")
+	var pts: Array = cfg.remnant.patrol
+	var pit_r := 28.0
+	for i in pts.size():
+		var a := Vector2(float(pts[i][0]), float(pts[i][2]))
+		var b := Vector2(float(pts[(i + 1) % pts.size()][0]), float(pts[(i + 1) % pts.size()][2]))
+		var closest := Geometry2D.get_closest_point_to_segment(Vector2.ZERO, a, b)
+		assert_gt(closest.length(), pit_r, "leg %d (%s -> %s) keeps out of the pit" % [i, a, b])
+
+
 func test_player_never_gets_remnant_colours() -> void:
 	for i in 40:
 		assert_ne(DroidRoster.pick_variant("assassin", rng), "remnant")
@@ -221,6 +234,28 @@ func test_controller_buy_sell_follow_and_ship() -> void:
 	assert_eq(ctl.sell(uid), 90)
 	assert_eq(WorldState.credits, 190)
 	assert_eq(ctl.companions.size(), 0, "the sold droid de-spawns")
+
+
+func test_lost_droid_rejoins_on_your_trail_not_at_your_side() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	WorldState.credits = 200
+	assert_eq(ctl.buy("assassin"), "bought")
+	p.global_position = Vector3(-60, 0, 0)
+	await wait_physics_frames(2)
+	# Walk 60 m along x in five seconds (12 m/s).
+	for i in 300:
+		p.global_position.x += 0.2
+		await wait_physics_frames(1)
+	var u: Node3D = ctl.companions.values()[0]
+	u.global_position = Vector3(90, 0, 90)          # left far behind
+	await wait_physics_frames(1)
+	var gap := DroidController._flat_dist(u.global_position, p.global_position)
+	assert_gt(gap, 10.0, "not dropped at the player's side")
+	assert_lt(gap, DroidController.REJOIN_MAX + 3.0, "most of the gap closed")
+	assert_lt(u.global_position.x, p.global_position.x, "back along the way the player came")
+	assert_lt(absf(u.global_position.z), 3.0, "on the trail")
 
 
 func test_chirp_timer_uses_droid_quirk() -> void:
