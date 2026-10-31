@@ -994,6 +994,22 @@ Confidence the next milestone fits its scope: low / medium / high
 
 ---
 
+## Issue #237 — saved layouts and the round port
+
+The port is now built to a saved layout: `content/core/towns/port_square.json`
+(this plan's town, size 50) or `content/core/towns/port_round.json` (size 67).
+A planet picks one with `town_layout`. The town keeps its id, `port_town`.
+
+- `port_round` is generated: `python3 tools/town/gen_port_round.py`. It reads
+  the `round` block of `content/core/planets/town_kit.json`, moves the square
+  port's districts by `moves`, and builds the wall, gates, ground, bowl, pads,
+  streets and neighbourhoods. Then it runs the walk check and this validator.
+- Box kind `ring` (`src/systems/world/ring_wall.gd`): a round wall. Its box is
+  the square round the circle, `thickness` thick, open at `gaps`
+  (`{ "deg", "half" }`). Hollow (skipped by V5). Rule **V9**: no marker and
+  no route comes within `player_clearance` of a ring's pieces.
+- A pickup or drop area can give per-layout spots under `"layouts"`.
+
 ## Appendix — Tuning later (no code changes needed)
 
 Everything below is a JSON edit plus `python3 docs/town/validate_town.py ...` to

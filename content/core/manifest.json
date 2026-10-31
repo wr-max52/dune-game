@@ -12,7 +12,7 @@
   "encounters": ["orbital_skirmish", "cruiser_escort"],
   "items": ["jetpack", "unmarked_cells", "refined_quantonium", "holocrystals", "space_whale_teeth", "food", "quartz", "red_energy_saber", "rifle_blaster", "energy_blade", "quantonium_armour"],
   "vendors": ["gear_trader", "fence", "food_stall", "station_fence"],
-  "towns": ["port_square"],
+  "towns": ["port_square", "port_round"],
   "pickups": ["port_town", "grit_station_town"],
   "worlds": ["port_desert"],
   "planets": ["port_desert", "grit_station"],

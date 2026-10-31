@@ -38,4 +38,39 @@ for r in t["routes"]:
         for b in B:
             if b["kind"] in BK and seg_box_dist(p,q,b)<=C: E.append(f"route {r['id']} seg {p}->{q} hits {b['id']}")
     print(f"{r['id']}: {L:.1f} m, walk {L/4:.0f}s, sprint {L/7:.0f}s")
+# V9 (issue #237): a round wall (kind "ring") blocks piece by piece, open at its gaps.
+# Same pieces as src/systems/world/ring_wall.gd.
+def ring_pieces(b):
+    r=(b["max"][0]-b["min"][0])/2; t=min(max(b.get("thickness",2.0),0.1),r); rm=r-t/2
+    cx=(b["min"][0]+b["max"][0])/2; cz=(b["min"][2]+b["max"][2])/2; piece=b.get("piece",6.0)
+    cuts=sorted([((math.radians(g.get("deg",0))-math.asin(min(1,g.get("half",1)/rm)))%(2*math.pi),
+        math.asin(min(1,g.get("half",1)/rm))*2) for g in b.get("gaps",[])])
+    spans=[(0,2*math.pi)] if not cuts else [(cuts[i][0]+cuts[i][1], cuts[(i+1)%len(cuts)][0]+(2*math.pi if i+1==len(cuts) else 0)) for i in range(len(cuts))]
+    out=[]
+    for a0,a1 in spans:
+        n=max(1,math.ceil((a1-a0)*rm/piece))
+        for i in range(n):
+            p0=a0+(a1-a0)*i/n; p1=a0+(a1-a0)*(i+1)/n; m=(p0+p1)/2; h=(p1-p0)/2
+            out.append((cx+math.cos(m)*rm*math.cos(h), cz+math.sin(m)*rm*math.cos(h), m, (2*rm*math.sin(h)+t*math.tan(h))/2, t/2))
+    return (cx,cz,r,r-t), out
+def ring_dist(info,ps,x,z):
+    cx,cz,r,ri=info; d=math.hypot(x-cx,z-cz)
+    if d<ri-3 or d>r+3: return 1e9
+    best=1e9
+    for px,pz,m,hx,hz in ps:
+        ux,uz=-math.sin(m),math.cos(m); nx,nz=math.cos(m),math.sin(m)
+        lx=abs((x-px)*ux+(z-pz)*uz)-hx; lz=abs((x-px)*nx+(z-pz)*nz)-hz
+        best=min(best,math.hypot(max(lx,0),max(lz,0)))
+    return best
+for b in B:
+    if b["kind"]!="ring": continue
+    info,ps=ring_pieces(b)
+    for m in t["markers"]:
+        x,y,z=m["pos"]
+        if b["min"][1]<=y<b["max"][1] and ring_dist(info,ps,x,z)<=C: E.append(f"marker {m['id']} blocked by {b['id']}")
+    for r in t["routes"]:
+        for p,q in zip(r["points"],r["points"][1:]):
+            n=max(2,int(math.dist(p,q)/0.1))
+            if any(ring_dist(info,ps,p[0]+(q[0]-p[0])*s/n,p[1]+(q[1]-p[1])*s/n)<=C for s in range(n+1)):
+                E.append(f"route {r['id']} seg {p}->{q} hits {b['id']}")
 print("ERRORS:" if E else "OK, 0 errors"); [print(" ",e) for e in E]
