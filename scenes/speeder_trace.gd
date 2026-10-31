@@ -144,17 +144,21 @@ func _run() -> void:
 	if s == null:
 		_write()
 		return
-	var house_x := post.origin.x - 0.5
-	out("PARKED_BEHIND_HOUSE", s.model.position.x < house_x - 4.0)
+	# Issue #295: in his garage's bay.
+	out("PARKED_IN_GARAGE", Vector2(s.model.position.x - post.world_point("bay").x, s.model.position.z - post.world_point("bay").z).length() < 1.5)
 	demo.bar.end_talk()
 	await frames(5)
 
 	# ---------------------------------------------------------------- 3. ride and jump
+	# Issue #295: his round-port garage is inside the wall; the drive out through the
+	# back gate is tests/test_skrugs_yard.gut.gd's. Start this ride outside the gate.
+	var outside := gap + Vector3(gap.x, 0, gap.z).normalized() * 12.0     # out from the town's middle
+	s.place(Vector3(outside.x, s.model.position.y, outside.z), s.model.yaw)
 	place_player(s.model.position + Vector3(0, -1.0, 2.0))
 	await frames(5)
 	out("MOUNT", s.mount())
 	out("RIDING", s.riding and player.piloting)
-	var run_up := post.world_point("ramp_run_up")
+	var run_up := post.ramp_run_up()
 	out("TO_THE_RAMP", await ride_to(s, run_up, 0.35, 30.0,
 		func(): return Vector2(s.model.position.x - run_up.x, s.model.position.z - run_up.z).length() < 2.5))
 	# Stop, turn on the spot to face up the ramp (it rises toward -z), then full

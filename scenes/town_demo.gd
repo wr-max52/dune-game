@@ -1259,7 +1259,7 @@ func _landmark_clearings() -> Array:
 	var cc := CoreContent.new()
 	cc.load_from()
 	var out: Array = []
-	for lm in cc.world_for_town(str(town.data.get("id", ""))).get("landmarks", []):
+	for lm in cc.world_for_town(str(town.data.get("id", "")), str(town.data.get("layout", ""))).get("landmarks", []):
 		if lm.has("clear"):
 			out.append([Vector2(float(lm.at[0]), float(lm.at[2])), float(lm.clear)])
 	return out

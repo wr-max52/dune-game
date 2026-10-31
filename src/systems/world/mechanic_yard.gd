@@ -12,9 +12,10 @@ extends Node3D
 ##                      selling the speeder for scrap.
 ##
 ## He only works on a speeder of yours parked in his bay (within bay_radius of the
-## lift). Parts are paid for here and fitted at once (SpeederPost.refit rebuilds the
-## speeder where it stands). The fit is saved per speeder (WorldState.speeder_fits).
-## Words, prices and parts: content/core/vehicles/speeder_upgrades.json.
+## lift, inside his garage: issue #295 made it wall pieces you can drive into).
+## Issue #295: the shop itself is SpeederShop, shared with Skrugs's garage bench in
+## free roam; this node is Dorrin, his yard and his [E]. Words, prices and parts:
+## content/core/vehicles/speeder_upgrades.json.
 ##
 ## The headless test calls talk(), buy(), scrap() and the menu's choose() directly:
 ## the same code paths as the keys.
@@ -27,17 +28,15 @@ var ground: WorldGround
 var player: CharacterBody3D
 var gear: GearController              ## for its HUD (prompt, toast) and its focus (E is shared)
 var cfg: Dictionary = {}              ## the "mechanic" block
-var menu: DroidMenu
+var shop: SpeederShop                 ## issue #295: his menu, parts and scrap (shared with Skrugs)
+var menu: DroidMenu                   ## the shop's
 var mechanic: Node3D                  ## Dorrin's body
 var xf := Transform3D()               ## the yard's frame (on the ball: along the ground's up)
 var points: Dictionary = {}
 var found := false                    ## the world has the landmark
 var in_reach := false
-var said := ""                        ## his last line, for tests
-var fitted := 0                       ## parts sold this session (tests, traces)
 var droids: Array = []                ## issue #100: { look: Node3D, center, rx, rz, speed, a } (cargo droids on their loops)
 var guard_droid: Node3D               ## issue #100: the assassin droid with no weapon
-var _was_locked := false
 
 
 func setup(town_demo, world_ground: WorldGround, p_gear: GearController) -> void:
@@ -50,9 +49,10 @@ func setup(town_demo, world_ground: WorldGround, p_gear: GearController) -> void
 
 func _ready() -> void:
 	cfg = SpeederUpgrades.mechanic()
-	menu = DroidMenu.new()
-	add_child(menu)
-	menu.option_selected.connect(_on_option_selected)
+	shop = SpeederShop.new()
+	shop.setup(demo, gear, cfg, func(): return world_point("bay") if found else Vector3.INF)
+	add_child(shop)
+	menu = shop.menu
 	var cc := CoreContent.new()
 	cc.load_from()
 	var world: Dictionary = demo.world if "world" in demo and not demo.world.is_empty() else cc.world_for_town("port_town")
@@ -82,14 +82,6 @@ func npc_name() -> String:
 	return str(cfg.get("name", "the mechanic"))
 
 
-func _l(key: String) -> String:
-	return str(cfg.get("labels", {}).get(key, key))
-
-
-func _line(key: String) -> String:
-	return str(cfg.get("lines", {}).get(key, ""))
-
-
 ## A point from the location file, in the world, on the sand.
 func world_point(id: String) -> Vector3:
 	var lp: Vector3 = points.get(id, Vector3.ZERO)
@@ -106,24 +98,7 @@ func world_point(id: String) -> Vector3:
 
 ## Your speeder parked in the bay (the nearest one to the lift), or null.
 func speeder_in_bay() -> SpeederNode:
-	var post: SpeederPost = demo.speeder_post if demo != null and "speeder_post" in demo else null
-	if post == null or not found:
-		return null
-	var bay := world_point("bay")
-	var best: SpeederNode = null
-	var best_d := float(cfg.get("bay_radius", 16.0))
-	for s in post.speeders:
-		if not is_instance_valid(s) or s.riding:
-			continue
-		var d: float = s.model.position.distance_to(bay)
-		if d <= best_d:
-			best = s
-			best_d = d
-	return best
-
-
-func _fit(s: SpeederNode) -> Dictionary:
-	return demo.speeder_post.fit_for(int(s.get_meta("slot", 0)))
+	return shop.speeder_in_bay() if shop != null else null
 
 
 # ------------------------------------------------------------------ frame
@@ -140,11 +115,8 @@ func _physics_process(dt: float) -> void:
 
 
 func _tick_focus() -> void:
-	if menu.is_open():
+	if shop.busy():
 		return
-	if _was_locked:
-		player.locked = false
-		_was_locked = false
 	var p := player.global_position
 	var at := mechanic.global_position
 	in_reach = not player.piloting and Vector2(p.x - at.x, p.z - at.z).length() <= float(cfg.get("reach", 3.4)) \
@@ -152,158 +124,34 @@ func _tick_focus() -> void:
 	if not in_reach:
 		return
 	if gear != null and gear.hud != null:
-		gear.hud.set_prompt(_l("talk") % npc_name())
+		gear.hud.set_prompt(shop.label("talk") % npc_name())
 	if not player.locked and InputMap.has_action("interact") and Input.is_action_just_pressed("interact"):
 		talk()
 
 
-# ------------------------------------------------------------------ the shop
+# ------------------------------------------------------------------ the shop (SpeederShop)
 
 ## [E] beside him: the top menu, or "bring one round" with no speeder in the bay.
 func talk() -> void:
-	var s := speeder_in_bay()
-	if s == null:
-		_say(_line("no_speeder"))
-		return
-	_open(_line("hello"), top_options(), _on_top)
+	shop.talk()
 
 
 func top_options() -> Array:
-	var s := speeder_in_bay()
-	if s == null:
-		return []
-	var fit := _fit(s)
-	var opts := [
-		{ "id": "group:paint", "text": _l("menu_paint") },
-		{ "id": "group:looks", "text": _l("menu_looks") },
-		{ "id": "group:performance", "text": _l("menu_performance") },
-	]
-	for p in SpeederUpgrades.in_group("lifter"):
-		opts.append(_row(fit, p))
-	opts.append({ "id": "scrap", "text": _l("menu_scrap") % SpeederUpgrades.scrap_value(fit) })
-	return opts
+	return shop.top_options()
 
 
 func group_options(group: String) -> Array:
-	var s := speeder_in_bay()
-	if s == null:
-		return []
-	var fit := _fit(s)
-	var out: Array = []
-	for p in SpeederUpgrades.in_group(group):
-		out.append(_row(fit, p))
-	out.append({ "id": "back", "text": _l("back") })
-	return out
+	return shop.group_options(group)
 
 
-func _row(fit: Dictionary, p: Dictionary) -> Dictionary:
-	var id := str(p.get("id", ""))
-	var why := SpeederUpgrades.why_not(fit, id)
-	var text := _l("buy") % [str(p.get("label", id)), int(p.get("price", 0))]
-	if why == "owned":
-		text = _l("owned") % str(p.get("label", id))
-	elif why.begins_with("needs:"):
-		text = _l("locked") % [str(p.get("label", id)), int(p.get("price", 0)),
-			str(SpeederUpgrades.part(why.substr(6)).get("label", why.substr(6)))]
-	return { "id": "buy:" + id, "text": text }
-
-
-func _on_top(id: String) -> void:
-	if id.begins_with("group:"):
-		var g := id.substr(6)
-		_open(_line("hello"), group_options(g), _on_group.bind(g))
-	elif id.begins_with("buy:"):
-		buy(id.substr(4))
-		_reopen(top_options(), _on_top)
-	elif id == "scrap":
-		var s := speeder_in_bay()
-		if s != null:
-			_open(_l("confirm_scrap") % SpeederUpgrades.scrap_value(_fit(s)),
-				[{ "id": "yes", "text": _l("yes_scrap") }, { "id": "no", "text": _l("no_scrap") }], _on_scrap)
-
-
-func _on_group(id: String, group: String) -> void:
-	if id == "back":
-		talk()
-	elif id.begins_with("buy:"):
-		buy(id.substr(4))
-		_reopen(group_options(group), _on_group.bind(group))
-
-
-## After a buy: the same menu again, with what he said and the new prices, the
-## cursor where it was. Esc walks away.
-func _reopen(opts: Array, pick: Callable) -> void:
-	if speeder_in_bay() != null:
-		menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, said, true)
-
-
-func _on_scrap(id: String) -> void:
-	if id == "yes":
-		scrap()
-	else:
-		talk()
-
-
-## Buy part `id` for the speeder in the bay and fit it now. Returns "bought",
-## "cant_afford", "no_speeder", "owned", "needs:<part>" or "unknown".
+## Buy part `id` for the speeder in the bay and fit it now (SpeederShop.buy).
 func buy(id: String) -> String:
-	var s := speeder_in_bay()
-	if s == null:
-		_say(_line("no_speeder"))
-		return "no_speeder"
-	var fit := _fit(s)
-	var why := SpeederUpgrades.why_not(fit, id)
-	if why != "":
-		return why
-	var p := SpeederUpgrades.part(id)
-	var price := int(p.get("price", 0))
-	if WorldState.credits < price:
-		_say(_line("too_poor"))
-		return "cant_afford"
-	WorldState.credits -= price
-	SpeederUpgrades.fit_part(fit, id)
-	fitted += 1
-	WorldState.log_event(_l("event_bought") % str(p.get("label", id)).to_lower())
-	demo.speeder_post.refit(s)
-	_say(_line("bought"))
-	return "bought"
+	return shop.buy(id)
 
 
 ## Sell the speeder in the bay for scrap. Returns the credits paid (0 = none there).
 func scrap() -> int:
-	var s := speeder_in_bay()
-	if s == null:
-		_say(_line("no_speeder"))
-		return 0
-	var pay := SpeederUpgrades.scrap_value(_fit(s))
-	WorldState.credits += pay
-	demo.speeder_post.remove(s)
-	WorldState.log_event(_l("event_scrapped"))
-	_say(_line("scrapped"))
-	return pay
-
-
-func _open(text: String, opts: Array, pick: Callable) -> void:
-	said = text
-	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, text)
-	if mechanic != null:
-		NpcVoice.speak(text, NpcVoice.profile_for_npc("mechanic", {}), "warm", mechanic)
-	if player != null and not player.locked:
-		player.locked = true
-		_was_locked = true
-
-
-func _say(text: String) -> void:
-	said = text
-	if gear != null and gear.hud != null and text != "":
-		gear.hud.toast("%s: %s" % [npc_name(), text], 4.5)
-	if mechanic != null:
-		NpcVoice.speak(text, NpcVoice.profile_for_npc("mechanic", {}), "warm", mechanic)
-
-
-func _on_option_selected(_id: String) -> void:
-	if mechanic != null:
-		NpcVoice.stop(mechanic)
+	return shop.scrap()
 
 
 # ------------------------------------------------------------------ Dorrin
@@ -317,12 +165,14 @@ func _build_mechanic() -> void:
 	add_child(mechanic)
 	mechanic.global_transform = Transform3D(xf.basis, world_point("mechanic"))
 	mechanic.look_at_target = player
+	shop.speaker = mechanic
 
 
 # ------------------------------------------------------------------ the look
 
-## The garage (open toward the bay), the bench, the lift and the scrap heap, in
-## the desert's colours: sun-bleached plaster, rust, oily steel.
+## The garage (open toward the town, the lift inside), the bench and the scrap
+## heap, in the desert's colours: sun-bleached plaster, rust, oily steel. Issue
+## #295: the garage is drawn piece by piece from the same boxes it collides with.
 func _dress(loc: Dictionary) -> void:
 	var mats: LookMaterials = demo._flat_mats()
 	var plaster := mats.plaster(xf.origin.y, xf.origin.y + 5.0, Color("#7a4a2a"), Color("#cdb48c"))
@@ -333,17 +183,12 @@ func _dress(loc: Dictionary) -> void:
 	for b in loc.get("buildings", []):
 		var s := WorldGround._v3(b.get("size", [1, 1, 1]))
 		var c := WorldGround._v3(b.get("position", [0, 0, 0]))
-		match str(b.id):
-			"garage":
-				# Three walls and a roof; the side toward the bay (+x) stands open.
-				_mesh(_box(Vector3(0.4, s.y, s.z)), plaster, c + Vector3(-s.x * 0.5, s.y * 0.5, 0))
-				_mesh(_box(Vector3(s.x, s.y, 0.4)), plaster, c + Vector3(0, s.y * 0.5, s.z * 0.5))
-				_mesh(_box(Vector3(s.x, s.y, 0.4)), plaster, c + Vector3(0, s.y * 0.5, -s.z * 0.5))
-				_mesh(_box(Vector3(s.x + 1.2, 0.3, s.z + 0.6)), rust, c + Vector3(0.6, s.y + 0.15, 0))
-				_mesh(_box(Vector3(s.x - 1.0, 0.05, s.z - 1.0)), dark, c + Vector3(0, 0.03, 0))
-				# A sign over the door: a hover glow tube in the shape of a bar.
-				_mesh(_box(Vector3(0.2, 0.9, 4.0)), rust, c + Vector3(s.x * 0.5 + 0.3, s.y - 0.4, 0))
-				_mesh(_box(Vector3(0.1, 0.12, 3.4)), mats.glow(Color("#7fe0d0")), c + Vector3(s.x * 0.5 + 0.42, s.y - 0.4, 0))
+		var id := str(b.id)
+		if id.begins_with("garage_"):
+			# Back wall, two side walls and a rusty roof; the side toward the town (+x) stands open.
+			_mesh(_box(s), rust if id == "garage_roof" else plaster, c + Vector3(0, s.y * 0.5, 0))
+			continue
+		match id:
 			"bench":
 				_mesh(_box(s), steel, c + Vector3(0, s.y * 0.5, 0))
 				_mesh(_box(Vector3(s.x + 0.1, 0.06, s.z + 0.1)), rust, c + Vector3(0, s.y + 0.03, 0))
@@ -357,12 +202,33 @@ func _dress(loc: Dictionary) -> void:
 					var m := _mesh(_box(sz), rust if i % 3 else steel,
 						c + Vector3(rng.randf_range(-1.6, 1.6), sz.y * 0.4 + (i / 3) * 0.5, rng.randf_range(-1.6, 1.6)))
 					m.rotation += Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(0, TAU), rng.randf_range(-0.3, 0.3))
+	_dress_garage(loc, mats, rust, dark)
 	_dress_shop(mats, rust, steel, dark, hazard)
 	# The lift in the bay: a steel pad with yellow and black edges.
 	var bay: Vector3 = points.get("bay", Vector3.ZERO)
 	_mesh(_box(Vector3(7.0, 0.12, 4.0)), steel, bay + Vector3(0, 0.06, 0))
 	for dz in [-2.05, 2.05]:
 		_mesh(_box(Vector3(7.0, 0.14, 0.12)), hazard, bay + Vector3(0, 0.07, dz))
+
+
+## The garage's dark floor, and a sign over its open door: a hover glow tube in
+## the shape of a bar. Sized from its wall pieces.
+func _dress_garage(loc: Dictionary, mats: LookMaterials, rust: Material, dark: Material) -> void:
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for b in loc.get("buildings", []):
+		if not str(b.id).begins_with("garage_") or str(b.id) == "garage_roof":
+			continue
+		var s := WorldGround._v3(b.get("size", [1, 1, 1]))
+		var c := WorldGround._v3(b.get("position", [0, 0, 0]))
+		lo = lo.min(c - s * Vector3(0.5, 0, 0.5))
+		hi = hi.max(c + s * Vector3(0.5, 1, 0.5))
+	if lo.x == INF:
+		return
+	var mid := (lo + hi) * 0.5
+	_mesh(_box(Vector3(hi.x - lo.x - 1.0, 0.05, hi.z - lo.z - 1.0)), dark, Vector3(mid.x, 0.03, mid.z))
+	_mesh(_box(Vector3(0.2, 0.9, 4.0)), rust, Vector3(hi.x + 0.3, hi.y - 0.4, mid.z))
+	_mesh(_box(Vector3(0.1, 0.12, 3.4)), mats.glow(Color("#7fe0d0")), Vector3(hi.x + 0.42, hi.y - 0.4, mid.z))
 
 
 ## Issue #100: the shop dressed up. An awning over Dorrin's counter with a string
@@ -402,8 +268,8 @@ func _dress_shop(mats: LookMaterials, rust: Material, steel: Material, dark: Mat
 		var t := _mesh(_box(Vector3(0.06, rng.randf_range(0.3, 0.6), 0.04)), steel if k % 3 else hazard,
 			tb + Vector3(-1.3 + k * 0.32, 1.95 + rng.randf_range(-0.3, 0.3), 0.5))
 		t.rotation.z = rng.randf_range(-0.4, 0.4)
-	# Crates by the garage door.
-	for c in [Vector3(-2.4, 0.45, -4.2), Vector3(-2.2, 1.3, -4.0), Vector3(-1.2, 0.45, -4.4)]:
+	# Crates by the garage door (issue #295: beside it, not in it).
+	for c in [Vector3(-2.4, 0.45, -5.4), Vector3(-2.2, 1.3, -5.2), Vector3(-1.2, 0.45, -5.6)]:
 		_mesh(_box(Vector3(0.9, 0.9, 0.9)), mats.flat(Color("#7a5a36"), 0.9), c)
 	# Canisters lying about: fuel red, coolant teal, some on their sides.
 	var paints := [mats.flat(Color("#b03a26"), 0.6, 0.2), mats.flat(Color("#3a8a8a"), 0.6, 0.2), hazard, steel]
@@ -411,8 +277,8 @@ func _dress_shop(mats: LookMaterials, rust: Material, steel: Material, dark: Mat
 		var a := rng.randf() * TAU
 		var r := rng.randf_range(4.0, 15.0)
 		var at := Vector3(2.0 + cos(a) * r, 0.0, sin(a) * r)
-		if Vector2(at.x - 6.0, at.z).length() < 5.0 or (at.x < -2.5 and absf(at.z) < 5.5) or Vector2(at.x + 1.5, at.z - 7.0).length() < 2.5:
-			continue                 # not on the lift, in the garage or at the counter
+		if (at.x > -3.0 and at.x < 12.0 and absf(at.z) < 3.0) or (at.x < -2.5 and absf(at.z) < 5.5) or Vector2(at.x + 1.5, at.z - 7.0).length() < 2.5:
+			continue                 # not on the way into the garage, in it or at the counter
 		var tall := rng.randf_range(0.6, 1.0)
 		var m := _mesh(_cyl(0.28, tall), paints[k % paints.size()], at + Vector3(0, tall * 0.5, 0))
 		if k % 3 == 0:
@@ -447,7 +313,7 @@ func _ball(r: float) -> SphereMesh:
 func _build_droids() -> void:
 	var mats: LookMaterials = demo._flat_mats()
 	var variants := ["tan", "olive", "blue"]
-	var loops := [[Vector3(9, 0, 0), 9.0, 11.0, 2.4], [Vector3(10, 0, -1), 7.0, 13.0, -2.0], [Vector3(8, 0, 1), 10.5, 8.0, 2.9]]
+	var loops := [[Vector3(9, 0, 0), 9.0, 11.0, 2.4], [Vector3(10, 0, -1), 7.0, 13.0, -2.0], [Vector3(10, 0, 1), 9.0, 8.0, 2.9]]
 	for i in loops.size():
 		var L: Array = loops[i]
 		var look := DroidKit.build("cargo", DroidRoster.variant_cfg("cargo", variants[i % variants.size()]), mats,
@@ -463,7 +329,7 @@ func _build_droids() -> void:
 	add_child(guard_droid)
 	DroidKit.set_awake(guard_droid, true)
 	DroidKit.play_anim(guard_droid, "idle")
-	guard_droid.global_transform = Transform3D(xf.basis * Basis(Vector3.UP, -PI * 0.5), _ground(Vector3(-2.2, 0, 3.6)))
+	guard_droid.global_transform = Transform3D(xf.basis * Basis(Vector3.UP, -PI * 0.5), _ground(Vector3(-2.0, 0, 5.6)))     # issue #295: beside the door, not in it
 	_drive_droids(0.0)
 
 

@@ -10,6 +10,7 @@ extends RefCounted
 ## parks one). Data: content/core/vehicles/speeder_upgrades.json.
 
 const PATH := "res://content/core/vehicles/speeder_upgrades.json"
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 
 static var _data: Dictionary = {}
 
@@ -24,6 +25,15 @@ static func data() -> Dictionary:
 
 static func mechanic() -> Dictionary:
 	return data().get("mechanic", {})
+
+
+## Issue #295: another shop's block ("shops": Skrugs's garage bench) laid over the
+## mechanic's, so its menu labels, parts and prices are his. Empty if there is none.
+static func shop(id: String) -> Dictionary:
+	var own: Dictionary = data().get("shops", {}).get(id, {})
+	if own.is_empty():
+		return {}
+	return CoreContent._merge(mechanic(), own)
 
 
 static func parts() -> Array:

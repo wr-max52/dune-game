@@ -1,0 +1,11 @@
+{
+  "id": "skrugs_ramp",
+  "kind": "post",
+  "note": "Issue #295: Skrugs's sand ramp, out past the back gate. It was part of his post; now that his round-port yard is inside the wall it is its own landmark (content/core/worlds/port_desert.json, placed per town layout). 'rise' makes the box a ramp (its top slopes up toward that side); src/systems/world/speeder_post.gd builds its sloped collider and its look. 'run_up': where to start a straight run at it.",
+  "buildings": [
+    { "id": "ramp", "shape": "box", "size": [6, 2.4, 10], "position": [0, 0, 0], "rise": "-z", "visual": false }
+  ],
+  "points": {
+    "run_up": [0, 0, 23]
+  }
+}
