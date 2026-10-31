@@ -1,7 +1,7 @@
 extends SceneTree
 ## Issue #220 trace (headless, the real town scene): the home planet's beast is
-## built from the planet's data (its name, out in the desert); it rolls about on
-## the ground; it farts; touching it kills the player on the spot, who then wakes
+## built from the planet's data (its name, out in the desert); a beetle-centipede
+## (issue #266), it crawls about on the ground, its body following and legs stepping; it farts; touching it kills the player on the spot, who then wakes
 ## again; a stray bolt from someone else only hurts it, but the player's sets it
 ## chasing until they are 1 km away; the locals talk of it by name and the AI
 ## characters are briefed on it; and killed, it stays dead.
@@ -57,7 +57,10 @@ func _run() -> void:
 	out("NAME_FROM_PLANET", beast.beast_name == str(demo.planet.get("beast", {}).get("name", "")) and beast.beast_name != "")
 	out("HP", int(beast.hp))
 	out("RADIUS", beast.radius)
-	out("PURPLE", beast._mat.albedo_color.b > beast._mat.albedo_color.g and beast._mat.albedo_color.r > beast._mat.albedo_color.g)
+	out("SEGMENTS", beast.segments.size())
+	out("LEGS", beast._legs.size())
+	out("MANDIBLES", beast._mandibles.size())
+	out("DESERT_HIDE", beast._mat.albedo_color.r >= beast._mat.albedo_color.b)
 	var town: Vector3 = demo.town.spawn_pos()
 	out("HOME_FROM_TOWN_M", int(beast.home.distance_to(town)))
 	# ---------------------------------------------------------------- known of
@@ -83,11 +86,17 @@ func _run() -> void:
 		out("LOCAL_SPOKE_OF_IT", "no_locals")
 	# ---------------------------------------------------------------- it rolls
 	var p0: Vector3 = beast.global_position
-	var b0: Basis = beast._ball.basis
+	var tail0: Vector3 = beast.segments[-1].node.global_position
+	var leg0: Vector3 = beast._legs[0].rotation
 	await frames(60 * 6)
 	out("ROLLED_M", snappedf(beast.travelled, 0.1))
 	out("MOVED", beast.global_position.distance_to(p0) > 2.0)
-	out("SPUN", not beast._ball.basis.is_equal_approx(b0))
+	out("BODY_FOLLOWS", beast.segments[-1].node.global_position.distance_to(tail0) > 2.0
+		and beast.segments[0].node.global_position.distance_to(beast.global_position) < float(beast.cfg.get("segment_gap", 3.2)) * 2.0)
+	out("LEGS_STEP", not beast._legs[0].rotation.is_equal_approx(leg0))
+	var s_last = beast.segments[-1]
+	var tg: Vector3 = beast._ground_at(s_last.node.global_position)
+	out("TAIL_ON_GROUND", absf(s_last.node.global_position.distance_to(tg) - float(s_last.r)) < float(s_last.r) * 0.35)
 	var gp: Vector3 = beast._ground_at(beast.global_position)
 	out("ON_GROUND", absf(beast.global_position.distance_to(gp) - beast.radius) < beast.radius * 0.25)
 	# ---------------------------------------------------------------- it farts
@@ -103,7 +112,8 @@ func _run() -> void:
 	var hit: Dictionary = beast.get_world_3d().direct_space_state.intersect_ray(q)
 	out("RAY_HITS_IT", not hit.is_empty() and hit.collider == beast)
 	# ---------------------------------------------------------------- touch = death
-	_put_player(beast._ground_at(beast.global_position + side * (beast.radius - 0.5)))
+	var mid = beast.segments[beast.segments.size() / 2]
+	_put_player(beast._ground_at(mid.node.global_position + side * float(mid.r) * 0.8))
 	var died := false
 	for i in 30:
 		await physics_frame
@@ -111,6 +121,7 @@ func _run() -> void:
 			died = true
 			break
 	out("DIED_ON_TOUCH", died)
+	out("BODY_KILLS", died)
 	out("KILLS", beast.kills)
 	var woke := false
 	for i in 60 * 12:
