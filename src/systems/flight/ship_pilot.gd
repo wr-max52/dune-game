@@ -308,6 +308,18 @@ func remove_last_berth() -> bool:
 	return true
 
 
+## Issue #295: berth `i` sold to Skrugs. It goes for good the way a lost stolen
+## ship does (_lose_stolen), but you stay where you are: a stolen one's chase ends
+## with it, and the one T-89 sold you frees his pad. Never the pit pad's ship
+## (berth 0), never the one you sit in. True when it went.
+func sell_berth(i: int) -> bool:
+	if i <= 0 or i >= berths.size() or bool(berths[i].get("destroyed", false)) or (piloting and berth == i):
+		return false
+	berths[i]["stolen"] = false
+	_wreck_berth(i, false)
+	return true
+
+
 ## Issue #207: T-89 fitted an upgrade: the parked ship you fly takes it now
 ## (in the air it waits for the next landing), and an upgrade with a paint job
 ## repaints its ship (ShipUpgrades.look). Every owned ship shows its parts at once.

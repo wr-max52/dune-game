@@ -31,6 +31,7 @@ const MET_FLAG := "met_t89"          ## saved: he has said his first hello to th
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 
 static var greeted := false          ## the hello happens once per run of the game
+static var _cfg_cache: Dictionary = {}
 
 var demo                             ## the town scene (town, decor, pilot, bar)
 var player: CharacterBody3D
@@ -335,11 +336,47 @@ func stock() -> Array:
 
 
 func price(ship_id: String) -> int:
-	return int(cfg.get("prices", {}).get(ship_id, cfg.get("default_price", 1500)))
+	return _price_in(cfg, ship_id)
 
 
 func resale(ship_id: String) -> int:
-	return int(round(price(ship_id) * float(cfg.get("resale_rate", 0.6))))
+	return _resale_in(cfg, ship_id)
+
+
+## Issue #295: his prices without him (Skrugs pays by them too): from t89.json.
+static func config() -> Dictionary:
+	if _cfg_cache.is_empty():
+		var f := FileAccess.open(CFG_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f != null else null
+		_cfg_cache = d if d is Dictionary else {}
+	return _cfg_cache
+
+
+static func list_price(ship_id: String) -> int:
+	return _price_in(config(), ship_id)
+
+
+static func resale_price(ship_id: String) -> int:
+	return _resale_in(config(), ship_id)
+
+
+static func _price_in(c: Dictionary, ship_id: String) -> int:
+	return int(c.get("prices", {}).get(ship_id, c.get("default_price", 1500)))
+
+
+static func _resale_in(c: Dictionary, ship_id: String) -> int:
+	return int(round(_price_in(c, ship_id) * float(c.get("resale_rate", 0.6))))
+
+
+## Issue #295: the ship he sold you is sold on (back to him, or to Skrugs): paid,
+## his pad free again, its upgrades gone with it (issue #207). The one place both
+## sales settle, so they never drift apart.
+static func settle_sale(ship_id: String, paid: int) -> void:
+	WorldState.credits += paid
+	if WorldState.hangar == ship_id:
+		WorldState.hangar = ""
+	if not ShipUpgrades.owned().has(ship_id):
+		WorldState.ship_fits.erase(ship_id)
 
 
 func ship_label(ship_id: String) -> String:
@@ -433,10 +470,7 @@ func sell() -> int:
 		bought_ship.queue_free()
 	bought_ship = null
 	var paid := resale(id)
-	WorldState.credits += paid
-	WorldState.hangar = ""
-	if not ShipUpgrades.owned().has(id):
-		WorldState.ship_fits.erase(id)        # issue #207: its upgrades go with it
+	settle_sale(id, paid)                  # issue #207: its upgrades go with it
 	_say(_line("sold") % paid)
 	return paid
 

@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Skrugs's yard, garages and stolen ships (2026-10-31)
+
+- **Skrugs moved in.** In the round port his stall is inside the wall now,
+  right behind the cantina on the back lane: his house, his stall, the display
+  speeder and a new garage. In the square port (F11 > World > Town) he is back
+  outside its own back gate, where he stood before the round port. His sand
+  ramp stays out in the desert past the back gate.
+- **The back gate fits a speeder.** It is just wide enough (about 3.9 m) to
+  drive one through. Buy a speeder, drive it out of his garage, turn down the
+  lane and out into the desert. Take the gate at a careful speed.
+- **No more price board** at his stall.
+- **Garages you can drive into.** Skrugs's new garage and Dorrin's garage out
+  in the desert are walls and a roof now, open on one side, so a speeder drives
+  straight in. Dorrin's lift is inside his garage.
+- **Skrugs fits parts too (free roam).** [E] at his garage bench opens the same
+  menu as Dorrin's, same parts, same prices, for the speeder parked in his
+  garage. In a story game Dorrin is still the only mechanic.
+- **Skrugs buys ships, and asks no questions.** Land a ship you stole from a
+  Remnant outpost by his post (in the round port, just outside the back gate)
+  and talk to him: he pays a quarter more than its list price. He also buys back
+  the ship T-89 sold you, at T-89's price. Only your click sells. A stolen ship
+  you sell is gone, and the Remnant interceptor stops chasing it. He never buys
+  the ship in the pit or the port's free ones.
+- **Bought speeders wait in his garage** (and beside it once it is full).
 ## The party barge, cleaned up (issue #269 follow-up, 2026-10-31)
 
 - **No more shaking.** The drifting barge used to get a fresh random turn every

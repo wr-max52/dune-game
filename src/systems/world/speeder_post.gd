@@ -1,21 +1,32 @@
 class_name SpeederPost
 extends Node3D
-## Skrugs's speeder stall, just outside the back gate (issue #42). Its footprint is
-## world data (the "skrugs_post" landmark in content/core/worlds/port_desert.json
-## and content/core/locations/skrugs_post.json), so the ship and speeders already
-## collide with it and the player walks on it. This node adds:
-##   - the look: a small house in the town's style, the stall, the sand ramp
-##     (with its sloped collider: a box would be a wall),
+## Skrugs's speeder post (issue #42). Issue #295: a different place per town
+## layout: in the round port his yard inside the wall right behind the cantina, in
+## the square port out in the sand past the back gate. Its footprint is world data
+## (the "skrugs_post" landmark in content/core/worlds/port_desert.json, resolved per
+## layout, and its location: content/core/locations/skrugs_post*.json), so the ship
+## and speeders already collide with it and the player walks on it. This node adds:
+##   - the look: a small house in the town's style, the stall, the display pad, his
+##     garage (wall pieces you drive into) and its bench, and the sand ramp out past
+##     the back gate (the "skrugs_ramp" landmark, with its sloped collider: a box
+##     would be a wall),
 ##   - Skrugs: an all-red local behind the counter, a TalkSpot on the town's
 ##     ConversationHost, run by the same NpcBrain as the Cantina Owner from his
 ##     own card (content/core/npcs/skrugs_card.json),
 ##   - the display speeder on its pad (not rideable),
 ##   - buying: Skrugs proposes (offer_speeder), the chat box shows the price, and
-##     only the player's click pays. 100 credits off, a speeder parked behind the
-##     house, his mood warm. Speeders you own are saved (WorldState counter
-##     "speeders_owned") and parked there again next time.
+##     only the player's click pays. 100 credits off, a speeder parked in his
+##     garage (then beside it), his mood warm. Speeders you own are saved
+##     (WorldState counter "speeders_owned") and parked there again next time.
+##   - issue #295, free roam only: [E] at his garage bench is Dorrin's parts menu
+##     (SpeederShop) for the speeder in his garage,
+##   - issue #295: he buys ships. One of yours landed by his post (a stolen
+##     outpost ship, for stolen_rate times its list price, or the one T-89 sold you,
+##     at T-89's buy-back price): his chat offers it (offer_ship_buy), and only the
+##     player's click sells.
 
-const LOCATION := "skrugs_post"
+const LANDMARK := "skrugs_post"         ## its location differs per layout (issue #295)
+const RAMP := "skrugs_ramp"
 const CARD_PATH := "res://content/core/npcs/skrugs_card.json"
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const RED := { "head": "local:red", "torso": "local:red", "legs": "local:red" }
@@ -30,7 +41,15 @@ var speeders: Array = []              ## SpeederNode the player owns, here in th
 var origin := Vector3.ZERO            ## the landmark's anchor (base height included)
 var yaw := 0.0
 var points: Dictionary = {}           ## local name -> Vector3 (see the location file)
+var parking: Array = []               ## issue #295: [{ at, nose }] where bought speeders wait
+var location := ""                    ## the location this layout's post is built from
+var card: Dictionary = {}             ## his card (the ship_buy block, his lines)
+var shop: SpeederShop                 ## issue #295: his garage bench, free roam only (null in story)
+var bench_in_reach := false
+var ramp_at := Vector3.INF            ## the ramp's middle and its run-up spot (the trace rides it)
+var ramp_start := Vector3.INF
 var sales := 0                        ## speeders sold this session (tests, traces)
+var ships_bought := 0                 ## issue #295: ships he bought this session (tests, traces)
 var _offered: Dictionary = {}         ## the item on the card right now
 var _paint_scenes: Dictionary = {}    ## issue #82: path -> the paint's model, loaded in the background
 
@@ -45,18 +64,28 @@ func _ready() -> void:
 	var cc := CoreContent.new()
 	cc.load_from()
 	var world: Dictionary = demo.world if "world" in demo and not demo.world.is_empty() else cc.world_for_town("port_town")
+	card = NpcBrain._read(CARD_PATH)
 	for lm in world.get("landmarks", []):
-		if str(lm.get("location", "")) == LOCATION:
-			var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
+		var at := WorldGround._v3(lm.get("at", [0, 0, 0]))
+		if str(lm.get("id", "")) == LANDMARK:
 			origin = Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z)
 			yaw = deg_to_rad(float(lm.get("yaw_deg", 0.0)))
-	var loc: Dictionary = cc.get_location(LOCATION)
+			location = str(lm.get("location", LANDMARK))
+		elif str(lm.get("id", "")) == RAMP:
+			var ry := deg_to_rad(float(lm.get("yaw_deg", 0.0)))
+			var run: Vector3 = WorldGround._v3(cc.get_location(str(lm.get("location", RAMP))).get("points", {}).get("run_up", [0, 0, 0]))
+			ramp_at = Vector3(at.x, ground.terrain.height_at(at.x, at.z), at.z)
+			ramp_start = ramp_at + run.rotated(Vector3.UP, ry)
+			ramp_start.y = ground.terrain.height_at(ramp_start.x, ramp_start.z)
+	var loc: Dictionary = cc.get_location(location if location != "" else LANDMARK)
 	for k in loc.get("points", {}):
 		points[k] = WorldGround._v3(loc.points[k])
+	parking = loc.get("parking", [])
 	_build_ramp_collider()
 	if demo.use_look:
 		_dress(loc)
 	_build_skrugs()
+	_build_shop()
 	display = SpeederNode.new()
 	display.setup(demo, ground, {}, false, str(HoverModel.load_config("speeder").get("look", {}).get("display_paint", "")))
 	add_child(display)
@@ -90,8 +119,25 @@ func _process(_dt: float) -> void:
 
 ## A point from the location file, in the world.
 func world_point(id: String) -> Vector3:
-	var lp: Vector3 = points.get(id, Vector3.ZERO)
+	return _world(points.get(id, Vector3.ZERO))
+
+
+func _world(lp: Vector3) -> Vector3:
 	return origin + lp.rotated(Vector3.UP, yaw)
+
+
+## Issue #295: where to start a straight run at the ramp, and the way up it
+## (flat). INF / zero when this world has no ramp.
+func ramp_run_up() -> Vector3:
+	return ramp_start
+
+
+func ramp_dir() -> Vector3:
+	if ramp_at == Vector3.INF:
+		return Vector3.ZERO
+	var d := ramp_at - ramp_start
+	d.y = 0.0
+	return d.normalized()
 
 
 ## Hand Skrugs to the town's conversation host (when it has one: the look is on,
@@ -105,8 +151,24 @@ func attach_host(h: ConversationHost) -> void:
 	spot.radius = 2.2
 	spot.face_height = 1.55
 	host.add_spot(spot)
+	brain.ship_offer = func(): return _offer_card(ship_offer())
+	brain.extra_brief = brief
 	brain.sale_offered.connect(_on_offer)
+	brain.ship_buy_offered.connect(_on_ship_offer)
 	host.panel.sale_answered.connect(_on_answer)
+
+
+## Issue #295: his own facts each turn: where his post is in this town, and what
+## his garage does (free roam: the bench fits parts).
+func brief() -> Array:
+	var out: Array = []
+	var where := str(card.get("where", {}).get(location, ""))
+	if where != "":
+		out.append(where)
+	var g := str(card.get("garage", {}).get("free" if shop != null else "story", ""))
+	if g != "":
+		out.append(g)
+	return out
 
 
 # ------------------------------------------------------------------ buying
@@ -122,11 +184,15 @@ func _on_offer(item: Dictionary) -> void:
 func _on_answer(id: String, accepted: bool) -> void:
 	if not accepted or host == null or host.active != spot or id != str(_offered.get("id", "")):
 		return
+	if bool(_offered.get("selling", false)):
+		_offered = {}
+		buy_ship()
+		return
 	buy()
 
 
-## Pay and park a new speeder behind the house. False (and nothing charged) if
-## the player cannot afford it.
+## Pay and park a new speeder in his garage (beside it once that is full). False
+## (and nothing charged) if the player cannot afford it.
 func buy() -> bool:
 	var sale: Dictionary = spot.brain.card.get("sale", {}) if spot != null else HoverModel.load_config("speeder")
 	var price := int(sale.get("price", 100))
@@ -135,7 +201,7 @@ func buy() -> bool:
 	WorldState.credits -= price
 	WorldState.bump("speeders_owned")
 	WorldState.set_flag("bought_speeder")
-	WorldState.log_event("Someone bought a speeder from Skrugs outside the back gate.")
+	WorldState.log_event("Someone bought a speeder from Skrugs.")
 	sales += 1
 	_park(WorldState.count("speeders_owned") - 1)
 	if spot != null:
@@ -144,20 +210,30 @@ func buy() -> bool:
 		rel.add_trust(3, "bought a speeder")
 		rel.remember("bought a speeder")
 		if host != null and host.active == spot:
-			var lines: Array = spot.brain.card.get("canned", {}).get("sold", ["She's behind the house."])
-			host.panel.commit_line()
-			host.panel.set_line(str(lines[0]))
-			host.panel.set_mood(rel.mood)
-			host.panel.set_money(WorldState.credits, rel.tab)
-			spot.speak_pulse()
+			var lines: Array = spot.brain.card.get("canned", {}).get("sold", ["She's in the garage."])
+			_answer_line(str(lines[0]))
 	return true
 
 
-## Speeder number `i` parked behind the house (side by side when there are several).
+## His line in the chat box after a deal, with the new money.
+func _answer_line(text: String) -> void:
+	host.panel.commit_line()
+	host.panel.set_line(text)
+	host.panel.set_mood(spot.brain.rel.mood)
+	host.panel.set_money(WorldState.credits, spot.brain.rel.tab)
+	spot.speak_pulse()
+
+
+## Speeder number `i` at its parking spot (issue #295: the location's "parking":
+## the garage first, then beside it), nose the way the spot says.
 func _park(i: int) -> SpeederNode:
 	var s := _spawn(i)
-	var side := Vector3(0, 0, (i % 4) * 4.5).rotated(Vector3.UP, yaw)
-	s.place(world_point("spawn") + side, yaw + PI * 0.5)   # nose to the open desert, away from the house
+	var spot_cfg: Dictionary = parking[i % parking.size()] if not parking.is_empty() else {}
+	var at := _world(WorldGround._v3(spot_cfg.get("at", [0, 0, 0])))
+	at.y = ground.terrain.height_at(at.x, at.z)
+	var axis := { "+x": Vector3.RIGHT, "-x": Vector3.LEFT, "+z": Vector3.BACK, "-z": Vector3.FORWARD }
+	var nose: Vector3 = (axis.get(str(spot_cfg.get("nose", "-x")), Vector3.LEFT) as Vector3).rotated(Vector3.UP, yaw)
+	s.place(at, atan2(-nose.x, -nose.z))
 	return s
 
 
@@ -218,6 +294,130 @@ func _forget(s: SpeederNode) -> void:
 				o.set_meta("slot", int(o.get_meta("slot", 0)) - 1)
 
 
+# ------------------------------------------------------------------ his bench (issue #295)
+
+## Free roam only: [E] at his garage bench is the mechanic's parts menu, on the
+## speeder in his garage. In a story save Dorrin stays the only mechanic.
+func _build_shop() -> void:
+	if WorldState.story_mode() or not points.has("bay"):
+		return
+	shop = SpeederShop.new()
+	shop.setup(demo, demo.gear if "gear" in demo else null, SpeederUpgrades.shop("skrugs"), func(): return world_point("bay"))
+	shop.speaker = skrugs
+	add_child(shop)
+
+
+func _physics_process(_dt: float) -> void:
+	var p: CharacterBody3D = demo._player if demo != null and "_player" in demo else null
+	if shop == null or p == null or shop.busy():
+		return
+	var gear: GearController = shop.gear
+	var at := world_point("bench")
+	bench_in_reach = not p.piloting and Vector2(p.global_position.x - at.x, p.global_position.z - at.z).length() \
+		<= float(shop.cfg.get("reach", 2.6)) and absf(p.global_position.y - at.y) <= 2.0 and (gear == null or gear.focus.is_empty())
+	if not bench_in_reach:
+		return
+	if gear != null and gear.hud != null:
+		gear.hud.set_prompt(shop.label("talk") % shop.npc_name())
+	if not p.locked and InputMap.has_action("interact") and Input.is_action_just_pressed("interact"):
+		shop.talk()
+
+
+# ------------------------------------------------------------------ buying ships (issue #295)
+
+## The ship he would buy right now, or {}: one of yours landed within ship_buy's
+## radius of his ship_sell spot and not under you. A stolen outpost ship pays
+## stolen_rate times its list price (t89.json); the ship T-89 sold you, his
+## buy-back price. Never the pit pad's ship (berth 0) or the port's free-roam
+## ships: free keys are not free money.
+## { id, name, price, berth, kind ("stolen" or "owned") }
+func ship_offer() -> Dictionary:
+	var pilot = demo.pilot if demo != null and "pilot" in demo else null
+	if pilot == null or not points.has("ship_sell"):
+		return {}
+	var sb: Dictionary = card.get("ship_buy", {})
+	var here := world_point("ship_sell")
+	var best := {}
+	var best_d := float(sb.get("radius", 30.0))
+	for i in range(1, pilot.berths.size()):
+		var b: Dictionary = pilot.berths[i]
+		if bool(b.get("destroyed", false)) or not is_instance_valid(b.visual) or (pilot.piloting and pilot.berth == i):
+			continue
+		var kind := _berth_kind(b)
+		if kind == "":
+			continue
+		var v: Vector3 = (b.visual as Node3D).global_position
+		var d := Vector2(v.x - here.x, v.z - here.z).length()
+		if d > best_d:
+			continue
+		var sid := str(b.ship_id)
+		var price := ShipSalesman.resale_price(sid) if kind == "owned" \
+			else int(round(ShipSalesman.list_price(sid) * float(sb.get("stolen_rate", 1.25))))
+		best = { "id": "ship:%d" % i, "name": ShipUpgrades.ship_label(sid), "price": price, "berth": i, "kind": kind }
+		best_d = d
+	return best
+
+
+## "stolen", "owned" (T-89's sale, on his pad's berth) or "" (he won't touch it).
+func _berth_kind(b: Dictionary) -> String:
+	if bool(b.get("stolen", false)):
+		return "stolen"
+	var pad := str(demo.salesman.cfg.get("pad", "spare_pad")) if "salesman" in demo and demo.salesman != null else "spare_pad"
+	if WorldState.hangar != "" and str(b.get("box_id", "")) == pad and str(b.ship_id) == WorldState.hangar:
+		return "owned"
+	return ""
+
+
+## What the model is told and may offer: the offer without the game's bookkeeping.
+static func _offer_card(o: Dictionary) -> Dictionary:
+	if o.is_empty():
+		return {}
+	return { "id": o.id, "name": o.name, "price": o.price, "stolen": str(o.kind) == "stolen" }
+
+
+## His offer_ship_buy: the chat box shows what he pays, if the ship is still there.
+func _on_ship_offer(item: Dictionary) -> void:
+	if host == null or host.active != spot:
+		return
+	var o := ship_offer()
+	if o.is_empty() or str(o.id) != str(item.get("id", "")):
+		return
+	_offered = { "id": o.id, "name": o.name, "price": o.price, "selling": true,
+		"text": str(card.get("ship_buy", {}).get("lines", {}).get("card", "%s")) % str(o.name) }
+	host.panel.show_sale(_offered, WorldState.credits)
+
+
+## Sell him the ship by his post. It goes for good the way a lost stolen ship does
+## (ShipPilot.sell_berth), but you stay where you are; a stolen one's chase ends
+## with it. Returns the credits paid, or -1 (nothing there, or you sit in it).
+func buy_ship() -> int:
+	var o := ship_offer()
+	if o.is_empty():
+		return -1
+	var pilot = demo.pilot
+	var i := int(o.berth)
+	var sid := str(pilot.berths[i].ship_id)
+	if not pilot.sell_berth(i):
+		return -1
+	var paid := int(o.price)
+	var lines: Dictionary = card.get("ship_buy", {}).get("lines", {})
+	if str(o.kind) == "owned":
+		ShipSalesman.settle_sale(sid, paid)
+		WorldState.log_event(str(lines.get("event_owned", "Someone sold a %s to Skrugs.")) % str(o.name))
+	else:
+		WorldState.credits += paid
+		WorldState.log_event(str(lines.get("event_stolen", "Someone sold a Remnant ship to Skrugs.")))
+	ships_bought += 1
+	if spot != null:
+		var rel := spot.brain.rel
+		rel.mood = "warm"
+		rel.add_trust(3, "sold you a ship")
+		rel.remember("sold you a " + str(o.name).to_lower())
+		if host != null and host.active == spot:
+			_answer_line(str(lines.get("bought", "Pleasure, friend.")) % paid)
+	return paid
+
+
 # ------------------------------------------------------------------ Skrugs
 
 func _build_skrugs() -> void:
@@ -241,7 +441,7 @@ func _build_skrugs() -> void:
 ## can walk up it too.
 func _build_ramp_collider() -> void:
 	for b in ground.boxes:
-		if not str(b.id).begins_with(LOCATION + "/") or str(b.get("rise", "")) == "":
+		if not (str(b.id).begins_with(RAMP + "/") or str(b.id).begins_with(LANDMARK + "/")) or str(b.get("rise", "")) == "":
 			continue
 		var mn: Vector3 = b.min
 		var mx: Vector3 = b.max
@@ -291,8 +491,9 @@ func _build_ramp_collider() -> void:
 			mi.global_transform = body.global_transform
 
 
-## The house, the stall and the display pad, in the town's palette. Shapes from
-## the location file; colours from docs/ART_DIRECTION.md (plaster, madder red).
+## The house, the stall, the display pad, the garage and its bench, in the town's
+## palette. Shapes from the location file (the garage piece by piece, the boxes it
+## collides with); colours from docs/ART_DIRECTION.md (plaster, madder red).
 func _dress(loc: Dictionary) -> void:
 	var mats: LookMaterials = demo._flat_mats()
 	var plaster := mats.plaster(origin.y, origin.y + 3.2, Color("#8e3a26"), Color("#d8c2a0"))
@@ -319,10 +520,18 @@ func _dress(loc: Dictionary) -> void:
 					_mesh(_cyl(0.06, 2.6), wood, c + Vector3(-1.2, 1.3, dz))
 					_mesh(_cyl(0.06, 2.6), wood, c + Vector3(0.45, 1.3, dz))
 				_mesh(_box(Vector3(2.2, 0.06, s.z + 0.6)), red, c + Vector3(-0.4, 2.62, 0), Vector3(0, 0, -8))
-				# A price board: one speeder, one price.
-				_mesh(_box(Vector3(0.06, 0.7, 1.2)), mats.flat(Color("#e8dcc0"), 0.9), c + Vector3(0.5, 1.75, 0))
 			"display_pad":
 				_mesh(_box(s), metal, c + Vector3(0, s.y * 0.5, 0))
+			"bench":
+				# Issue #295: his garage bench, a few parts lying on it.
+				_mesh(_box(s), metal, c + Vector3(0, s.y * 0.5, 0))
+				_mesh(_box(Vector3(s.x + 0.1, 0.06, s.z + 0.1)), wood, c + Vector3(0, s.y + 0.03, 0))
+				_mesh(_box(Vector3(0.4, 0.3, 0.4)), red, c + Vector3(0, s.y + 0.15, 0))
+				_mesh(_cyl(0.12, 0.3), metal, c + Vector3(0.3, s.y + 0.15, 0.6) if s.z > s.x else c + Vector3(0.6, s.y + 0.15, 0.3))
+			_:
+				if str(b.id).begins_with("garage_"):
+					# Issue #295: back wall, two side walls and a red roof; one side stands open.
+					_mesh(_box(s), red if str(b.id) == "garage_roof" else plaster, c + Vector3(0, s.y * 0.5, 0))
 
 
 ## A mesh at a point in the post's own frame (turned and placed into the world).

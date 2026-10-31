@@ -2,6 +2,25 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #295, Skrugs's yard (2026-10-31)
+
+**Checked:** `tests/test_skrugs_yard.gut.gd` (19/19: landmark per layout, the round
+yard inside the wall and clear of every town box, the back gate's gap, a speeder
+driven out of his garage and through the gate, both garages driven into and their
+walls blocking, the bench in free roam and not in story, ship buying),
+`test_speeder_upgrades` (19/19) and `test_speeders` (18/19: "no job board" also
+fails on main, since #188 gave Skrugs jobs). The smoke test and a boot check. The
+speeder trace was updated but not run.
+
+- **The back gate is tight on purpose.** A speeder lined up on the lane goes
+  through; swing into it fast off the turn from his garage and you scrape.
+- **His bench box is there in story too.** Only its menu is free roam.
+- **A sold stolen ship is back at its outpost next session**, as a lost one is
+  (outpost ships are not saved).
+- **The yard has no decor of its own** beyond his buildings: no crates, no lamps.
+- **Speeders past the fourth park on top of the first spots**, as before.
+
+## After issue #269, the party barge (2026-10-31)
 ## After the party barge cleanup (issue #269 follow-up, 2026-10-31)
 
 **Checked:** the barge trace, run as a main scene (every line true), and rendered

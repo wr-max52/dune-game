@@ -125,7 +125,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 		town = TownGen.generate(town_id, size, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), opts)
 	var world: Dictionary = {}
 	if cfg.has("world"):
-		world = cc.get_world(str(cfg.world)).duplicate(true)
+		world = CoreContent.resolve_layout(cc.get_world(str(cfg.world)), layout)    # issue #295: landmarks per layout
 	else:
 		world = _world_for(id, town_id, tcfg)
 	world["ground"] = str(tcfg.get("ground", "terrain"))

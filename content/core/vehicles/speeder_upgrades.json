@@ -1,13 +1,14 @@
 {
-  "note": "Issue #95: what the mechanic in the desert sells for a speeder. Read by src/systems/vehicles/speeder_upgrades.gd (prices, rules, stats) and src/systems/world/mechanic_yard.gd (him, his words). A part has a slot; a speeder holds one part per slot, except 'paint', which can be bought again. 'requires' is the part before it in its line (tier 2 needs tier 1, and replaces it). 'mods' multiply the speeder's numbers in content/core/vehicles/speeder.json ('laser.damage' reaches into the laser). 'hover' turns on the Grav Lifter in hover_model.gd. Looks-only parts change nothing but the look. Scrap pays 'base' plus 'parts_back' of what was spent on parts.",
+  "note": "Issue #95: what the mechanic in the desert sells for a speeder. Read by src/systems/vehicles/speeder_upgrades.gd (prices, rules, stats) and src/systems/world/speeder_shop.gd (the shop, its words). Issue #295: 'mechanic' is Dorrin's shop; 'shops' holds the others (Skrugs's garage bench, free roam only), each laid over Dorrin's block (SpeederUpgrades.shop), so the menu, parts and prices are the same and only the name, bay and words change. A part has a slot; a speeder holds one part per slot, except 'paint', which can be bought again. 'requires' is the part before it in its line (tier 2 needs tier 1, and replaces it). 'mods' multiply the speeder's numbers in content/core/vehicles/speeder.json ('laser.damage' reaches into the laser). 'hover' turns on the Grav Lifter in hover_model.gd. Looks-only parts change nothing but the look. Scrap pays 'base' plus 'parts_back' of what was spent on parts.",
   "mechanic": {
     "name": "Dorrin Vask",
     "location": "mechanic_yard",
     "reach": 3.4,
     "bay_radius": 16.0,
+    "voice": "mechanic",
     "lines": {
       "hello": "Bring her round to the bay and I'll see what she needs.",
-      "no_speeder": "No speeder in my bay. Drive one over and park it by the lift.",
+      "no_speeder": "No speeder in my bay. Drive one into the garage and park it on the lift.",
       "bought": "Done. She'll feel it.",
       "too_poor": "Come back when your credits can pay for it.",
       "scrapped": "Pleasure doing business. She'll make good spares."
@@ -28,6 +29,26 @@
       "locked": "%s  (%d cr)  - needs %s",
       "event_bought": "Someone had a %s fitted at the mechanic's yard.",
       "event_scrapped": "Someone sold a speeder for scrap at the mechanic's yard."
+    }
+  },
+  "shops": {
+    "skrugs": {
+      "name": "Skrugs",
+      "reach": 2.6,
+      "bay_radius": 8.0,
+      "voice": "skrugs",
+      "lines": {
+        "hello": "Ah, she's in my garage! Let's make her better, friend. Same parts as the old mechanic out in the sand, same prices.",
+        "no_speeder": "No speeder in my garage, friend. Drive her in and we'll talk parts.",
+        "bought": "Done! Bolted on, good as new. Better than new!",
+        "too_poor": "Friend, friend. Come back with the credits.",
+        "scrapped": "Sad to see her go. Happy to have the spares!"
+      },
+      "labels": {
+        "talk": "[E] %s's bench (speeder parts)",
+        "event_bought": "Someone had a %s fitted in Skrugs's garage.",
+        "event_scrapped": "Someone sold a speeder to Skrugs for scrap."
+      }
     }
   },
   "scrap": { "base": 35, "parts_back": 0.25 },

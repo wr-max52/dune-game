@@ -17,6 +17,8 @@ them still works), and the rest is built new:
   - the two neighbourhoods, packed along winding lanes by gen_neighborhoods.pack:
     huts (residential_w) and towers (residential_e) wrapping round the back until
     they nearly meet behind the cantina, with only the back lane between them
+  - Skrugs's yard behind the cantina (issue #295): a zone the towers, clutter and
+    hiding places keep out of (his post itself is a world landmark)
 
 A walk check (0.25 m grid, player radius, the wall in the way) proves every door
 and hiding place can be reached on foot from its district's resident, and the
@@ -769,6 +771,11 @@ def main():
 	# ---- the neighbourhoods
 	keep = [grow(bbox([rect_of(b) for b in boxes if b["zone"] in (z,)]), 3.0) for z in ("cantina", "cantina_square", "market", "barracks")]
 	keep.append(grow(bbox([rect_of(b) for b in boxes if b["id"].startswith("watchtower")]), 3.0))
+	# Issue #295: Skrugs's yard behind the cantina. Nothing of the town's in it: the
+	# towers repack round it, their clutter and the hiding places keep out.
+	yard = tuple(cfg["skrugs_yard"]["rect"])
+	keep.append(yard)
+	zones.append({"id": "skrugs_yard", "min": [yard[0], yard[1]], "max": [yard[2], yard[3]]})
 	back_lane = ([tuple(r2(v) for v in p) for p in lane_pts], bl["width"])
 	results = {}
 	for zid, kit, weights, seed in (("residential_w", gn.HUTS, gn.HUT_WEIGHTS, 2371), ("residential_e", gn.TOWERS, gn.TOWER_WEIGHTS, 2372)):
@@ -864,7 +871,7 @@ def main():
 			routes.append({"id": "stroll_" + mid, "points": walk + list(reversed(walk))[1:]})
 
 	def tucked(x, z, rects, ok, lanes, need):
-		if not ok(x, z) or gn.lane_dist((x, z), lanes) < 1.0:
+		if not ok(x, z) or gn.lane_dist((x, z), lanes) < 1.0 or gn.rect_dist(x, z, yard) < 1.0:
 			return False
 		return sum(1 for r in rects if gn.rect_dist(x, z, r) < 1.6) >= need
 	rng = random.Random(2373)
