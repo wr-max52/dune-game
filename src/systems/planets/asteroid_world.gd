@@ -178,6 +178,26 @@ func _hall_boxes() -> Array:
 	return out
 
 
+## The gate's frame, round the hallway's mouth into the dome. The ring wall's gate
+## is cut in whole panels, wider and taller than the hallway, so this fills the
+## rest: a jamb either side and a lintel over the roof, deep enough to bury the
+## wall's curve. What it leaves open is the hallway's own section, which the gate
+## shield fills edge to edge.
+func _gate_frame_boxes() -> Array:
+	var out: Array = []
+	if hall.is_empty():
+		return out
+	var hw := float(hall.half)
+	var h := float(hall.height)
+	var outer := gate_half + 2.2         # past the panels the wall leaves off round the gate
+	var x0 := rc.x + rw - 1.0
+	var x1 := rc.x + rw + 0.4
+	for sg in [-1.0, 1.0]:
+		out.append([Vector3((x0 + x1) * 0.5, h * 0.5, rc.z + sg * (hw + outer) * 0.5), Vector3(x1 - x0, h, outer - hw)])
+	out.append([Vector3((x0 + x1) * 0.5, (h + wall_h) * 0.5, rc.z), Vector3(x1 - x0, wall_h - h, outer * 2.0)])
+	return out
+
+
 func _build_colliders() -> void:
 	var body := StaticBody3D.new()
 	body.name = "Station"
@@ -187,7 +207,7 @@ func _build_colliders() -> void:
 	dome_tris = dome.size() / 3
 	_add_trimesh(body, dome)
 	_add_trimesh(body, _cylinder(pit_c, pit_r, 0.0, liner_h, LINER_SEG, 6, _liner_gap))
-	for b in _hall_boxes():
+	for b in _hall_boxes() + _gate_frame_boxes():
 		var cs := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
 		shape.size = b[1]
@@ -688,6 +708,14 @@ func _dress_hall(metal: Material, glass: Material, _env: LookEnvironment, mats: 
 			_box(root, Vector3(x, (bottom if x > rim else 0.0) * 0.5 + h * 0.5, z), Vector3(0.25, h - (bottom if x > rim else 0.0), 0.35), metal)
 			x += 4.0
 	_box(root, Vector3((x0 + x1) * 0.5, h + 0.15, 0.0), Vector3(x1 - x0, 0.3, hw * 2.0 + 0.6), metal)
+	# The gate's frame, a trim reveal round the opening on both faces.
+	for b in _gate_frame_boxes():
+		_box(root, b[0], b[1], metal)
+	var trim := mats.flat(Color("#899195"), 0.6, 0.7)
+	for fx in [float(hall.x0) - 1.03, float(hall.x0) + 0.43]:
+		for sg in [-1.0, 1.0]:
+			_box(root, Vector3(fx, (h + 0.24) * 0.5, rc.z + sg * (hw + 0.12)), Vector3(0.06, h + 0.24, 0.24), trim)
+		_box(root, Vector3(fx, h + 0.12, rc.z), Vector3(0.06, 0.24, hw * 2.0 + 0.48), trim)
 	# The end wall round its shield (the same boxes as the collider).
 	var boxes := _hall_boxes()
 	for k in range(boxes.size() - 3, boxes.size()):
