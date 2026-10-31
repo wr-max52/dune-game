@@ -885,7 +885,7 @@ func _animate(dt: float, move: Vector3) -> void:
 		if bottle.visible and action == "":
 			ClubMoves.hold(joints, 1.0)
 			if speed < 0.2:     # nodding along to the music while they stand
-				(joints.neck as Node3D).rotation_degrees.x += 5.0 * sin(anim.time * TAU * float(profile.get("bpm", 110.0)) / 60.0)
+				_groove(float(profile.get("groove", 0.0)))
 	# Head follows what the senses have: the target while seen, else straight ahead.
 	if not _staged():
 		var look_at := Vector3.INF
@@ -955,6 +955,27 @@ func _hold_bottle() -> void:
 	bottle.position = Vector3(0.0, -0.08, -0.09)
 	bottle.rotation_degrees = Vector3(90.0, 0.0, 0.0)
 	_sip_wait = randf_range(1.0, SIP_EVERY.y)
+
+
+## Standing with a drink: a nod on the beat; a raver ("groove" > 0) bounces at the
+## knees, sways and throws the free hand up for a few bars now and then.
+func _groove(g: float) -> void:
+	var beat: float = anim.time * TAU * float(profile.get("bpm", 110.0)) / 60.0
+	(joints.neck as Node3D).rotation_degrees.x += (5.0 + 5.0 * g) * sin(beat)
+	if g <= 0.0:
+		return
+	var b := 0.5 + 0.5 * sin(beat)
+	for side in ["l", "r"]:
+		(joints[side + "_knee"] as Node3D).rotation_degrees.x += 16.0 * g * b
+		(joints[side + "_hip"] as Node3D).rotation_degrees.x -= 8.0 * g * b
+	(joints.pelvis as Node3D).position.y -= 0.035 * g * b
+	(joints.chest as Node3D).rotation_degrees.z += 6.0 * g * sin(beat * 0.5)
+	var phase := hash(post_id) % 8
+	var up := clampf((sin(beat / 16.0 + phase) - 0.3) * 3.0, 0.0, 1.0)
+	var ls := joints.l_shoulder as Node3D
+	ls.rotation_degrees = ls.rotation_degrees.lerp(Vector3(-25.0, 0.0, 150.0 + 12.0 * sin(beat)), up)
+	var le := joints.l_elbow as Node3D
+	le.rotation_degrees = le.rotation_degrees.lerp(Vector3(-20.0 - 30.0 * b, 0.0, 0.0), up)
 
 
 func _tick_sip(dt: float) -> void:
