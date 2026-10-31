@@ -16,7 +16,7 @@ func before_each() -> void:
 	cc = CoreScript.new()
 	cc.load_from()
 	var t = TownLayout.new()
-	t.load_town("port_town")
+	t.load_town("port_town", "port_square")   # issue #237: these brains are tuned to the square port's gate
 	cfg = t.data.get("garrison", {}).get("alarm", {})
 
 
@@ -112,7 +112,7 @@ func test_profiles_inherit() -> void:
 
 func test_every_trooper_post_is_live() -> void:
 	var t = TownLayout.new()
-	t.load_town("port_town")
+	t.load_town("port_town", "port_square")   # issue #237: these brains are tuned to the square port's gate
 	for m in t.markers_with_role("trooper_post"):
 		assert_true(m.has("soldier"), "%s has a soldier" % m.id)
 		assert_false(cc.get_soldier(str(m.soldier)).is_empty())

@@ -2,6 +2,7 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The round port (issue #237, 2026-10-31)
 ## Brighter star cruiser (2026-10-31)
 
 - **Every area aboard the Remnant cruiser is lit properly.** The bay, the
@@ -138,8 +139,19 @@ Plain English, newest on top. One entry per milestone.
 - The overlap check (V5) now treats round boxes (round huts, the stair tower,
   the lookout, the round roof) as circles, not squares. A stair tower's door can
   face any way (`door_deg`).
-- **The home planet still uses the square port** until the round one is done.
-  F11 > World > Town builds it to the round one for the rest of the run.
+- **The home planet is the round port now** (part 5). F11 > World > Town builds
+  it to the square one for the rest of the run.
+- **Skrugs moved out** to about 90 m past the back gate, straight out from it,
+  so a speeder starts to make sense. The near outpost is off the barracks side
+  (0, 250) and the far outpost moved to (700, 300): straight out of the front
+  gate you see only the crashed cruiser and the desert.
+- Oda's town briefing and Skrugs's card tell it the round way.
+- **The round port is fuller**: crates, barrels and water tanks against a share
+  of the houses (never walling a door in), a cargo yard with a container and
+  crate stacks in every gap between the landing pads with a dock hand by each,
+  more towers on the barracks side, and three more locals walking the lanes.
+- New stills of the round port in `docs/town/look/port_round/`, and the frame
+  time against the square port in `docs/town/round_port_perf.md`.
 - **New box kind `ring`**: a round wall cut open at gates, which any layout can
   use. The validators check it (V9).
 - `tools/town/gen_port_round.py` makes the round port from the numbers in
