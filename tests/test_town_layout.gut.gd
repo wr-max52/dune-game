@@ -51,6 +51,24 @@ func test_round_port_keeps_every_marker_and_route() -> void:
 		assert_false(t.get_box(id).is_empty(), "port_round has box " + id)
 
 
+## The club cantina (issue #261) moves whole: its band and patrons keep where
+## they stand and what they look at, relative to the bar.
+func test_round_port_carries_the_club_cantina() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	assert_eq(t.data.get("club", {}), sq.data.get("club", {}), "the same club")
+	var shift := t.marker_pos("cantina_owner") - sq.marker_pos("cantina_owner")
+	for m in sq.markers():
+		if not (str(m.id).begins_with("band_") or str(m.id).begins_with("patron_")):
+			continue
+		assert_almost_eq(t.marker_pos(str(m.id)).distance_to(sq.marker_pos(str(m.id)) + shift), 0.0, 0.01, str(m.id) + " moved with the cantina")
+		if m.has("face"):
+			var a := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2])) + shift
+			var f: Array = t.get_marker(str(m.id)).face
+			assert_almost_eq(Vector3(float(f[0]), float(f[1]), float(f[2])).distance_to(a), 0.0, 0.01, str(m.id) + " looks at the same thing")
+
+
 func test_round_port_is_round_and_twice_the_size() -> void:
 	var t := _round()
 	var wall := t.get_box("town_wall")
@@ -134,8 +152,8 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
 	assert_eq(t.boxes().size(), 182)   # issue #76: + the barracks landing pad
-	assert_eq(t.markers().size(), 31)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen
-	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
+	assert_eq(t.markers().size(), 42)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen; issue #261: + the band of three and eight club patrons
+	assert_eq(t.routes().size(), 17)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout; issue #261: + three club strolls
 	assert_eq(t.zones().size(), 8)
 
 
@@ -321,12 +339,17 @@ func test_cantina_stage_and_patrons() -> void:
 	assert_eq(str(stage.kind), "cover", "you cannot walk through it")
 	var roof := t.get_box("cantina_roof")
 	assert_gte(float(roof.min[1]), 8.0, "a tall hall")
+	# The bar stools (patron_1, _2, ...) face the cantina owner; issue #261's club
+	# patrons stand at tables and booths or stroll, facing their own way.
 	var patrons := 0
 	for m in t.markers():
-		if str(m.id).begins_with("patron_"):
+		var id := str(m.id)
+		if id.begins_with("patron_") and id.trim_prefix("patron_").is_valid_int():
 			patrons += 1
 			var f := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
 			assert_almost_eq(f.distance_to(t.marker_pos("cantina_owner")), 0.0, 0.5, "%s faces the cantina owner" % m.id)
+		elif id.begins_with("patron_"):
+			assert_true(m.has("face") or m.has("patrol"), "%s faces somewhere or strolls" % id)
 	assert_gte(patrons, 3, "locals at the bar")
 
 

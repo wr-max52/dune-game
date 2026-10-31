@@ -7,7 +7,7 @@
   "stage_dancer": true,
   "seed": 45,
   "style": "metallic",
-  "club": "salvage_rave",
+  "club": "salvage_rave", "club_dome": { "style": "rave", "bpm": 126, "dim": 0.25 },
   "near": "port_desert",
   "at": [9000, 5200, -6500],
   "cantina_owner": { "look": "cantina_owner_station" },

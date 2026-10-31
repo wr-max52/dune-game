@@ -1,0 +1,26 @@
+{
+  "id": "club_dj",
+  "label": "Club DJ",
+  "archetype": "club_band",
+  "faction": "locals",
+  "ambient": true,
+  "band": true,
+  "radio_voice": false,
+  "note": "Issue #261: the club's DJ, behind the desk with the glowing buttons and the two glowing decks (ClubProps.dj_desk). A non-combatant on the stage: plays the set loop (ClubMoves 'dj': decks, a cue in the headphones, a hand in the air, long looks round the room) with the hands on the desk, and stays damageable. 'band': killing them stops the club's music (Sound.set_club_live(false)); a new band plays the next visit. 'bpm': the beat the loop nods to.",
+  "naming": {
+    "kind": "person_dune",
+    "nameplate_range": 0.0
+  },
+  "hp": 50,
+  "walk_speed": 0.0,
+  "sprint_speed": 0.0,
+  "turn_rate_deg": 220.0,
+  "perform": "dj",
+  "bpm": 100.0,
+  "perception": {
+    "sight_range": 0.0,
+    "hearing_range": 0.0,
+    "ray_hz": 0.0
+  },
+  "weapon": {}
+}

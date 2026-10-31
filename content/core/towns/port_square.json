@@ -772,7 +772,9 @@
    ],
    "shape": "round",
    "look": "stage",
-   "note": "The stage in the middle of the cantina. Nobody plays."
+   "note": "The stage in the middle of the cantina. Issue #261: the band plays here (band markers), back to back, facing out; no microphone.",
+   "band": true,
+   "standable": true
   },
   {
    "id": "stair_tower",
@@ -3291,6 +3293,173 @@
    "note": "A local on a bar stool, facing the cantina owner."
   },
   {
+   "id": "band_dj",
+   "pos": [
+    -67.0,
+    0.6,
+    0.0
+   ],
+   "role": "ambient",
+   "soldier": "club_dj",
+   "prop": "dj_desk",
+   "face": [
+    -60.0,
+    0.6,
+    0.0
+   ],
+   "note": "Issue #261: the band's DJ, behind the desk facing the door; the other two back to back with them."
+  },
+  {
+   "id": "band_drums",
+   "pos": [
+    -68.5,
+    0.6,
+    0.87
+   ],
+   "role": "ambient",
+   "soldier": "club_drummer",
+   "prop": "drum_kit",
+   "face": [
+    -71.0,
+    0.6,
+    5.2
+   ],
+   "note": "Issue #261: the band's drummer, standing at a hologram techno drum kit, facing out to the north-west."
+  },
+  {
+   "id": "band_bass",
+   "pos": [
+    -68.5,
+    0.6,
+    -0.87
+   ],
+   "role": "ambient",
+   "soldier": "club_bassist",
+   "prop": "upright_bass",
+   "face": [
+    -71.0,
+    0.6,
+    -5.2
+   ],
+   "note": "Issue #261: the band's bassist, standing at an upright bass strung with lasers, facing out to the south-west."
+  },
+  {
+   "id": "patron_table_1",
+   "pos": [
+    -68.6,
+    0,
+    -8.6
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "face": [
+    -70.0,
+    0,
+    -10.0
+   ],
+   "note": "Issue #261: a patron with a drink at the table."
+  },
+  {
+   "id": "patron_table_2",
+   "pos": [
+    -62.0,
+    0,
+    -8.8
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "face": [
+    -62.0,
+    0,
+    -10.5
+   ],
+   "note": "Issue #261: a patron with a drink at the table."
+  },
+  {
+   "id": "patron_table_3",
+   "pos": [
+    -70.4,
+    0,
+    6.6
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "face": [
+    -72.0,
+    0,
+    7.0
+   ],
+   "note": "Issue #261: a patron with a drink at the table."
+  },
+  {
+   "id": "patron_stage_e",
+   "pos": [
+    -60.8,
+    0,
+    3.2
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "face": [
+    -68.0,
+    0.6,
+    0.0
+   ],
+   "note": "Issue #261: a patron by the door, watching the band."
+  },
+  {
+   "id": "patron_booth",
+   "pos": [
+    -59.0,
+    0,
+    -10.6
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "face": [
+    -59.0,
+    0,
+    -12.3
+   ],
+   "note": "Issue #261: a patron with a drink by the south booths."
+  },
+  {
+   "id": "patron_walk_stage",
+   "pos": [
+    -75.0,
+    0,
+    -5.2
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "patrol": "club_stroll_stage",
+   "note": "Issue #261: a patron strolling round the stage with a drink."
+  },
+  {
+   "id": "patron_walk_south",
+   "pos": [
+    -76.0,
+    0,
+    -7.4
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "patrol": "club_stroll_south",
+   "note": "Issue #261: a patron wandering between the bar and the door with a drink."
+  },
+  {
+   "id": "patron_walk_north",
+   "pos": [
+    -76.5,
+    0,
+    9.0
+   ],
+   "role": "ambient",
+   "soldier": "local_patron",
+   "patrol": "club_stroll_north",
+   "note": "Issue #261: a patron wandering the north side with a drink."
+  },
+  {
    "id": "trooper_gate_n",
    "pos": [
     95,
@@ -4237,6 +4406,77 @@
     ]
    ],
    "note": "A shopper: the back lane by the shops, then up the aisle (south half) the other way."
+  },
+  {
+   "id": "club_stroll_stage",
+   "points": [
+    [
+     -75.0,
+     -5.2
+    ],
+    [
+     -62.8,
+     -5.2
+    ],
+    [
+     -62.8,
+     5.2
+    ],
+    [
+     -75.0,
+     5.2
+    ],
+    [
+     -75.0,
+     -5.2
+    ]
+   ]
+  },
+  {
+   "id": "club_stroll_south",
+   "points": [
+    [
+     -76.0,
+     -7.4
+    ],
+    [
+     -58.6,
+     -7.4
+    ],
+    [
+     -58.6,
+     -4.4
+    ],
+    [
+     -76.0,
+     -7.4
+    ]
+   ]
+  },
+  {
+   "id": "club_stroll_north",
+   "points": [
+    [
+     -76.5,
+     9.0
+    ],
+    [
+     -68.5,
+     9.0
+    ],
+    [
+     -68.5,
+     11.8
+    ],
+    [
+     -76.5,
+     11.8
+    ],
+    [
+     -76.5,
+     9.0
+    ]
+   ]
   }
  ],
  "chunks": [
@@ -4274,5 +4514,11 @@
    "raise_standing": -10,
    "killed_standing": -8
   }
+ },
+ "club": {
+  "note": "Issue #261: the cantina is a chill jazz club (ClubDressing 'jazz'): plank floor and a checker floor round the stage, panelled walls under velvet drapes, booths and candlelit tables, warm and blue stage spots, a neon sign over the bar. The band (markers band_*, each with the instrument in front of them: 'prop') plays at 'bpm'; 'dim' turns the house lights down; kill one and the music stops until the next visit. Patrons (soldier local_patron) stand at the tables and walk the room with a drink.",
+  "style": "jazz",
+  "bpm": 100,
+  "dim": 0.4
  }
 }

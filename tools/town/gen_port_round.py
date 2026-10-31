@@ -40,6 +40,8 @@ GROUP_ZONES = {"barracks": "barracks", "market": "market", "cantina": "cantina",
 	"main_street": "gate"}
 GROUP_ROUTES = {"patrol_gate_n": "gate", "patrol_gate_s": "gate", "patrol_yard_a": "barracks", "patrol_yard_b": "barracks",
 	"stroll_market_1": "market", "stroll_market_2": "market", "cantina_to_lookout": "cantina"}
+REBUILT_ROUTES = ("gate_to_cantina", "cantina_to_gate", "spawn_to_cantina", "backgap_to_cantina",
+	"stroll_resident_w", "stroll_resident_w_2", "stroll_resident_e")
 REBUILT = ("ground_", "desert_apron", "backgap_apron", "wall_", "gate_lintel", "watchtower", "house_", "bridge_", "well_")
 
 
@@ -111,6 +113,18 @@ def marker_group(m, sq_zones):
 		if zr["min"][0] - 3 <= x <= zr["max"][0] + 3 and zr["min"][1] - 3 <= z <= zr["max"][1] + 3:
 			return grp
 	return "stay"
+
+
+def route_group(r, sq_zones):
+	"""A route not named in GROUP_ROUTES moves with the district it lies wholly
+	inside (the club's strolls in the cantina), or is rebuilt (None)."""
+	if r["id"] in REBUILT_ROUTES:
+		return None
+	for zid, grp in GROUP_ZONES.items():
+		zr = sq_zones[zid]
+		if grp != "gate" and all(zr["min"][0] - 3 <= p[0] <= zr["max"][0] + 3 and zr["min"][1] - 3 <= p[1] <= zr["max"][1] + 3 for p in r["points"]):
+			return grp
+	return None
 
 
 # ------------------------------------------------------------------ pieces
@@ -311,10 +325,13 @@ def main():
 			continue
 		m = copy.deepcopy(m)
 		if grp in moves:
-			m["pos"] = [r2(m["pos"][0] + moves[grp][0]), m["pos"][1], r2(m["pos"][2] + moves[grp][1])]
+			d = moves[grp]
+			m["pos"] = [r2(m["pos"][0] + d[0]), m["pos"][1], r2(m["pos"][2] + d[1])]
+			if isinstance(m.get("face"), list) and len(m["face"]) == 3:      # a point it looks at (issue #261's club)
+				m["face"] = [r2(m["face"][0] + d[0]), m["face"][1], r2(m["face"][2] + d[1])]
 		markers.append(m)
 	for r in SQ["routes"]:
-		grp = GROUP_ROUTES.get(r["id"])
+		grp = GROUP_ROUTES.get(r["id"]) or route_group(r, sq_zones)
 		if grp:
 			d = moves[grp]
 			routes.append({"id": r["id"], "points": [[r2(p[0] + d[0]), r2(p[1] + d[1])] for p in r["points"]]})
@@ -503,9 +520,9 @@ def main():
 		"markers": markers,
 		"routes": routes,
 		"chunks": [dict(c, load_ms=18.0, kind="port") for c in cfg["chunks"]],
-		"garrison": SQ["garrison"],
-		"locals": SQ["locals"],
 	}
+	for k, v in SQ.items():          # the rest as the square port has it (garrison, locals, club...)
+		town.setdefault(k, copy.deepcopy(v))
 	missing = sorted(set(m["id"] for m in SQ["markers"]) - set(m["id"] for m in markers))
 	missing += sorted(set(r["id"] for r in SQ["routes"]) - set(r["id"] for r in routes))
 	if missing:

@@ -20,6 +20,60 @@ Plain English, newest on top. One entry per milestone.
 - `tools/town/gen_port_round.py` makes the round port from the numbers in
   `town_kit.json` (`round`). Don't edit the layout file by hand.
 
+## The moon's dome rave (issue #261, part 2, 2026-10-31)
+
+- **Grit Station's whole dome is the club now.** The cantina building and the
+  four grey homes are gone. The bar (Oda's counter under a lit canopy, with a
+  freestanding back bar) and the merchant's table stay where they were.
+- **The stage is on your right as you walk in from the pad.** It's round with
+  a diamond-plate deck and a lit rim that cycles through the colours. Above it
+  stands a truss with moving heads, strobes and a fan of sweeping lasers, and an
+  LED video wall rolls colours behind the DJ. Rave speaker stacks stand either
+  side.
+- **Only a DJ** plays, at a black rave desk with glowing buttons and two glowing
+  decks. Kill them and the music stops. The station's **dancer** has moved off
+  the stage to dance on the floor beside it.
+- **An LED dance floor** in front of the stage ripples on the beat. Ravers stand
+  on it and dance, a hand thrown up for a few bars now and then, with drinks.
+  More walk loops round the room. They're locals: they fight back, and the town
+  talks.
+- **It's dark in there.** The dome is smoked glass that keeps the sun off, and
+  its floods are turned down (`"club_dome": { "dim" }`). Neon rings run round the
+  wall and a mirror ball hangs over the floor.
+- A planet's `"club_dome"` turns this on for a sealed station. The layout is in
+  content/core/planets/town_kit.json (`club_dome`).
+
+## The clubs' people, and the desert's jazz club (issue #261, part 1, 2026-10-31)
+
+- **The desert port's cantina is a chill jazz club.** A dark plank floor with a
+  checker floor round the stage, panelled walls under velvet drapes, leather
+  booths with candlelit tables, round tables in place of the old boxes, warm
+  and blue stage spots through the haze, a mirror ball, a neon sign over the
+  bar, an upright piano and a saxophone on its stand. The house lights are
+  turned down (`"club": { "dim" }`).
+- **A band of three plays on the centre stage**, back to back, facing out. They
+  are full black versions of the player with the guard's white helmet:
+  - the **DJ**, at a desk with glowing buttons and two glowing decks that spin;
+  - the **drummer**, standing at a **hologram drum kit**: a floor projector
+    throws up see-through hex pads, cymbal discs and a kick panel that flare and
+    swell on each hit;
+  - the **bassist**, on a gloss black upright bass **strung with lasers** that
+    cycle through the colours, both hands up on the neck.
+  Each plays a 20 s loop (ClubMoves): looking round the room, moving their arms,
+  bobbing on the beat and shifting their weight, with their hands kept on the
+  instrument by the arm IK.
+- **Kill a band member and the music stops** until the next visit.
+- **A crowd with drinks.** Eight patrons stand at the tables or walk the room,
+  bottle in hand, nodding along and taking a sip now and then. They are locals:
+  hurt one and the whole club draws holdout pistols and fights back, and the town
+  talks about it. Gunfire scatters them but does not stop the music.
+- **Ask Oda for a vibe.** "Something harder", "slow it down": she has the band
+  change the song (`club_vibe`, checked against the club's moods). Free, and she
+  never refuses.
+- **Shared with the moon's club (part 2):** the textures (ClubTextures), the
+  instruments and lights (ClubProps), the play loops (ClubMoves), the band and
+  patron profiles, and Oda's action.
+
 ## The club mix (issue #104, part 1: the music, 2026-10-31)
 
 - **Every cantina is a club now.** Walk toward one and its music fades in from
