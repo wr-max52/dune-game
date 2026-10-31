@@ -20,6 +20,7 @@ const Greybox := preload("res://src/systems/world/greybox.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const StairTower := preload("res://src/systems/world/stair_tower.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
@@ -417,6 +418,8 @@ func _build_boxes() -> void:
 			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.tower_parts(b)), color)
 		elif b.kind == "bowl":
 			node = Greybox.make_trimesh(b.id, StairTower.merged(PitBowl.parts(b, town)), color)
+		elif b.kind == "ring":
+			node = RingWall.make_body(b, color)       # issue #237: a round wall
 		elif b.kind == "lookout":
 			var tower: Dictionary = town.get_box(str(b.get("stair", "")))
 			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.lookout_parts(b, tower)), color)
