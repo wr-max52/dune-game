@@ -54,6 +54,17 @@ func test_goods_are_contraband_the_fence_buys() -> void:
 		assert_true(ItemKit.new().has_look(str(it.look)), "%s has a look" % g.item)
 
 
+## The fence pays twice an item's value and never sells it on: buying it back
+## cheaper than it pays would be free money.
+func test_fence_pays_double_and_does_not_resell() -> void:
+	var fence: Dictionary = content.get_vendor("fence")
+	var item: Dictionary = content.get_item("holocrystals")
+	assert_eq(Inventory.sell_price(item, fence), int(item.value) * 2, "twice the value")
+	WorldState.inventory.add("holocrystals")
+	assert_eq(WorldState.inventory.sell("holocrystals", item, fence), int(item.value) * 2)
+	assert_false(WorldState.inventory.vendor_stock(fence).has("holocrystals"), "not on the fence's shelf")
+
+
 func test_offer_names_the_goods_and_the_area() -> void:
 	var j := _offered()
 	assert_false(j.is_empty(), "Oda offers the run once the story reaches it")
@@ -62,7 +73,7 @@ func test_offer_names_the_goods_and_the_area() -> void:
 	assert_false(str(j.text).contains("%"), "the text is filled in")
 	assert_true(str(j.text).contains(str(WorldState.smuggle.hint)), "she says where")
 	var value := int(content.get_item(str(WorldState.smuggle.item)).value)
-	assert_eq(int(j.pays), int(WorldState.smuggle.count) * value, "pays what the fence gives")
+	assert_eq(int(j.pays), int(WorldState.smuggle.count) * value * 2, "pays what the fence gives: twice the value")
 	assert_true(WorldState.smuggle_drop().is_empty(), "nothing in the world until you take it")
 
 

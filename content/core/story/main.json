@@ -159,10 +159,10 @@
   "ship_wreck": "Your ship. A wreck: T-89 in the pit can rebuild it.",
   "ship_not_yours": "Not yours. No keys, no flight.",
   "bounty": {
-    "first_pay": 600,
+    "first_pay": 1200,
     "general_standing": -15,
     "general_crime": "He's run this port for the Remnant since the day the Hegemony fell, and half the graves outside the gate are his doing. He's out at the outpost inspecting the troops.",
-    "pay": [900, 1600],
+    "pay": [1800, 3200],
     "collect": "[E] Collect the bounty on %s  (+%d cr)",
     "collected": "The fence pays %d cr for %s.",
     "killed_toast": "%s is dead. Collect the bounty from the fence.",

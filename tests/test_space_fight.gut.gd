@@ -133,7 +133,7 @@ func test_winning_pays_and_keeps_you_flying() -> void:
 	var where := pilot.atmo.position()
 	pilot.end_fight("complete")
 	assert_null(pilot.fight)
-	assert_eq(WorldState.credits, credits + 200, "the encounter's payout")
+	assert_eq(WorldState.credits, credits + 1000, "the encounter's payout")
 	assert_true(WorldState.has_flag("remnant_patrol_beaten"), "the town hears about it")
 	assert_eq(pilot.atmo.state, AtmoFlight.State.FLYING, "you fly on from where the fight left you")
 	assert_almost_eq(pilot.atmo.position(), where, Vector3.ONE * 0.01)

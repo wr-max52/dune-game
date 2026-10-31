@@ -8,9 +8,10 @@
     "contraband"
   ],
   "bounties": false,
-  "buy_rate": 1.0,
+  "buy_rate": 2.0,
+  "resells": false,
   "sell_rate": 1.6,
   "stock": [],
   "pitch": "The %s pays well for things with no serial numbers",
-  "note": "The merchant in front of the station cantina. Buys Oda's rock drops at full value and asks no questions. Bounties stay at the port's fence: the Remnant officers are out in the home planet's desert."
+  "note": "The merchant in front of the station cantina. Buys Oda's rock drops at twice their value and asks no questions. 'resells': false = what it buys is not sold on (it pays more than it would ask). Bounties stay at the port's fence: the Remnant officers are out in the home planet's desert."
 }
