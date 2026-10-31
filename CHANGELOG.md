@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Nomads trade for sand pig (2026-10-30)
+
+- **Food is now called sand pig.** The item, the nomads' trade menu, their
+  prompts and the log all say sand pig. Saves still work (the item's id is
+  still `food`).
+- **The nomads' goods cost single digits.** Jetpack 3, rifle blaster 5, energy
+  blade 6, red energy saber 8, quantonium armour 12 (were 30 to 125).
+  Skrugs and the quest text now quote a blaster for 5 and armour for 12.
+
 ## The beast (issue #220, 2026-10-30)
 
 - **Every planet can have a beast.** A planet's file
