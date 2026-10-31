@@ -59,7 +59,7 @@ func test_the_station_offers_only_its_own_run() -> void:
 	assert_eq(str(runs[0].get("location", "")), "grit_station_town")
 	assert_false(jobs.map(func(j): return str(j.get("id", ""))).has("j_smuggle_run"),
 		"the port's run is not offered off the home planet")
-	assert_eq(str(WorldState.smuggle.location), "grit_station_town")
+	assert_eq(str(WorldState.smuggle_offers[JOB].location), "grit_station_town")
 	assert_true(WorldState.smuggle_drop().is_empty(), "nothing in the world until you take it")
 
 
@@ -140,7 +140,7 @@ func test_the_loop_repeats_and_moves_the_drop() -> void:
 	var c0 := WorldState.credits
 	for run in 8:
 		assert_false(_offered().is_empty(), "offered again on run %d" % run)
-		areas.append(str(WorldState.smuggle.area))
+		areas.append(str(WorldState.smuggle_offers[JOB].area))
 		_run_once()
 		assert_false(WorldState.carrying_contraband())
 	for i in range(1, areas.size()):

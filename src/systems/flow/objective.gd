@@ -9,9 +9,11 @@ extends RefCounted
 ## chapter wants (home planet only).
 ##
 ## A target is a word the town scene turns into a place (ObjectiveHud.where):
-## npc:<marker>, marker:<marker>, range, remote, pad, outpost:<location id>, cruiser,
-## droid_post.
-## The drop's target is its area's marker, not the exact spot: finding it is the job.
+## npc:<marker>, marker:<marker>, drop:<marker>, range, remote, pad, outpost:<location
+## id>, cruiser, droid_post.
+## Issue #251: the drop's target is a spot near it (within WorldState.DROP_NEAR,
+## its area's marker until the drop is placed), not the exact spot: the last few
+## metres are still a search. The general's run takes its goods to him, not the fence.
 ##
 ## Every line: content/core/story/main.json "objectives".
 
@@ -48,12 +50,14 @@ static func current() -> Dictionary:
 			return { "text": line("hunt_away") % [str(b.name), where], "target": "" }
 		return { "text": line("hunt") % [str(b.name), where], "target": "outpost:" + str(b.outpost) }
 	if WorldState.carrying_contraband():
+		if for_general():
+			return { "text": line("general_bring"), "target": "npc:general" }
 		var fence := fence_marker()
 		return { "text": line("sell"), "target": "marker:" + fence if fence != "" else "" }
 	var drop := WorldState.smuggle_drop()
 	if not drop.is_empty() and str(drop.location) == WorldState.current_town_id():
 		var hint := str(WorldState.smuggle.get("hint", ""))
-		return { "text": line("drop") % hint, "target": "marker:" + str(drop.marker) if str(drop.marker) != "" else "" }
+		return { "text": run_line("drop") % hint, "target": "drop:" + str(drop.marker) }
 	if not home():
 		return {}
 	var to := Territory.supply_out()
@@ -73,6 +77,17 @@ static func chapter_objective() -> Dictionary:
 	var told := bool(WorldState.story.get("told", false)) or str(c.get("teller", "")) != "cantina_owner"
 	var o: Dictionary = mine if told and not mine.is_empty() else cfg().get("teller", {})
 	return { "text": str(o.get("text", "")), "target": str(o.get("target", "")) } if str(o.get("text", "")) != "" else {}
+
+
+## Issue #251: the run on is the general's and he is there to take its goods
+## (dead or away, the fence still buys them).
+static func for_general() -> bool:
+	return WorldState.smuggle_to() == "general" and home() and GeneralPost.station() != ""
+
+
+## A smuggling-run line, in the general's words ("general_<key>") while his run is on.
+static func run_line(key: String) -> String:
+	return line("general_" + key) if WorldState.smuggle_to() == "general" and cfg().has("general_" + key) else line(key)
 
 
 ## The marker of the stall that buys contraband in this town (or, with
@@ -116,10 +131,10 @@ static func log_entries() -> Array:
 			out.append({ "title": line("log_story"), "text": say })
 	var drop := WorldState.smuggle_drop()
 	if WorldState.carrying_contraband():
-		out.append({ "title": line("log_smuggle"), "text": line("log_carry") })
+		out.append({ "title": run_line("log_smuggle"), "text": line("general_log_carry") if for_general() else line("log_carry") })
 	elif not drop.is_empty():
-		out.append({ "title": line("log_smuggle"),
-			"text": line("log_drop") % [WorldState.smuggle_goods_text(), str(WorldState.smuggle.get("hint", ""))] })
+		out.append({ "title": run_line("log_smuggle"),
+			"text": run_line("log_drop") % [WorldState.smuggle_goods_text(), str(WorldState.smuggle.get("hint", ""))] })
 	var b := WorldState.bounty
 	if not WorldState.bounty_target().is_empty():
 		out.append({ "title": line("log_bounty"),
