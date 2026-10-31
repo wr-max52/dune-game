@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Eject from the ship in flight (issue #271: #274, #275, #276, 2026-10-31)
+
+- **Falls hurt (#274).** Landing faster than 16 m/s (a drop of about 6 m) costs
+  health, rising in a straight line to 100 (your base health) at 40 m/s (about
+  40 m). Nobody falls faster than 45 m/s. A jetpack burn before you land takes
+  about 29 m/s off, enough to walk away from a high fall. Armour's extra health
+  helps a little. Only the player takes fall damage; guards share the body but
+  never do. The numbers are in `content/core/flow/falls.json`.
+- **Hold B to eject (#275).** In the air (below space, outside a fight, not
+  during the opening landing), hold B for half a second. You're thrown clear
+  above and behind the ship, kicked upward, and carried on by her speed (up to
+  60 m/s, fading in the air). Then you fall on foot. Without a jetpack, a high
+  ejection is fatal. The tuning is in `launch_pads.json` (`eject_*`).
+- **The empty ship comes down on her own (#276).** With nobody at the controls
+  she goes **adrift** at zero throttle. She keeps her momentum, air drag slows
+  her, gravity pulls her down, and her nose drops the way she's going. If she
+  hits faster than `crash_speed`, she crashes and is towed back to her pad like
+  any crash. If she comes down slower, she rests where she lands and you can
+  walk back and board her. She can still be shot on the way down. You can't
+  board another ship until she's down or towed.
+
 ## The party barge (issue #269, 2026-10-31)
 
 - **A sail barge that is one long party.** Out in the home planet's desert,
