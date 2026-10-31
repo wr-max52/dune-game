@@ -527,6 +527,8 @@ func hand_over(uid: int) -> int:
 	var d := WorldState.droids.find(uid)
 	if d.is_empty() or not droids_to_hand_over().has(d):
 		return -1
+	if not WorldState.droids.cargo_fits(uid, WorldState.inventory):
+		return -1                                # its hold would spill: unload it first
 	WorldState.droids.unload(uid, WorldState.inventory)
 	WorldState.droids.remove(uid)
 	if demo != null and demo.get("droids") != null:

@@ -12,6 +12,11 @@
       "sound": "droid_beep",
       "hover": 1.7,
       "hit_radius": 0.55,
+      "hp": 40,
+      "engage": {
+        "advance": 7.5,
+        "standoff": 3.0
+      },
       "chirp_s": [9.0, 20.0],
       "follow": {
         "side": 1.1,
@@ -71,6 +76,8 @@
       "sound": "cargo_beep",
       "chirp_s": [7.0, 16.0],
       "carries": true,
+      "cargo_slots": 2,
+      "hp": 60,
       "follow": {
         "side": -1.2,
         "back": 1.8,
@@ -125,6 +132,11 @@
       "sound": "assassin_beep",
       "chirp_s": [11.0, 22.0],
       "height": 2.3,
+      "hp": 120,
+      "engage": {
+        "advance": 7.5,
+        "standoff": 3.0
+      },
       "follow": {
         "side": 0.0,
         "back": 2.6,
@@ -263,6 +275,14 @@
       "assassin"
     ]
   },
+  "upgrades": {
+    "health": { "label": "Armour plating", "prices": [40, 80, 140], "per_level": 0.5 },
+    "cargo": { "label": "Cargo racks", "prices": [30, 60, 100], "per_level": 2 },
+    "damage": { "label": "Gun capacitor", "prices": [60, 110, 180], "per_level": 0.35 },
+    "note": "The droid merchant's upgrades, per droid (DroidRoster.upgrade). Each has one level per price. health: +per_level of the kind's 'hp' each level (every kind). cargo: +per_level hold slots each level on a droid that carries (a cargo droid starts with its kind's 'cargo_slots'; a slot is one kind of item, any number of it). damage: +per_level of its gun's damage each level (a droid with a gun). Your droids take hits from anyone you are fighting; at 0 hp one is knocked out for knocked_out_s, then reboots at full health."
+  },
+  "knocked_out_s": 20.0,
+  "engage_note": "Assassin and floating droids of yours ('engage' on their kind): when one sees an enemy (enemies()) it walks up to 'advance' metres (about ten steps) toward it from where it stood, stopping 'standoff' metres short, and shoots from there. Once that enemy is dead (and no other is in sight) it comes back to you. Walk off far enough and it jumps to you as it always did.",
   "taming": {
     "streak": 5,
     "note": "Block or deflect this many of the range remote's bolts in a row (a bolt that hits you resets the count) and it follows you home. Oda drops the hint as a rumor (rumors/port_town.json, r_remote_tame)."
@@ -439,7 +459,18 @@
     "fixed": "The %s reboots, resets, and follows you.",
     "make_room": "You already run %d droids. Sell one to make room?",
     "hold": "[E] Open the cargo droid's hold",
-    "menu_hold": "Cargo droid hold  -  the gate never looks in here",
+    "menu_hold": "Cargo droid hold  -  %d of %d slots  -  the gate never looks in here",
+    "hold_full": "The cargo droid's hold is full (%d of %d slots). Upgrade its racks at the droid merchant.",
+    "unload_partial": "Your backpack is full. %d items stay in the cargo droid.",
+    "hold_wont_fit": "Its hold won't fit in your backpack. Unload it first.",
+    "upgrades": "Upgrade your droids",
+    "menu_upgrades": "Droid upgrades  -  you have %d cr",
+    "upgrade": "%s  -  %s %d -> %d of %d  (%d cr)",
+    "upgraded": "%s: %s now %d of %d.",
+    "upgrade_cant_afford": "%s costs %d cr. You have %d.",
+    "nothing_to_upgrade": "Your droids have every upgrade the merchant sells.",
+    "knocked_out": "Your %s is knocked out. It reboots in %d s.",
+    "rebooted": "Your %s reboots.",
     "stash": "Stash %s  x%d",
     "unload": "Unload everything (%s)",
     "stashed": "Stashed %s in the cargo droid.",

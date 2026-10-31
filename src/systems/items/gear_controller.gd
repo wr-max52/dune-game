@@ -22,6 +22,8 @@ extends Node
 ##     the player's health; in a story save it is the desert guard's whole look,
 ##   - issue #210: a pickup can be "story_only", can sit "inside" a droid (no glow,
 ##     "[E] Open the cargo droid"), and reports its "event" to the story when taken.
+##   - the backpack (Inventory.room_for): picking up, buying and taking gear off
+##     all need a free slot; the pistol always holds the first of five.
 ##
 ## The headless trace calls interact() and toggle_gear() directly: the same code
 ## path the keys use. All words come from content/core/flow/gear.json.
@@ -353,10 +355,13 @@ func interact() -> String:
 
 func _take(node) -> String:
 	var entry: Dictionary = node.pickup
-	if not inv().pick_up(entry):
-		return ""
 	var id := str(entry.get("item", ""))
 	var item: Dictionary = content.get_item(id)
+	if not inv().is_taken(str(entry.get("id", ""))) and not inv().room_for(id, item):
+		_full()
+		return "full"
+	if not inv().pick_up(entry):
+		return ""
 	if str(entry.get("taken_flag", "")) != "":
 		WorldState.set_flag(str(entry.taken_flag))
 	Story.event(str(entry.get("event", "")))     # issue #210: an optional quest done
@@ -410,6 +415,9 @@ func _trade(v: Dictionary) -> String:
 		return "menu"
 	for id in inv().vendor_stock(v):
 		var it: Dictionary = content.get_item(str(id))
+		if not inv().room_for(str(id), it):
+			_full()
+			return "full"
 		var cost := inv().buy(str(id), it, v, WorldState.credits)
 		if cost < 0:
 			return "cant_afford"
@@ -455,7 +463,24 @@ func buy_offer(id: String) -> String:
 			hud.toast(_l("offer_bought") % str(o.label), 4.0)
 	elif r == "cant_afford" and hud != null:
 		hud.toast(_l("offer_cant_afford") % [str(o.label), int(o.price), WorldState.credits], 4.0)
+	elif r == "full":
+		_full()
 	return r
+
+
+## The backpack has no slot for it.
+func _full() -> void:
+	if hud != null:
+		hud.toast(Inventory.full_line(), 4.0)
+
+
+## Taking `id` off puts it in the backpack: false (and says so) with no slot free.
+func _room_to_take_off(id: String) -> bool:
+	if inv().slots_free() > 0:
+		return true
+	if hud != null:
+		hud.toast(_l("no_room_to_take_off") % str(content.get_item(id).get("label", id)).to_lower(), 4.0)
+	return false
 
 
 ## An upgrade went on: the jetpack takes its new tank, the guns their new numbers.
@@ -467,10 +492,13 @@ func refit() -> void:
 
 
 ## Issue #209: put on or take off a worn item (the inventory's button): the
-## jetpack on the back, the armour. Returns "attached", "detached" or "".
+## jetpack on the back, the armour. Returns "attached", "detached", "full" (no
+## backpack slot to take it off into) or "".
 func toggle_item(id: String) -> String:
 	var item: Dictionary = content.get_item(id)
 	if inv().is_attached(id):
+		if not _room_to_take_off(id):
+			return "full"
 		inv().detach(id)
 		sync_gear()
 		return "detached"
@@ -488,6 +516,8 @@ func toggle_item(id: String) -> String:
 func toggle_gear() -> String:
 	var on := inv().in_slot(SLOT_BACK)
 	if on != "":
+		if not _room_to_take_off(on):
+			return "full"
 		inv().detach(on)
 		sync_gear()
 		if hud != null:
