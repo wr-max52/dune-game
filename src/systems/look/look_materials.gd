@@ -6,6 +6,7 @@ extends RefCounted
 const ROCK := preload("res://src/systems/look/shaders/rock.gdshader")
 const PLASTER := preload("res://src/systems/look/shaders/plaster.gdshader")
 const HULL := preload("res://src/systems/look/shaders/hull.gdshader")
+const ENERGY_SHIELD := preload("res://src/systems/look/shaders/energy_shield.gdshader")
 
 const CLOTH_TEAL := Color("#1f7a78")
 const CLOTH_MADDER := Color("#a8322a")
@@ -134,6 +135,19 @@ func flat(color: Color, roughness: float = 0.9, metallic: float = 0.0) -> Standa
 	m.roughness = roughness
 	m.metallic = metallic
 	_cache[key] = m
+	return m
+
+
+## An energy shield on a mesh `size` across (a box, or a disc `size.x` wide): the
+## cruiser bay's look, scan lines rolling along `lines` and a rim glowing `rim`
+## metres in from each face (0 on an axis = no rim there). Not cached: each is sized.
+static func energy_shield(size: Vector3, rim: Vector3, lines := Vector3.UP, disc := false) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = ENERGY_SHIELD
+	m.set_shader_parameter("half_size", size * 0.5)
+	m.set_shader_parameter("rim", rim)
+	m.set_shader_parameter("line_axis", lines)
+	m.set_shader_parameter("disc", disc)
 	return m
 
 

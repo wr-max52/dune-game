@@ -36,7 +36,7 @@ var pit_c := Vector3.ZERO
 var pit_r := 28.0
 var liner_h := 13.0
 var dome_tris := 0                     ## triangles in the dome's collider (traces, tests)
-var shields: Array = []                ## MeshInstance3D: every energy shield (they pulse)
+var shields: Array = []                ## MeshInstance3D: every energy shield
 var boulders: Array = []               ## { xform: Transform3D, size: Vector3 }
 
 
@@ -285,13 +285,6 @@ func ground_at(x: float, z: float) -> float:
 ## No edge to fall off: the ball's gravity holds you everywhere.
 func _physics_process(_dt: float) -> void:
 	pass
-
-
-func _process(_dt: float) -> void:
-	var t := Time.get_ticks_msec() / 1000.0
-	for s in shields:
-		var m := (s as MeshInstance3D).material_override as StandardMaterial3D
-		m.albedo_color.a = 0.16 + 0.06 * sin(t * 2.2 + float(s.get_index()))
 
 
 # ------------------------------------------------------------------ looks
@@ -547,7 +540,7 @@ func _pit_shield() -> void:
 	cm.height = 0.1
 	cm.radial_segments = 64
 	top.mesh = cm
-	top.material_override = _shield_mat()
+	top.material_override = _shield_mat(Vector3(pit_r * 2.0, 0.1, pit_r * 2.0), true)
 	top.position = pit_c + Vector3(0, liner_h, 0)
 	top.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(top)
@@ -572,16 +565,10 @@ func _club_glass() -> StandardMaterial3D:
 	return g
 
 
-func _shield_mat() -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_color = Color(0.35, 0.85, 1.0, 0.2)
-	m.emission_enabled = true
-	m.emission = Color("#5fe0ff")
-	m.emission_energy_multiplier = 1.2
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	return m
+## The cruiser bay's shield look: scan lines and a glowing rim round its frame.
+func _shield_mat(size: Vector3, disc := false) -> ShaderMaterial:
+	var r := minf(3.0, minf(size.x if disc else size.y, size.z) * 0.1)
+	return LookMaterials.energy_shield(size, Vector3(r, 0, r) if disc else Vector3(0, r, r), Vector3.RIGHT if disc else Vector3.UP, disc)
 
 
 func _shield(n: String, at: Vector3, size: Vector3) -> MeshInstance3D:
@@ -590,7 +577,7 @@ func _shield(n: String, at: Vector3, size: Vector3) -> MeshInstance3D:
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	mi.material_override = _shield_mat()
+	mi.material_override = _shield_mat(size)
 	mi.position = at
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
