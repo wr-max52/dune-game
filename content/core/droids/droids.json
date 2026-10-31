@@ -384,6 +384,15 @@
   },
   "wreck": {
     "landmark": "starcruiser_wreck",
+    "sites": [
+      { "landmark": "starcruiser_wreck", "hauler": true },
+      { "landmark": "starcruiser_wreck_2", "skip_routes": ["port_balcony"] },
+      { "landmark": "starcruiser_wreck_3", "skip_routes": ["starboard_balcony"] },
+      { "landmark": "starcruiser_wreck_4" }
+    ],
+    "respawn_away_m": 152.4,
+    "idle_beyond_m": 900.0,
+    "sites_note": "Wreck field: every wreck in 'sites' gets the same units on the same routes ('landmark' is the original's, which alone keeps the hauler and its red saber). skip_routes: routes over a deck that wreck lost (its 'variant'), left unmanned. A destroyed unit comes back after respawn_s (3 minutes) or as soon as you are respawn_away_m (500 ft) from where it fell, whichever is first. Units more than idle_beyond_m from you stand still on their route (nobody sees them walk) so four crews cost little.",
     "routes": {
       "bridge": { "frame": "level", "points": [[-9, 146, 128], [9, 146, 128], [9, 146, 146], [-9, 146, 146]] },
       "pad": { "frame": "level", "points": [[-5, 146, 134], [-5, 146, 142], [5, 146, 142], [5, 146, 134]] },

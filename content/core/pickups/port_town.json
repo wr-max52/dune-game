@@ -60,6 +60,20 @@
       "note": "A smuggler's drop outside the front gate: three cases of unmarked cells. Worth 180 cr to the fence, if you can get them past the checkpoint."
     }
   ],
+  "site_crates": [
+    { "id": "wreck_crate_1", "site": "starcruiser_wreck", "site_point": [10.5, 146, 148.5] },
+    { "id": "wreck_crate_2", "site": "starcruiser_wreck_2", "site_point": [-11, 146, 147] },
+    { "id": "wreck_crate_3", "site": "starcruiser_wreck_3", "site_point": [11.5, 146, 131] },
+    { "id": "wreck_crate_4", "site": "starcruiser_wreck_4", "site_point": [-10.5, 146, 149] }
+  ],
+  "crate_prizes": [
+    { "credits": 300, "weight": 3 },
+    { "item": "food", "count": 10, "weight": 3 },
+    { "item": "refined_quantonium", "count": 5, "weight": 3 },
+    { "credits": 600, "weight": 1 },
+    { "item": "holocrystals", "count": 3, "weight": 2 }
+  ],
+  "crate_note": "Wreck field: a supply crate on the top deck (the bridge platform, the landing pad) of each crashed starcruiser (worlds/port_desert.json, kind 'wreck'). site_crates: where, as a point in that wreck's level frame (x, height v, stern-ward w; StarcruiserWreck.site_point). [E] opens it: one prize rolled from crate_prizes by weight (credits, or 'count' of an item, which needs a backpack slot). Opened once and it stays open (saved with the taken pickups).",
   "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of one of the pit's ramps, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved).",
   "drops": {
     "note": "Hiding places for Oda's smuggling run (board/bar_board.json, j_smuggle_run). Each run picks one area (never the same one twice in a row) and one spot in it. Oda only names the area, so the player has to search it. A spot is an offset from the area's marker. ground: snap the drop to the desert terrain. Drops have no glow ring, so out in the sand they are hard to spot. marked (issue #64): a drop in the streets or on a roof gets a beam of light over it, so it can be found in town. Issue #251: the job names which areas are its own ('areas' on the board): Oda's and the fence's run is the desert ones, the general's the alleys and the roofs. The HUD pointer goes to within 15 m of the drop itself (WorldState.DROP_NEAR), not to the area's marker.",

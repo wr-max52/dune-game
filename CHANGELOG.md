@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The wreck field (2026-10-31)
+
+- **Three more crashed starcruisers** lie out east, under the Remnant's cruiser and
+  most of the way round to the far side of the ball (map 3.5 km, 5.6 km and 7.7 km
+  east). Each is about 2.2 km from the last, so from one you can see the next
+  one's stern over the sand.
+- **Each one is barely different**: its own heading, a fallen deck and drop ramp
+  (port on one, starboard on another), a missing stair on the last, other ramp
+  widths, other railings knocked out, a radiator or two gone, the torn plating
+  twisted another way, no speeder kicker on the last. A landmark's `variant`
+  (`StarcruiserWreck.VARIANT_KEYS`) says what changes.
+- **Every wreck has the same Remnant crew** (less the droids for a deck it lost).
+  The red saber's hauler stays on the first wreck.
+- **Wreck droids come back** three minutes after they fall, or as soon as you are
+  500 ft (152 m) from where one fell. Droids more than 900 m from you stand still,
+  so four crews cost little.
+- **A supply crate on every wreck's bridge platform**, the first wreck's too,
+  under a beacon. `[E]` opens it for one random prize: 300 or 600 credits, 10 sand
+  pig, 5 refined quantonium or 3 holocrystals. An opened crate stays open (saved).
+- Small wreck parts (railings, vents, braces) are not drawn past 1.5 km.
+
 ## The round port (issue #237, parts 1 and 2, 2026-10-31)
 
 - **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)

@@ -1179,22 +1179,34 @@ func clear_outpost_units(id: String) -> void:
 ## Issue #148: the wreck's Remnant droids and its hauler, on routes from the data
 ## (droids.json "wreck") turned into world points. Nothing when this ground has
 ## no wreck (another planet, a test without one).
+## Wreck field: the same crew aboard every wreck in "sites" this ground has, less
+## the routes over a deck that one lost; the hauler only on the original.
 func _build_wreck_site() -> void:
 	var wc: Dictionary = cfg.get("wreck", {})
-	var id := str(wc.get("landmark", "starcruiser_wreck"))
-	if not StarcruiserWreck.has_wreck(ground, id):
-		return
-	for spec in wc.get("units", []):
-		var route := wreck_route(str(spec.get("route", "")))
-		if route.is_empty():
+	for site in wreck_sites():
+		var id := str(site.landmark)
+		if not StarcruiserWreck.has_wreck(ground, id):
 			continue
-		var sp: Dictionary = spec.duplicate()
-		sp["patrol"] = route
-		sp["site"] = id
-		sp["hostile"] = true
-		_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
-	var hc: Dictionary = wc.get("hauler", {})
-	var stops := wreck_route(str(hc.get("route", "")))
+		var skip: Array = site.get("skip_routes", [])
+		for spec in wc.get("units", []):
+			if str(spec.get("route", "")) in skip:
+				continue
+			var route := wreck_route(str(spec.get("route", "")), id)
+			if route.is_empty():
+				continue
+			var sp: Dictionary = spec.duplicate()
+			sp["patrol"] = route
+			sp["site"] = id
+			sp["wreck"] = true
+			sp["hostile"] = true
+			_spawn_remnant(sp, int(spec.get("start", 0)) % route.size())
+		if bool(site.get("hauler", false)):
+			_build_wreck_hauler(id)
+
+
+func _build_wreck_hauler(id: String) -> void:
+	var hc: Dictionary = cfg.get("wreck", {}).get("hauler", {})
+	var stops := wreck_route(str(hc.get("route", "")), id)
 	if stops.is_empty():
 		return
 	wreck_hauler = _make_unit("cargo", str(hc.get("variant", "olive")))
@@ -1206,11 +1218,20 @@ func _build_wreck_site() -> void:
 	DroidKit.set_awake(wreck_hauler.look, true)
 
 
-## A named route of the wreck's ("wreck"/"routes" in droids.json), in the world.
-func wreck_route(name: String) -> Array:
+## Wreck field: the wrecks the Remnant holds ("wreck"/"sites": { landmark,
+## skip_routes?, hauler? }); just the original when the data lists none.
+func wreck_sites() -> Array:
+	var wc: Dictionary = cfg.get("wreck", {})
+	return wc.get("sites", [{ "landmark": str(wc.get("landmark", "starcruiser_wreck")), "hauler": true }])
+
+
+## A named route of the wreck's ("wreck"/"routes" in droids.json), in the world,
+## aboard wreck `id` (the original by default).
+func wreck_route(name: String, id: String = "") -> Array:
 	var wc: Dictionary = cfg.get("wreck", {})
 	var r: Dictionary = wc.get("routes", {}).get(name, {})
-	var id := str(wc.get("landmark", "starcruiser_wreck"))
+	if id == "":
+		id = str(wc.get("landmark", "starcruiser_wreck"))
 	return r.get("points", []).map(func(p): return StarcruiserWreck.site_point(ground, _v3(p), str(r.get("frame", "level")), id))
 
 
@@ -1277,7 +1298,7 @@ func _tick_remnant_respawns(dt: float) -> void:
 		if not u.dead or u.respawn_left < 0.0:
 			continue
 		u.respawn_left -= dt
-		if u.respawn_left > 0.0:
+		if u.respawn_left > 0.0 and not _left_behind(u):
 			continue
 		var at := Vector3.INF
 		if not _still_posted(u):
@@ -1290,6 +1311,15 @@ func _tick_remnant_respawns(dt: float) -> void:
 		remnant.erase(u)
 		u.queue_free()
 		_spawn_remnant(u.spec, u.patrol_i, at)
+
+
+## Wreck field: a wreck's droid is back once you are respawn_away_m (500 ft) from
+## where it fell, without waiting out its timer.
+func _left_behind(u: DroidUnit) -> bool:
+	if not bool(u.spec.get("wreck", false)) or player == null:
+		return false
+	var away := float(cfg.get("wreck", {}).get("respawn_away_m", INF))
+	return player.global_position.distance_to(u.global_position) >= away
 
 
 func _garrison(u: DroidUnit = null):
@@ -1330,6 +1360,8 @@ func _remnant_step(dt: float) -> void:
 			continue
 		var pts: Array = u.patrol
 		u.gun_cd -= dt
+		if _idle_far(u):
+			continue
 		var sees := false
 		if u.spec.has("flee"):
 			# Issue #76: no gun; it bolts when its outpost is in a fight.
@@ -1363,6 +1395,14 @@ func _remnant_step(dt: float) -> void:
 		_put(u, pos)
 		_face(u, to)
 		u.walk(dt, true, pace)
+
+
+## Wreck field: a wreck's droid far beyond anyone's sight stands where it is.
+func _idle_far(u: DroidUnit) -> bool:
+	if not bool(u.spec.get("wreck", false)) or player == null:
+		return false
+	var far := float(cfg.get("wreck", {}).get("idle_beyond_m", INF))
+	return player.global_position.distance_squared_to(u.global_position) > far * far
 
 
 ## The player died and woke in the pit: the Remnant's droids (and the locals')

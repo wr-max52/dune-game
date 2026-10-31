@@ -36,6 +36,11 @@
     "offer_locked": "%s  (%d cr): locked, %s",
     "offer_locked_toast": "%s: the fence only sells it %s.",
     "open_droid": "[E] Open the cargo droid",
+    "open_crate": "[E] Open the supply crate",
+    "crate_opened": "The supply crate held %s",
+    "crate_credits": "%d credits",
+    "crate_items": "%d %s",
+    "event_crate": "Opened a supply crate on a wrecked starcruiser: %s.",
     "wear": "Wear",
     "take_off": "Take off",
     "no_room_to_take_off": "No free slot in your backpack to put the %s in."
