@@ -2,6 +2,32 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the cruiser pass: scope shake, computers, holo map, more droids (2026-10-31)
+
+**Checked:** a rendered probe measuring the reticle scoped in on the cruiser's deck
+while turning (before: 2.05 px per frame on average, 8.4 max; after: 0.000), stills
+of the bridge, holo table, ramp shaft, corridor and both rooms, a probe that wakes
+the crew (26 aboard, 17 droids: 14 assassins and 3 floating, none off the decks
+after 15 s), `test_smoke`, `test_ads`, `test_remnant_cruiser` and a headless boot.
+Nothing was played by hand; no fight against the new droids was tried.
+
+- **Only the scope is pinned to the eye.** The pistol's iron sights and the arms
+  are still drawn from world positions, so far out (the cruiser, 11.5 km from the
+  origin) they keep about a millimetre of wobble. Aimed with the pistol (1.25x,
+  26 cm from the eye) that is a few pixels. The fix would be the same pin on the
+  weapon and glove materials.
+- **The scope's last few frames of aiming in** use world positions (the weapon is
+  still blending in), so they can wobble that millimetre once.
+- **The holo map is not to scale off the ball.** Heights are squeezed so the orbit
+  fits over the table, and the moon sits at a set distance in its true direction.
+  It spins as a whole, so north turns with it.
+- **The corridor and shaft terminals are drawn only** (you walk through them);
+  the room terminals, the bridge banks and the landing terminals are solid.
+- **Screens are shader pictures**, four kinds picked per screen by where it is.
+  They show nothing real (no live map, no alarms).
+- **The cruiser trace still builds no crew** when run with `-s` (the NpcVoice
+  autoload compile issue), as before.
+
 ## After issue #269, the party barge (2026-10-31)
 
 **Checked:** one headless trace run (`scenes/barge_trace.gd`, every step

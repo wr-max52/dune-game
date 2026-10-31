@@ -115,13 +115,14 @@ func test_scope_lenses_are_transparent_glass() -> void:
 	var lenses := scope.find_children("Lens*", "MeshInstance3D", true, false)
 	assert_eq(lenses.size(), 2, "front and rear lens")
 	for l in lenses:
-		var m := (l as MeshInstance3D).material_override as StandardMaterial3D
-		assert_eq(m.transparency, BaseMaterial3D.TRANSPARENCY_ALPHA)
-		assert_lt(m.albedo_color.a, 0.3, "see-through glass")
+		var m := (l as MeshInstance3D).material_override as ShaderMaterial
+		assert_eq(m.shader, GunSights.SCOPE_GLASS)
+		assert_lt((m.get_shader_parameter("tint") as Color).a, 0.3, "see-through glass")
 	var ret := scope.find_child("Reticle", true, false).get_child(0) as MeshInstance3D
-	var rm := ret.material_override as StandardMaterial3D
-	assert_true(rm.no_depth_test, "reticle floats over the glass")
-	assert_eq(rm.shading_mode, BaseMaterial3D.SHADING_MODE_UNSHADED)
+	var rm := ret.material_override as ShaderMaterial
+	assert_eq(rm.shader, GunSights.SCOPE_RETICLE)
+	assert_true(rm.shader.code.contains("depth_test_disabled"), "reticle floats over the glass")
+	assert_true(rm.shader.code.contains("unshaded"))
 
 
 func test_pistol_has_front_post_and_rear_notch() -> void:

@@ -28,7 +28,7 @@ extends Node3D
 const SHADER := preload("res://src/systems/look/shaders/cruiser_metal.gdshader")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const FINISHES := { "hull": 0, "trim": 1, "deck": 2, "wall": 3, "grate": 4, "ramp": 5, "cargo": 6,
-	"console": 7, "rail": 8, "bridge": 9, "pad": 10, "beacon": 11 }
+	"console": 7, "rail": 8, "bridge": 9, "pad": 10, "beacon": 11, "screen": 12 }
 const NAV_BOUNDS := AABB(Vector3(-52, -20, -152), Vector3(118, 100, 484))
 
 var demo                               ## town_demo.gd
@@ -57,6 +57,7 @@ var _was_aboard := false
 var _last_aboard := Vector3.INF
 var _mats: Dictionary = {}
 var _flames: Array = []                ## the engines' flame nodes (Node3D), to flicker
+var holo: CruiserHolo                  ## the bridge's planet map, built the first time you are near it
 
 static var _meshes: Dictionary = {}    ## finish -> ArrayMesh, built once a session
 
@@ -427,7 +428,6 @@ func _build_look() -> void:
 		_mats[f] = m
 	_mats["glass"] = _glass()
 	_mats["glow"] = _emissive(Color("#e8f6ff"), 3.0)
-	_mats["screen"] = _emissive(Color("#1d86b0"), 1.3)
 	_mats["reactor"] = _emissive(Color("#9fdcff"), 6.0)
 	var groups := {}
 	for p in CruiserHull.parts():
@@ -664,6 +664,7 @@ func _build_label() -> void:
 
 func _process(_dt: float) -> void:
 	_flicker()
+	_holo_near()
 	if _label == null:
 		return
 	var pilot = demo.pilot
@@ -682,6 +683,32 @@ func _process(_dt: float) -> void:
 	_label.text = text
 	_label.position = cam.unproject_position(at) + Vector2(14, -10)
 	_label.visible = true
+
+
+## The holo table's map: built the first time you come within holo.show_within of
+## it, shown only then (it spins every frame).
+func _holo_near() -> void:
+	var spec: Dictionary = cfg.get("holo", {})
+	if not demo.use_look or spec.is_empty() or demo._player == null or not is_instance_valid(demo._player):
+		return
+	var table := CruiserHull.holo_table()
+	var near: bool = (inv * (demo._player.global_position as Vector3)).distance_to(table) <= float(spec.get("show_within", 400.0))
+	if near and holo == null:
+		var names := { "town": NameHooks.town(ground.world), "cruiser": vessel_name }
+		var moons: Array = []
+		var travel = demo.pilot.travel if demo.pilot != null else null
+		if travel != null:
+			for b in travel.bodies:
+				moons.append(b)
+				names[str(b.id)] = str(b.name)
+		elif "planet" in demo:
+			moons = demo.planet.get("neighbours", [])
+		holo = CruiserHolo.new()
+		holo.setup(spec, ground.sphere(), frame, table + Vector3(0, float(spec.get("lift", 1.75)), 0), ground.world, moons, names)
+		_hull.add_child(holo)
+	if holo != null:
+		holo.visible = near
+		holo.process_mode = Node.PROCESS_MODE_INHERIT if near else Node.PROCESS_MODE_DISABLED
 
 
 func _toast(text: String, secs: float) -> void:
