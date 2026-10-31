@@ -247,7 +247,11 @@ func _run() -> void:
 	await frames(2)
 	out("SELL_PROMPT", gear.prompt_text())
 	var c0: int = WorldState.credits
-	out("SELL_RESULT", gear.interact())
+	out("TRADE_MENU", gear.interact())
+	out("SELL_ROW", _row(gear, "sell:jetpack"))
+	gear.menu.choose("sell:jetpack")
+	out("SELL_RESULT", gear.last_trade)
+	out("MENU_STAYS_OPEN", gear.menu.is_open())
 	await frames(2)
 	out("SOLD_FOR", WorldState.credits - c0)
 	out("AFTER_SALE_OWNS", WorldState.inventory.has("jetpack"))
@@ -256,17 +260,21 @@ func _run() -> void:
 	out("AFTER_SALE_WORN", gear.worn != null)
 	out("TRADER_STOCK", ",".join(PackedStringArray(WorldState.inventory.vendor_stock(trader))))
 	out("EVENT_LOGGED", str(WorldState.events[-1].text) if not WorldState.events.is_empty() else "")
-	out("BUY_PROMPT", gear.prompt_text())
+	out("BUY_ROW", _row(gear, "buy:jetpack"))
 	var c1: int = WorldState.credits
-	out("BUY_RESULT", gear.interact())
+	gear.menu.choose("buy:jetpack")
+	out("BUY_RESULT", gear.last_trade)
 	await frames(2)
 	out("BOUGHT_FOR", c1 - WorldState.credits)
 	out("BOUGHT_ATTACHED", WorldState.inventory.in_slot("back"))
 	out("BOUGHT_PLAYER_HAS_JET", player.jetpack != null)
-	out("RESELL_RESULT", gear.interact())
+	gear.menu.choose("sell:jetpack")
+	out("RESELL_RESULT", gear.last_trade)
 	await frames(2)
-	out("POOR_PROMPT", gear.prompt_text())
-	out("POOR_RESULT", gear.interact())
+	out("POOR_ROW", _row(gear, "buy:jetpack"))
+	gear.menu.choose("buy:jetpack")
+	out("POOR_RESULT", gear.last_trade)
+	gear.menu.choose("")        # walk away
 	out("END_CREDITS", WorldState.credits)
 
 	# Frame cost of the gameplay above (the reload below rebuilds the whole town,
@@ -298,3 +306,11 @@ func _run() -> void:
 	f.close()
 	print("M13TRACE wrote ", OUT, " (", lines.size(), " lines)")
 	quit()
+
+
+## The trade menu's row for option `id` ("" when it is not there).
+func _row(gear, id: String) -> String:
+	for o in gear.menu.options:
+		if str(o.id) == id:
+			return str(o.text)
+	return ""

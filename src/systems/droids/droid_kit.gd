@@ -196,6 +196,8 @@ static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) ->
 		return false
 	if ap.current_animation != clip:
 		ap.play(clip, blend)
+	elif ap.has_section():
+		ap.reset_section()          # coming out of hold_pose on the same clip (idle = aim)
 	ap.speed_scale = speed
 	return true
 
@@ -203,6 +205,9 @@ static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) ->
 ## Issue #64: hold one frame of a clip, still (a droid in a fight stands in its
 ## ready stance instead of running the idle's shuffle). look.anims[role] at
 ## `at` seconds. False when the look has no rig or no such clip.
+## It loops a sliver of the clip at full speed rather than pausing it: a paused
+## player never finishes its crossfade, so a droid that stopped mid-stride to
+## shoot stayed frozen halfway between the walk and the stance.
 static func hold_pose(look: Node3D, role: String, at := 0.0, blend := 0.2) -> bool:
 	var holder: Node = null
 	for n in look.find_children("*", "Node3D", true, false):
@@ -215,10 +220,9 @@ static func hold_pose(look: Node3D, role: String, at := 0.0, blend := 0.2) -> bo
 	var clip := str((holder.get_meta("anims") as Dictionary).get(role, ""))
 	if clip == "" or not ap.has_animation(clip):
 		return false
-	if ap.current_animation != clip or ap.speed_scale != 0.0:
-		ap.play(clip, blend)
-		ap.seek(at, true)
-	ap.speed_scale = 0.0
+	if ap.current_animation != clip or not ap.has_section() or not is_equal_approx(ap.get_section_start_time(), at):
+		ap.play_section(clip, at, at + 0.001, blend)
+	ap.speed_scale = 1.0
 	return true
 
 

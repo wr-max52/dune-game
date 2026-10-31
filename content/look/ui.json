@@ -1,6 +1,6 @@
 {
   "note": "Issue #71: text and UI size. text_scale is the one number that sizes every UI element: every panel, label, prompt, box and HUD read-out grows or shrinks with it (it is the window's UI scale, so layouts keep their shape). The player changes it in F11 > HUD and it is saved per machine with the HUD colour (user://settings/ui.cfg); this is the default and the slider's range. sizes: base font sizes (at text_scale 1.0) for the screens that read worst before: the dialogue box, the job box, and the ship and speeder read-outs.",
-  "text_scale": 1.25,
+  "text_scale": 1.75,
   "min": 0.75,
   "max": 2.0,
   "step": 0.05,
