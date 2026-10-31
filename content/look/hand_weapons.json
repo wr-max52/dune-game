@@ -28,6 +28,7 @@
     "scale": 1.0,
     "holster": "l_hip",
     "fpv_pose": { "r": "hilt", "l": "hilt" },
+    "aim_fpv": { "one_hand": true },
     "slot": 2
   },
   "rifle_blaster": {
