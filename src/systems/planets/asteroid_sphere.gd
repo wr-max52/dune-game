@@ -27,12 +27,21 @@ func _init(r: float = 1500.0, surface: Dictionary = {}) -> void:
 
 
 ## Seat the town: as PlanetSphere, with the asteroid's own (much shorter) blend
-## from the station's floors to open rock.
+## from the station's floors to open rock. Outside the walls the hallway's and
+## the pit ring's decks are slabs laid on the rock, so the rock sits DECK_CLEAR
+## under them (level with them it showed through). The pit's dip ends under its
+## deck ring: the near mesh widens it 4 m past the pit floor (the collider's
+## grow), and with 1 m of ramp it stays inside the 6 m ring instead of opening a
+## trench along the ring's outer edge.
+const DECK_CLEAR := 0.12
+
+
 func configure_site(floor_rect: Rect2, walls_rect: Rect2, sunken: Array, floor_y: float = 0.0) -> void:
-	super.configure_site(floor_rect, walls_rect, sunken, floor_y)
+	super.configure_site(floor_rect, walls_rect, sunken, floor_y - DECK_CLEAR)
 	pad_margin = 10.0
 	blend = 70.0
 	dune_offset = 1.5
+	sink_ramp = 1.0
 
 
 ## Every crater, once: `count` of them per layer at random spots on the ball,
