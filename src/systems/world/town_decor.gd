@@ -683,7 +683,7 @@ func park_ship(ship_id: String, box: Dictionary) -> Node3D:
 
 ## Belly on the box base, centred on its footprint; the greybox stand-in hidden.
 func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> Node3D:
-	var ship := ship_kit.build(look_id)
+	var ship := ship_kit.build(ShipUpgrades.look(ship_id, look_id))      # in its upgrade's paint
 	ship.name = node_name
 	ship.set_meta("ship_id", ship_id)
 	ship.set_meta("box_id", str(box.id))

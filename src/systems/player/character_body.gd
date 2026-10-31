@@ -11,11 +11,13 @@ extends CharacterBody3D
 
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
 const GaitInput := preload("res://src/systems/player/gait_input.gd")
+const FallDamage := preload("res://src/systems/combat/fall_damage.gd")
 
 signal pose_changed(pose: int)
 signal hurt(amount: float)          ## something hit the player (bolts, blades)
 signal jumped
 signal landed
+signal fell(speed: float, damage: int)  ## issue #274: a landing hard enough to hurt
 signal jet_started              ## M13: the jetpack lit
 signal jet_stopped              ## M13: the jetpack cut out (released or empty)
 
@@ -47,6 +49,16 @@ var last_hit_amount := 0.0
 var _since_hit := 999.0
 var _regen_carry := 0.0
 var _was_on_floor := true
+## Issue #274: the falls.json tuning, set on the player only (empty = no fall damage:
+## guards share this body). `fall_speed` is how fast it was falling (m/s, along up)
+## the frame before it last touched down, for traces and tests.
+var fall_damage: Dictionary = {}:
+	set(v):
+		fall_damage = v
+		controller.max_fall = FallDamage.terminal_speed(v)
+var fall_speed := 0.0
+var _falling_at := 0.0
+var _launched := false               ## launch(): the next tick is in the air
 
 ## Contained render smoothing. The game renders faster than the 60 Hz physics tick
 ## (120 Hz displays) and engine physics interpolation is off, so characters would
@@ -156,7 +168,8 @@ func _physics_process(delta: float) -> void:
 	var made_in := tilt
 	_update_tilt()
 	var to_local := tilt.inverse()
-	var grounded := is_on_floor()
+	var grounded := is_on_floor() and not _launched   # the floor it stood on before a launch is stale
+	_launched = false
 	controller.body_pos = global_position
 	controller.on_ground = grounded
 	controller.velocity = made_in.inverse() * velocity
@@ -166,6 +179,7 @@ func _physics_process(delta: float) -> void:
 	# A ground height far below the world disables the controller's flat-floor
 	# clamp, so landing is decided by collision instead of a hardcoded y = 0.
 	controller.step(delta, yaw, -INF)
+	_falling_at = maxf(0.0, -controller.velocity.y)   # along up: the planet's, on the ball
 
 	velocity = tilt * controller.velocity
 	if tilt != Basis.IDENTITY and controller.on_ground and controller.velocity.y < 0.01:
@@ -184,6 +198,8 @@ func _physics_process(delta: float) -> void:
 	pose_changed.emit(controller.pose)
 	var on_floor := is_on_floor()
 	if on_floor and not _was_on_floor:
+		fall_speed = _falling_at
+		_take_fall(fall_speed)
 		landed.emit()
 	elif not on_floor and _was_on_floor and controller.velocity.y > 0.5:
 		jumped.emit()
@@ -251,6 +267,22 @@ func render_origin() -> Vector3:
 			or here.distance_squared_to(_curr_origin) > EXTERNAL_MOVE_M * EXTERNAL_MOVE_M:
 		return here
 	return render_origin_at(Engine.get_physics_interpolation_fraction())
+
+
+## Thrown into the air (issue #275: ejecting from a ship): moving at `v` (world),
+## with a shove `push` across the ground that fades by `push_fade` m/s every
+## second in the air and ends on landing (CharacterController.push).
+func launch(v: Vector3, push: Vector3, push_fade: float) -> void:
+	var to_local := tilt.inverse()
+	velocity = v
+	controller.velocity = to_local * v
+	var local := to_local * push
+	local.y = 0.0
+	controller.push = local
+	controller.push_fade = push_fade
+	controller.on_ground = false
+	_was_on_floor = false
+	_launched = true
 
 
 ## Read "up" from the planet (if any) and stand the capsule along it.
@@ -389,6 +421,19 @@ func apply_damage(amount: float) -> void:
 	if health.hp <= 0:
 		is_downed = true
 		downed.emit()
+
+
+## Issue #274: touching down at `speed` m/s straight down hurts like a hit (god
+## mode, the hit flash and being downed all work as for bolts). The player only.
+func _take_fall(speed: float) -> void:
+	if fall_damage.is_empty():
+		return
+	var dmg := FallDamage.damage(speed, fall_damage)
+	if dmg <= 0:
+		return
+	last_hit_from = Vector3.INF
+	apply_damage(dmg)
+	fell.emit(speed, dmg)
 
 
 ## Bolts call this when they know who fired them (issue #25: so the fall is away

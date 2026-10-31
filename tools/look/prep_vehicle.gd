@@ -77,11 +77,16 @@ func _prep(id: String, c: Dictionary) -> void:
 ## Issue #82: one Hyper3D model, several paint jobs. The albedo's light panels
 ## take `body`, its mid greys (pads, frame, trim) take `trim`, near-black (glass,
 ## underside) stays as it is. The blue plasma core is lit by an emission map made
-## from its own pixels, recoloured to `glow` when there is one.
+## from its own pixels, recoloured to `glow` when there is one. `bands` [trim from,
+## trim to, body from, body to] moves the luminance split, and `refs` [body, trim] the
+## luminance each colour is matched at, for a darker albedo (the frigate's: mostly
+## 0.2 to 0.3, all of it "trim" on the defaults).
 static func _paint(root: Node, paint: Dictionary) -> void:
 	var body := Color(str(paint.get("body", "#0000")))      # alpha 0 = leave it
 	var trim := Color(str(paint.get("trim", "#0000")))
 	var glow := Color(str(paint.get("glow", "#0000")))
+	var bands: Array = paint.get("bands", [0.08, 0.2, 0.32, 0.5])
+	var refs: Array = paint.get("refs", [0.8, 0.28])
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		for s in mi.mesh.get_surface_count():
 			var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
@@ -102,12 +107,12 @@ static func _paint(root: Node, paint: Dictionary) -> void:
 						continue
 					var l := c.get_luminance()
 					var out := c
-					var wb := smoothstep(0.32, 0.5, l) if body.a > 0.0 else 0.0
-					var wt := smoothstep(0.08, 0.2, l) * (1.0 - wb) if trim.a > 0.0 else 0.0
+					var wb := smoothstep(float(bands[2]), float(bands[3]), l) if body.a > 0.0 else 0.0
+					var wt := smoothstep(float(bands[0]), float(bands[1]), l) * (1.0 - wb) if trim.a > 0.0 else 0.0
 					if wb > 0.0:
-						out = out.lerp(body * clampf(l / 0.8, 0.6, 1.15), wb)
+						out = out.lerp(body * clampf(l / float(refs[0]), 0.6, 1.15), wb)
 					if wt > 0.0:
-						out = out.lerp(trim * clampf(l / 0.28, 0.45, 1.3), wt)
+						out = out.lerp(trim * clampf(l / float(refs[1]), 0.45, 1.3), wt)
 					out.a = c.a
 					img.set_pixel(x, y, out)
 			mat = mat.duplicate() as BaseMaterial3D

@@ -32,6 +32,8 @@ var command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.5, "boost"
 ## is slower). 1.0 in space, so the dogfight flies exactly as before.
 var speed_scale := 1.0
 var accel_scale := 1.0
+## A space fight's turn_scale (content/core/flow/space_fight.json); 1.0 in the air.
+var turn_mult := 1.0
 
 
 func _init(flight_cfg: Dictionary = {}) -> void:
@@ -59,15 +61,15 @@ func accel() -> float:
 
 
 func pitch_rate() -> float:
-	return float(cfg.get("pitch_rate", 1.5))
+	return float(cfg.get("pitch_rate", 1.5)) * turn_mult
 
 
 func yaw_rate() -> float:
-	return float(cfg.get("yaw_rate", 1.0))
+	return float(cfg.get("yaw_rate", 1.0)) * turn_mult
 
 
 func roll_rate() -> float:
-	return float(cfg.get("roll_rate", 3.0))
+	return float(cfg.get("roll_rate", 3.0)) * turn_mult
 
 
 func boost_time() -> float:
