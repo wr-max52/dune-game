@@ -1,0 +1,8 @@
+{
+  "id": "local_raver",
+  "base": "local_patron",
+  "label": "Raver",
+  "note": "Issue #261: a local at the moon's rave. A patron (base: a bottle, the town's brain, fights back) at the rave's tempo who dances where they stand ('groove': how hard they bounce, 0 = a nod).",
+  "bpm": 126.0,
+  "groove": 1.0
+}

@@ -4,7 +4,8 @@ extends RefCounted
 ## content/core/planets/<id>.json (name, type, town_size, style, where it hangs in
 ## a neighbour's sky); this turns it into everything the town scene builds:
 ##
-##   town      -- the layout (TownGen at its town_size, or an authored location)
+##   town      -- the layout (TownGen at its town_size, or an authored town: a saved
+##                layout from content/core/towns/ named by town_layout, issue #237)
 ##   world     -- the world dict ShipPilot, the sky and the detail tiers read
 ##                (an authored world, or one made from the planet's type)
 ##   type_cfg  -- content/core/planets/types.json for its type: ground (terrain,
@@ -29,6 +30,7 @@ const TYPES_PATH := "res://content/core/planets/types.json"
 
 static var _types: Dictionary = {}
 static var _cache: Dictionary = {}       ## planet id -> built planet (built once per run)
+static var layout_override: Dictionary = {}   ## issue #237: planet id -> town layout picked in F11 (this run only)
 
 
 static func types() -> Dictionary:
@@ -61,6 +63,22 @@ static func build(planet_id: String, content = null) -> Dictionary:
 	return p
 
 
+## Issue #237: the saved town layouts a planet with an authored town can pick.
+static func layouts(content = null) -> Array:
+	var cc = content if content != null else _content()
+	return cc.towns.keys()
+
+
+## Issue #237: build `planet_id`'s town to `layout` for the rest of this run
+## (F11). "" goes back to the layout its file names.
+static func set_layout(planet_id: String, layout: String) -> void:
+	if layout == "":
+		layout_override.erase(planet_id)
+	else:
+		layout_override[planet_id] = layout
+	_cache.erase(planet_id)
+
+
 ## Build from a config dictionary (also for configs not in the manifest: tests,
 ## a contributor trying one out).
 static func make(cfg: Dictionary, cc = null) -> Dictionary:
@@ -76,7 +94,15 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 	var size := clampi(int(cfg.get("town_size", 50)), 1, 100)
 	var town_id := str(cfg.get("town", ""))
 	var town: Dictionary = {}
-	if town_id != "":
+	var layout := str(layout_override.get(id, cfg.get("town_layout", "")))
+	if town_id != "" and layout != "":
+		# Issue #237: an authored town built to a saved layout (content/core/towns/).
+		town = cc.town_from_layout(layout, town_id)
+		var lsize := int(town.get("size", size))
+		if lsize != size and not layout_override.has(id):
+			push_warning("PlanetGen: %s wants town_size %d but layout %s is size %d" % [id, size, layout, lsize])
+		size = lsize
+	elif town_id != "":
 		town = cc.get_location(town_id)            # authored
 	else:
 		town_id = id + "_town"
@@ -94,6 +120,8 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 			opts["ring"] = tcfg.get("station", {})      # issue #99: a sealed, round station
 		if bool(cfg.get("stage_dancer", false)):
 			opts["stage_dancer"] = true
+		if cfg.has("club_dome"):
+			opts["club_dome"] = cfg.club_dome      # issue #261: the whole dome is the club
 		town = TownGen.generate(town_id, size, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), opts)
 	var world: Dictionary = {}
 	if cfg.has("world"):

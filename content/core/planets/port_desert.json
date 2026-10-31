@@ -1,9 +1,10 @@
 {
   "id": "port_desert",
-  "note": "The home planet: the hand-built port town on the sand. town names an authored location instead of a generated one, and world an authored world (content/core/worlds/), so nothing about the port changes. See docs/planets/PLANETS.md.",
+  "note": "The home planet: the hand-built port town on the sand. town names an authored town instead of a generated one, laid out by town_layout (issue #237: a saved layout in content/core/towns/, at its town_size), and world an authored world (content/core/worlds/), so nothing about the port changes. See docs/planets/PLANETS.md.",
   "name": "",
   "type": "sand",
   "town": "port_town",
+  "town_layout": "port_square",
   "town_size": 50,
   "world": "port_desert",
   "style": "desert",
@@ -111,12 +112,12 @@
       720
     ],
     "lore": [
-      "Stay off the far flats. Old Murk rolls out there.",
-      "Old Murk took a whole caravan once. Didn't even slow down.",
+      "Stay off the far flats. Old Murk crawls out there.",
+      "Old Murk took a whole caravan once. Walked right over it on all those legs.",
       "If you hear something like a wet raspberry out in the sand, run.",
       "Don't shoot at Old Murk. It remembers, and it follows.",
       "Nobody's ever killed Old Murk. Plenty have tried. You can tell by the smell.",
-      "Old Murk doesn't hunt. It just goes where it likes, and you'd best not be there."
+      "Old Murk doesn't hunt. It just goes where it likes, clicking those jaws, and you'd best not be there."
     ],
     "lore_slain": [
       "They say someone killed Old Murk. I'll believe it when I smell it gone.",

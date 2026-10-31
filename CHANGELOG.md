@@ -31,6 +31,96 @@ Plain English, newest on top. One entry per milestone.
   one plays (ClubMusic).
 - Trace: scenes/barge_trace.gd (in CI), tests/test_barge_trace.gut.gd. Stills:
   docs/lookdev/barge/.
+## The round port (issue #237, parts 1 and 2, 2026-10-31)
+
+- **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)
+  in `content/core/towns/`, and a planet picks its layout with `town_layout`.
+  The town is still `port_town` whichever layout it has, so saves carry over.
+- **A second layout: the round port** (`port_round`, size 67). A round wall,
+  about twice the floor space (61,600 m² inside), two manned gate towers, a
+  76 m bowl with eight surface pads round it, and huts and towers that wrap
+  round the back until they nearly meet behind the cantina, with only the back
+  lane to the back gate between them. The market, barracks and cantina are
+  today's for now; they grow in the next parts.
+- **The home planet still uses the square port** until the round one is done.
+  F11 > World > Town builds it to the round one for the rest of the run.
+- **New box kind `ring`**: a round wall cut open at gates, which any layout can
+  use. The validators check it (V9).
+- `tools/town/gen_port_round.py` makes the round port from the numbers in
+  `town_kit.json` (`round`). Don't edit the layout file by hand.
+
+## The beast is a giant beetle-centipede (issue #266, 2026-10-31)
+
+- **No more purple ball.** The planet's beast (Old Murk on the home planet) is
+  now a giant armoured beetle-centipede. It has a beetle's head with a horn,
+  curved mandibles that open and close, swaying antennae and glowing eyes. Its
+  long body is 14 armoured segments, about 50 m from head to tail.
+- **It walks.** Each segment has a pair of legs that step in a wave as it
+  crawls. The body follows the exact path the head took over the dunes.
+- **Same behaviour as before.** It wanders with no pull toward or away from the
+  town, kills on touch, has 1000 health, chases you if you hurt it, stays dead
+  once killed, and still farts (now from its tail end).
+- **The whole body is deadly and can be hit.** Touching the head or any segment
+  kills you, on foot or on a speeder. Bolts and blades hit any segment.
+- **Dead, it slumps** and its legs curl up.
+- The locals' lore, the AI briefing and the beast's lines now describe the new
+  creature. Numbers and colours are in content/core/hazards/beast.json
+  (`segments`, `segment_gap`, `tail_scale`, `stride_m`, `look`).
+- Stills: docs/lookdev/hazards/desert_beast.jpg and desert_beast_head.jpg.
+
+## The moon's dome rave (issue #261, part 2, 2026-10-31)
+
+- **Grit Station's whole dome is the club now.** The cantina building and the
+  four grey homes are gone. The bar (Oda's counter under a lit canopy, with a
+  freestanding back bar) and the merchant's table stay where they were.
+- **The stage is on your right as you walk in from the pad.** It's round with
+  a diamond-plate deck and a lit rim that cycles through the colours. Above it
+  stands a truss with moving heads, strobes and a fan of sweeping lasers, and an
+  LED video wall rolls colours behind the DJ. Rave speaker stacks stand either
+  side.
+- **Only a DJ** plays, at a black rave desk with glowing buttons and two glowing
+  decks. Kill them and the music stops. The station's **dancer** has moved off
+  the stage to dance on the floor beside it.
+- **An LED dance floor** in front of the stage ripples on the beat. Ravers stand
+  on it and dance, a hand thrown up for a few bars now and then, with drinks.
+  More walk loops round the room. They're locals: they fight back, and the town
+  talks.
+- **It's dark in there.** The dome is smoked glass that keeps the sun off, and
+  its floods are turned down (`"club_dome": { "dim" }`). Neon rings run round the
+  wall and a mirror ball hangs over the floor.
+- A planet's `"club_dome"` turns this on for a sealed station. The layout is in
+  content/core/planets/town_kit.json (`club_dome`).
+
+## The clubs' people, and the desert's jazz club (issue #261, part 1, 2026-10-31)
+
+- **The desert port's cantina is a chill jazz club.** A dark plank floor with a
+  checker floor round the stage, panelled walls under velvet drapes, leather
+  booths with candlelit tables, round tables in place of the old boxes, warm
+  and blue stage spots through the haze, a mirror ball, a neon sign over the
+  bar, an upright piano and a saxophone on its stand. The house lights are
+  turned down (`"club": { "dim" }`).
+- **A band of three plays on the centre stage**, back to back, facing out. They
+  are full black versions of the player with the guard's white helmet:
+  - the **DJ**, at a desk with glowing buttons and two glowing decks that spin;
+  - the **drummer**, standing at a **hologram drum kit**: a floor projector
+    throws up see-through hex pads, cymbal discs and a kick panel that flare and
+    swell on each hit;
+  - the **bassist**, on a gloss black upright bass **strung with lasers** that
+    cycle through the colours, both hands up on the neck.
+  Each plays a 20 s loop (ClubMoves): looking round the room, moving their arms,
+  bobbing on the beat and shifting their weight, with their hands kept on the
+  instrument by the arm IK.
+- **Kill a band member and the music stops** until the next visit.
+- **A crowd with drinks.** Eight patrons stand at the tables or walk the room,
+  bottle in hand, nodding along and taking a sip now and then. They are locals:
+  hurt one and the whole club draws holdout pistols and fights back, and the town
+  talks about it. Gunfire scatters them but does not stop the music.
+- **Ask Oda for a vibe.** "Something harder", "slow it down": she has the band
+  change the song (`club_vibe`, checked against the club's moods). Free, and she
+  never refuses.
+- **Shared with the moon's club (part 2):** the textures (ClubTextures), the
+  instruments and lights (ClubProps), the play loops (ClubMoves), the band and
+  patron profiles, and Oda's action.
 
 ## The club mix (issue #104, part 1: the music, 2026-10-31)
 

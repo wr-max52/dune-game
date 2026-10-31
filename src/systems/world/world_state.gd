@@ -35,7 +35,8 @@ static var jobs_taken: Dictionary = {}     ## job id -> "active" | "done"
 static var clock := 0.0                    ## seconds of play, for cooldowns
 static var inventory := Inventory.new()    ## M13: the player's gear (owned, attached, taken, vendor stock)
 static var names := NameBook.new()         ## issue #15: every name given out, so each one is unique
-static var smuggle: Dictionary = {}        ## Oda's drop: { run, item, count, area, hint, marker, offset, ground, surface, marked, location, out }
+static var smuggle: Dictionary = {}        ## the drop put out: { run, job, to, item, count, area, hint, marker, offset, near, ground, surface, marked, location, out }
+static var smuggle_offers: Dictionary = {} ## issue #251: smuggling job id -> the drop it offers, not out yet (not saved: rolled again after a load)
 static var droids := DroidRoster.new()     ## issue #51: the player's companion droids, their cargo, desert wrecks
 static var hangar := ""                    ## issue #58: the ship id you bought from T-89 (on the spare pad), "" = none
 static var story: Dictionary = {}          ## issue #64: { chapter, told } (Story); {} = the first chapter
@@ -58,6 +59,7 @@ static var _cooldowns: Dictionary = {}
 static var _items: Dictionary = {}         ## item id -> its content/core/items entry (cache)
 
 const MAX_EVENTS := 12
+const DROP_NEAR := 15.0                    ## issue #251: the pointer lands at most this far from a drop (m)
 
 
 static func reset() -> void:
@@ -73,6 +75,7 @@ static func reset() -> void:
 	inventory = Inventory.new()
 	names = NameBook.new()
 	smuggle = {}
+	smuggle_offers = {}
 	droids = DroidRoster.new()
 	hangar = ""
 	story = {}
@@ -396,11 +399,17 @@ static func _supply_job(j: Dictionary) -> Dictionary:
 
 # ------------------------------------------------------------------ smuggling
 
-## Oda's repeating job (kind "smuggle"). She lines up a drop of contraband in
-## one of the town's hiding places (pickups/<location>.json "drops"); taking the
-## job puts it there. She lines up the next one once that drop is picked up and
-## the player carries no contraband (sold to the fence, or lost at the gate),
-## so the loop runs for as long as anyone plays.
+## The repeating smuggling jobs (kind "smuggle"). Each one lines up a drop of
+## contraband in one of its town's hiding places (pickups/<location>.json
+## "drops", only its own "areas" when it names some); taking the job puts it
+## there. One drop is out at a time: the next one is offered once that drop is
+## picked up and the player carries no contraband (sold to the fence, handed to
+## the general, or lost at the gate), so the loop runs for as long as anyone plays.
+##
+## Issue #251: at the port, Oda and the fence send you out of town (the desert
+## past either gate) and the fence buys the goods; the general sends you after
+## stashes inside the town (the alleys, the roofs) and the goods go to him
+## ("deliver_to": "general").
 
 ## The drop lying in the world, as a pickup entry, or {} when there is none.
 static func smuggle_drop() -> Dictionary:
@@ -418,10 +427,15 @@ static func smuggle_drop() -> Dictionary:
 	}
 
 
-## Can she line up a new drop? Not while one is lying out there, and not while
+## Can a new drop be lined up? Not while one is lying out there, and not while
 ## the player still has contraband to get rid of.
 static func smuggle_ready() -> bool:
 	return smuggle_drop().is_empty() and not carrying_contraband()
+
+
+## Who takes the goods of the last drop put out: "fence" or "general" (issue #251).
+static func smuggle_to() -> String:
+	return str(smuggle.get("to", "fence"))
 
 
 ## Pockets or a cargo droid (issue #51): the gate never finds what a droid
@@ -434,14 +448,37 @@ static func carrying_contraband() -> bool:
 
 
 static func _smuggle_job(j: Dictionary) -> Dictionary:
-	if smuggle.is_empty() or (bool(smuggle.get("out", false)) and smuggle_ready()):
-		_roll_smuggle(j)
-	if smuggle.is_empty():
+	var s := _smuggle_for(j)
+	if s.is_empty():
 		return {}
 	var out := j.duplicate()
-	out["text"] = str(j.get("text", "%s %s")) % [smuggle_goods_text(j), str(smuggle.hint)]
-	out["pays"] = int(smuggle.count) * maxi(0, Inventory.sell_price(_item(str(smuggle.item)), _fence(str(smuggle.get("location", "")))))
+	out["text"] = str(j.get("text", "%s %s")) % [smuggle_goods_text(j, s), str(s.hint)]
+	out["pays"] = int(s.count) * maxi(0, Inventory.sell_price(_item(str(s.item)), _fence(str(s.get("location", "")))))
 	return out
+
+
+## The drop job `j` is about: its own drop while that one is still on (out, or
+## its goods still on you), else the one it offers next (rolled once, then kept
+## until it is taken, so the text the player read is the drop they get).
+static func _smuggle_for(j: Dictionary) -> Dictionary:
+	if bool(smuggle.get("out", false)) and not smuggle_ready() and _drop_job_id() == str(j.get("id", "")):
+		return smuggle
+	var id := str(j.get("id", ""))
+	if not smuggle_offers.has(id):
+		smuggle_offers[id] = _roll_smuggle(j)
+	return smuggle_offers[id]
+
+
+## The board job the drop put out came from (a drop saved before issue #251
+## names none: its town's run for the fence).
+static func _drop_job_id() -> String:
+	if smuggle.has("job"):
+		return str(smuggle.job)
+	for b in board():
+		if str(b.get("kind", "")) == "smuggle" and str(b.get("location", "")) == str(smuggle.get("location", "")) \
+				and str(b.get("deliver_to", "fence")) == "fence":
+			return str(b.id)
+	return ""
 
 
 ## The vendor in `location` that buys contraband (the fence the drop goes to), or {}.
@@ -455,19 +492,23 @@ static func _fence(location: String) -> Dictionary:
 	return {}
 
 
-## What the drop is, in the job's words ("2 cases of holocrystals"). `j` = the
-## smuggling job; {} = the one for the drop's own town. Reads only.
-static func smuggle_goods_text(j: Dictionary = {}) -> String:
-	if smuggle.is_empty():
+## What a drop is, in its job's words ("2 cases of holocrystals"). `s` = the
+## drop ({} = the one put out), `j` = its smuggling job ({} = the one it came
+## from). Reads only.
+static func smuggle_goods_text(j: Dictionary = {}, s: Dictionary = {}) -> String:
+	if s.is_empty():
+		s = smuggle
+	if s.is_empty():
 		return ""
 	if j.is_empty():
+		var from := str(s.job) if s.has("job") else _drop_job_id()
 		for b in board():
-			if str(b.get("kind", "")) == "smuggle" and str(b.get("location", "")) == str(smuggle.get("location", "")):
+			if str(b.get("id", "")) == from:
 				j = b
-	var n := int(smuggle.count)
+	var n := int(s.count)
 	var goods := {}
 	for g in j.get("goods", []):
-		if str(g.get("item", "")) == str(smuggle.item):
+		if str(g.get("item", "")) == str(s.item):
 			goods = g
 	var what := str(goods.get("say_one", goods.get("say", "%d"))) if n == 1 else str(goods.get("say", "%d"))
 	if what.contains("%d"):
@@ -475,28 +516,45 @@ static func smuggle_goods_text(j: Dictionary = {}) -> String:
 	return what
 
 
-## Pick the next drop: goods from the job, a hiding place from the location's
-## drops (never the same area twice running).
-static func _roll_smuggle(j: Dictionary) -> void:
+## Pick job `j`'s next drop: goods from the job, a hiding place from its areas of
+## the location's drops (never the area of the last drop put out), and where the
+## pointer goes ("near": within DROP_NEAR of it, so there is still a search).
+## {} when it has nothing to offer.
+static func _roll_smuggle(j: Dictionary) -> Dictionary:
 	var goods: Array = j.get("goods", [])
 	var d = _read_json(PICKUP_DIR + "/" + str(j.get("location", "")) + ".json")
 	var areas: Array = d.get("drops", {}).get("areas", []) if d is Dictionary else []
+	var mine: Array = j.get("areas", [])
+	# Issue #237: in a town built to a saved layout, an area's "layouts" block (its
+	# spots in that layout) is laid over it.
+	if str(j.get("location", "")) == current_town_id():
+		var layout := str(GameFlow.planet().get("town", {}).get("layout", ""))
+		areas = areas.map(func(a):
+			var over: Dictionary = a.get("layouts", {}).get(layout, {})
+			if over.is_empty():
+				return a
+			var m: Dictionary = a.duplicate(true)
+			m.merge(over, true)
+			return m)
 	var last := str(smuggle.get("area", ""))
-	var choices := areas.filter(func(a): return str(a.get("id", "")) != last and not (a.get("spots", []) as Array).is_empty())
+	var choices := areas.filter(func(a): return str(a.get("id", "")) != last and not (a.get("spots", []) as Array).is_empty() \
+			and (mine.is_empty() or mine.has(str(a.get("id", "")))))
 	if goods.is_empty() or choices.is_empty():
-		smuggle = {}
-		return
+		return {}
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var g: Dictionary = goods[rng.randi() % goods.size()]
 	var a: Dictionary = choices[rng.randi() % choices.size()]
 	var spots: Array = a.spots
 	var span: Array = g.get("count", [1, 1])
-	smuggle = {
-		"run": int(smuggle.get("run", 0)) + 1, "item": str(g.item),
+	var turn := rng.randf() * TAU
+	var r := rng.randf_range(DROP_NEAR * 0.3, DROP_NEAR)
+	return {
+		"job": str(j.get("id", "")), "to": str(j.get("deliver_to", "fence")), "item": str(g.item),
 		"count": rng.randi_range(int(span[0]), int(span[1])),
 		"area": str(a.id), "hint": str(a.get("hint", "")), "marker": str(a.get("marker", "")),
-		"offset": spots[rng.randi() % spots.size()], "ground": bool(a.get("ground", false)),
+		"offset": spots[rng.randi() % spots.size()], "near": [cos(turn) * r, sin(turn) * r],
+		"ground": bool(a.get("ground", false)),
 		"surface": bool(a.get("surface", false)), "out": false,
 		"marked": bool(a.get("marked", false)),
 		"location": str(j.get("location", "")),    # the town this drop belongs to
@@ -504,15 +562,59 @@ static func _roll_smuggle(j: Dictionary) -> void:
 
 
 static func _start_smuggle(j: Dictionary) -> bool:
-	if j.is_empty() or not smuggle_ready() or bool(smuggle.get("out", false)):
+	var s: Dictionary = smuggle_offers.get(str(j.get("id", "")), {})
+	if j.is_empty() or s.is_empty() or not smuggle_ready():
 		return false
+	var run := smuggle_run() + 1
+	smuggle = s.duplicate(true)
+	smuggle["run"] = run
 	smuggle.out = true
+	smuggle_offers.erase(str(j.id))
 	# Issue #64: only the port's chapter run counts. A station job never moves
-	# the port's story on, even if that story is waiting for a smuggling sale.
-	story["took_run"] = str(j.get("location", "")) == "port_town"
+	# the port's story on, even if that story is waiting for a smuggling sale,
+	# and neither does the general's (issue #251: his goods never reach the fence).
+	story["took_run"] = str(j.get("location", "")) == "port_town" and smuggle_to() == "fence"
 	bump("smuggle_runs")
-	log_event("Oda set up a drop: " + str(j.get("text", "")))
+	log_event(("The general sent you after contraband: " if smuggle_to() == "general" else "Oda set up a drop: ") + str(j.get("text", "")))
 	return true
+
+
+## How many drops have been put out (each one's pickup id is smuggle_<run>).
+static func smuggle_run() -> int:
+	return int(smuggle.get("run", 0))
+
+
+## Issue #251: the general's run. What he pays for the contraband in your
+## pockets (what the fence would have), or 0 when the run on is not his or its
+## drop is still lying out there.
+static func repossession_pay() -> int:
+	if smuggle_to() != "general" or not bool(smuggle.get("out", false)) or not smuggle_drop().is_empty():
+		return 0
+	var fence := _fence(str(smuggle.get("location", "")))
+	var pay := 0
+	for id in inventory.item_ids():
+		var it := _item(str(id))
+		if bool(it.get("contraband", false)):
+			pay += inventory.count(str(id)) * maxi(0, Inventory.sell_price(it, fence))
+	return pay
+
+
+## Hand the general the contraband in your pockets: he pays repossession_pay(),
+## Remnant standing goes up by `standing_gain`, and once nothing contraband is
+## left on you the next drop can be lined up. Returns the pay, or 0.
+static func hand_over_contraband(standing_gain: int) -> int:
+	var pay := repossession_pay()
+	if pay <= 0:
+		return 0
+	for id in inventory.item_ids():
+		if bool(_item(str(id)).get("contraband", false)):
+			while inventory.has(str(id)):
+				inventory.remove(str(id))
+	credits += pay
+	change_standing("imperial_remnant", standing_gain, "Someone handed the Remnant general a smuggler's stash.")
+	bump("repossessions")
+	log_event("Handed the general the contraband for %d cr." % pay)
+	return pay
 
 
 static func _item(id: String) -> Dictionary:

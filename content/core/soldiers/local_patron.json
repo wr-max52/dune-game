@@ -1,0 +1,14 @@
+{
+  "id": "local_patron",
+  "base": "local_resident",
+  "label": "Patron",
+  "note": "Issue #261: a local out at the club. A local_resident (base) with a bottle in hand: stands by a table or walks a loop round the room (marker 'patrol'), nods along, and takes a sip now and then. Shares the town's brain (Townsfolk): hurt one and the whole club fights back with holdout pistols, the bottle put away; gunfire scatters them to cover but does not stop the music.",
+  "drinks": true,
+  "bpm": 100.0,
+  "walk_speed": 1.3,
+  "patrol": {
+    "pause_s": 9.0,
+    "look_around_deg": 50.0,
+    "look_every_s": 2.5
+  }
+}

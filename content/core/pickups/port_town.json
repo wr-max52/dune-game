@@ -6,15 +6,16 @@
       "id": "pit_jetpack",
       "item": "jetpack",
       "marker": "player_spawn",
-      "offset": [
-        24.0,
-        6.0,
-        -10.5
-      ],
+      "offset": [24.0, 6.0, -10.5],
       "reach": 2.6,
       "taken_flag": "pit_jetpack_taken",
       "inside": "pit_hauler",
-      "note": "Issue #64: rides on the pit hauler, the old cargo droid that roams the pit (droids/droids.json, pit_hauler); its position here is only where it starts. taken_flag: set when someone takes it (Oda's rumor r_pit_hauler stops). Issue #210: 'inside': it is hidden inside the droid, not on it: no look, no glow, '[E] Open the cargo droid' when you reach it."
+      "note": "Issue #64: rides on the pit hauler, the old cargo droid that roams the pit (droids/droids.json, pit_hauler); its position here is only where it starts. taken_flag: set when someone takes it (Oda's rumor r_pit_hauler stops). Issue #210: 'inside': it is hidden inside the droid, not on it: no look, no glow, '[E] Open the cargo droid' when you reach it.",
+      "layouts": {
+        "port_round": {
+          "offset": [0.0, 0.0, -13.0]
+        }
+      }
     },
     {
       "id": "wreck_red_saber",
@@ -54,18 +55,14 @@
       "item": "unmarked_cells",
       "count": 3,
       "marker": "desert_exit",
-      "offset": [
-        22.0,
-        0.0,
-        16.0
-      ],
+      "offset": [22.0, 0.0, 16.0],
       "reach": 2.0,
       "note": "A smuggler's drop outside the front gate: three cases of unmarked cells. Worth 180 cr to the fence, if you can get them past the checkpoint."
     }
   ],
   "note": "Items lying in the town. Positions are a town marker plus an offset, so no coordinates live in code. The jetpack sits at the top of one of the pit's ramps, on street level, where the walk out of the pit passes it (inside the pit, E launches the ship). A pickup taken once stays taken (saved).",
   "drops": {
-    "note": "Hiding places for Oda's smuggling run (board/bar_board.json, j_smuggle_run). Each run picks one area (never the same one twice in a row) and one spot in it. Oda only names the area, so the player has to search it. A spot is an offset from the area's marker. ground: snap the drop to the desert terrain. Drops have no glow ring, so out in the sand they are hard to spot. marked (issue #64): a drop in the streets or on a roof gets a beam of light over it, so it can be found in town.",
+    "note": "Hiding places for Oda's smuggling run (board/bar_board.json, j_smuggle_run). Each run picks one area (never the same one twice in a row) and one spot in it. Oda only names the area, so the player has to search it. A spot is an offset from the area's marker. ground: snap the drop to the desert terrain. Drops have no glow ring, so out in the sand they are hard to spot. marked (issue #64): a drop in the streets or on a roof gets a beam of light over it, so it can be found in town. Issue #251: the job names which areas are its own ('areas' on the board): Oda's and the fence's run is the desert ones, the general's the alleys and the roofs. The HUD pointer goes to within 15 m of the drop itself (WorldState.DROP_NEAR), not to the area's marker.",
     "areas": [
       {
         "id": "east_desert",
@@ -73,26 +70,10 @@
         "marker": "desert_exit",
         "ground": true,
         "spots": [
-          [
-            28,
-            0,
-            -22
-          ],
-          [
-            12,
-            0,
-            -44
-          ],
-          [
-            40,
-            0,
-            34
-          ],
-          [
-            18,
-            0,
-            58
-          ]
+          [28, 0, -22],
+          [12, 0, -44],
+          [40, 0, 34],
+          [18, 0, 58]
         ]
       },
       {
@@ -101,88 +82,59 @@
         "marker": "back_gap",
         "ground": true,
         "spots": [
-          [
-            -12,
-            0,
-            -9
-          ],
-          [
-            -26,
-            0,
-            12
-          ],
-          [
-            -44,
-            0,
-            2
-          ],
-          [
-            -34,
-            0,
-            -12
-          ]
+          [-12, 0, -9],
+          [-26, 0, 12],
+          [-44, 0, 2],
+          [-34, 0, -12]
         ]
       },
       {
         "id": "alleys",
         "hint": "tucked in one of the alleys between the houses",
         "marked": true,
-      "marker": "resident_w",
+        "marker": "resident_w",
         "spots": [
-          [
-            20.5,
-            0.0,
-            -9.75
-          ],
-          [
-            -67.25,
-            0.0,
-            7.0
-          ],
-          [
-            -24.25,
-            0.0,
-            -11.0
-          ],
-          [
-            -60.75,
-            0.0,
-            109.5
-          ],
-          [
-            -20.0,
-            0.0,
-            112.25
-          ]
-        ]
+          [20.5, 0.0, -9.75],
+          [-67.25, 0.0, 7.0],
+          [-24.25, 0.0, -11.0],
+          [-60.75, 0.0, 109.5],
+          [-20.0, 0.0, 112.25]
+        ],
+        "layouts": {
+          "port_round": {
+            "marker": "resident_w",
+            "spots": [
+              [-0.56, 0.0, -18.97],
+              [-61.06, 0.0, 27.53],
+              [31.19, 0.0, -33.72],
+              [-18.31, 0.0, 188.28],
+              [17.19, 0.0, 196.78]
+            ]
+          }
+        }
       },
       {
         "id": "rooftops",
         "hint": "up on one of the low house roofs. Bring something that flies",
         "marked": true,
-      "marker": "resident_w",
+        "marker": "resident_w",
         "spots": [
-          [
-            -67.0,
-            4.0,
-            -10.5
-          ],
-          [
-            29.5,
-            3.5,
-            13.5
-          ],
-          [
-            -12.5,
-            3.5,
-            11.0
-          ],
-          [
-            4.5,
-            4.0,
-            -3.0
-          ]
-        ]
+          [-67.0, 4.0, -10.5],
+          [29.5, 3.5, 13.5],
+          [-12.5, 3.5, 11.0],
+          [4.5, 4.0, -3.0]
+        ],
+        "layouts": {
+          "port_round": {
+            "marker": "resident_w",
+            "spots": [
+              [20.44, 4.0, -46.22],
+              [-8.56, 3.5, 20.78],
+              [-22.56, 4.0, -24.22],
+              [28.94, 4.0, -12.22]
+            ]
+          }
+        }
       }
     ]
   }

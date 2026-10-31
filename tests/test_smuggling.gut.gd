@@ -69,11 +69,12 @@ func test_offer_names_the_goods_and_the_area() -> void:
 	var j := _offered()
 	assert_false(j.is_empty(), "Oda offers the run once the story reaches it")
 	assert_eq(str(j.location), "port_town", "the home job stays at the port")
-	assert_eq(str(WorldState.smuggle.location), "port_town")
+	var offer: Dictionary = WorldState.smuggle_offers[JOB]
+	assert_eq(str(offer.location), "port_town")
 	assert_false(str(j.text).contains("%"), "the text is filled in")
-	assert_true(str(j.text).contains(str(WorldState.smuggle.hint)), "she says where")
-	var value := int(content.get_item(str(WorldState.smuggle.item)).value)
-	assert_eq(int(j.pays), int(WorldState.smuggle.count) * value * 2, "pays what the fence gives: twice the value")
+	assert_true(str(j.text).contains(str(offer.hint)), "she says where")
+	var value := int(content.get_item(str(offer.item)).value)
+	assert_eq(int(j.pays), int(offer.count) * value * 2, "pays what the fence gives: twice the value")
 	assert_true(WorldState.smuggle_drop().is_empty(), "nothing in the world until you take it")
 
 
@@ -83,7 +84,7 @@ func test_loop_repeats_and_moves_the_drop() -> void:
 	for run in 8:
 		var j := _offered()
 		assert_false(j.is_empty(), "offered again on run %d" % run)
-		areas.append(str(WorldState.smuggle.area))
+		areas.append(str(WorldState.smuggle_offers[JOB].area))
 		_run_once()
 		assert_false(WorldState.carrying_contraband())
 	for i in range(1, areas.size()):

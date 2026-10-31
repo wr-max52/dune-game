@@ -14,6 +14,7 @@ extends Node3D
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 
 ## Bake settings. Agent sizes are whole multiples of the cells so nothing gets
 ## rounded (Godot warns when they do). Radius 0.5 is the 0.4 capsule plus margin.
@@ -98,13 +99,17 @@ static func _stood_on(town, b: Dictionary) -> bool:
 
 
 ## Every box as 12 triangles (36 vertices), in world space. The round pit is a
-## hollow shell, so it gives its real triangles instead (its box would be a lid).
+## hollow shell, so it gives its real triangles instead (its box would be a lid);
+## so does a round wall (its box is the whole town).
 static func box_faces(town) -> PackedVector3Array:
 	var faces := PackedVector3Array()
 	for b in town.boxes():
 		if str(b.kind) == "bowl":
 			for m in PitBowl.parts(b, town).values():
 				faces.append_array((m as ArrayMesh).get_faces())
+			continue
+		if str(b.kind) == "ring":                # issue #237: a round wall, piece by piece
+			faces.append_array(RingWall.faces(b))
 			continue
 		var xf: Transform3D
 		var half: Vector3

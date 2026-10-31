@@ -1,18 +1,22 @@
 extends RefCounted
-## Town layout (M9). Reads port_town from the data layer and validates it.
+## Town layout (M9). Reads port_town from the data layer and validates it. Issue
+## #237: the town is built to a saved layout (content/core/towns/: port_square).
 ## Pure: no nodes. The scene builder (town_demo.gd) and the walk trace use it.
-## The validator mirrors docs/town/validate_town.py rule for rule (V1 to V8).
+## The validator mirrors docs/town/validate_town.py rule for rule (V1 to V9).
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 
 var data: Dictionary = {}
 
 
-func load_town(town_id: String = "port_town") -> bool:
+## `layout` (issue #237): build the town to that saved layout (content/core/towns/)
+## instead of the one its planet picks, e.g. load_town("port_town", "port_square").
+func load_town(town_id: String = "port_town", layout: String = "") -> bool:
 	var cc := CoreContent.new()
 	if not cc.load_from():
 		return false
-	data = cc.get_location(town_id)
+	data = cc.town_from_layout(layout, town_id) if layout != "" else cc.get_location(town_id)
 	return not data.is_empty()
 
 
@@ -162,6 +166,30 @@ func validate() -> Array:
 				if str(b.kind) in blocking:
 					if _segment_rect_dist(pts[k - 1], pts[k], b) <= clearance:
 						errs.append("V8 route %s segment %d hits %s" % [r.id, k, b.id])
+
+	# V9 (issue #237) a round wall (kind "ring") blocks like a wall, piece by
+	# piece, and is open only at its gaps: no marker within clearance of a piece
+	# (at a height the wall stands at), no route segment either.
+	for b in bs:
+		if str(b.kind) != "ring":
+			continue
+		var t := RingWall.info(b)
+		var ps := RingWall.pieces(b)
+		for m in markers():
+			var p := _v3(m.pos)
+			if float(t.y0) <= p.y and p.y < float(t.y1) and RingWall.distance(b, p.x, p.z, ps, t) <= clearance:
+				errs.append("V9 marker blocked: %s by %s" % [m.id, b.id])
+		for r in routes():
+			var pts: Array = r.points
+			for k in range(1, pts.size()):
+				var a := Vector2(float(pts[k - 1][0]), float(pts[k - 1][1]))
+				var c := Vector2(float(pts[k][0]), float(pts[k][1]))
+				var n := maxi(2, int(a.distance_to(c) / 0.1))
+				for s in n + 1:
+					var q := a.lerp(c, float(s) / float(n))
+					if RingWall.distance(b, q.x, q.y, ps, t) <= clearance:
+						errs.append("V9 route %s segment %d hits %s" % [r.id, k, b.id])
+						break
 	return errs
 
 
