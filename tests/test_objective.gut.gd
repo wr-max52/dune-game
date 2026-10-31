@@ -67,7 +67,7 @@ func test_a_smuggling_run_points_at_the_drop_area_then_the_fence() -> void:
 	assert_eq(_target(), "npc:cantina_owner", "the job is on offer: ask Oda")
 	assert_true(WorldState.accept_job("j_smuggle_run"))
 	var drop := WorldState.smuggle_drop()
-	assert_eq(_target(), "marker:" + str(drop.marker), "the drop's area, not the exact spot")
+	assert_eq(_target(), "drop:" + str(drop.marker), "near the drop (its area's marker until it is placed)")
 	assert_string_contains(_text(), str(WorldState.smuggle.hint))
 	assert_string_contains(_log_text(), WorldState.smuggle_goods_text(), "the log says what the goods are")
 	assert_true(WorldState.inventory.pick_up(drop))

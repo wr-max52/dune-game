@@ -2,6 +2,18 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #266, the beetle-centipede beast (2026-10-31)
+
+**Checked:** the headless beast trace (`scenes/beast_trace.gd`, every step
+passed) and two rendered stills. The full test suite was not run for this PR.
+
+- **The legs swing; they don't plant.** The steps are a wave keyed to distance
+  crawled. Feet can slide or dip a little into slopes.
+- **The body is a chain of spheres**, so it still passes through rocks and
+  buildings like the blob did.
+- **The puff from its tail is the blob's old puff.** It is not real particles.
+- **Its fart sound is still the blob's.**
+
 ## After issue #220, the beast (2026-10-30)
 
 **Checked:** the smoke test, a headless boot of the town, and the beast trace
