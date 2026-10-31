@@ -1,0 +1,7 @@
+{
+  "note": "Fall damage (issue #274). Read by src/systems/combat/fall_damage.gd for the player only (guards share the body and never take it). Speeds are m/s straight down (along the planet's up) the frame before you touch the ground; gravity is 20 m/s^2, so a drop of h metres lands at sqrt(40 h). At or under safe_speed (a 6.4 m drop) nothing happens; from there the damage rises in a straight line to lethal_damage at lethal_speed (a 40 m drop), and is more past it. lethal_damage is the player's base health, so worn armour (more health) takes a fall a little better. terminal_speed caps how fast you fall: a jetpack burn (thrust 36 against gravity 20, 1.8 s of fuel) takes about 29 m/s off it, enough to walk away from an ejection.",
+  "safe_speed": 16.0,
+  "lethal_speed": 40.0,
+  "lethal_damage": 100,
+  "terminal_speed": 45.0
+}
