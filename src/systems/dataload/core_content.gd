@@ -29,6 +29,7 @@ var pickups: Dictionary = {}       # location-id -> Dictionary (items lying in t
 var worlds: Dictionary = {}        # world-id -> Dictionary (terrain, landmarks, atmosphere) (M14)
 var planets: Dictionary = {}       # planet-id -> Dictionary (a planet's config: type, town size, style) (issue #45)
 var names: Dictionary = {}         # bank-id -> Dictionary (the name library: lists, tongues, kinds) (issue #15)
+var towns: Dictionary = {}         # layout-id -> Dictionary (a saved town layout at its size: port_square) (issue #237)
 var _loaded := false
 
 
@@ -51,6 +52,7 @@ func load_from(root: String = ROOT) -> bool:
 	worlds = {}
 	names = {}
 	planets = {}
+	towns = {}
 
 	manifest = _read_json_at(root_path(root, "manifest.json"))
 	if manifest.is_empty():
@@ -102,6 +104,17 @@ func load_from(root: String = ROOT) -> bool:
 	_load_category(root, "names", names)
 	# Issue #45: planets (the generator turns each into a town and a world).
 	_load_category(root, "planets", planets)
+	# Issue #237: saved town layouts. A planet names its town (the place: port_town)
+	# and the layout it is built to; that town is also a location, so get_location
+	# ("port_town") is the planet's chosen layout.
+	_load_category(root, "towns", towns)
+	for pid in planets:
+		var town_id := str(planets[pid].get("town", ""))
+		var layout := str(planets[pid].get("town_layout", ""))
+		if town_id != "" and layout != "" and not locations.has(town_id):
+			var t := town_from_layout(layout, town_id)
+			if not t.is_empty():
+				locations[town_id] = t
 
 	_loaded = true
 	return true
@@ -139,6 +152,19 @@ func get_faction(id: String) -> Dictionary:
 
 func get_location(id: String) -> Dictionary:
 	return locations.get(id, {})
+
+
+## Issue #237: a saved town layout as the town `town_id` (a deep copy: its id is
+## the town's, its layout the layout's id). Empty when there is no such layout.
+func town_from_layout(layout: String, town_id: String) -> Dictionary:
+	var src: Dictionary = towns.get(layout, {})
+	if src.is_empty():
+		push_warning("CoreContent: no town layout " + layout)
+		return {}
+	var t: Dictionary = src.duplicate(true)
+	t["id"] = town_id
+	t["layout"] = layout
+	return t
 
 
 func get_mission(id: String) -> Dictionary:
@@ -186,9 +212,24 @@ func get_vendor(id: String) -> Dictionary:
 	return vendors.get(id, {})
 
 
-## Pickups placed in a location (an empty list when there are none).
-func get_pickups(location_id: String) -> Array:
-	return pickups.get(location_id, {}).get("pickups", [])
+## Pickups placed in a location (an empty list when there are none). Issue #237:
+## in a town built to `layout`, an entry's "layouts": { <layout>: {...} } block
+## (where it lies in that layout: marker, offset) is laid over it. Same id and
+## taken flag in every layout, so a pickup taken stays taken.
+func get_pickups(location_id: String, layout: String = "") -> Array:
+	var list: Array = pickups.get(location_id, {}).get("pickups", [])
+	if layout == "":
+		return list
+	var out: Array = []
+	for e in list:
+		var over: Dictionary = e.get("layouts", {}).get(layout, {})
+		if over.is_empty():
+			out.append(e)
+			continue
+		var d: Dictionary = e.duplicate(true)
+		d.merge(over, true)
+		out.append(d)
+	return out
 
 
 func get_world(id: String) -> Dictionary:

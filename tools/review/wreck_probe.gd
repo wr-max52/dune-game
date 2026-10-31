@@ -47,7 +47,7 @@ func _review() -> void:
 	sand.collider_center = WorldGround._v3(landmark.at)
 	# Match the real port's sand seating, so a wall-height vista is not taken
 	# from inside an unflattened dune. No town/NPC scenes need to be loaded.
-	var town: Dictionary = ItemKit._read_json("res://content/core/locations/port_town.json")
+	var town: Dictionary = ItemKit._read_json("res://content/core/towns/port_square.json")
 	var floor_rect := Rect2()
 	var sunken: Array = []
 	for b in town.boxes:

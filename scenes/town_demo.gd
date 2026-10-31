@@ -20,6 +20,7 @@ const Greybox := preload("res://src/systems/world/greybox.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 const StairTower := preload("res://src/systems/world/stair_tower.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 const LaunchPad := preload("res://src/systems/flow/launch_pad.gd")
 const CharacterBody := preload("res://src/systems/player/character_body.gd")
 const CameraRigNode := preload("res://src/systems/camera/camera_rig_node.gd")
@@ -75,6 +76,7 @@ var built_markers := 0
 var nav: TownNav                      ## the walkable surface NPCs path on
 var npcs: Array = []                  ## NpcBody, one per Remnant soldier marker (the garrison)
 var stage_performers: Array = []      ## ambient NPCs (dance, do not join a combat group)
+var club_look: ClubDressing           ## issue #261: the club's room and the band's instruments (null without one)
 var garrison: Garrison                ## M15: runs every trooper in town (null with npc_brains off)
 var locals: Array = []                ## NpcBody, one per marker whose profile is in the "locals" faction
 var townsfolk: Townsfolk              ## runs every local (null with npc_brains off)
@@ -199,6 +201,7 @@ func build_plan(staged_build: bool) -> Array:
 	if use_look:
 		add.call("look", SHELL, func(): _build_look(); return true)
 		add.call("decor", SHELL, func(): _build_decor(); return true)
+		add.call("club_look", LATER, func(): _build_club_look(); return true)    # issue #261: the club's room and instruments
 		add.call("dress_desert", SHELL, func():
 			if terrain != null:
 				_dress_desert()
@@ -361,6 +364,16 @@ func _build_decor() -> void:
 	decor.dress(town, look)
 
 
+## Issue #261: the cantina dressed as its club (the town's "club" block), and the
+## band's instruments in front of them.
+func _build_club_look() -> void:
+	if town.data.get("club", {}).is_empty():
+		return
+	club_look = ClubDressing.new()
+	add_child(club_look)
+	club_look.dress(town, self)
+
+
 func _build_shot_camera() -> void:
 	shots = _load_shots()
 	camera = Camera3D.new()
@@ -417,6 +430,8 @@ func _build_boxes() -> void:
 			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.tower_parts(b)), color)
 		elif b.kind == "bowl":
 			node = Greybox.make_trimesh(b.id, StairTower.merged(PitBowl.parts(b, town)), color)
+		elif b.kind == "ring":
+			node = RingWall.make_body(b, color)       # issue #237: a round wall
 		elif b.kind == "lookout":
 			var tower: Dictionary = town.get_box(str(b.get("stair", "")))
 			node = Greybox.make_trimesh(b.id, StairTower.merged(StairTower.lookout_parts(b, tower)), color)
@@ -750,6 +765,8 @@ func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String
 	(root if root != null else self).add_child(npc)
 	if bool(soldier.get("ambient", false)):
 		stage_performers.append(npc)
+		if bool(soldier.get("band", false)):
+			npc.died.connect(func(): Sound.set_club_live(false))   # issue #261: kill the band, the music stops
 	elif npc.faction == "locals":
 		locals.append(npc)
 	else:

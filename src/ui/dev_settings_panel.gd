@@ -259,7 +259,31 @@ func _world_tab() -> Control:
 	dogfight.toggled.connect(func(on): GameFlow.set_space_dogfight(on))
 	_row(v, "", dogfight)
 	_refreshers.append(func(): dogfight.set_pressed_no_signal(GameFlow.space_dogfight()))
+	# Issue #237: which saved layout the home town is built to (this run only).
+	_section(v, "Town")
+	var layout := OptionButton.new()
+	var ids: Array = PlanetGen.layouts()
+	ids.sort()
+	for id in ids:
+		layout.add_item(str(id))
+	layout.item_selected.connect(func(i): set_town_layout(str(ids[i])))
+	_row(v, "Home town layout", layout)
+	_refreshers.append(func():
+		var here := str(demo.planet.get("town", {}).get("layout", "")) if demo != null and "planet" in demo else ""
+		layout.select(ids.find(here))
+		layout.disabled = demo == null or str(demo.planet.get("id", "")) != PlanetGen.home_id())
 	return v.get_parent()
+
+
+## Issue #237: build the home town to `layout` (content/core/towns/) and reload it.
+func set_town_layout(layout: String, reload := true) -> void:
+	PlanetGen.set_layout(PlanetGen.home_id(), layout)
+	if not reload or not is_inside_tree():
+		return
+	_save()
+	visible = false
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 func _show_hour() -> void:

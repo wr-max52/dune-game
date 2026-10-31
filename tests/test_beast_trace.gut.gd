@@ -1,6 +1,6 @@
 extends GutTest
 ## Issue #220: the planet's beast, from the headless trace (scenes/beast_trace.gd):
-## it is built from the home planet's data, named, out in the desert; it is purple,
+## it is built from the home planet's data, named, out in the desert; it is a beetle-centipede (issue #266),
 ## rolls along the ground and farts; touching it kills the player, who wakes again;
 ## the player's hits set it chasing until they are 1 km away; it has 1000 health
 ## and stays dead; the locals and the AI characters know it by name.
@@ -20,7 +20,10 @@ func _true(k: String) -> void:
 func test_built_from_the_planet() -> void:
 	_true("BEAST_BUILT")
 	_true("NAME_FROM_PLANET")
-	_true("PURPLE")
+	assert_gte(int(t.get("SEGMENTS", 0)), 10, "a long body")
+	assert_eq(int(t.get("LEGS", 0)), int(t.get("SEGMENTS", 0)) * 2, "a pair of legs per segment")
+	assert_eq(int(t.get("MANDIBLES", 0)), 2)
+	_true("DESERT_HIDE")
 	assert_eq(int(t.get("HP", 0)), 1000)
 	assert_gt(float(t.get("RADIUS", 0)), 2.5, "a large beast")
 	assert_gt(int(t.get("HOME_FROM_TOWN_M", 0)), 300, "its home is out in the desert, not in town")
@@ -36,7 +39,9 @@ func test_the_locals_know_it() -> void:
 func test_rolls() -> void:
 	assert_gt(float(t.get("ROLLED_M", 0)), 3.0)
 	_true("MOVED")
-	_true("SPUN")
+	_true("BODY_FOLLOWS")
+	_true("LEGS_STEP")
+	_true("TAIL_ON_GROUND")
 	_true("ON_GROUND")
 
 
@@ -47,6 +52,7 @@ func test_farts() -> void:
 
 func test_touch_kills() -> void:
 	_true("DIED_ON_TOUCH")
+	_true("BODY_KILLS")
 	assert_eq(int(t.get("KILLS", 0)), 1)
 	_true("WOKE")
 	_true("WOKE_AWAY_FROM_BEAST")

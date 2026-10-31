@@ -4,12 +4,124 @@ extends GutTest
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 
 
 func _town() -> TownLayout:
 	var t := TownLayout.new()
 	assert_true(t.load_town("port_town"), "port_town loads from content/core")
 	return t
+
+
+## Issue #237: port_town is its planet's saved layout, and either layout loads.
+func test_port_town_is_a_saved_layout() -> void:
+	var t := _town()
+	assert_eq(str(t.data.id), "port_town")
+	assert_ne(str(t.data.get("layout", "")), "", "built to a named layout")
+	var sq := TownLayout.new()
+	assert_true(sq.load_town("port_town", "port_square"), "port_square loads by name")
+	assert_eq(int(sq.data.size), 50)
+	assert_eq(sq.validate(), [], "port_square is valid")
+	assert_false(TownLayout.new().load_town("port_town", "no_such_layout"), "an unknown layout is no town")
+
+
+## Issue #237: the round port. Valid, about twice the floor space, round walled,
+## and everything that points at the square port is there too.
+func _round() -> TownLayout:
+	var t := TownLayout.new()
+	assert_true(t.load_town("port_town", "port_round"), "port_round loads by name")
+	return t
+
+
+func test_round_port_validates_clean() -> void:
+	var t := _round()
+	assert_eq(t.validate(), [], "port_round has no validation errors")
+	assert_eq(int(t.data.size), 67)
+
+
+func test_round_port_keeps_every_marker_and_route() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	for m in sq.markers():
+		assert_false(t.get_marker(str(m.id)).is_empty(), "port_round has marker " + str(m.id))
+	for r in sq.routes():
+		assert_false(t.get_route(str(r.id)).is_empty(), "port_round has route " + str(r.id))
+	for id in ["bar_counter", "cantina_roof", "cantina_stage", "stair_tower", "pit_bowl", "pit_floor", "gate_lintel", "watchtower", "spare_pad"]:
+		assert_false(t.get_box(id).is_empty(), "port_round has box " + id)
+
+
+## The club cantina (issue #261) moves whole: its band and patrons keep where
+## they stand and what they look at, relative to the bar.
+func test_round_port_carries_the_club_cantina() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	assert_eq(t.data.get("club", {}), sq.data.get("club", {}), "the same club")
+	var shift := t.marker_pos("cantina_owner") - sq.marker_pos("cantina_owner")
+	for m in sq.markers():
+		if not (str(m.id).begins_with("band_") or str(m.id).begins_with("patron_")):
+			continue
+		assert_almost_eq(t.marker_pos(str(m.id)).distance_to(sq.marker_pos(str(m.id)) + shift), 0.0, 0.01, str(m.id) + " moved with the cantina")
+		if m.has("face"):
+			var a := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2])) + shift
+			var f: Array = t.get_marker(str(m.id)).face
+			assert_almost_eq(Vector3(float(f[0]), float(f[1]), float(f[2])).distance_to(a), 0.0, 0.01, str(m.id) + " looks at the same thing")
+
+
+func test_round_port_is_round_and_twice_the_size() -> void:
+	var t := _round()
+	var wall := t.get_box("town_wall")
+	assert_eq(str(wall.get("kind", "")), "ring", "a round town wall")
+	var info := RingWall.info(wall)
+	assert_almost_eq(float(info.t), 2.0, 0.01, "as thick as the square wall")
+	assert_almost_eq(float(info.y1) - float(info.y0), 6.0, 0.01, "and as tall")
+	var inside := PI * float(info.ri) * float(info.ri)
+	assert_between(inside / (196.0 * 146.0), 1.9, 2.4, "about twice the square port's floor")
+	var bowl := t.get_box("pit_bowl")
+	assert_gt(float(bowl.max[0]) - float(bowl.min[0]), 56.0, "a wider bowl than the 56 m pit")
+	assert_gte(t.boxes().filter(func(b): return str(b.id).begins_with("surface_pad_")).size(), 8, "pads round the bowl")
+	# Two gate towers, each manned, either side of the gate.
+	var gate := t.marker_pos("gate")
+	for pair in [["watchtower", "trooper_tower"], ["watchtower_s", "trooper_tower_s"]]:
+		var b := t.get_box(pair[0])
+		assert_false(b.is_empty(), pair[0])
+		assert_eq(str(t.get_marker(pair[1]).get("role", "")), "trooper_post", pair[1] + " mans it")
+		assert_lt(Vector2(float(b.min[0]) - gate.x, (float(b.min[2]) + float(b.max[2])) * 0.5 - gate.z).length(), 30.0, pair[0] + " by the gate")
+	assert_true(sign(float(t.get_box("watchtower").min[2])) != sign(float(t.get_box("watchtower_s").min[2])), "one each side")
+
+
+func test_round_wall_is_open_only_at_its_gates() -> void:
+	var t := _round()
+	var wall := t.get_box("town_wall")
+	var info := RingWall.info(wall)
+	var ps := RingWall.pieces(wall)
+	for g in wall.gaps:
+		var a := deg_to_rad(float(g.deg))
+		var p := Vector2(cos(a), sin(a)) * float(info.rm)
+		assert_gt(RingWall.distance(wall, p.x, p.y, ps, info), 1.0, "the %s is open" % str(g.id))
+	var shut := Vector2(cos(deg_to_rad(90.0)), sin(deg_to_rad(90.0))) * float(info.rm)
+	assert_eq(RingWall.distance(wall, shut.x, shut.y, ps, info), 0.0, "the wall is shut between them")
+
+
+func test_v9_catches_a_marker_in_the_round_wall() -> void:
+	var t := _round()
+	var copy: Dictionary = t.data.duplicate(true)
+	for m in copy.markers:
+		if m.id == "resident_e":
+			m.pos = [0.0, 0.0, 141.0]
+	var t2 := TownLayout.new()
+	t2.load_from_dict(copy)
+	assert_true(_has_rule(t2.validate(), "V9"), "a marker in the wall breaks V9")
+
+
+func test_v9_catches_a_route_through_the_round_wall() -> void:
+	var t := _round()
+	var copy: Dictionary = t.data.duplicate(true)
+	copy.routes.append({ "id": "through_wall", "points": [[0, 130], [0, 150]] })
+	var t2 := TownLayout.new()
+	t2.load_from_dict(copy)
+	assert_true(_has_rule(t2.validate(), "V9"), "a route through the wall breaks V9")
 
 
 ## Deep-copy the real town, break one thing, return the validator errors.
@@ -40,8 +152,8 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
 	assert_eq(t.boxes().size(), 182)   # issue #76: + the barracks landing pad
-	assert_eq(t.markers().size(), 31)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen
-	assert_eq(t.routes().size(), 14)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout
+	assert_eq(t.markers().size(), 42)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen; issue #261: + the band of three and eight club patrons
+	assert_eq(t.routes().size(), 17)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout; issue #261: + three club strolls
 	assert_eq(t.zones().size(), 8)
 
 
@@ -227,12 +339,17 @@ func test_cantina_stage_and_patrons() -> void:
 	assert_eq(str(stage.kind), "cover", "you cannot walk through it")
 	var roof := t.get_box("cantina_roof")
 	assert_gte(float(roof.min[1]), 8.0, "a tall hall")
+	# The bar stools (patron_1, _2, ...) face the cantina owner; issue #261's club
+	# patrons stand at tables and booths or stroll, facing their own way.
 	var patrons := 0
 	for m in t.markers():
-		if str(m.id).begins_with("patron_"):
+		var id := str(m.id)
+		if id.begins_with("patron_") and id.trim_prefix("patron_").is_valid_int():
 			patrons += 1
 			var f := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
 			assert_almost_eq(f.distance_to(t.marker_pos("cantina_owner")), 0.0, 0.5, "%s faces the cantina owner" % m.id)
+		elif id.begins_with("patron_"):
+			assert_true(m.has("face") or m.has("patrol"), "%s faces somewhere or strolls" % id)
 	assert_gte(patrons, 3, "locals at the bar")
 
 

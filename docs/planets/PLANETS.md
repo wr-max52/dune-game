@@ -43,6 +43,7 @@ where `at` puts it. Fly into it to land there.
 | `encounter` | Optional. The space fight when you climb out of this planet's atmosphere (`"orbital_skirmish"`), or `""` for a quiet sky. Default: the landing pad's. |
 | `features` | The port only: `training_range`, `speeders`, `landforms`, `pickups`. |
 | `town` / `world` | The port only: use a hand-built town and world instead of generated ones. |
+| `town_layout` | With `town`: the saved layout the town is built to (`content/core/towns/<id>.json`, issue #237), e.g. `port_square` (size 50). The town keeps its id (`port_town`) whatever layout it has; `town_size` should match the layout's `size`. F11 > World > Town builds the home town to another layout for the rest of the run. |
 
 ## Planet types
 

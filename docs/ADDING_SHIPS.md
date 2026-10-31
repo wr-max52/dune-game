@@ -41,7 +41,7 @@ Every new id also goes in `content/core/manifest.json` under `ships`, `weapons`,
    - `label`: its make and model, from the name generator (`equipment`, class `ship`).
 4. Add the id to `ships` in the manifest.
 5. To park it in the port so the player can fly it, give a `ship` box in
-   `content/core/locations/port_town.json` a `"ship": "<id>"` and size the box to the
+   `content/core/towns/port_square.json` a `"ship": "<id>"` and size the box to the
    model (issue #43). E beside it boards it.
 
 ### Flying it in the atmosphere (M14)

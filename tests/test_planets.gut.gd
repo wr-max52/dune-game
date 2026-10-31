@@ -143,17 +143,37 @@ func test_the_port_is_unchanged() -> void:
 	assert_eq(PlanetGen.home_id(), "port_desert")
 
 
-func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
+## Issue #237: the port is built to a saved layout, picked by id and size, and
+## keeps its id (port_town) whichever layout it is.
+func test_the_port_picks_a_saved_layout() -> void:
+	var p := PlanetGen.build("port_desert", cc)
+	assert_eq(str(p.town.layout), str(cc.planets.port_desert.town_layout), "the layout its file names")
+	assert_eq(int(p.town.size), int(p.size), "at the layout's size")
+	assert_eq(str(p.town.id), "port_town", "the place keeps its id")
+	assert_true("port_square" in PlanetGen.layouts(cc), "today's port is saved as port_square")
+	var sq: Dictionary = cc.town_from_layout("port_square", "port_town")
+	assert_eq(int(sq.size), 50, "port_square is size 50")
+	assert_eq(str(cc.towns.port_square.id), "port_square", "the saved layout itself is untouched")
+	PlanetGen.set_layout("port_desert", "port_square")
+	var o := PlanetGen.build("port_desert", cc)
+	assert_eq(str(o.town.layout), "port_square", "F11 builds it to another layout")
+	PlanetGen.set_layout("port_desert", "")
+	assert_false(PlanetGen.layout_override.has("port_desert"), "and back")
+
+
+func test_only_grit_station_gets_one_dancer_next_to_its_stage() -> void:
 	var station := PlanetGen.build("grit_station", cc)
 	var station_town := TownLayout.new()
 	station_town.load_from_dict(station.town)
 	var dancers: Array = station_town.markers().filter(func(m): return str(m.get("soldier", "")) == "cantina_dancer")
-	assert_eq(dancers.size(), 1, "the station has exactly one performer")
+	assert_eq(dancers.size(), 1, "the station has exactly one dancer")
+	# Issue #261: the DJ has the stage; she dances on the floor beside it.
 	var dancer_pos: Vector3 = station_town.marker_pos("cantina_dancer")
 	var stage: Dictionary = station_town.get_box("cantina_stage")
-	assert_almost_eq(dancer_pos.y, float(stage.max[1]), 0.001, "feet are on the stage surface")
-	assert_true(dancer_pos.x >= float(stage.min[0]) and dancer_pos.x <= float(stage.max[0]), "stage X bounds")
-	assert_true(dancer_pos.z >= float(stage.min[2]) and dancer_pos.z <= float(stage.max[2]), "stage Z bounds")
+	assert_almost_eq(dancer_pos.y, 0.0, 0.001, "on the floor, not the stage")
+	var c := Vector2((float(stage.min[0]) + float(stage.max[0])) * 0.5, (float(stage.min[2]) + float(stage.max[2])) * 0.5)
+	var r := (float(stage.max[0]) - float(stage.min[0])) * 0.5
+	assert_between(Vector2(dancer_pos.x, dancer_pos.z).distance_to(c), r, r + 4.0, "next to the stage")
 	var other := PlanetGen.make({ "id": "dance_test", "type": "sand", "town_size": 1, "seed": 45 }, cc)
 	var other_town := TownLayout.new()
 	other_town.load_from_dict(other.town)
@@ -161,27 +181,27 @@ func test_only_grit_station_gets_one_dancer_on_its_cantina_stage() -> void:
 		"generated towns without the station flag stay unchanged")
 
 
-func test_four_short_gray_homes_face_the_station_cantina_street() -> void:
+func test_the_station_dome_is_one_big_rave() -> void:
 	var station_town := TownLayout.new()
 	station_town.load_from_dict(PlanetGen.build("grit_station", cc).town)
-	assert_eq(station_town.validate(), [], "the station town still validates with the homes")
-	var homes: Array = station_town.boxes().filter(func(b):
-		return str(b.get("id", "")).begins_with("cantina_home_"))
-	assert_eq(homes.size(), 4)
-	var north := 0
-	for b in homes:
-		assert_eq(b.get("style"), "gray")
-		assert_eq(b.get("zone"), "cantina_homes")
-		assert_lte(float(b.max[1]), 4.0, "short houses, not towers")
-		if str(b.id).contains("_n_"):
-			north += 1
-			assert_eq(b.get("face"), "-z", "north doors face toward the street")
-		else:
-			assert_eq(b.get("face"), "+z", "south doors face toward the street")
-	assert_eq(north, 2)
-	var other := PlanetGen.make({ "id": "homes_test", "type": "sand", "town_size": 1, "seed": 45 }, cc)
-	assert_eq((other.town.boxes as Array).filter(func(b): return str(b.id).begins_with("cantina_home_")).size(), 0,
-		"only the sealed station gets them")
+	assert_eq(station_town.validate(), [], "the station town still validates")
+	assert_eq(str(station_town.data.club.style), "rave")
+	for id in ["cantina_wall_w", "cantina_wall_n", "cantina_wall_s", "cantina_wall_e_s", "cantina_wall_e_n", "cantina_roof"]:
+		assert_true(station_town.get_box(id).is_empty(), "no cantina building: " + id)
+	assert_eq(station_town.boxes().filter(func(b): return str(b.id).begins_with("cantina_home_")).size(), 0, "no homes in the rave")
+	assert_false(station_town.get_box("bar_counter").is_empty(), "the bar stays")
+	assert_false(station_town.get_box("stall_fn1").is_empty(), "the merchant's table stays")
+	var zone: Dictionary = station_town.data.zones.filter(func(z): return z.id == "cantina")[0]
+	var st: Dictionary = station_town.data.station
+	assert_almost_eq(float(zone.max[0]) - float(zone.min[0]), float(st.radius) * 2.0, 0.01, "the club is the whole dome")
+	# Walking in from the pad (the gate is on +x, so you face -x) the stage is on
+	# your right: -z.
+	var stage: Dictionary = station_town.get_box("cantina_stage")
+	assert_lt(float(stage.max[2]), 0.0, "the stage is to the right of the way in")
+	var band := station_town.markers().filter(func(m): return str(m.get("soldier", "")).begins_with("club_"))
+	assert_eq(band.size(), 1, "only a DJ")
+	assert_eq(str(band[0].prop), "dj_desk")
+	assert_gte(station_town.markers().filter(func(m): return str(m.get("soldier", "")) == "local_raver").size(), 8)
 
 
 func test_the_asteroid_station() -> void:

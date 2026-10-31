@@ -674,8 +674,9 @@ func _look_lookout(b: Dictionary, _lx: float, _lz: float, _h: float) -> void:
 
 
 ## The round stage in the middle of the cantina: lit rim, a step all round,
-## speakers at the back, a microphone, and a lighting ring hung from the ceiling.
-## Nobody on it.
+## speakers at the back and a microphone (not with a band on it, "band": their
+## instruments and the club's speakers stand there instead), and a lighting ring
+## hung from the ceiling.
 func _look_stage(b: Dictionary, lx: float, _lz: float, h: float) -> void:
 	var r := lx * 0.5
 	var ceiling := 9.0
@@ -685,15 +686,16 @@ func _look_stage(b: Dictionary, lx: float, _lz: float, h: float) -> void:
 	part(cyl(r - 0.05, r - 0.05, 0.06, 40), mats.flat(Color("#2a2522"), 0.35, 0.3), Vector3(0, h - 0.03, 0))
 	part(ring(r - 0.12, r + 0.02, h - 0.02, h + 0.03, 40), door_glow, Vector3.ZERO)
 	part(ring(r, r + 0.45, 0.0, 0.22, 40), trim, Vector3.ZERO)
-	for s in [-1.0, 1.0]:
+	for s in ([] if bool(b.get("band", false)) else [-1.0, 1.0]):
 		var at := Transform3D(Basis(Vector3.UP, s * 0.35), Vector3(-r * 0.62, h, s * r * 0.5))
 		_at(at, box(0.7, 1.3, 0.75), panel, Vector3(0, 0.65, 0))
 		_at(at, cyl(0.24, 0.24, 0.06, 16), seam, Vector3(0.36, 0.42, 0), AXIS_X)
 		_at(at, cyl(0.12, 0.12, 0.06, 12), seam, Vector3(0.36, 1.0, 0), AXIS_X)
 		_at(at, box(0.04, 0.05, 0.5), door_glow, Vector3(0.36, 1.22, 0))
-	part(cyl(0.02, 0.02, 1.5, 6), metal, Vector3(r * 0.55, h + 0.75, 0))
-	part(cyl(0.18, 0.2, 0.03, 12), metal, Vector3(r * 0.55, h + 0.015, 0))
-	part(ball(0.05, 0.12, false, 8), seam, Vector3(r * 0.55, h + 1.55, 0))
+	if not bool(b.get("band", false)):          # issue #261: a band's instruments stand there instead
+		part(cyl(0.02, 0.02, 1.5, 6), metal, Vector3(r * 0.55, h + 0.75, 0))
+		part(cyl(0.18, 0.2, 0.03, 12), metal, Vector3(r * 0.55, h + 0.015, 0))
+		part(ball(0.05, 0.12, false, 8), seam, Vector3(r * 0.55, h + 1.55, 0))
 	# The lighting ring, hung on three rods, with lamps aimed down at the empty stage.
 	var ry := ceiling - 2.6
 	part(ring(r - 0.6, r - 0.35, ry - 0.12, ry + 0.12, 40), trim, Vector3.ZERO)
