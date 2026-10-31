@@ -208,8 +208,9 @@ func reflect(new_direction: Vector3, new_shooter: Node) -> void:
 
 func _physics_process(dt: float) -> void:
 	# Whoever fired it may be gone already (a droid that respawned, a trooper
-	# who left town): a freed shooter is an error to even test with `is`.
-	if shooter != null and not is_instance_valid(shooter):
+	# who left town): a freed shooter is an error to even test with `is`. No
+	# `!= null` first: Godot counts a freed object as equal to null.
+	if not is_instance_valid(shooter):
 		shooter = null
 	# Advance the bolt along its direction by one frame.
 	var step := integrate(dt)
@@ -260,7 +261,7 @@ func _in_ground() -> bool:
 func _on_body_entered(body: Node3D) -> void:
 	if not _alive:
 		return
-	if shooter != null and not is_instance_valid(shooter):
+	if not is_instance_valid(shooter):
 		shooter = null
 	if shooter != null and body == shooter:
 		return
