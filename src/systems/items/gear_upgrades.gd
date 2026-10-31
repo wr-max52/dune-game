@@ -52,13 +52,15 @@ static func locked_offers() -> Array:
 
 
 ## Pay for an offer: an upgrade goes on, an item goes in your pockets. Returns
-## "bought", "cant_afford" or "" (not on offer).
+## "bought", "cant_afford", "full" (no backpack slot for the item) or "" (not on offer).
 static func buy(id: String) -> String:
 	var o := offer(id)
 	if o.is_empty() or not open_offers().has(o):
 		return ""
 	if WorldState.credits < int(o.get("price", 0)):
 		return "cant_afford"
+	if o.has("item") and not WorldState.inventory.room_for(str(o.item)):
+		return "full"
 	WorldState.credits -= int(o.get("price", 0))
 	WorldState.gear_fits.append(id)
 	if o.has("item"):

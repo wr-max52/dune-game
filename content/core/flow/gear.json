@@ -1,5 +1,11 @@
 {
   "note": "Words the gear prompts use (M13). Read by src/systems/items/gear_controller.gd. %s is an item or vendor label, %d a price or a credit balance. Kept here so code stays name-free.",
+  "backpack": {
+    "slots": 5,
+    "fixed": ["Pistol"],
+    "full": "Your backpack is full (%d of %d slots).",
+    "note": "The player's backpack (Inventory.slots_used). The pistol always holds the first slot; each other kind of item you own takes one (a stack is one slot): the rifle, a saber, food, quartz, every contraband good. The jetpack and the armour take one too, but not while they are activated (worn: listed as '(activated)'). Picking up, buying, trading, unloading a cargo droid and taking gear off all need a free slot."
+  },
   "labels": {
     "pick_up": "[E]  Pick up %s",
     "picked_up": "Picked up: %s",
@@ -31,6 +37,7 @@
     "offer_locked_toast": "%s: the fence only sells it %s.",
     "open_droid": "[E] Open the cargo droid",
     "wear": "Wear",
-    "take_off": "Take off"
+    "take_off": "Take off",
+    "no_room_to_take_off": "No free slot in your backpack to put the %s in."
   }
 }

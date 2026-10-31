@@ -11,12 +11,18 @@ extends RefCounted
 ## Lives in WorldState.droids, so it survives town -> flight -> town and is saved
 ## with the rest of the world. A droid's cargo is NOT in WorldState.inventory:
 ## that is the point. The gate searches the inventory, never the droid.
+##
+## Upgrades: the droid merchant fits each droid with more health, a bigger hold
+## (a cargo droid starts with cargo_slots kinds of item) or a harder-hitting gun
+## (droids.json "upgrades"). Levels live on the droid ("up") and go with it.
+## A droid of yours wears its kind's base_variant until its first upgrade, then
+## the shiny upgraded_variant (look_variant).
 
 const DATA := "res://content/core/droids/droids.json"
 
 static var _cfg: Dictionary = {}
 
-var owned: Array = []       ## [{ uid, kind, variant, cargo: { item id -> count } }]
+var owned: Array = []       ## [{ uid, kind, variant, cargo: { item id -> count }, up: { upgrade -> level } }]
 var wrecks: Array = []      ## [{ uid, kind, variant, pos: [x, y, z] }]
 var wrecks_seeded := false  ## the home ball's starting field is generated once and saved
 var streak := 0             ## range remote bolts blocked in a row
@@ -68,6 +74,16 @@ static func pick_variant(kind: String, rng: RandomNumberGenerator) -> String:
 	return str(vs[rng.randi() % vs.size()]) if not vs.is_empty() else ""
 
 
+## How droid `d` of yours looks: its kind's base_variant, or once it has any
+## upgrade, the upgraded_variant. Falls back to its own variant.
+static func look_variant(d: Dictionary) -> String:
+	var kc := kind_cfg(str(d.get("kind", "")))
+	var upgraded := false
+	for key in (d.get("up", {}) as Dictionary):
+		upgraded = upgraded or int(d.up[key]) > 0
+	return str(kc.get("upgraded_variant" if upgraded else "base_variant", d.get("variant", "")))
+
+
 # ---- owning -------------------------------------------------------------------
 
 func is_full() -> bool:
@@ -86,7 +102,8 @@ func find(uid: int) -> Dictionary:
 func add(kind: String, variant: String) -> Dictionary:
 	if is_full() or kind_cfg(kind).is_empty():
 		return {}
-	var d := { "uid": next_uid, "kind": kind, "variant": variant, "cargo": {} }
+	var d := { "uid": next_uid, "kind": kind, "variant": variant, "cargo": {}, "up": {} }
+	d.variant = look_variant(d)          # yours start in the kind's base look
 	next_uid += 1
 	owned.append(d)
 	return d
@@ -124,13 +141,106 @@ func sell(uid: int) -> int:
 	return resale(str(d.kind))
 
 
+# ---- upgrades ---------------------------------------------------------------------
+
+static func upgrade_cfg(key: String) -> Dictionary:
+	return (config().get("upgrades", {}) as Dictionary).get(key, {})
+
+
+static func upgrade_label(key: String) -> String:
+	return str(upgrade_cfg(key).get("label", key))
+
+
+static func upgrade_max(key: String) -> int:
+	return (upgrade_cfg(key).get("prices", []) as Array).size()
+
+
+## The upgrades a kind can take: health for all, cargo for a droid that carries,
+## damage for one with a gun.
+static func upgrades_for(kind: String) -> Array:
+	var kc := kind_cfg(kind)
+	var out: Array = []
+	for key in (config().get("upgrades", {}) as Dictionary):
+		match str(key):
+			"note":
+				pass
+			"cargo":
+				if bool(kc.get("carries", false)):
+					out.append(key)
+			"damage":
+				if kc.has("gun"):
+					out.append(key)
+			_:
+				out.append(key)
+	return out
+
+
+static func level(d: Dictionary, key: String) -> int:
+	return int((d.get("up", {}) as Dictionary).get(key, 0))
+
+
+## What the next level of `key` costs this droid, or -1 (maxed, or not for its kind).
+static func upgrade_price(d: Dictionary, key: String) -> int:
+	if not upgrades_for(str(d.get("kind", ""))).has(key):
+		return -1
+	var prices: Array = upgrade_cfg(key).get("prices", [])
+	var lv := level(d, key)
+	return int(prices[lv]) if lv < prices.size() else -1
+
+
+## Hit points: its kind's "hp", plus "per_level" of that for each health level.
+static func health(d: Dictionary) -> float:
+	var base := float(kind_cfg(str(d.get("kind", ""))).get("hp", 60.0))
+	return base * (1.0 + float(upgrade_cfg("health").get("per_level", 0.5)) * level(d, "health"))
+
+
+## Its gun's damage, times this.
+static func damage_mult(d: Dictionary) -> float:
+	return 1.0 + float(upgrade_cfg("damage").get("per_level", 0.35)) * level(d, "damage")
+
+
+## How many kinds of item its hold takes (0 for a droid that does not carry).
+static func cargo_slots(d: Dictionary) -> int:
+	var kc := kind_cfg(str(d.get("kind", "")))
+	if not bool(kc.get("carries", false)):
+		return 0
+	return int(kc.get("cargo_slots", 2)) + int(upgrade_cfg("cargo").get("per_level", 2)) * level(d, "cargo")
+
+
+## Pay for the next level of `key` on droid `uid` with `credits` available.
+## Returns { cost, level }, or { error: "unknown" | "maxed" | "cant_afford" }.
+func upgrade(uid: int, key: String, credits: int) -> Dictionary:
+	var d := find(uid)
+	if d.is_empty() or not upgrades_for(str(d.kind)).has(key):
+		return { "error": "unknown" }
+	var cost := upgrade_price(d, key)
+	if cost < 0:
+		return { "error": "maxed" }
+	if cost > credits:
+		return { "error": "cant_afford" }
+	if not d.has("up"):
+		d["up"] = {}
+	d.up[key] = level(d, key) + 1
+	d.variant = look_variant(d)          # any upgrade: the shiny look
+	return { "cost": cost, "level": int(d.up[key]) }
+
+
 # ---- cargo ----------------------------------------------------------------------
 
+## Room in droid `d`'s hold for `item_id`: it stacks, or a slot is free.
+static func hold_has_room(d: Dictionary, item_id: String) -> bool:
+	var cargo: Dictionary = d.get("cargo", {})
+	return cargo.has(item_id) or cargo.size() < cargo_slots(d)
+
+
 ## Move n of an item from the player's pockets into a cargo droid. Worn gear comes
-## off first. Returns false if the droid cannot carry or the pockets are short.
+## off first. Returns false if the droid cannot carry, its hold has no slot for
+## another kind, or the pockets are short.
 func stash(uid: int, inv: Inventory, item_id: String, n: int = 1) -> bool:
 	var d := find(uid)
 	if d.is_empty() or not bool(kind_cfg(str(d.kind)).get("carries", false)):
+		return false
+	if not hold_has_room(d, item_id):
 		return false
 	if not inv.remove(item_id, n):
 		return false
@@ -138,17 +248,25 @@ func stash(uid: int, inv: Inventory, item_id: String, n: int = 1) -> bool:
 	return true
 
 
-## Everything in a cargo droid back into the pockets. Returns how many items moved.
+## What a cargo droid holds back into the pockets, as much as the backpack has
+## room for (the rest stays in the hold). Returns how many items moved.
 func unload(uid: int, inv: Inventory) -> int:
 	var d := find(uid)
 	if d.is_empty():
 		return 0
 	var moved := 0
-	for id in d.cargo:
+	for id in d.cargo.keys():
+		if not inv.room_for(str(id)):
+			continue
 		inv.add(str(id), int(d.cargo[id]))
 		moved += int(d.cargo[id])
-	d.cargo = {}
+		d.cargo.erase(id)
 	return moved
+
+
+## Everything in droid `uid`'s hold would fit in the backpack.
+func cargo_fits(uid: int, inv: Inventory) -> bool:
+	return inv.room_for_all(find(uid).get("cargo", {}))
 
 
 ## Every item every droid is carrying: item id -> count.
@@ -282,8 +400,13 @@ func from_save(d: Dictionary) -> void:
 	owned = []
 	for o in d.get("owned", []):
 		if not kind_cfg(str(o.get("kind", ""))).is_empty() and owned.size() < max_owned():
-			owned.append({ "uid": int(o.uid), "kind": str(o.kind), "variant": str(o.get("variant", "")),
-				"cargo": (o.get("cargo", {}) as Dictionary).duplicate() })
+			var up := {}
+			for key in (o.get("up", {}) as Dictionary):
+				up[str(key)] = int(o.up[key])
+			var mine := { "uid": int(o.uid), "kind": str(o.kind), "variant": str(o.get("variant", "")),
+				"cargo": (o.get("cargo", {}) as Dictionary).duplicate(), "up": up }
+			mine.variant = look_variant(mine)    # older saves: the random look becomes the base one
+			owned.append(mine)
 	wrecks = []
 	for w in d.get("wrecks", []):
 		wrecks.append({ "uid": int(w.uid), "kind": str(w.kind), "variant": str(w.get("variant", "")),

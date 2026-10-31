@@ -30,6 +30,12 @@ extends Node3D
 ##   - issue #148: what is left of the Remnant aboard the crashed starcruiser
 ##     patrols its bridge and hold and shoots on sight, answering to no garrison,
 ##     and an old cargo droid in its deep hold carries a red energy saber.
+##   - the droid merchant also upgrades your droids (DroidRoster.upgrade): more
+##     health, a bigger cargo hold (a cargo droid starts with two slots), a
+##     harder-hitting gun. Your droids take hits from whoever you are fighting; one
+##     at 0 hp is knocked out a while, then reboots,
+##   - in a fight your assassin and floating droids walk up to ten steps toward
+##     what they see (their kind's "engage"), and come back to you once it is dead.
 ## Up to max_owned droids: a fourth asks which one to sell to make room.
 ## Words, prices and tuning: content/core/droids/droids.json. Looks: DroidKit.
 ##
@@ -142,6 +148,7 @@ func _physics_process(dt: float) -> void:
 		focus = {}
 	else:
 		_sync_companions()
+		_tick_knocked_out(dt)
 		_follow(dt)
 		_companion_guns(dt)
 		_tick_fix(dt)
@@ -259,7 +266,8 @@ func interact() -> String:
 			if opts.is_empty():
 				_toast(_l("empty_hold"))
 				return ""
-			_open_menu(_l("menu_hold"), opts, _on_hold.bind(int(focus.uid)))
+			var d := roster().find(int(focus.uid))
+			_open_menu(_l("menu_hold") % [d.get("cargo", {}).size(), DroidRoster.cargo_slots(d)], opts, _on_hold.bind(int(focus.uid)))
 			return "menu"
 	return ""
 
@@ -288,6 +296,8 @@ func trade_options() -> Array:
 	var out := []
 	for kind in cfg.get("vendor", {}).get("stock", []):
 		out.append({ "id": "buy:" + str(kind), "text": _l("buy") % [DroidRoster.label(str(kind)), DroidRoster.price(str(kind))] })
+	if not roster().owned.is_empty():
+		out.append({ "id": "upgrades", "text": _l("upgrades") })
 	for d in roster().owned:
 		out.append({ "id": "sell:%d" % int(d.uid), "text": _l("sell") % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))] })
 	# Issue #212: at a desert post, Oda's friend takes the droids she asked for.
@@ -324,8 +334,78 @@ func _on_trade(id: String, site: int) -> void:
 		sell(int(id.substr(5)))
 	elif id.begins_with("deliver:"):
 		deliver(int(id.substr(8)))
+	elif id == "upgrades":
+		open_upgrades()
+		return                                # its own menu, not the stall's again
 	if id != "":
 		_open_trade(site, true)
+
+
+# ------------------------------------------------------------------ upgrades
+
+## "Cargo droid", or "Cargo droid 2" when you run more than one of a kind.
+func droid_name(d: Dictionary) -> String:
+	var same: Array = roster().owned.filter(func(o): return str(o.kind) == str(d.kind))
+	var label := DroidRoster.label(str(d.kind))
+	return label if same.size() < 2 else "%s %d" % [label, same.find(d) + 1]
+
+
+## Every upgrade the merchant can still fit, droid by droid.
+func upgrade_options() -> Array:
+	var out := []
+	for d in roster().owned:
+		for key in DroidRoster.upgrades_for(str(d.kind)):
+			var price := DroidRoster.upgrade_price(d, str(key))
+			if price < 0:
+				continue
+			var lv := DroidRoster.level(d, str(key))
+			out.append({ "id": "up:%d:%s" % [int(d.uid), key], "text": _l("upgrade") % [droid_name(d),
+				DroidRoster.upgrade_label(str(key)), lv, lv + 1, DroidRoster.upgrade_max(str(key)), price] })
+	return out
+
+
+func open_upgrades() -> void:
+	var opts := upgrade_options()
+	if opts.is_empty():
+		_toast(_l("nothing_to_upgrade"))
+		return
+	_open_menu(_l("menu_upgrades") % WorldState.credits, opts, func(id: String):
+		if id.begins_with("up:"):
+			var parts := id.split(":")
+			if upgrade(int(parts[1]), parts[2]) == "upgraded":
+				open_upgrades())         # buy another without walking off and back
+
+
+## Fit the next level of `key` to droid `uid`. Returns "upgraded", "cant_afford",
+## "maxed" or "". A droid out in the world takes its new health at once.
+func upgrade(uid: int, key: String) -> String:
+	var d := roster().find(uid)
+	var r := roster().upgrade(uid, key, WorldState.credits)
+	match str(r.get("error", "")):
+		"cant_afford":
+			_toast(_l("upgrade_cant_afford") % [DroidRoster.upgrade_label(key), DroidRoster.upgrade_price(d, key), WorldState.credits])
+			return "cant_afford"
+		"maxed":
+			return "maxed"
+		"unknown":
+			return ""
+	WorldState.credits -= int(r.cost)
+	var u: DroidUnit = companions.get(uid)
+	if u != null and not u.dead and u.variant != str(d.variant):
+		# Its first upgrade: it comes back from the merchant's bench in the shiny look.
+		var at := u.global_position
+		var yaw := u.yaw
+		_free_companion(uid)
+		u = _spawn_companion(d, at)
+		u.yaw = yaw
+		_orient(u)
+	elif u != null and not u.dead:
+		var was := u.max_hp
+		u.max_hp = DroidRoster.health(d)
+		u.hp += u.max_hp - was
+	_toast(_l("upgraded") % [droid_name(d), DroidRoster.upgrade_label(key), int(r.level), DroidRoster.upgrade_max(key)])
+	_beep(u)
+	return "upgraded"
 
 
 ## Issue #212: hand a droid over for Oda's friend (no pay: it is a favour to
@@ -333,6 +413,9 @@ func _on_trade(id: String, site: int) -> void:
 func deliver(uid: int) -> bool:
 	var d := roster().find(uid)
 	if d.is_empty() or str(d.kind) != Story.droid_wanted_kind():
+		return false
+	if not roster().cargo_fits(uid, WorldState.inventory):
+		_toast(_l("hold_wont_fit"))
 		return false
 	roster().unload(uid, WorldState.inventory)
 	roster().remove(uid)
@@ -381,6 +464,9 @@ func sell(uid: int) -> int:
 	var d := roster().find(uid)
 	if d.is_empty():
 		return -1
+	if not roster().cargo_fits(uid, WorldState.inventory):
+		_toast(_l("hold_wont_fit"))      # never sell what you are carrying out from under you
+		return -1
 	var moved := roster().unload(uid, WorldState.inventory)
 	var price := roster().sell(uid)
 	WorldState.credits += price
@@ -408,13 +494,16 @@ func _on_make_room(id: String, then: Callable, declined: Callable) -> void:
 		declined.call()
 
 
+## Stash what the hold has a slot for (or already holds some of), and unload.
 func hold_options(uid: int) -> Array:
 	var out := []
 	var inv := WorldState.inventory
+	var d := roster().find(uid)
 	for id in inv.item_ids():
+		if not DroidRoster.hold_has_room(d, str(id)):
+			continue
 		var it: Dictionary = WorldState._item(str(id))
 		out.append({ "id": "stash:" + str(id), "text": _l("stash") % [str(it.get("label", id)), inv.count(str(id))] })
-	var d := roster().find(uid)
 	var held: Array = []
 	for id in d.get("cargo", {}):
 		held.append("%s x%d" % [str(WorldState._item(str(id)).get("label", id)), int(d.cargo[id])])
@@ -426,13 +515,19 @@ func hold_options(uid: int) -> Array:
 func _on_hold(id: String, uid: int) -> void:
 	if id == "unload":
 		var moved := roster().unload(uid, WorldState.inventory)
-		_toast(_l("unloaded") % moved)
+		var left := 0
+		for n in roster().find(uid).get("cargo", {}).values():
+			left += int(n)
+		_toast(_l("unloaded") % moved if left == 0 else _l("unload_partial") % left)
 	elif id.begins_with("stash:"):
 		var item := id.substr(6)
+		var d := roster().find(uid)
 		if roster().stash(uid, WorldState.inventory, item, WorldState.inventory.count(item)):
 			_toast(_l("stashed") % str(WorldState._item(item).get("label", item)))
 			if gear != null:
 				gear.sync_gear()        # a stashed jetpack comes off your back
+		elif not DroidRoster.hold_has_room(d, item):
+			_toast(_l("hold_full") % [d.get("cargo", {}).size(), DroidRoster.cargo_slots(d)])
 	_beep(companions.get(uid))
 
 
@@ -650,6 +745,8 @@ func _spawn_companion(d: Dictionary, at: Vector3, from_y := INF) -> DroidUnit:
 		u.look.position.y = u.lift_now
 		u.shape.position.y = u.lift_now
 	DroidKit.set_awake(u.look, true)
+	u.max_hp = DroidRoster.health(d)
+	u.hp = u.max_hp
 	companions[int(d.uid)] = u
 	return u
 
@@ -689,6 +786,8 @@ func _follow(dt: float) -> void:
 	var of_kind := {}                  # kind -> how many placed so far
 	for uid in companions:
 		var u: DroidUnit = companions[uid]
+		if u.dead:
+			continue                          # knocked out: it lies there until it reboots
 		var f: Dictionary = DroidRoster.kind_cfg(u.kind).get("follow", {})
 		# Issue #64: two of a kind no longer share a slot and march in step. Each
 		# takes the next place in a fan behind its kind's slot (alternating sides,
@@ -724,6 +823,13 @@ func _follow(dt: float) -> void:
 			var back := _rejoin_point()
 			# Keep its place in the group (slot's offset from you) so they do not land in a heap.
 			pos = slot if back == Vector3.INF else back + (slot - player.global_position)
+			_disengage(u)                     # you walked off: it jumps to you, fight or not
+		elif u.engaged != null and is_instance_valid(u.engaged):
+			var to_goal := _flat(_advance_goal(u) - pos, _up(pos))
+			if to_goal.length() > 0.15:
+				speed = float(f.get("speed", 7.0)) * 0.7
+				pos += to_goal.normalized() * minf(speed * dt, to_goal.length())
+			_face(u, u.engaged.global_position - pos)
 		elif u.following:
 			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
 			pos += to / dist * minf(speed * dt, dist)
@@ -732,7 +838,82 @@ func _follow(dt: float) -> void:
 			_face(u, player.global_position - u.global_position)
 		pos += _separation(u, pos) * dt
 		_put(u, pos)
-		u.walk(dt, u.following, speed, u.target != null)
+		u.walk(dt, u.following or speed > 0.0, speed, u.target != null)
+
+
+## Where an engaged droid is going: from where it stood when the fight found it,
+## toward its enemy, at most its kind's engage.advance (about ten steps) and never
+## closer than engage.standoff.
+func _advance_goal(u: DroidUnit) -> Vector3:
+	var e: Dictionary = DroidRoster.kind_cfg(u.kind).get("engage", {})
+	var up := _up(u.engage_from)
+	var to := _flat(u.engaged.global_position - u.engage_from, up)
+	var reach := minf(float(e.get("advance", 7.5)), maxf(0.0, to.length() - float(e.get("standoff", 3.0))))
+	return u.engage_from + (to.normalized() * reach if to.length() > 0.01 else Vector3.ZERO)
+
+
+## Go after what it sees (a kind with "engage"), keep after it while it lives, and
+## head back to you once it is dead or out of the fight with nobody else in sight.
+func _engage(u: DroidUnit, cands: Array) -> void:
+	if DroidRoster.kind_cfg(u.kind).get("engage", {}).is_empty():
+		return
+	var e = u.engaged                         # untyped: it may have been freed
+	if not is_instance_valid(e) or ("dead" in e and e.dead) or not cands.has(e):
+		e = null
+	if e == null and u.target != null:
+		e = u.target
+		if u.engage_from == Vector3.INF:
+			u.engage_from = u.global_position     # ten steps from here, however many it fights
+	if e == null:
+		_disengage(u)
+	else:
+		u.engaged = e
+
+
+func _disengage(u: DroidUnit) -> void:
+	if u.engage_from == Vector3.INF:
+		return
+	u.engaged = null
+	u.engage_from = Vector3.INF
+	u.following = true                        # back to its place by you
+
+
+## A knocked-out droid of yours lies there knocked_out_s, then reboots where it
+## fell at full health (a new body: the fall and the dark eyes are undone).
+func _tick_knocked_out(dt: float) -> void:
+	for uid in companions.keys():
+		var u: DroidUnit = companions[uid]
+		if not u.dead:
+			continue
+		u.down_left -= dt
+		if u.down_left > 0.0:
+			continue
+		var d := roster().find(uid)
+		var at := u.global_position
+		_free_companion(uid)
+		if d.is_empty():
+			continue
+		var n := _spawn_companion(d, at)
+		Sound.play("droid_wake", at)
+		_beep(n)
+		_toast(_l("rebooted") % DroidRoster.label(str(d.kind)).to_lower())
+
+
+## One of your droids took a hit from someone you are fighting.
+func _hurt_companion(u: DroidUnit, amount: float) -> void:
+	u.hp -= amount
+	if u.hp > 0.0:
+		return
+	u.dead = true
+	u.target = null
+	u.engaged = null
+	u.engage_from = Vector3.INF
+	u.down_left = float(cfg.get("knocked_out_s", 20.0))
+	u.collision_layer = 0
+	ExplosionFx.small(u.get_parent(), u.center())
+	Sound.play("droid_pop", u.center())
+	_lay_down(u)
+	_toast(_l("knocked_out") % [DroidRoster.label(u.kind).to_lower(), int(u.down_left)])
 
 
 ## Where a droid left far behind rejoins: the oldest point of your trail at most
@@ -770,16 +951,21 @@ func _companion_guns(dt: float) -> void:
 	for uid in companions:
 		var u: DroidUnit = companions[uid]
 		var gun: Dictionary = DroidRoster.kind_cfg(u.kind).get("gun", {})
-		if gun.is_empty():
+		if gun.is_empty() or u.dead:
 			continue
 		u.gun_cd -= dt
 		u.target = _enemy_near(u, float(gun.get("range", 30.0)), cands)
+		_engage(u, cands)
 		if u.target == null:
 			continue
 		var aim := _chest(u.target)
 		_face(u, aim - u.global_position)
 		if u.gun_cd <= 0.0:
 			u.gun_cd = float(gun.get("interval", 1.0)) * (0.9 + u.quirk().x * 0.2)
+			var mult := DroidRoster.damage_mult(roster().find(uid))
+			if mult != 1.0:
+				gun = gun.duplicate()
+				gun["damage"] = float(gun.get("damage", 10.0)) * mult     # the merchant's capacitor
 			fire(u, aim, gun)
 
 
@@ -1217,12 +1403,19 @@ func _strand(u: DroidUnit) -> void:
 	u.respawn_left = float(Story.remnant_cfg().get("outpost_respawn_s", 180.0))
 
 
-## A bolt hit a droid. Yours and wrecks shrug it off; the Remnant's take damage
-## from anyone outside the Remnant, turn on you, and call it in. `sweep` is the way
-## the player's energy sword was moving (zero for a bolt): a killing cut bats it.
+## A bolt hit a droid. Wrecks shrug it off, and so do yours unless someone else
+## fired it (yours, your droids' and your sword's never hurt them); the Remnant's
+## take damage from anyone outside the Remnant, turn on you, and call it in.
+## `sweep` is the way the player's energy sword was moving (zero for a bolt): a
+## killing cut bats it.
 func on_unit_hit(u: DroidUnit, amount: float, shooter: Node, sweep := Vector3.ZERO) -> void:
 	_beep(u)
-	if u.faction == "" or u.dead:
+	if u.dead:
+		return
+	if u.faction == "":
+		if not u.broken and companions.get(u.uid) == u and shooter != null and is_instance_valid(shooter) \
+				and not by_player(shooter, player):
+			_hurt_companion(u, amount)
 		return
 	if shooter is DroidUnit and (shooter as DroidUnit).faction == u.faction:
 		return
@@ -1492,6 +1685,9 @@ class DroidUnit extends StaticBody3D:
 	var lift_now := 0.0             ## issue #80: its hover height now, easing to look_lift
 	var falling := false            ## issue #80: dropping after it died (the bob stops)
 	var yaw := 0.0                  ## issue #93: its heading about the ground's up (see _orient)
+	var engaged: Node3D             ## the enemy one of yours is going after (see _engage)
+	var engage_from := Vector3.INF  ## where it stood when that fight found it
+	var down_left := 0.0            ## a knocked-out droid of yours: seconds until it reboots
 
 	## This droid's own small differences, 0..1 each, steady for its uid.
 	func quirk() -> Vector3:

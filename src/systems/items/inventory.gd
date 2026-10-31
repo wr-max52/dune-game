@@ -11,6 +11,16 @@ extends RefCounted
 ##
 ## Lives in WorldState.inventory, so it survives town -> flight -> town and is saved
 ## with the rest of the world.
+##
+## The backpack: what you carry fills a few slots (content/core/flow/gear.json
+## "backpack"). The pistol always holds the first; every other kind you own takes
+## one (a stack is one slot), except what is activated (worn: the jetpack on your
+## back, the armour on), which rides on the body instead. Owning more than fits
+## is possible (a story gift), but the ways you pick things up ask room_for first.
+
+const GEAR_PATH := "res://content/core/flow/gear.json"
+
+static var _pack_cfg: Dictionary = {}
 
 var owned: Dictionary = {}      ## item id -> count
 var attached: Dictionary = {}   ## slot -> item id ("back" -> "jetpack")
@@ -48,6 +58,67 @@ func item_ids() -> Array:
 	var ids := owned.keys()
 	ids.sort()
 	return ids
+
+
+# ---- the backpack ------------------------------------------------------------------
+
+static func backpack_cfg() -> Dictionary:
+	if _pack_cfg.is_empty():
+		var f := FileAccess.open(GEAR_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f != null else null
+		_pack_cfg = d.get("backpack", {}) if d is Dictionary else {}
+	return _pack_cfg
+
+
+static func backpack_slots() -> int:
+	return int(backpack_cfg().get("slots", 5))
+
+
+## What always holds the first slots (the pistol), by label.
+static func fixed_slots() -> Array:
+	return backpack_cfg().get("fixed", ["Pistol"])
+
+
+## "Your backpack is full (5 of 5 slots)."
+static func full_line() -> String:
+	return str(backpack_cfg().get("full", "Your backpack is full (%d of %d slots).")) % [backpack_slots(), backpack_slots()]
+
+
+## The kinds in the backpack, in order: everything owned that is not activated.
+func packed_ids() -> Array:
+	return item_ids().filter(func(id): return not is_attached(str(id)))
+
+
+func slots_used() -> int:
+	return fixed_slots().size() + packed_ids().size()
+
+
+func slots_free() -> int:
+	return maxi(0, backpack_slots() - slots_used())
+
+
+## Room for one more `id`: it stacks on what you have, a slot is free, or (given
+## its item data) it goes straight onto a free body slot (the caller wears it).
+func room_for(id: String, item_cfg: Dictionary = {}) -> bool:
+	if has(id) or slots_free() > 0:
+		return true
+	var slot := str(item_cfg.get("slot", ""))
+	return slot != "" and in_slot(slot) == ""
+
+
+## Room for all of `items` (item id -> count) at once.
+func room_for_all(items: Dictionary) -> bool:
+	var new_kinds := 0
+	for id in items:
+		if not has(str(id)) and int(items[id]) > 0:
+			new_kinds += 1
+	return new_kinds <= slots_free()
+
+
+## Room for `id` once `paid` x `paid_id` has gone (a trade: the last of what you
+## pay with frees its slot).
+func room_after_paying(id: String, paid_id: String, paid: int) -> bool:
+	return room_for(id) or (paid_id != id and count(paid_id) == paid)
 
 
 # ---- attaching ------------------------------------------------------------------
