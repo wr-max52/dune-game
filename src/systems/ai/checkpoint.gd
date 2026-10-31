@@ -369,14 +369,15 @@ func answer(choice_id: String) -> bool:
 	return true
 
 
-## The player was knocked out and dragged off: the checkpoint stands down but
-## remembers the fight.
+## The player was knocked out and dragged off: the checkpoint stands down and
+## forgets the fight (and a walk-away from the card) with it.
 func on_player_downed() -> void:
 	_close_card()
 	if state == State.HOSTILE:
-		memory_left = n("memory_s", 300.0)
 		_emit({ "type": "calm", "why": "downed" })
 	state = State.IDLE
+	memory_left = 0.0
+	refused = false
 
 
 func drain() -> Array:

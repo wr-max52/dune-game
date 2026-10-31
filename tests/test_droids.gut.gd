@@ -36,6 +36,19 @@ func test_three_kinds_with_variants_and_prices() -> void:
 	assert_eq(Color(str(red.eye)).r > 0.9 and Color(str(red.body)).v < 0.15, true, "the Remnant's assassin is black with red eyes")
 
 
+## The pit is T-89's: the Remnant's street patrol walks round its rim, never
+## across the floor where the player wakes up.
+func test_remnant_patrol_stays_out_of_the_pit() -> void:
+	var cfg: Dictionary = CharacterKit._read_json("res://content/core/droids/droids.json")
+	var pts: Array = cfg.remnant.patrol
+	var pit_r := 28.0
+	for i in pts.size():
+		var a := Vector2(float(pts[i][0]), float(pts[i][2]))
+		var b := Vector2(float(pts[(i + 1) % pts.size()][0]), float(pts[(i + 1) % pts.size()][2]))
+		var closest := Geometry2D.get_closest_point_to_segment(Vector2.ZERO, a, b)
+		assert_gt(closest.length(), pit_r, "leg %d (%s -> %s) keeps out of the pit" % [i, a, b])
+
+
 func test_player_never_gets_remnant_colours() -> void:
 	for i in 40:
 		assert_ne(DroidRoster.pick_variant("assassin", rng), "remnant")

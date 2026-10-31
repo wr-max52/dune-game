@@ -1120,6 +1120,14 @@ func _remnant_step(dt: float) -> void:
 		u.walk(dt, true, pace)
 
 
+## The player died and woke in the pit: the Remnant's droids (and the locals')
+## forget who shot at them. Their garrison has stood down too, so they walk their
+## round again instead of waiting at the pit.
+func forgive_player() -> void:
+	for u in remnant:
+		u.provoked = false
+
+
 func _alarm_up(u: DroidUnit) -> bool:
 	var g = _folk(u) if u.faction == "locals" else _garrison(u)
 	return g != null and g.alarm != null and g.alarm.active()

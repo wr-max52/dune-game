@@ -304,38 +304,7 @@
   },
   "remnant": {
     "faction": "imperial_remnant",
-    "patrol": [
-      [
-        88,
-        0,
-        2
-      ],
-      [
-        31,
-        0,
-        2
-      ],
-      [
-        31,
-        0,
-        29
-      ],
-      [
-        -29,
-        0,
-        29
-      ],
-      [
-        -29,
-        0,
-        2
-      ],
-      [
-        31,
-        0,
-        2
-      ]
-    ],
+    "patrol": [[88, 0, 2], [31, 0, 2], [31, 0, 31], [-31, 0, 31], [-31, 0, 2], [-31, 0, 31], [31, 0, 31], [31, 0, 2]],
     "walk_speed": 2.2,
     "sight": 22.0,
     "kill_standing": -6,
@@ -367,7 +336,7 @@
       { "kind": "cargo", "variant": "remnant", "hp": 40, "route": "cargo", "walk_speed": 0.8,
         "flee": { "speed": 5.5, "distance": 150.0, "max_s": 45.0 } }
     ],
-  "note": "Issue #64/#76: outpost_units are the droids each desert outpost keeps, each walking the outpost's point list named by 'route': an assassin droid on 'patrol', an armed floating droid on 'floater', and a cargo droid on 'cargo' ('walk_speed' sets its own pace). 'flee': when its outpost's alarm goes up (or it is shot) it runs 'distance' metres into the desert, away from you, at 'speed' (giving up after 'max_s'), and is left there broken: a wreck you can fix and keep. A new one turns up at the outpost when the troopers come back. The Remnant's own droids: they patrol the main street, share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
+  "note": "Issue #64/#76: outpost_units are the droids each desert outpost keeps, each walking the outpost's point list named by 'route': an assassin droid on 'patrol', an armed floating droid on 'floater', and a cargo droid on 'cargo' ('walk_speed' sets its own pace). 'flee': when its outpost's alarm goes up (or it is shot) it runs 'distance' metres into the desert, away from you, at 'speed' (giving up after 'max_s'), and is left there broken: a wreck you can fix and keep. A new one turns up at the outpost when the troopers come back. The Remnant's own droids: they patrol the main street ('patrol': out along the street round the north rim of the landing pit and back the same way, never across the pit floor, which is T-89's), share the Remnant's standing (they turn on you when the garrison would), sound the town alarm when they see trouble, and fight. Killing one costs Remnant standing like a trooper."
   },
   "wreck": {
     "landmark": "starcruiser_wreck",
