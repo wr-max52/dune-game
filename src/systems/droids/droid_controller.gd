@@ -1122,6 +1122,9 @@ func _build_remnant() -> void:
 ## "locals"), on the Remnant's street route.
 func _build_town_units(side: Dictionary) -> void:
 	var pts: Array = cfg.get("remnant", {}).get("patrol", [])
+	# Issue #237: a town layout can draw its own street patrol (route "street_patrol").
+	if demo != null and "town" in demo and demo.town != null and not demo.town.get_route("street_patrol").is_empty():
+		pts = demo.town.get_route("street_patrol").points.map(func(p): return [p[0], 0, p[1]])
 	if pts.is_empty():
 		return
 	var route: Array = pts.map(func(p): return _v3(p))

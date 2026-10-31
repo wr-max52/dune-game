@@ -13,6 +13,7 @@ extends RefCounted
 ## No physics engine involved, so the dogfight-style pure flight model can fly
 ## through the town in a headless trace exactly as in the game.
 
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 const FLOOR_KINDS := ["floor"]
 ## Box kinds that are not part of the world a ship flies through: the "ship" box
 ## in the town data is the parked ship itself; the "bowl" is the round pit's
@@ -60,6 +61,14 @@ func setup(world_cfg: Dictionary, town = null, content = null,
 	columns = []
 	if town != null:
 		for b in town.boxes():
+			if str(b.kind) == "ring":
+				# Issue #237: a round wall is its pieces, each a box in its own frame.
+				var k := 0
+				for p in RingWall.pieces(b):
+					var h: Vector3 = p.size * 0.5
+					add_box("%s_%d" % [str(b.id), k], "wall", -h, h, "", true, Transform3D(p.basis, p.center))
+					k += 1
+				continue
 			add_box(str(b.id), str(b.kind), _v3(b.min), _v3(b.max), str(b.get("rise_toward", "")))
 	for lm in world_cfg.get("landmarks", []):
 		_add_landmark(lm, content)

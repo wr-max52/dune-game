@@ -20,6 +20,18 @@
     "stage": { "small": 4.0, "full": 7.0, "height": 0.6, "at": 0.68, "note": "Issue #75: every cantina has a round stage (diameter in metres), at this fraction of its length from the back wall, against the side wall, off the door-to-bar path." },
     "patrons_from_size": 10
   },
+  "club_dome": {
+    "note": "Issue #261: a sealed station whose planet has \"club_dome\" has no cantina building: the whole dome is the club (zone 'cantina'), a rave. The bar and the merchant's stall stay where they were; the homes go. Metres from the ring's centre, +x toward the gate: the stage (round, the DJ alone on it, 'band'), the dancer on the floor beside it, the LED dance floor in front of it, the crowd standing on it and the loops some walk.",
+    "stage": { "at": [8.0, -23.0], "diameter": 9.0, "height": 0.9 },
+    "dancer": [14.5, -19.0],
+    "floor": { "min": [1.0, -16.5], "max": [15.0, -6.5] },
+    "standing": [[5.0, -14.0], [8.0, -13.5], [11.0, -14.2], [6.0, -11.0], [9.5, -10.8], [12.5, -11.5], [4.5, -8.5], [10.0, -8.2]],
+    "walks": [
+      [[2.0, -6.5], [16.0, -6.5], [16.0, -16.0], [2.0, -16.0], [2.0, -6.5]],
+      [[-12.0, -8.0], [0.0, -8.0], [0.0, -14.0], [-12.0, -14.0], [-12.0, -8.0]],
+      [[-14.0, 5.0], [-8.0, 5.0], [-8.0, 14.0], [-14.0, 14.0], [-14.0, 5.0]]
+    ]
+  },
   "barracks_from_size": 25,
   "tower_from_size": 35,
   "counts": {
@@ -53,6 +65,179 @@
       {"id": "bay_pad_2", "kind": "pad", "min": [-20.0, -6, 5.0], "max": [-8.0, -5.97, 17.0], "shape": "round"},
       {"id": "bay_pad_3", "kind": "pad", "min": [-20.0, -6, -17.0], "max": [-8.0, -5.97, -5.0], "shape": "round"},
       {"id": "bay_pad_4", "kind": "pad", "min": [8.0, -6, -17.0], "max": [20.0, -5.97, -5.0], "shape": "round"}
+    ]
+  },
+  "round": {
+    "note": "Issue #237: the round port (content/core/towns/port_round.json), laid out by tools/town/gen_port_round.py from these numbers and the square port's districts. Angles in degrees round the pit: 0 is the front gate (+X), +90 the barracks side (+Z). Radii in metres from the pit's centre. Districts are sectors [deg from, deg to] between radii [inner, outer]; a 'curl' is the part that wraps in behind the cantina. moves: [dx, dz] each of the square port's districts is carried by (its boxes, markers and routes inside it keep their shape).",
+    "layout": "port_round",
+    "size": 67,
+    "radius": 140.0,
+    "wall_piece": 6.0,
+    "front_gate": {
+      "deg": 0.0,
+      "half": 6.0
+    },
+    "back_gate": {
+      "deg": -166.0,
+      "half": 1.5
+    },
+    "ground_strip": 6.5,
+    "ground_overhang": 4.0,
+    "front_apron": {
+      "length": 60.0,
+      "half": 40.0
+    },
+    "back_apron": {
+      "length": 30.0,
+      "half": 14.0
+    },
+    "pit": {
+      "radius": 38.0,
+      "ramp_from": 10.0
+    },
+    "pads": {
+      "ring": 53.0,
+      "diameter": 12.0,
+      "first_deg": 20.0,
+      "count": 8,
+      "note": "Surface pads round the bowl (no collision, like the pit's spare pad): room for more parked ships, the rebuild and the fleet."
+    },
+    "dock_booth": {
+      "at": [36.0, -46.0],
+      "size": [4.0, 3.0, 3.0]
+    },
+    "ring_road": {
+      "radius": 69.0,
+      "step_deg": 15.0
+    },
+    "gate_towers": {
+      "size": 6.0,
+      "height": 12.0,
+      "inset": 4.0,
+      "z": 18.0
+    },
+    "moves": {
+      "gate": [41.9, 0.0],
+      "barracks": [31.0, -6.0],
+      "market": [31.0, 19.0],
+      "cantina": [-27.0, 0.0]
+    },
+    "main_street": {
+      "half": 8.0,
+      "from": 68.0,
+      "bends": [
+        [118.0, 3.0],
+        [98.0, -3.0],
+        [82.0, 2.0]
+      ]
+    },
+    "back_lane": {
+      "width": 5.0,
+      "points_deg": [
+        [69.0, -164.0],
+        [96.0, -168.0],
+        [118.0, -170.0]
+      ]
+    },
+    "residential_w": {
+      "sector": [-160.0, -100.0],
+      "radii": [77.0, 137.0],
+      "curl": {
+        "sector": [-162.0, -150.0],
+        "inner": 118.0
+      },
+      "arcs": [
+        {
+          "r": 100.0,
+          "deg": [-158.0, -101.0],
+          "width": 3.6
+        },
+        {
+          "r": 124.0,
+          "deg": [-161.0, -101.0],
+          "width": 3.6
+        }
+      ],
+      "spokes": [
+        {
+          "deg": -118.0,
+          "r": [76.0, 136.0],
+          "width": 2.6
+        },
+        {
+          "deg": -138.0,
+          "r": [76.0, 136.0],
+          "width": 2.6
+        }
+      ],
+      "wobble": 4.0,
+      "gap": 1.2,
+      "reach": 9.0,
+      "attempts": 20000,
+      "residents": {
+        "resident_w": [100.0, -128.0],
+        "resident_w_2": [124.0, -112.0]
+      },
+      "well": [112.0, -150.0]
+    },
+    "residential_e": {
+      "sector": [78.0, 192.0],
+      "radii": [77.0, 137.0],
+      "curl": {
+        "sector": [166.0, 192.0],
+        "inner": 118.0
+      },
+      "arcs": [
+        {
+          "r": 98.0,
+          "deg": [80.0, 164.0],
+          "width": 4.6
+        },
+        {
+          "r": 122.0,
+          "deg": [80.0, 190.0],
+          "width": 4.6
+        }
+      ],
+      "spokes": [
+        {
+          "deg": 100.0,
+          "r": [76.0, 136.0],
+          "width": 3.4
+        },
+        {
+          "deg": 128.0,
+          "r": [76.0, 136.0],
+          "width": 3.4
+        },
+        {
+          "deg": 150.0,
+          "r": [76.0, 136.0],
+          "width": 3.4
+        }
+      ],
+      "wobble": 5.0,
+      "gap": 3.0,
+      "reach": 7.0,
+      "attempts": 12000,
+      "residents": {
+        "resident_e": [98.0, 114.0]
+      },
+      "well": [110.0, 139.0]
+    },
+    "chunks": [
+      {
+        "id": "town_back",
+        "center": -90.0
+      },
+      {
+        "id": "town_mid",
+        "center": 0.0
+      },
+      {
+        "id": "town_front",
+        "center": 90.0
+      }
     ]
   },
   "bay_ships": ["freighter", "courier", "gunship"],

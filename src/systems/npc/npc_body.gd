@@ -88,6 +88,16 @@ var turn_rate := deg_to_rad(260.0)
 var kit: CharacterKit
 var look_body: Node3D
 var joints: Dictionary = {}
+## Issue #261: a club performer's set ("dj", "drum", "bass"; ClubMoves), from the
+## profile's "perform"; "" for everyone else.
+var perform := ""
+## Issue #261: the club crowd's bottle, in the right hand (profile "drinks"), with a
+## sip every so often while their pistol is put away.
+var bottle: Node3D
+var sips := 0
+var _sip_wait := 0.0
+const SIP_EVERY := Vector2(6.0, 14.0)
+const HAND_POLES := { "l": Vector3(0.7, -0.6, -0.4), "r": Vector3(-0.7, -0.6, -0.4) }
 var anim = BodyAnimatorT.new()
 ## Issue #87: the rifle rests low across the body until there is something to aim
 ## at, comes up before the first shot and goes back down a moment after.
@@ -137,6 +147,7 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 	controller.sprint_speed = float(soldier.get("sprint_speed", 6.2))
 	turn_rate = deg_to_rad(float(soldier.get("turn_rate_deg", 260.0)))
 	faction = str(soldier.get("faction", ""))
+	perform = str(soldier.get("perform", ""))
 	# Health is the player body's (character_body.gd); guards do not regenerate.
 	max_health = int(soldier.get("hp", 60))
 	health = HealthT.new(max_health)
@@ -174,6 +185,10 @@ func setup(soldier: Dictionary, at: Vector3, yaw: float, materials: LookMaterial
 		if look_body.has_meta("weapon"):
 			_rifle_aim_xf = (look_body.get_meta("weapon") as Node3D).transform
 			(look_body.get_meta("weapon") as Node3D).visible = drawn
+		if bool(soldier.get("drinks", false)):
+			_hold_bottle()
+		if bool(soldier.get("sticks", false)):
+			ClubProps.sticks(joints)      # issue #261: the drummer's sticks
 	else:
 		var mesh := CapsuleMesh.new()
 		mesh.radius = 0.35
@@ -506,6 +521,7 @@ func _physics_process(delta: float) -> void:
 		action_t += delta
 		if action_t >= action_len:
 			action = ""
+	_tick_sip(delta)
 	var move := _walk(delta)
 	_turn(delta, move)
 	var dir := NpcLocomotion.world_to_command(move, -rotation.y)
@@ -802,7 +818,7 @@ var _look_rest := Vector3.INF  ## look_body's rest position, noted before the fi
 
 
 func _animate_lod(dt: float, move: Vector3) -> void:
-	if bool(profile.get("dance_loop", false)):
+	if _staged():
 		_anim_dist = 0.0
 		_animate(dt, move)
 		anim_frames += 1
@@ -837,6 +853,7 @@ func _animate(dt: float, move: Vector3) -> void:
 		"crouch": bool(command.crouch), "sprint": bool(command.sprint), "upper": str(profile.get("upper", BodyAnimatorT.UPPER_RIFLE)),
 		"aim_pitch": _aim_pitch(), "ready": carry.eased(),
 		"dance": bool(profile.get("dance_loop", false)),
+		"perform": perform, "bpm": float(profile.get("bpm", 110.0)),
 	})
 	if bool(profile.get("dance_loop", false)):
 		rotation.y = post_facing + float(out.get("dance_yaw", 0.0))
@@ -861,8 +878,16 @@ func _animate(dt: float, move: Vector3) -> void:
 			kit.reach(look_body, "r", w.transform * (grips.r as Vector3), Vector3(-0.5, -0.7, -0.5))
 		if grips.has("l"):
 			kit.reach(look_body, "l", w.transform * (grips.l as Vector3), Vector3(0.6, -0.7, -0.4))
+	if perform != "":
+		_reach_instrument(out)
+	if bottle != null:
+		bottle.visible = not drawn
+		if bottle.visible and action == "":
+			ClubMoves.hold(joints, 1.0)
+			if speed < 0.2:     # nodding along to the music while they stand
+				_groove(float(profile.get("groove", 0.0)))
 	# Head follows what the senses have: the target while seen, else straight ahead.
-	if not bool(profile.get("dance_loop", false)):
+	if not _staged():
 		var look_at := Vector3.INF
 		if perception.visible:
 			look_at = target.global_position + Vector3(0, 1.5, 0)
@@ -878,6 +903,9 @@ func _animate(dt: float, move: Vector3) -> void:
 	if action != "":
 		var mw := NativeMoves.weight(action, action_t / maxf(action_len, 0.001))
 		var pose := NativeMoves.pose(action, action_t / maxf(action_len, 0.001), action_t)
+		if action == "sip":      # issue #261: its own easing in and out
+			mw = 1.0
+			pose = ClubMoves.sip_pose(action_t / maxf(action_len, 0.001))
 		for jn in pose:
 			if joints.has(jn):
 				var j := joints[jn] as Node3D
@@ -886,6 +914,78 @@ func _animate(dt: float, move: Vector3) -> void:
 	# when told to, after they have moved this frame.
 	if look_body.has_meta("skin"):
 		(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
+
+
+## Issue #261: the dancer and the band play their loop every frame wherever the
+## player is, facing where they were put; their heads follow the loop, not the senses.
+func _staged() -> bool:
+	return perform != "" or bool(profile.get("dance_loop", false))
+
+
+## Issue #261: a performer's hands on their instrument. The loop says where each
+## hand goes (ClubMoves, the performer's own space) and how much (0 = the arm's own
+## pose); the arm IK puts it there, blended from where the pose had it.
+func _reach_instrument(out: Dictionary) -> void:
+	var hands: Dictionary = out.get("hands", {})
+	var reach: Dictionary = out.get("reach", {})
+	var chest := joints.get("chest") as Node3D
+	if chest == null:
+		return
+	var to_chest := chest.global_transform.affine_inverse() * global_transform
+	for side in ["l", "r"]:
+		var w := float(reach.get(side, 0.0))
+		var at = hands.get(side)
+		var wrist := joints.get(side + "_wrist") as Node3D
+		if w <= 0.01 or at == null or wrist == null:
+			continue
+		var from := chest.global_transform.affine_inverse() * wrist.global_position
+		kit.reach(look_body, side, from.lerp(to_chest * (at as Vector3), w), HAND_POLES[side])
+
+
+## Issue #261: a bottle in the right hand, upright while the forearm is level
+## (ClubMoves.HOLD); a colour of its own.
+func _hold_bottle() -> void:
+	var wrist := joints.get("r_wrist") as Node3D
+	if wrist == null:
+		return
+	var colors := CantinaDressing.SERVED_COLORS
+	bottle = CantinaDressing.bottle_mesh(Color(colors[absi(hash(post_id)) % colors.size()]))
+	bottle.name = "HeldBottle"
+	wrist.add_child(bottle)
+	bottle.position = Vector3(0.0, -0.08, -0.09)
+	bottle.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+	_sip_wait = randf_range(1.0, SIP_EVERY.y)
+
+
+## Standing with a drink: a nod on the beat; a raver ("groove" > 0) bounces at the
+## knees, sways and throws the free hand up for a few bars now and then.
+func _groove(g: float) -> void:
+	var beat: float = anim.time * TAU * float(profile.get("bpm", 110.0)) / 60.0
+	(joints.neck as Node3D).rotation_degrees.x += (5.0 + 5.0 * g) * sin(beat)
+	if g <= 0.0:
+		return
+	var b := 0.5 + 0.5 * sin(beat)
+	for side in ["l", "r"]:
+		(joints[side + "_knee"] as Node3D).rotation_degrees.x += 16.0 * g * b
+		(joints[side + "_hip"] as Node3D).rotation_degrees.x -= 8.0 * g * b
+	(joints.pelvis as Node3D).position.y -= 0.035 * g * b
+	(joints.chest as Node3D).rotation_degrees.z += 6.0 * g * sin(beat * 0.5)
+	var phase := hash(post_id) % 8
+	var up := clampf((sin(beat / 16.0 + phase) - 0.3) * 3.0, 0.0, 1.0)
+	var ls := joints.l_shoulder as Node3D
+	ls.rotation_degrees = ls.rotation_degrees.lerp(Vector3(-25.0, 0.0, 150.0 + 12.0 * sin(beat)), up)
+	var le := joints.l_elbow as Node3D
+	le.rotation_degrees = le.rotation_degrees.lerp(Vector3(-20.0 - 30.0 * b, 0.0, 0.0), up)
+
+
+func _tick_sip(dt: float) -> void:
+	if bottle == null or drawn or action != "":
+		return
+	_sip_wait -= dt
+	if _sip_wait <= 0.0:
+		_sip_wait = randf_range(SIP_EVERY.x, SIP_EVERY.y)
+		sips += 1
+		act("sip", ClubMoves.SIP_S)
 
 
 ## Radians up (+) or down toward the aim point, for the chest bend.
