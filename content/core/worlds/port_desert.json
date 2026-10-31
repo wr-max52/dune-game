@@ -88,21 +88,18 @@
     },
     {
       "id": "skrugs_post",
+      "note": "Issue #237: out in the sand about 90 m past the round port's back gate, straight out from it, far enough that a speeder starts to make sense. +x faces the gate.",
       "kind": "location",
       "location": "skrugs_post",
-      "at": [
-        -135,
-        0,
-        -60
-      ],
-      "yaw_deg": 0
+      "at": [-226, 0, -56],
+      "yaw_deg": -14
     },
     {
       "id": "remnant_outpost_near",
       "kind": "location",
       "location": "remnant_outpost_near",
-      "at": [250, 0, 40],
-      "yaw_deg": 180,
+      "at": [0, 0, 250],
+      "yaw_deg": 90,
       "clear": 45
     },
     {
@@ -117,8 +114,8 @@
       "id": "remnant_outpost_far",
       "kind": "location",
       "location": "remnant_outpost_far",
-      "at": [720, 0, 110],
-      "yaw_deg": 170,
+      "at": [700, 0, 300],
+      "yaw_deg": 157,
       "clear": 45
     },
     {

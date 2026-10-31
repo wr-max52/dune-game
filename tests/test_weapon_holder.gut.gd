@@ -88,3 +88,30 @@ func test_last_weapon_and_cycle() -> void:
 	h.cycle(1)
 	_run(h, 0.5)
 	assert_eq(h.current, "energy_blade")
+
+
+func test_tab_cycle_ends_on_empty_hands() -> void:
+	var h := _h()
+	for want in ["pistol_blaster", "energy_blade", "rifle_blaster", "", "pistol_blaster"]:
+		h.cycle_to_empty()
+		_run(h, 0.5)
+		assert_eq(h.current, want)
+
+
+func test_tab_cycle_skips_weapons_it_may_not_draw() -> void:
+	var h := _h()
+	h.can_draw = func(id): return id == "pistol_blaster"
+	h.cycle_to_empty()
+	_run(h, 0.5)
+	assert_eq(h.current, "pistol_blaster")
+	h.cycle_to_empty()
+	_run(h, 0.5)
+	assert_eq(h.current, "", "the only weapon, then empty hands")
+
+
+func test_tab_cycle_mid_swap_follows_where_it_is_going() -> void:
+	var h := _h()
+	h.cycle_to_empty()
+	h.cycle_to_empty()     # pressed again while the pistol is still coming up
+	_run(h, 0.6)
+	assert_eq(h.current, "energy_blade")

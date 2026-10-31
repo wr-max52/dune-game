@@ -100,6 +100,18 @@ func cycle(step: int) -> void:
 			return
 
 
+## Tab: forward through the weapons it may draw, then hands free after the last
+## one, then round to the first again.
+func cycle_to_empty() -> void:
+	var target := pending if is_swapping() else current
+	for i in range(slots.find(target) + 1, slots.size()):
+		if can_draw.call(str(slots[i])):
+			request(str(slots[i]))
+			return
+	if target != "":
+		request("")
+
+
 func update(dt: float) -> Array:
 	var events: Array = []
 	_t += dt

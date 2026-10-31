@@ -7,6 +7,7 @@ extends Node
 ## Controls (project.godot actions):
 ##   1 / 2 / 3     blaster / energy sword / rifle   (same key again holsters)
 ##   Q             last weapon        mouse wheel   cycle        H   holster
+##   Tab           next weapon, and hands free after the last one
 ##   LMB (fire)    shoot / swing: a click swipes left, the next right, and so on;
 ##                 a double click is the combo, left-right-centre
 ##   RMB (alt)     right-click TOGGLES: blaster aim/zoom in-out, sword block on-off
@@ -118,6 +119,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			holder.request_slot(n + 1)
 	if event.is_action_pressed("weapon_last"):
 		holder.request_last()
+	if event.is_action_pressed("weapon_cycle"):
+		holder.cycle_to_empty()
 	if event.is_action_pressed("holster"):
 		holder.request("")
 	if event.is_action_pressed("reload") and guns.has(holder.current):

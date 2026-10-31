@@ -500,6 +500,120 @@ def barracks(cfg, boxes, markers, routes, zones):
 	zones.append(zone_of("barracks", [rect_of(b) for b in boxes if b["zone"] == "barracks"]))
 
 
+def clutter(cfg, results, all_boxes):
+	"""Crates, barrels and water tanks against a share of the houses' side walls."""
+	cc = cfg["fill"]["clutter"]
+	rng = random.Random(cc["seed"])
+	taken = [rect_of(b) for b in all_boxes if b["kind"] not in ("floor", "ring", "pad")]
+	out = []
+	for zid, res in results.items():
+		tag = zid[-1]
+		for h in sorted(res["placed"], key=lambda h: (h["rect"][1], h["rect"][0])):
+			if rng.random() > cc["share"]:
+				continue
+			r = h["rect"]
+			side = rng.choice([s_ for s_ in ("+x", "-x", "+z", "-z") if s_ != h["face"]])
+			tank = rng.random() < cc["tank_share"]
+			if tank:
+				along = dep = cc["tank"]["size"]
+				ht = cc["tank"]["height"]
+			else:
+				along = rng.uniform(*cc["crates"][0])
+				dep = rng.uniform(*cc["crates"][1])
+				ht = rng.uniform(*cc["crates"][2])
+			if side in ("+x", "-x"):
+				if r[3] - r[1] < along:
+					continue
+				z0 = rng.uniform(r[1], r[3] - along)
+				x0 = r[2] + 0.15 if side == "+x" else r[0] - 0.15 - dep
+				c = (x0, z0, x0 + dep, z0 + along)
+			else:
+				if r[2] - r[0] < along:
+					continue
+				x0 = rng.uniform(r[0], r[2] - along)
+				z0 = r[3] + 0.15 if side == "+z" else r[1] - 0.15 - dep
+				c = (x0, z0, x0 + along, z0 + dep)
+			c = tuple(round(v * 20) / 20 for v in c)
+			if not res["inside"](c) or not gn.rect_lane_clear(c, res["lanes"], 0.4):
+				continue
+			if any(overlaps(c, t) for t in taken) or any(overlaps(grow(c, 0.6), rect_of(o)) for o in out):
+				continue
+			n = sum(1 for o in out if o["zone"] == zid) + 1
+			extra = {"look": "cistern", "shape": "round"} if tank else {"look": "crates"}
+			out.append(box("clutter_%s_%02d" % (tag, n), zid, "cover", [c[0], 0, c[1]], [c[2], round(ht, 2), c[3]], **extra))
+	return out
+
+
+def yards(cfg, boxes, markers):
+	"""Crate stacks and a container in every gap between the surface pads, with a
+	dock worker by each, clear of the ramps' lines."""
+	yc = cfg["fill"]["yards"]
+	pads = cfg["pads"]
+	rng = random.Random(yc["seed"])
+	pad_c = [pol(pads["ring"], pads["first_deg"] + k * 360.0 / pads["count"]) for k in range(pads["count"])]
+	pad_r = pads["diameter"] / 2 + 1.2
+	taken = [rect_of(b) for b in boxes if b["kind"] not in ("floor", "ring", "pad")]
+	pit_r = cfg["pit"]["radius"] + 2.0
+	road = cfg["ring_road"]["radius"] - 6.0
+	worker = next(m for m in SQ["markers"] if m["id"] == "shopper_1")
+	n_yard = 0
+	k = 0
+	while k * yc["step_deg"] < 360.0:
+		a = yc["first_deg"] + k * yc["step_deg"]
+		k += 1
+		if any(abs((a - kd + 180) % 360 - 180) < yc["keep_half"] for kd in yc["keep_deg"]):
+			continue
+		n_yard += 1
+		cx, cz = pol(yc["r"], a)
+		placed = []
+
+		def ok(r, margin=0.8):
+			near, far = rect_r(r)
+			if near < pit_r or far > road:
+				return False
+			if any(gn.rect_dist(p[0], p[1], r) < pad_r for p in pad_c):
+				return False
+			return not any(overlaps(grow(r, margin), t) for t in taken + placed)
+		cw, cd = yc["container"]["size"]
+		tx, tz = -math.sin(math.radians(a)), math.cos(math.radians(a))
+		along_x = abs(tx) >= abs(tz)
+		w, d = (cw, cd) if along_x else (cd, cw)
+		for _ in range(30):
+			x = cx + rng.uniform(-2.0, 2.0)
+			z = cz + rng.uniform(-2.0, 2.0)
+			r = (x - w / 2, z - d / 2, x + w / 2, z + d / 2)
+			if ok(r):
+				boxes.append(box("yard_%d_container" % n_yard, "spaceport", "solid", [r[0], 0, r[1]], [r[2], yc["container"]["height"], r[3]], look="crates"))
+				placed.append(r)
+				break
+		s = 0
+		for _ in range(200):
+			if s >= yc["stacks"]:
+				break
+			sw = rng.uniform(*yc["stack_size"][0])
+			sd = rng.uniform(*yc["stack_size"][1])
+			x = cx + rng.uniform(-yc["spread"], yc["spread"])
+			z = cz + rng.uniform(-yc["spread"], yc["spread"])
+			r = tuple(round(v * 20) / 20 for v in (x - sw / 2, z - sd / 2, x + sw / 2, z + sd / 2))
+			if ok(r):
+				s += 1
+				boxes.append(box("yard_%d_crates_%d" % (n_yard, s), "spaceport", "cover", [r[0], 0, r[1]], [r[2], round(rng.uniform(*yc["stack_size"][2]), 2), r[3]], look="crates"))
+				placed.append(r)
+		taken += placed
+		# The dock worker: a clear spot on the pit side of the yard, facing the pads.
+		spots = [(yc["r"] - dr, a + da) for dr in (6.0, 8.0, 4.5, 10.0, 0.0, -4.0) for da in (0.0, 4.0, -4.0, 8.0, -8.0)]
+		for sr, sa in spots:
+			wx, wz = pol(sr, sa)
+			if all(gn.rect_dist(wx, wz, t) > 1.0 for t in taken) and math.hypot(wx, wz) > pit_r \
+					and all(math.dist((wx, wz), p) > pad_r for p in pad_c):
+				m = copy.deepcopy(worker)
+				m.pop("patrol", None)
+				m.update({"id": "dock_worker_%d" % n_yard, "pos": [r2(wx), 0, r2(wz)], "face": [r2(cx), 0, r2(cz)],
+					"note": "Issue #237: a dock hand by the cargo between the surface pads."})
+				markers.append(m)
+				break
+
+
 def lanes_for(dcfg, rng):
 	out = []
 	for a in dcfg["arcs"]:
@@ -587,6 +701,7 @@ def main():
 	wall_and_gates(cfg, SQ["boxes"], boxes, markers)
 	ground(cfg, boxes, cfg["pit"]["radius"])
 	spaceport(cfg, SQ["boxes"], boxes)
+	yards(cfg, boxes, markers)
 
 	# ---- the districts that move as a block
 	for b in SQ["boxes"]:
@@ -671,7 +786,7 @@ def main():
 		reserved = [(well[0], well[1], 3.6)] + [(pts[i][0], pts[i][1], 1.8) for pts, i in res.values()]
 		placed = gn.pack(rng, ((zr[0], zr[1]), (zr[2], zr[3])), lanes, kit, weights, gap=dcfg["gap"], reach=dcfg["reach"],
 			reserved=reserved, attempts=dcfg["attempts"], keep_out={}, inside=district_inside(dcfg, keep))
-		results[zid] = {"placed": placed, "lanes": lanes, "res": res, "well": well, "zone": zr}
+		results[zid] = {"placed": placed, "lanes": lanes, "res": res, "well": well, "zone": zr, "inside": district_inside(dcfg, keep)}
 	other = [b for b in boxes]
 
 	def build_res():
@@ -714,6 +829,22 @@ def main():
 			break
 		print("dropped %d building(s) with no way to their door" % gone)
 	all_boxes = other + build_res()
+	# Issue #237: crates, barrels and water tanks against the houses, then the same
+	# walk check: clutter that walls a door (or a resident) in is taken away again.
+	clut = clutter(cfg, results, all_boxes)
+	for _ in range(8):
+		bad = []
+		for zid, res in results.items():
+			start_pts, start_i = next(iter(res["res"].values()))
+			zr = grow(res["zone"], 6.0)
+			_, ok = gn.walk_grid(((zr[0], zr[1]), (zr[2], zr[3])), blockers(all_boxes + clut), start_pts[start_i])
+			oks[zid] = ok
+			bad += [h["step"] for h in res["placed"] if not ok(*h["step"])]
+			bad += [pts[i] for pts, i in res["res"].values() if not ok(*pts[i])]
+		if not bad:
+			break
+		clut = [c for c in clut if all(gn.rect_dist(p[0], p[1], rect_of(c)) > 4.0 for p in bad)]
+	all_boxes += clut
 	for zid, res in results.items():
 		for mid, (pts, i) in res["res"].items():
 			if not oks[zid](*pts[i]):
@@ -722,8 +853,11 @@ def main():
 	# ---- residents, their strolls, hiding places
 	for zid, res in results.items():
 		for mid, (pts, i) in res["res"].items():
-			src = next(m for m in SQ["markers"] if m["id"] == mid)
+			src = next((m for m in SQ["markers"] if m["id"] == mid), None)
+			if src is None:          # issue #237: a new resident is the district's first one, elsewhere
+				src = dict(sq_marker(next(iter(res["res"]))), note="Issue #237: another local walking the lanes.")
 			m = copy.deepcopy(src)
+			m["id"] = mid
 			m["pos"] = [pts[i][0], 0, pts[i][1]]
 			markers.append(m)
 			walk = [list(p) for p in (pts[i:i + 4] if i + 3 < len(pts) else list(reversed(pts[max(0, i - 3):i + 1])))]
