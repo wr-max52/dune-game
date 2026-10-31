@@ -683,7 +683,10 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		var at := WeaponMotion.reload_hand(reload, g_l, mag, out)
 		kit.reach(body, "l", w.transform * at, POLE_L)
 	elif grips.has("l") and drawn > 0.6 and not one_hand:
-		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+		var at_l := w.transform * (grips.l as Vector3)
+		if first_person and current == "energy_blade":
+			at_l = SwordCombo.fpv_left_grip(w.transform, grips.r, grips.l)
+		kit.reach(body, "l", at_l, POLE_L)
 
 
 ## Issue #229: the energy cell in the left hand during a reload (from when it
