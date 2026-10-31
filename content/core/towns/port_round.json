@@ -38,23 +38,23 @@
   {
    "id": "market",
    "min": [
-    66.0,
-    -51.0
+    -6,
+    -137
    ],
    "max": [
-    126.0,
-    7.0
+    130,
+    -23
    ]
   },
   {
    "id": "barracks",
    "min": [
-    66.0,
-    6.0
+    35,
+    11
    ],
    "max": [
-    126.0,
-    64.0
+    125,
+    105
    ]
   },
   {
@@ -2437,538 +2437,6 @@
    ]
   },
   {
-   "id": "shop_1",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    69.0,
-    0,
-    -51.0
-   ],
-   "max": [
-    81.0,
-    4,
-    -39.0
-   ],
-   "look": "shop",
-   "face": "+z"
-  },
-  {
-   "id": "shop_2",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    84.0,
-    0,
-    -51.0
-   ],
-   "max": [
-    96.0,
-    4,
-    -39.0
-   ],
-   "look": "shop",
-   "face": "+z"
-  },
-  {
-   "id": "shop_3",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    99.0,
-    0,
-    -51.0
-   ],
-   "max": [
-    111.0,
-    4,
-    -39.0
-   ],
-   "look": "shop",
-   "face": "+z"
-  },
-  {
-   "id": "shop_4",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    114.0,
-    0,
-    -51.0
-   ],
-   "max": [
-    126.0,
-    4,
-    -39.0
-   ],
-   "look": "shop",
-   "face": "+z"
-  },
-  {
-   "id": "stall_n1",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    71.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    75.0,
-    1.1,
-    -14.0
-   ],
-   "note": "Market stalls: two rows facing each other across the aisle (z -42..-34). Each is a waist-high counter on the aisle side and a back panel; the merchant stands between them.",
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n1_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    71.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    75.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_n2",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    79.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    83.0,
-    1.1,
-    -14.0
-   ],
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n2_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    79.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    83.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_n3",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    87.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    91.0,
-    1.1,
-    -14.0
-   ],
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n3_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    87.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    91.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_n4",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    95.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    99.0,
-    1.1,
-    -14.0
-   ],
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n4_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    95.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    99.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_n5",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    103.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    107.0,
-    1.1,
-    -14.0
-   ],
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n5_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    103.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    107.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_n6",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    111.0,
-    0,
-    -15.0
-   ],
-   "max": [
-    115.0,
-    1.1,
-    -14.0
-   ],
-   "look": "stall",
-   "face": "-z"
-  },
-  {
-   "id": "stall_n6_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    111.0,
-    0,
-    -11.4
-   ],
-   "max": [
-    115.0,
-    2.6,
-    -11.0
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s1",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    71.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    75.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s1_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    71.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    75.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s2",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    79.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    83.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s2_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    79.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    83.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s3",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    87.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    91.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s3_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    87.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    91.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s4",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    95.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    99.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s4_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    95.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    99.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s5",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    103.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    107.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s5_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    103.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    107.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "stall_s6",
-   "zone": "market",
-   "kind": "cover",
-   "min": [
-    111.0,
-    0,
-    -24.0
-   ],
-   "max": [
-    115.0,
-    1.1,
-    -23.0
-   ],
-   "look": "stall",
-   "face": "+z"
-  },
-  {
-   "id": "stall_s6_back",
-   "zone": "market",
-   "kind": "solid",
-   "min": [
-    111.0,
-    0,
-    -27.0
-   ],
-   "max": [
-    115.0,
-    2.6,
-    -26.6
-   ],
-   "look": "stall_back"
-  },
-  {
-   "id": "barracks_pad",
-   "zone": "barracks",
-   "kind": "pad",
-   "min": [
-    95.0,
-    0,
-    11.8
-   ],
-   "max": [
-    107.0,
-    0.03,
-    23.8
-   ],
-   "shape": "round",
-   "parked_yaw_deg": 0,
-   "remnant_ship": "remnant_interceptor",
-   "note": "Issue #76: the Remnant's landing pad in the barracks yard. Its dark interceptor (remnant_ship) stands here and hunts you in the air when you are wanted (src/systems/flight/atmo_fighter.gd); shot down, a new one is here a while later. No collision: the ship carries its own hull."
-  },
-  {
-   "id": "barracks_hall",
-   "zone": "barracks",
-   "kind": "solid",
-   "min": [
-    86.0,
-    0,
-    39.0
-   ],
-   "max": [
-    121.0,
-    6,
-    62.0
-   ],
-   "look": "hall",
-   "face": "-z",
-   "style": "garrison"
-  },
-  {
-   "id": "yard_wall_w",
-   "zone": "barracks",
-   "kind": "cover",
-   "min": [
-    71.0,
-    0,
-    10.0
-   ],
-   "max": [
-    91.0,
-    1.5,
-    10.6
-   ]
-  },
-  {
-   "id": "yard_wall_e",
-   "zone": "barracks",
-   "kind": "cover",
-   "min": [
-    97.0,
-    0,
-    10.0
-   ],
-   "max": [
-    118.0,
-    1.5,
-    10.6
-   ]
-  },
-  {
    "id": "checkpoint_barricade_n",
    "zone": "main_street",
    "kind": "cover",
@@ -3001,18 +2469,1816 @@
    "note": "Gate checkpoint barricade, south side."
   },
   {
+   "id": "stall_01",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    -1.36,
+    0.0,
+    -82.5
+   ],
+   "max": [
+    2.64,
+    1.1,
+    -81.5
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_01_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -1.36,
+    0.0,
+    -78.9
+   ],
+   "max": [
+    2.64,
+    3.4,
+    -78.5
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_02",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    11.38,
+    0.0,
+    -81.41
+   ],
+   "max": [
+    15.38,
+    1.1,
+    -80.41
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_02_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    11.38,
+    0.0,
+    -77.81
+   ],
+   "max": [
+    15.38,
+    3.4,
+    -77.41
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_03",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    23.8,
+    0.0,
+    -78.36
+   ],
+   "max": [
+    27.8,
+    1.1,
+    -77.36
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_03_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    23.8,
+    0.0,
+    -74.76
+   ],
+   "max": [
+    27.8,
+    3.4,
+    -74.36
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_04",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    35.6,
+    0.0,
+    -73.44
+   ],
+   "max": [
+    39.6,
+    1.1,
+    -72.44
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_04_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    35.6,
+    0.0,
+    -69.84
+   ],
+   "max": [
+    39.6,
+    3.4,
+    -69.44
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_05",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    46.49,
+    0.0,
+    -66.74
+   ],
+   "max": [
+    50.49,
+    1.1,
+    -65.74
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_05_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    46.49,
+    0.0,
+    -63.14
+   ],
+   "max": [
+    50.49,
+    3.4,
+    -62.74
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_06",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    56.22,
+    0.0,
+    -58.45
+   ],
+   "max": [
+    60.22,
+    1.1,
+    -57.45
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_06_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    56.22,
+    0.0,
+    -54.85
+   ],
+   "max": [
+    60.22,
+    3.4,
+    -54.45
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_07",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    72.29,
+    0.0,
+    -39.88
+   ],
+   "max": [
+    73.29,
+    1.1,
+    -35.88
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_07_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    69.29,
+    0.0,
+    -39.88
+   ],
+   "max": [
+    69.69,
+    3.4,
+    -35.88
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_08",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    77.26,
+    0.0,
+    -28.1
+   ],
+   "max": [
+    78.26,
+    1.1,
+    -24.1
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_08_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    74.26,
+    0.0,
+    -28.1
+   ],
+   "max": [
+    74.66,
+    3.4,
+    -24.1
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_09",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    -2.0,
+    0.0,
+    -90.5
+   ],
+   "max": [
+    2.0,
+    1.1,
+    -89.5
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_09_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -2.0,
+    0.0,
+    -93.5
+   ],
+   "max": [
+    2.0,
+    3.4,
+    -93.1
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_10",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    10.46,
+    0.0,
+    -89.63
+   ],
+   "max": [
+    14.46,
+    1.1,
+    -88.63
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_10_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    10.46,
+    0.0,
+    -92.63
+   ],
+   "max": [
+    14.46,
+    3.4,
+    -92.23
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_11",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    22.67,
+    0.0,
+    -87.03
+   ],
+   "max": [
+    26.67,
+    1.1,
+    -86.03
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_11_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    22.67,
+    0.0,
+    -90.03
+   ],
+   "max": [
+    26.67,
+    3.4,
+    -89.63
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_12",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    34.4,
+    0.0,
+    -82.76
+   ],
+   "max": [
+    38.4,
+    1.1,
+    -81.76
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_12_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    34.4,
+    0.0,
+    -85.76
+   ],
+   "max": [
+    38.4,
+    3.4,
+    -85.36
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_13",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    55.53,
+    0.0,
+    -69.56
+   ],
+   "max": [
+    59.53,
+    1.1,
+    -68.56
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_13_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    55.53,
+    0.0,
+    -72.56
+   ],
+   "max": [
+    59.53,
+    3.4,
+    -72.16
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_14",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    66.51,
+    0.0,
+    -61.89
+   ],
+   "max": [
+    67.51,
+    1.1,
+    -57.89
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_14_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    70.11,
+    0.0,
+    -61.89
+   ],
+   "max": [
+    70.51,
+    3.4,
+    -57.89
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_15",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    80.44,
+    0.0,
+    -41.23
+   ],
+   "max": [
+    81.44,
+    1.1,
+    -37.23
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_15_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    84.04,
+    0.0,
+    -41.23
+   ],
+   "max": [
+    84.44,
+    3.4,
+    -37.23
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_16",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    85.12,
+    0.0,
+    -29.66
+   ],
+   "max": [
+    86.12,
+    1.1,
+    -25.66
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_16_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    88.72,
+    0.0,
+    -29.66
+   ],
+   "max": [
+    89.12,
+    3.4,
+    -25.66
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_17",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    -3.17,
+    0.0,
+    -100.49
+   ],
+   "max": [
+    0.83,
+    1.1,
+    -99.49
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_17_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -3.17,
+    0.0,
+    -96.89
+   ],
+   "max": [
+    0.83,
+    3.4,
+    -96.49
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_18",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    8.51,
+    0.0,
+    -99.95
+   ],
+   "max": [
+    12.51,
+    1.1,
+    -98.95
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_18_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    8.51,
+    0.0,
+    -96.35
+   ],
+   "max": [
+    12.51,
+    3.4,
+    -95.95
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_19",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    20.04,
+    0.0,
+    -98.05
+   ],
+   "max": [
+    24.04,
+    1.1,
+    -97.05
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_19_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    20.04,
+    0.0,
+    -94.45
+   ],
+   "max": [
+    24.04,
+    3.4,
+    -94.05
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_20",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    31.27,
+    0.0,
+    -94.83
+   ],
+   "max": [
+    35.27,
+    1.1,
+    -93.83
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_20_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    31.27,
+    0.0,
+    -91.23
+   ],
+   "max": [
+    35.27,
+    3.4,
+    -90.83
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_21",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    42.06,
+    0.0,
+    -90.33
+   ],
+   "max": [
+    46.06,
+    1.1,
+    -89.33
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_21_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    42.06,
+    0.0,
+    -86.73
+   ],
+   "max": [
+    46.06,
+    3.4,
+    -86.33
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_22",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    61.7,
+    0.0,
+    -77.73
+   ],
+   "max": [
+    65.7,
+    1.1,
+    -76.73
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_22_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    61.7,
+    0.0,
+    -74.13
+   ],
+   "max": [
+    65.7,
+    3.4,
+    -73.73
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_23",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    71.29,
+    0.0,
+    -71.81
+   ],
+   "max": [
+    72.29,
+    1.1,
+    -67.81
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_23_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    68.29,
+    0.0,
+    -71.81
+   ],
+   "max": [
+    68.69,
+    3.4,
+    -67.81
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_24",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    85.44,
+    0.0,
+    -53.26
+   ],
+   "max": [
+    86.44,
+    1.1,
+    -49.26
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_24_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    82.44,
+    0.0,
+    -53.26
+   ],
+   "max": [
+    82.84,
+    3.4,
+    -49.26
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_25",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    90.81,
+    0.0,
+    -42.88
+   ],
+   "max": [
+    91.81,
+    1.1,
+    -38.88
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_25_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    87.81,
+    0.0,
+    -42.88
+   ],
+   "max": [
+    88.21,
+    3.4,
+    -38.88
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_26",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    94.94,
+    0.0,
+    -31.94
+   ],
+   "max": [
+    95.94,
+    1.1,
+    -27.94
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_26_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    91.94,
+    0.0,
+    -31.94
+   ],
+   "max": [
+    92.34,
+    3.4,
+    -27.94
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_27",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    -3.25,
+    0.0,
+    -108.49
+   ],
+   "max": [
+    0.75,
+    1.1,
+    -107.49
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_27_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -3.25,
+    0.0,
+    -111.49
+   ],
+   "max": [
+    0.75,
+    3.4,
+    -111.09
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_28",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    9.24,
+    0.0,
+    -107.91
+   ],
+   "max": [
+    13.24,
+    1.1,
+    -106.91
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_28_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    9.24,
+    0.0,
+    -110.91
+   ],
+   "max": [
+    13.24,
+    3.4,
+    -110.51
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_29",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    21.57,
+    0.0,
+    -105.88
+   ],
+   "max": [
+    25.57,
+    1.1,
+    -104.88
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_29_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    21.57,
+    0.0,
+    -108.88
+   ],
+   "max": [
+    25.57,
+    3.4,
+    -108.48
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_30",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    33.59,
+    0.0,
+    -102.44
+   ],
+   "max": [
+    37.59,
+    1.1,
+    -101.44
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_30_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    33.59,
+    0.0,
+    -105.44
+   ],
+   "max": [
+    37.59,
+    3.4,
+    -105.04
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_31",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    45.12,
+    0.0,
+    -97.62
+   ],
+   "max": [
+    49.12,
+    1.1,
+    -96.62
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_31_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    45.12,
+    0.0,
+    -100.62
+   ],
+   "max": [
+    49.12,
+    3.4,
+    -100.22
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_32",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    66.14,
+    0.0,
+    -84.15
+   ],
+   "max": [
+    70.14,
+    1.1,
+    -83.15
+   ],
+   "look": "stall",
+   "face": "+z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_32_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    66.14,
+    0.0,
+    -87.15
+   ],
+   "max": [
+    70.14,
+    3.4,
+    -86.75
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_33",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    77.33,
+    0.0,
+    -76.68
+   ],
+   "max": [
+    78.33,
+    1.1,
+    -72.68
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_33_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    80.93,
+    0.0,
+    -76.68
+   ],
+   "max": [
+    81.33,
+    3.4,
+    -72.68
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_34",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    92.47,
+    0.0,
+    -56.83
+   ],
+   "max": [
+    93.47,
+    1.1,
+    -52.83
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_34_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    96.07,
+    0.0,
+    -56.83
+   ],
+   "max": [
+    96.47,
+    3.4,
+    -52.83
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_35",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    98.21,
+    0.0,
+    -45.72
+   ],
+   "max": [
+    99.21,
+    1.1,
+    -41.72
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_35_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    101.81,
+    0.0,
+    -45.72
+   ],
+   "max": [
+    102.21,
+    3.4,
+    -41.72
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_36",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    102.62,
+    0.0,
+    -34.03
+   ],
+   "max": [
+    103.62,
+    1.1,
+    -30.03
+   ],
+   "look": "stall",
+   "face": "-x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_36_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    106.22,
+    0.0,
+    -34.03
+   ],
+   "max": [
+    106.62,
+    3.4,
+    -30.03
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_37",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    -4.36,
+    0.0,
+    -118.48
+   ],
+   "max": [
+    -0.36,
+    1.1,
+    -117.48
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_37_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -4.36,
+    0.0,
+    -114.88
+   ],
+   "max": [
+    -0.36,
+    3.4,
+    -114.48
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_38",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    7.44,
+    0.0,
+    -118.12
+   ],
+   "max": [
+    11.44,
+    1.1,
+    -117.12
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_38_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    7.44,
+    0.0,
+    -114.52
+   ],
+   "max": [
+    11.44,
+    3.4,
+    -114.12
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_39",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    19.16,
+    0.0,
+    -116.6
+   ],
+   "max": [
+    23.16,
+    1.1,
+    -115.6
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_39_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    19.16,
+    0.0,
+    -113.0
+   ],
+   "max": [
+    23.16,
+    3.4,
+    -112.6
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_40",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    30.66,
+    0.0,
+    -113.91
+   ],
+   "max": [
+    34.66,
+    1.1,
+    -112.91
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_40_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    30.66,
+    0.0,
+    -110.31
+   ],
+   "max": [
+    34.66,
+    3.4,
+    -109.91
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_41",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    41.84,
+    0.0,
+    -110.09
+   ],
+   "max": [
+    45.84,
+    1.1,
+    -109.09
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_41_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    41.84,
+    0.0,
+    -106.49
+   ],
+   "max": [
+    45.84,
+    3.4,
+    -106.09
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_42",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    52.59,
+    0.0,
+    -105.18
+   ],
+   "max": [
+    56.59,
+    1.1,
+    -104.18
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_42_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    52.59,
+    0.0,
+    -101.58
+   ],
+   "max": [
+    56.59,
+    3.4,
+    -101.18
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_43",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    72.34,
+    0.0,
+    -92.28
+   ],
+   "max": [
+    76.34,
+    1.1,
+    -91.28
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_43_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    72.34,
+    0.0,
+    -88.68
+   ],
+   "max": [
+    76.34,
+    3.4,
+    -88.28
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_44",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    81.16,
+    0.0,
+    -84.42
+   ],
+   "max": [
+    85.16,
+    1.1,
+    -83.42
+   ],
+   "look": "stall",
+   "face": "-z",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_44_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    81.16,
+    0.0,
+    -80.82
+   ],
+   "max": [
+    85.16,
+    3.4,
+    -80.42
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_45",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    90.15,
+    0.0,
+    -77.72
+   ],
+   "max": [
+    91.15,
+    1.1,
+    -73.72
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_45_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    87.15,
+    0.0,
+    -77.72
+   ],
+   "max": [
+    87.55,
+    3.4,
+    -73.72
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_46",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    103.35,
+    0.0,
+    -58.15
+   ],
+   "max": [
+    104.35,
+    1.1,
+    -54.15
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_46_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    100.35,
+    0.0,
+    -58.15
+   ],
+   "max": [
+    100.75,
+    3.4,
+    -54.15
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_47",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    108.42,
+    0.0,
+    -47.48
+   ],
+   "max": [
+    109.42,
+    1.1,
+    -43.48
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_47_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    105.42,
+    0.0,
+    -47.48
+   ],
+   "max": [
+    105.82,
+    3.4,
+    -43.48
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "stall_48",
+   "zone": "market",
+   "kind": "cover",
+   "min": [
+    112.41,
+    0.0,
+    -36.36
+   ],
+   "max": [
+    113.41,
+    1.1,
+    -32.36
+   ],
+   "look": "stall",
+   "face": "+x",
+   "canopy_lift": 0.9
+  },
+  {
+   "id": "stall_48_back",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    109.41,
+    0.0,
+    -36.36
+   ],
+   "max": [
+    109.81,
+    3.4,
+    -32.36
+   ],
+   "look": "stall_back"
+  },
+  {
+   "id": "shop_1",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    -3.5,
+    0.0,
+    -136.0
+   ],
+   "max": [
+    3.5,
+    4.5,
+    -129.0
+   ],
+   "look": "shop",
+   "face": "+z"
+  },
+  {
+   "id": "shop_2",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    14.88,
+    0.0,
+    -134.26
+   ],
+   "max": [
+    21.88,
+    4.5,
+    -127.26
+   ],
+   "look": "shop",
+   "face": "+z"
+  },
+  {
+   "id": "shop_3",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    32.79,
+    0.0,
+    -130.07
+   ],
+   "max": [
+    39.79,
+    4.5,
+    -123.07
+   ],
+   "look": "shop",
+   "face": "+z"
+  },
+  {
+   "id": "shop_4",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    49.94,
+    0.0,
+    -123.52
+   ],
+   "max": [
+    56.94,
+    4.5,
+    -116.52
+   ],
+   "look": "shop",
+   "face": "+z"
+  },
+  {
+   "id": "shop_5",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    114.53,
+    0.0,
+    -61.07
+   ],
+   "max": [
+    121.53,
+    4.5,
+    -54.07
+   ],
+   "look": "shop",
+   "face": "-x"
+  },
+  {
+   "id": "shop_6",
+   "zone": "market",
+   "kind": "solid",
+   "min": [
+    121.65,
+    0.0,
+    -44.16
+   ],
+   "max": [
+    128.65,
+    4.5,
+    -37.16
+   ],
+   "look": "shop",
+   "face": "-x"
+  },
+  {
+   "id": "yard_wall_w",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    76.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    92.0,
+    1.5,
+    12.6
+   ]
+  },
+  {
+   "id": "yard_wall_e",
+   "zone": "barracks",
+   "kind": "cover",
+   "min": [
+    100.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    124.0,
+    1.5,
+    12.6
+   ]
+  },
+  {
+   "id": "barracks_pad",
+   "zone": "barracks",
+   "kind": "pad",
+   "min": [
+    100.0,
+    0.0,
+    18.0
+   ],
+   "max": [
+    112.0,
+    0.03,
+    30.0
+   ],
+   "shape": "round",
+   "parked_yaw_deg": 0,
+   "remnant_ship": "remnant_interceptor",
+   "note": "Issue #76: the Remnant's landing pad in the barracks yard. Its dark interceptor (remnant_ship) stands here and hunts you in the air when you are wanted (src/systems/flight/atmo_fighter.gd); shot down, a new one is here a while later. No collision: the ship carries its own hull."
+  },
+  {
+   "id": "drill_yard",
+   "zone": "barracks",
+   "kind": "floor",
+   "min": [
+    78.0,
+    0.0,
+    18.0
+   ],
+   "max": [
+    96.0,
+    0.02,
+    42.0
+   ]
+  },
+  {
    "id": "yard_crate_1",
    "zone": "barracks",
    "kind": "cover",
    "min": [
-    81.0,
-    0,
-    19.0
+    98.0,
+    0.0,
+    36.0
    ],
    "max": [
-    83.0,
+    100.0,
     1.2,
-    21.0
+    38.0
    ]
   },
   {
@@ -3020,14 +4286,14 @@
    "zone": "barracks",
    "kind": "cover",
    "min": [
-    101.0,
-    0,
-    24.0
+    116.0,
+    0.0,
+    20.0
    ],
    "max": [
-    103.0,
+    118.0,
     1.2,
-    26.0
+    22.0
    ]
   },
   {
@@ -3035,31 +4301,31 @@
    "zone": "barracks",
    "kind": "cover",
    "min": [
-    91.0,
-    0,
-    30.0
-   ],
-   "max": [
-    94.0,
-    1.2,
-    31.0
-   ]
-  },
-  {
-   "id": "barracks_bunk",
-   "zone": "barracks",
-   "kind": "solid",
-   "min": [
-    69.0,
-    0,
+    80.0,
+    0.0,
     44.0
    ],
    "max": [
-    81.0,
-    16.0,
-    58.0
+    83.0,
+    1.2,
+    45.0
+   ]
+  },
+  {
+   "id": "barracks_hall",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    66.0,
+    0.0,
+    50.0
    ],
-   "look": "tower_block",
+   "max": [
+    112.0,
+    7.0,
+    72.0
+   ],
+   "look": "hall",
    "face": "-z",
    "style": "garrison"
   },
@@ -3068,16 +4334,34 @@
    "zone": "barracks",
    "kind": "solid",
    "min": [
-    103.0,
-    6.0,
-    44.0
-   ],
-   "max": [
-    119.0,
-    13.0,
+    96.0,
+    7.0,
     58.0
    ],
+   "max": [
+    112.0,
+    14.0,
+    72.0
+   ],
    "look": "upper",
+   "face": "-z",
+   "style": "garrison"
+  },
+  {
+   "id": "barracks_bunk",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    52.0,
+    0.0,
+    56.0
+   ],
+   "max": [
+    64.0,
+    16.0,
+    70.0
+   ],
+   "look": "tower_block",
    "face": "-z",
    "style": "garrison"
   },
@@ -3086,17 +4370,53 @@
    "zone": "barracks",
    "kind": "overhead",
    "min": [
-    81.0,
-    12.4,
-    49.5
+    64.0,
+    13.4,
+    62.0
    ],
    "max": [
-    103.0,
-    13.0,
-    52.5
+    96.0,
+    14.0,
+    65.0
    ],
    "look": "bridge",
-   "axis": "x",
+   "style": "garrison",
+   "axis": "x"
+  },
+  {
+   "id": "barracks_block_2",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    60.0,
+    0.0,
+    82.0
+   ],
+   "max": [
+    88.0,
+    9.0,
+    104.0
+   ],
+   "look": "hall",
+   "face": "-z",
+   "style": "garrison"
+  },
+  {
+   "id": "barracks_armoury",
+   "zone": "barracks",
+   "kind": "solid",
+   "min": [
+    36.0,
+    0.0,
+    78.0
+   ],
+   "max": [
+    50.0,
+    6.0,
+    92.0
+   ],
+   "look": "upper",
+   "face": "-z",
    "style": "garrison"
   },
   {
@@ -5447,9 +6767,9 @@
   {
    "id": "trooper_yard_a",
    "pos": [
-    91.0,
-    0,
-    24.0
+    90.0,
+    0.0,
+    30.0
    ],
    "role": "trooper_post",
    "soldier": "yard_trooper",
@@ -5458,9 +6778,9 @@
   {
    "id": "trooper_yard_b",
    "pos": [
-    109.0,
-    0,
-    32.0
+    114.0,
+    0.0,
+    38.0
    ],
    "role": "trooper_post",
    "soldier": "yard_trooper",
@@ -5469,109 +6789,109 @@
   {
    "id": "trooper_roof_w",
    "pos": [
-    89.0,
-    6,
-    40.5
+    72.0,
+    7.0,
+    52.5
    ],
    "role": "trooper_post",
    "soldier": "roof_rifleman",
    "face": [
-    79.0,
-    0,
-    16.0
+    80.0,
+    0.0,
+    26.0
    ],
    "note": "West roof rifleman: over the yard's west half and the crates."
   },
   {
    "id": "trooper_roof_c",
    "pos": [
-    98.0,
-    6,
-    40.5
+    88.0,
+    7.0,
+    52.5
    ],
    "role": "trooper_post",
    "soldier": "roof_rifleman",
    "face": [
-    95.0,
-    0,
-    12.0
+    92.0,
+    0.0,
+    14.0
    ],
    "note": "Centre roof rifleman: down the middle of the yard to the main street."
   },
   {
    "id": "trooper_roof_e",
    "pos": [
-    115.0,
-    6,
-    41.0
+    106.0,
+    7.0,
+    52.5
    ],
    "role": "trooper_post",
    "soldier": "roof_rifleman",
    "face": [
-    126.0,
-    0,
-    -4.0
+    124.0,
+    0.0,
+    4.0
    ],
    "note": "East roof rifleman, in front of the upper block: the yard's east side and the gate."
   },
   {
    "id": "vendor_1",
    "pos": [
-    73.0,
+    25.8,
     0,
-    -12.7
+    -76.06
    ],
    "role": "ambient",
    "soldier": "local_merchant",
    "face": [
-    73.0,
+    25.8,
     0,
-    -19.0
+    -81.86
    ]
   },
   {
    "id": "vendor_2",
    "pos": [
-    89.0,
+    70.99,
     0,
-    -12.7
+    -37.88
    ],
    "role": "ambient",
    "soldier": "local_merchant",
    "face": [
-    89.0,
+    76.79,
     0,
-    -19.0
+    -37.88
    ]
   },
   {
    "id": "vendor_3",
    "pos": [
-    105.0,
+    24.67,
     0,
-    -25.3
+    -88.33
    ],
    "role": "ambient",
    "soldier": "local_fence",
    "face": [
-    105.0,
+    24.67,
     0,
-    -19.0
+    -82.53
    ]
   },
   {
    "id": "vendor_4",
    "pos": [
-    81.0,
+    82.74,
     0,
-    -25.3
+    -39.23
    ],
    "role": "ambient",
    "soldier": "local_merchant",
    "face": [
-    81.0,
+    76.94,
     0,
-    -19.0
+    -39.23
    ]
   },
   {
@@ -5610,9 +6930,9 @@
   {
    "id": "shopper_1",
    "pos": [
-    69.0,
+    -1.5,
     0,
-    -17.5
+    -85.99
    ],
    "role": "ambient",
    "soldier": "local_resident",
@@ -5621,9 +6941,9 @@
   {
    "id": "shopper_2",
    "pos": [
-    117.0,
+    -1.82,
     0,
-    -33.0
+    -103.98
    ],
    "role": "ambient",
    "soldier": "local_resident",
@@ -5647,12 +6967,56 @@
   {
    "id": "remnant_respawn",
    "pos": [
-    103.0,
-    0,
-    64.5
+    76.0,
+    0.0,
+    77.0
    ],
    "role": "waypoint",
    "note": "Issue #64: behind the barracks hall, between it and the north wall. A Remnant trooper killed in town comes back here a minute later (while the garrison still holds the town) and walks back to its post."
+  },
+  {
+   "id": "shopper_3",
+   "pos": [
+    -2.13,
+    0,
+    -121.98
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_3"
+  },
+  {
+   "id": "shopper_4",
+   "pos": [
+    73.72,
+    0,
+    -44.29
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_4"
+  },
+  {
+   "id": "shopper_5",
+   "pos": [
+    89.15,
+    0,
+    -53.56
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_5"
+  },
+  {
+   "id": "shopper_6",
+   "pos": [
+    104.57,
+    0,
+    -62.83
+   ],
+   "role": "ambient",
+   "soldier": "local_resident",
+   "patrol": "stroll_market_6"
   },
   {
    "id": "trooper_tower_s",
@@ -5663,6 +7027,134 @@
    ],
    "role": "trooper_post",
    "soldier": "tower_sentry"
+  },
+  {
+   "id": "vendor_10",
+   "pos": [
+    21.16,
+    0,
+    -114.3
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    21.16,
+    0,
+    -120.1
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_11",
+   "pos": [
+    74.34,
+    0,
+    -89.98
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    74.34,
+    0,
+    -95.78
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_12",
+   "pos": [
+    107.12,
+    0,
+    -45.48
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    112.92,
+    0,
+    -45.48
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_5",
+   "pos": [
+    22.04,
+    0,
+    -95.75
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    22.04,
+    0,
+    -101.55
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_6",
+   "pos": [
+    69.99,
+    0,
+    -69.81
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    75.79,
+    0,
+    -69.81
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_7",
+   "pos": [
+    -1.25,
+    0,
+    -109.79
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    -1.25,
+    0,
+    -103.99
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_8",
+   "pos": [
+    47.12,
+    0,
+    -98.92
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    47.12,
+    0,
+    -93.12
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
+  },
+  {
+   "id": "vendor_9",
+   "pos": [
+    100.51,
+    0,
+    -43.72
+   ],
+   "role": "ambient",
+   "soldier": "local_merchant",
+   "face": [
+    94.71,
+    0,
+    -43.72
+   ],
+   "note": "Issue #237: a merchant behind a stall in the round port's market."
   }
  ],
  "routes": [
@@ -6004,43 +7496,45 @@
    "id": "patrol_yard_a",
    "points": [
     [
-     91.0,
-     24.0
+     90.0,
+     30.0
     ],
     [
-     77.0,
-     24.0
+     82.0,
+     30.0
     ],
     [
-     77.0,
-     34.0
+     82.0,
+     38.0
     ],
     [
-     89.0,
-     34.0
+     90.0,
+     38.0
     ]
-   ]
+   ],
+   "note": "West barracks trooper's loop round the yard crates."
   },
   {
    "id": "patrol_yard_b",
    "points": [
     [
-     109.0,
+     114.0,
+     38.0
+    ],
+    [
+     120.0,
+     38.0
+    ],
+    [
+     120.0,
      32.0
     ],
     [
-     115.0,
+     116.0,
      32.0
-    ],
-    [
-     115.0,
-     16.0
-    ],
-    [
-     111.0,
-     16.0
     ]
-   ]
+   ],
+   "note": "East barracks trooper's loop between the hall and the yard wall."
   },
   {
    "id": "cantina_to_lookout",
@@ -6410,43 +7904,101 @@
    "id": "stroll_market_1",
    "points": [
     [
-     69.0,
-     -17.5
+     -1.5,
+     -85.99
     ],
     [
-     119.0,
-     -17.5
+     2.7,
+     -85.96
     ],
     [
-     119.0,
-     -7.0
+     6.9,
+     -85.72
     ],
     [
-     69.0,
-     -7.0
+     11.08,
+     -85.28
+    ],
+    [
+     15.23,
+     -84.64
+    ],
+    [
+     19.35,
+     -83.8
+    ],
+    [
+     15.23,
+     -84.64
+    ],
+    [
+     11.08,
+     -85.28
+    ],
+    [
+     6.9,
+     -85.72
+    ],
+    [
+     2.7,
+     -85.96
+    ],
+    [
+     -1.5,
+     -85.99
     ]
-   ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
   },
   {
    "id": "stroll_market_2",
    "points": [
     [
-     117.0,
-     -33.0
+     -1.82,
+     -103.98
     ],
     [
-     67.0,
-     -33.0
+     3.27,
+     -103.95
     ],
     [
-     67.0,
-     -20.5
+     8.34,
+     -103.67
     ],
     [
-     117.0,
-     -20.5
+     13.39,
+     -103.13
+    ],
+    [
+     18.42,
+     -102.36
+    ],
+    [
+     23.39,
+     -101.33
+    ],
+    [
+     18.42,
+     -102.36
+    ],
+    [
+     13.39,
+     -103.13
+    ],
+    [
+     8.34,
+     -103.67
+    ],
+    [
+     3.27,
+     -103.95
+    ],
+    [
+     -1.82,
+     -103.98
     ]
-   ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
   },
   {
    "id": "club_stroll_stage",
@@ -6631,6 +8183,206 @@
      0
     ]
    ]
+  },
+  {
+   "id": "stroll_market_3",
+   "points": [
+    [
+     -2.13,
+     -121.98
+    ],
+    [
+     3.83,
+     -121.94
+    ],
+    [
+     9.78,
+     -121.61
+    ],
+    [
+     15.71,
+     -120.98
+    ],
+    [
+     21.6,
+     -120.07
+    ],
+    [
+     27.44,
+     -118.87
+    ],
+    [
+     21.6,
+     -120.07
+    ],
+    [
+     15.71,
+     -120.98
+    ],
+    [
+     9.78,
+     -121.61
+    ],
+    [
+     3.83,
+     -121.94
+    ],
+    [
+     -2.13,
+     -121.98
+    ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
+  },
+  {
+   "id": "stroll_market_4",
+   "points": [
+    [
+     73.72,
+     -44.29
+    ],
+    [
+     75.79,
+     -40.64
+    ],
+    [
+     77.69,
+     -36.89
+    ],
+    [
+     79.4,
+     -33.05
+    ],
+    [
+     80.92,
+     -29.13
+    ],
+    [
+     82.24,
+     -25.14
+    ],
+    [
+     80.92,
+     -29.13
+    ],
+    [
+     79.4,
+     -33.05
+    ],
+    [
+     77.69,
+     -36.89
+    ],
+    [
+     75.79,
+     -40.64
+    ],
+    [
+     73.72,
+     -44.29
+    ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
+  },
+  {
+   "id": "stroll_market_5",
+   "points": [
+    [
+     89.15,
+     -53.56
+    ],
+    [
+     91.66,
+     -49.15
+    ],
+    [
+     93.95,
+     -44.61
+    ],
+    [
+     96.01,
+     -39.97
+    ],
+    [
+     97.85,
+     -35.23
+    ],
+    [
+     99.46,
+     -30.41
+    ],
+    [
+     97.85,
+     -35.23
+    ],
+    [
+     96.01,
+     -39.97
+    ],
+    [
+     93.95,
+     -44.61
+    ],
+    [
+     91.66,
+     -49.15
+    ],
+    [
+     89.15,
+     -53.56
+    ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
+  },
+  {
+   "id": "stroll_market_6",
+   "points": [
+    [
+     104.57,
+     -62.83
+    ],
+    [
+     107.52,
+     -57.65
+    ],
+    [
+     110.21,
+     -52.33
+    ],
+    [
+     112.63,
+     -46.88
+    ],
+    [
+     114.79,
+     -41.33
+    ],
+    [
+     116.67,
+     -35.67
+    ],
+    [
+     114.79,
+     -41.33
+    ],
+    [
+     112.63,
+     -46.88
+    ],
+    [
+     110.21,
+     -52.33
+    ],
+    [
+     107.52,
+     -57.65
+    ],
+    [
+     104.57,
+     -62.83
+    ]
+   ],
+   "note": "Issue #237: a shopper up and down an aisle."
   }
  ],
  "chunks": [

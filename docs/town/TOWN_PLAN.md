@@ -1009,6 +1009,9 @@ A planet picks one with `town_layout`. The town keeps its id, `port_town`.
   (`{ "deg", "half" }`). Hollow (skipped by V5). Rule **V9**: no marker and
   no route comes within `player_clearance` of a ring's pieces.
 - A pickup or drop area can give per-layout spots under `"layouts"`.
+- The round port's market and barracks are built, not moved: `round.market`
+  (aisles, cross aisles, stall size, stall count, shops, merchants, shoppers)
+  and `round.barracks` (its boxes, markers and routes, by id) in the kit.
 
 ## Appendix — Tuning later (no code changes needed)
 

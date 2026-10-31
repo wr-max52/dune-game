@@ -96,6 +96,8 @@ func material_for(town, b: Dictionary) -> Material:
 		"floor":
 			if zone == "ground":
 				return mats.paving(2.4) if _inside_bounds(town, b) else mats.flat(LookMaterials.CLOTH_SAND)
+			if zone == "barracks":                 # issue #237: the drill yard, packed earth
+				return mats.flat(Color("#8a7458"), 0.95)
 		"wall", "ring":
 			if zone == "perimeter":
 				return mats.plaster(0.0, 5.2, LookMaterials.REMNANT_OXBLOOD.darkened(0.1))

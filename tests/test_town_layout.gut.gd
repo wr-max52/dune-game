@@ -91,6 +91,52 @@ func test_round_port_is_round_and_twice_the_size() -> void:
 	assert_true(sign(float(t.get_box("watchtower").min[2])) != sign(float(t.get_box("watchtower_s").min[2])), "one each side")
 
 
+## Issue #237 part 3: a market three times today's, with aisles and taller
+## stalls and more people in it, and bigger barracks.
+func test_round_port_market_is_three_times_and_taller() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	var stalls := func(town) -> Array: return town.boxes().filter(func(b): return str(b.get("look", "")) == "stall")
+	var sq_stalls: Array = stalls.call(sq)
+	var rd_stalls: Array = stalls.call(t)
+	assert_gte(rd_stalls.size(), sq_stalls.size() * 3, "three times the stalls")
+	var sq_back := float(sq.get_box(str(sq_stalls[0].id) + "_back").max[1])
+	for b in rd_stalls:
+		var back := t.get_box(str(b.id) + "_back")
+		assert_false(back.is_empty(), str(b.id) + " has a back panel")
+		assert_gt(float(back.max[1]), sq_back, str(b.id) + " is taller")
+		assert_gt(float(b.get("canopy_lift", 0.0)), 0.0, str(b.id) + " has a raised canopy")
+	var kit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/planets/town_kit.json"))
+	var mk: Dictionary = kit.round.market
+	assert_gte((mk.aisles as Array).size(), 3, "at least three aisles")
+	assert_gte((mk.cross as Array).size(), 2, "and aisles across them")
+	var count := func(town, prefix: String) -> int: return town.markers().filter(func(m): return str(m.id).begins_with(prefix)).size()
+	assert_gt(count.call(t, "vendor_"), count.call(sq, "vendor_"), "more merchants")
+	assert_gt(count.call(t, "shopper_"), count.call(sq, "shopper_"), "more shoppers")
+	for id in ["vendor_1", "vendor_2", "vendor_3", "vendor_4"]:
+		assert_eq(str(t.get_marker(id).get("soldier", "")), str(sq.get_marker(id).get("soldier", "")), id + " is the same trader")
+
+
+func test_round_port_barracks_are_bigger() -> void:
+	var sq := TownLayout.new()
+	sq.load_town("port_town", "port_square")
+	var t := _round()
+	var area := func(b: Dictionary) -> float: return (float(b.max[0]) - float(b.min[0])) * (float(b.max[2]) - float(b.min[2]))
+	assert_gt(area.call(t.get_box("barracks_hall")), area.call(sq.get_box("barracks_hall")), "a bigger hall")
+	for id in ["barracks_block_2", "drill_yard", "barracks_pad", "barracks_bunk", "barracks_upper"]:
+		assert_false(t.get_box(id).is_empty(), "the barracks have " + id)
+	var zone := func(town) -> float:
+		for z in town.zones():
+			if str(z.id) == "barracks":
+				return (float(z.max[0]) - float(z.min[0])) * (float(z.max[1]) - float(z.min[1]))
+		return 0.0
+	assert_gt(zone.call(t), zone.call(sq) * 1.8, "about twice the ground")
+	var roof := float(t.get_box("barracks_hall").max[1])
+	for id in ["trooper_roof_w", "trooper_roof_c", "trooper_roof_e"]:
+		assert_almost_eq(t.marker_pos(id).y, roof, 0.01, id + " is on the hall roof")
+
+
 func test_round_wall_is_open_only_at_its_gates() -> void:
 	var t := _round()
 	var wall := t.get_box("town_wall")
