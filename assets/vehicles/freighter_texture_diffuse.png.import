@@ -3,22 +3,23 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://05wo46wmm537"
-path="res://.godot/imported/freighter_texture_diffuse.png-20d563fe4e276ce48e88a80f39085bbe.ctex"
+path.s3tc="res://.godot/imported/freighter_texture_diffuse.png-20d563fe4e276ce48e88a80f39085bbe.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
-"md5": "e9da44dde41cc81712e9156aa3a0a555"
+"md5": "f6270aa1291b4f3d6f2393212c2022b4"
 }
 
 [deps]
 
 source_file="res://assets/vehicles/freighter_texture_diffuse.png"
-dest_files=["res://.godot/imported/freighter_texture_diffuse.png-20d563fe4e276ce48e88a80f39085bbe.ctex"]
+dest_files=["res://.godot/imported/freighter_texture_diffuse.png-20d563fe4e276ce48e88a80f39085bbe.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

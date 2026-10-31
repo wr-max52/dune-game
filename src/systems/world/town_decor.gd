@@ -19,6 +19,9 @@ extends Node3D
 const TownBuildings := preload("res://src/systems/world/town_buildings.gd")
 const TownMarket := preload("res://src/systems/world/town_market.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
+const StairTower := preload("res://src/systems/world/stair_tower.gd")
+const STAIR_LIGHT := Color("#ffbe78")
 
 var mats: LookMaterials
 var look: LookEnvironment
@@ -44,6 +47,7 @@ func dress(town, look_env: LookEnvironment) -> void:
 	kit.town = town
 	_build_buildings(town)
 	_dress_cantina(town)
+	_light_stair_tower(town)
 	_dress_spaceport(town)
 	_dress_market(town)
 	_add_alley_cables(town)
@@ -96,6 +100,8 @@ func material_for(town, b: Dictionary) -> Material:
 		"floor":
 			if zone == "ground":
 				return mats.paving(2.4) if _inside_bounds(town, b) else mats.flat(LookMaterials.CLOTH_SAND)
+			if zone == "barracks":                 # issue #237: the drill yard, packed earth
+				return mats.flat(Color("#8a7458"), 0.95)
 		"wall", "ring":
 			if zone == "perimeter":
 				return mats.plaster(0.0, 5.2, LookMaterials.REMNANT_OXBLOOD.darkened(0.1))
@@ -186,6 +192,10 @@ func _dress_market(town) -> void:
 ## pilasters and beams inside, a roof parapet and relays outside, and an arched
 ## portal with a glowing lunette over the door. Positions come from its wall boxes.
 func _dress_cantina(town) -> void:
+	var body: Dictionary = town.get_box("cantina_body")
+	if not body.is_empty():
+		_dress_round_cantina(town, body)
+		return
 	var w: Dictionary = town.get_box("cantina_wall_w")
 	var n: Dictionary = town.get_box("cantina_wall_n")
 	var s: Dictionary = town.get_box("cantina_wall_s")
@@ -244,6 +254,85 @@ func _dress_cantina(town) -> void:
 	for k in 5:
 		var a := PI * (k + 1) / 6.0 - PI * 0.5
 		kit.put(kit.box(0.1, half - 0.2, 0.08), kit.trim, Transform3D(Basis(Vector3.RIGHT, a), Vector3(gx + 0.02, gy + 0.3, gc) + Vector3(0, cos(a), sin(a)) * (half - 0.2) * 0.5))
+
+
+## Issue #237: the club's round body: pilasters with a lamp each round the inside
+## and a ring beam under the roof, a parapet round the roof outside, and the same
+## arched portal with its glowing lunette over the door.
+func _dress_round_cantina(town, body: Dictionary) -> void:
+	var info := RingWall.info(body)
+	var c: Vector3 = info.c
+	var ri: float = info.ri
+	var ro: float = info.r
+	var top: float = info.y1
+	var shell := mats.plaster(0.0, 3.6, LookMaterials.CLOTH_TEAL)
+	kit._xf = Transform3D.IDENTITY
+	var n := int(TAU * ri / 4.0)
+	for i in n:
+		var a := TAU * i / n
+		if RingWall.in_gap(info, a) or RingWall.in_gap(info, a + 0.12) or RingWall.in_gap(info, a - 0.12):
+			continue
+		var d := Vector3(cos(a), 0, sin(a))
+		var yaw := Basis(Vector3.UP, -a)
+		kit.put(kit.box(0.5, top, 0.7), shell, Transform3D(yaw, c + d * (ri - 0.25) + Vector3(0, top * 0.5, 0)))
+		kit.put(kit.box(0.2, 0.5, 0.24), kit.window_glow, Transform3D(yaw, c + d * (ri - 0.58) + Vector3(0, 3.2, 0)))
+		kit.put(kit.box(0.36, 0.1, 0.4), kit.trim, Transform3D(yaw, c + d * (ri - 0.55) + Vector3(0, 2.9, 0)))
+	kit.put(kit.ring(ri - 0.7, ri - 0.05, top - 0.8, top - 0.3, 64), kit.trim, Transform3D(Basis.IDENTITY, Vector3(c.x, 0, c.z)))
+	var roof: Dictionary = town.get_box("cantina_roof")
+	var roof_top := float(roof.max[1]) if not roof.is_empty() else top + 0.3
+	kit.put(kit.ring(ro - 0.3, ro, roof_top, roof_top + 0.7, 64), shell, Transform3D(Basis.IDENTITY, Vector3(c.x, 0, c.z)))
+	kit.antennas(c + Vector3(ro * 0.45, roof_top, -ro * 0.4), 5.0, PI * 0.5)
+	kit.antennas(c + Vector3(ro * 0.1, roof_top, -ro * 0.55), 3.4, PI * 0.5)
+	# The portal, in the door's own frame (+x out of the room).
+	var lintel: Dictionary = town.get_box("cantina_door_lintel")
+	var door: Dictionary = {}
+	for g in body.get("gaps", []):
+		if str(g.get("id", "")) == "door":
+			door = g
+	if lintel.is_empty() or door.is_empty():
+		return
+	var da := deg_to_rad(float(door.deg))
+	var half := float(door.half)
+	var gy := float(lintel.min[1])
+	var gx := ro + 0.35
+	kit._xf = Transform3D(Basis(Vector3.UP, -da), c)
+	for side in [-1.0, 1.0]:
+		kit.part(kit.box(0.8, gy, 0.7), kit.trim, Vector3(gx, gy * 0.5, side * (half + 0.35)))
+		kit.part(kit.box(0.06, gy * 0.8, 0.08), kit.door_glow, Vector3(gx + 0.42, gy * 0.5, side * (half + 0.1)))
+	kit.part(kit.box(0.8, 0.3, (half + 0.7) * 2.0), kit.trim, Vector3(gx, gy + 0.15, 0))
+	kit.part(kit.arch(half, half + 0.7, 0.8), kit.trim, Vector3(gx, gy + 0.3, 0))
+	kit.part(kit.arch(0.0, half - 0.15, 0.2), kit.door_glow, Vector3(gx - 0.1, gy + 0.3, 0))
+	for k in 5:
+		var a := PI * (k + 1) / 6.0 - PI * 0.5
+		kit.part(kit.box(0.1, half - 0.2, 0.08), kit.trim, Vector3(gx + 0.02, gy + 0.3, 0) + Vector3(0, cos(a), sin(a)) * (half - 0.2) * 0.5, Basis(Vector3.RIGHT, a))
+	kit._xf = Transform3D.IDENTITY
+
+
+## Issue #237: the stair tower lit all the way up: a warm light inside every turn
+## of the ramp and one in the lookout, so the climb reads at night and from the
+## square (the tower's look adds glowing bands under its ledges outside).
+func _light_stair_tower(town) -> void:
+	var tower: Dictionary = town.get_box("stair_tower")
+	if tower.is_empty():
+		return
+	var t := StairTower.info(tower)
+	var turns := int(float(t.h) / float(t.rise))
+	for k in turns:
+		var p := StairTower.ramp_point(t, float(t.rc) + 0.4, float(t.th0) + TAU * (k + 0.5)) + Vector3(0, 2.0, 0)
+		_stair_light(p, 1.4, 4.5)
+	_stair_light(Vector3(t.c.x, t.c.y + float(t.h) + 2.0, t.c.z), 2.0, 8.0)
+
+
+func _stair_light(p: Vector3, energy: float, reach: float) -> void:
+	var l := OmniLight3D.new()
+	l.name = "StairLight"
+	l.light_color = STAIR_LIGHT
+	l.light_energy = energy
+	l.omni_range = reach
+	l.omni_attenuation = 1.2
+	l.shadow_enabled = false
+	l.position = p
+	add_child(l)
 
 
 ## The round pit (art pass 2): its wall and the street round it, a curb and wall
@@ -594,7 +683,7 @@ func park_ship(ship_id: String, box: Dictionary) -> Node3D:
 
 ## Belly on the box base, centred on its footprint; the greybox stand-in hidden.
 func _park(ship_kit: ShipKit, look_id: String, node_name: String, yaw_deg: float, box: Dictionary, ship_id: String) -> Node3D:
-	var ship := ship_kit.build(look_id)
+	var ship := ship_kit.build(ShipUpgrades.look(ship_id, look_id))      # in its upgrade's paint
 	ship.name = node_name
 	ship.set_meta("ship_id", ship_id)
 	ship.set_meta("box_id", str(box.id))

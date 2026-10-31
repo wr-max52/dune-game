@@ -152,6 +152,10 @@ flight_missile={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":88),Object(InputEventMouseButton,"button_index":2,"button_mask":2)]
 }
+flight_eject={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":66)]
+}
 flight_next_target={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":84)]

@@ -7,11 +7,19 @@ extends Node
 ##
 ## A new band plays every visit, so the music is back on when the town is built
 ## again after the last band was killed.
+##
+## Issue #269: a club can also follow a node (the party barge): heard by distance
+## from it, inside within `follow_r` metres. With more than one club in a scene,
+## the loudest one is what Sound plays.
 
 var playlist := ""
 var rect := Rect2()     ## the cantina's floor (x, z), in the scene's space
 var target: Node3D      ## the player
 var hear := 40.0
+var follow: Node3D       ## issue #269: a moving club (the barge); rect unused
+var follow_r := 0.0
+var inside_fn := Callable()   ## optional: (pos) -> bool, overrides "within follow_r"
+static var _levels: Dictionary = {}   ## instance id -> [playlist, near, inside]
 
 
 func setup(id: String, zone: Dictionary, who: Node3D) -> ClubMusic:
@@ -26,17 +34,52 @@ func setup(id: String, zone: Dictionary, who: Node3D) -> ClubMusic:
 	return self
 
 
+## Issue #269: the same club music, heard from a node that moves.
+func setup_follow(id: String, node: Node3D, radius: float, who: Node3D) -> ClubMusic:
+	name = "ClubMusic_" + node.name
+	playlist = id
+	target = who
+	follow = node
+	follow_r = radius
+	hear = float(Sound.lib().cfg.get("club", {}).get("hear", 40.0)) * 1.5
+	Sound.set_club_live(true)
+	return self
+
+
 func _process(_dt: float) -> void:
-	if playlist == "" or not is_instance_valid(target):
-		Sound.set_club("", 0.0, false)
-		return
-	var p := target.global_position
-	var d := distance(rect, p.x, p.z)
-	Sound.set_club(playlist, near(d, hear), d <= 0.0)
+	var key := get_instance_id()
+	if playlist == "" or not is_instance_valid(target) or (follow != null and not is_instance_valid(follow)):
+		_levels.erase(key)
+	else:
+		var p := target.global_position
+		var d: float
+		var inside: bool
+		if follow != null:
+			d = maxf(0.0, p.distance_to(follow.global_position) - follow_r)
+			inside = bool(inside_fn.call(p)) if inside_fn.is_valid() else d <= 0.0
+		else:
+			d = distance(rect, p.x, p.z)
+			inside = d <= 0.0
+		_levels[key] = [playlist, near(d, hear), inside]
+	_apply()
 
 
 func _exit_tree() -> void:
-	Sound.set_club("", 0.0, false)
+	_levels.erase(get_instance_id())
+	_apply()
+
+
+## The loudest club in the scene is the one Sound plays.
+static func _apply() -> void:
+	var best: Array = []
+	for k in _levels:
+		var l: Array = _levels[k]
+		if best.is_empty() or float(l[1]) > float(best[1]) or (bool(l[2]) and not bool(best[2])):
+			best = l
+	if best.is_empty():
+		Sound.set_club("", 0.0, false)
+	else:
+		Sound.set_club(str(best[0]), float(best[1]), bool(best[2]))
 
 
 ## Metres from (x, z) to the nearest point of `r` (0 inside it).

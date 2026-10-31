@@ -9,11 +9,13 @@ extends RefCounted
 ## ("hull", "shield.max", "atmosphere.boost_speed"). apply() puts them on a copy of
 ## a ship's data wherever the player's ship is set up (ShipPilot in the air,
 ## Dogfight in space); every other ship of that model stays as it is.
+## An upgrade can also repaint a ship: see look().
 
 const CFG_PATH := "res://content/core/npcs/t89.json"
 const SHIP_DIR := "res://content/core/ships"
 
 static var _cfg: Dictionary = {}
+static var _looks: Dictionary = {}
 
 
 static func all() -> Dictionary:
@@ -78,7 +80,24 @@ static func apply(cfg: Dictionary, ship_id: String) -> Dictionary:
 			var last := keys[keys.size() - 1]
 			if d.has(last):
 				d[last] = float(d[last]) * float(mult[path])
+	if out.has("look"):
+		out["look"] = look(ship_id, str(out.look))
 	return out
+
+
+## The look ship `ship_id` shows with its upgrades on. An upgrade with a paint job for
+## this look ("<look>_<upgrade id>" in content/look/ships.json: the frigate's three,
+## the same model recoloured by tools/look/prep_vehicle.gd) repaints it; with several,
+## the last one fitted wins. Otherwise `look_id` as it is.
+static func look(ship_id: String, look_id: String) -> String:
+	if _looks.is_empty():
+		_looks = ShipKit._read_json(ShipKit.LOOKS_PATH).get("looks", {})
+	var fits := fitted(ship_id)
+	for k in range(fits.size() - 1, -1, -1):
+		var painted := "%s_%s" % [look_id, fits[k]]
+		if _looks.has(painted):
+			return painted
+	return look_id
 
 
 ## "Shields+  Hull+" for the board prompt, "" with none.

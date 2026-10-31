@@ -318,6 +318,16 @@ if [ ! -f test_results/beast_trace.txt ]; then
 fi
 echo "CI: beast trace present ($(wc -l < test_results/beast_trace.txt) lines)"
 
+# Issue #269: the party barge: built from the planet's block, bought, driven
+# slowly from the helm with the party going on, steerage partying too.
+echo "CI: generating barge trace..."
+"$GODOT_BIN" --headless --fixed-fps 60 --path . -s res://scenes/barge_trace.gd >/dev/null 2>&1 || true
+if [ ! -f test_results/barge_trace.txt ]; then
+  echo "CI: ERROR -- barge trace was not generated" >&2
+  exit 1
+fi
+echo "CI: barge trace present ($(wc -l < test_results/barge_trace.txt) lines)"
+
 # GUT headless run. -gdir points at tests; -gexit quits the process after the run.
 # GUT quits with a non-zero exit code when any test asserts false, which makes
 # `set -e` above turn a failing suite into a non-zero CI exit.
