@@ -25,6 +25,57 @@
       "clear": 370
     },
     {
+      "id": "starcruiser_wreck_2",
+      "kind": "wreck",
+      "note": "Wreck field: three more of the same class came down out east, under the Remnant's cruiser and on round toward the far side of the ball, each a couple of km from the last so the next one's stern stands on the horizon. All 'kind': 'wreck' (src/systems/world/starcruiser_wreck.gd). 'variant' makes each barely unique: a different heading, a deck or ramp fallen away, a radiator gone, other railings knocked out (StarcruiserWreck.VARIANT_KEYS). Their droids and the prize crate on each one's bridge platform: droids/droids.json 'wreck'.sites, pickups/port_town.json 'site_crates'.",
+      "at": [3500, 0, -670],
+      "yaw_deg": -158,
+      "pitch_deg": -34,
+      "bury_height": 60,
+      "clear": 370,
+      "variant": {
+        "skip": ["port_drop", "port_balcony", "radiator_1", "hull_band_135"],
+        "stern_ramp_w": 246,
+        "ramp_width": { "stern_ramp": 10.0 },
+        "rail_gaps": { "starboard_deck_rail": [1, 5], "mid_catwalk_bow_rail": [2, 6], "bridge_starboard_rail": [2] },
+        "shard_turn": 9,
+        "salvage": 2
+      }
+    },
+    {
+      "id": "starcruiser_wreck_3",
+      "kind": "wreck",
+      "at": [5550, 0, 380],
+      "yaw_deg": 168,
+      "pitch_deg": -34,
+      "bury_height": 61,
+      "clear": 370,
+      "variant": {
+        "skip": ["starboard_drop", "starboard_balcony", "radiator_4", "hull_band_-150"],
+        "stern_ramp_w": 254,
+        "ramp_width": { "gallery_ramp": 8.0 },
+        "rail_gaps": { "port_deck_outer_rail": [0, 3], "upper_catwalk_stern_rail": [1], "bridge_port_rail": [0] },
+        "shard_turn": -7,
+        "salvage": 4
+      }
+    },
+    {
+      "id": "starcruiser_wreck_4",
+      "kind": "wreck",
+      "at": [7650, 0, -420],
+      "yaw_deg": -141,
+      "pitch_deg": -34,
+      "bury_height": 59,
+      "clear": 370,
+      "variant": {
+        "skip": ["port_stair", "speeder_kicker", "radiator_0", "radiator_5"],
+        "ramp_width": { "stern_ramp": 7.0, "starboard_stair": 9.0 },
+        "rail_gaps": { "mid_catwalk_bow_rail": [0, 3, 8], "starboard_ledge_rail": [1], "bridge_stern_rail_a": [0] },
+        "shard_turn": 14,
+        "salvage": 1
+      }
+    },
+    {
       "id": "outpost",
       "kind": "location",
       "location": "outpost",

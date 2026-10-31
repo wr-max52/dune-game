@@ -24,6 +24,9 @@ extends Node
 ##     "[E] Open the cargo droid"), and reports its "event" to the story when taken.
 ##   - the backpack (Inventory.room_for): picking up, buying and taking gear off
 ##     all need a free slot; the pistol always holds the first of five.
+##   - wreck field: a supply crate on each crashed starcruiser's bridge platform
+##     (pickups "site_crates"), placed once the world's ground is here; [E] opens
+##     it for one prize rolled from "crate_prizes" (credits or a stack of goods).
 ##
 ## The headless trace calls interact() and toggle_gear() directly: the same code
 ## path the keys use. All words come from content/core/flow/gear.json.
@@ -77,6 +80,8 @@ var _trade_said := ""           ## the trade menu's body: the pitch, then what t
 var on_refit := Callable()      ## issue #208: () after an upgrade (the town refits the player's guns)
 var _armour_look := false       ## issue #209: the desert guard's look is on (story saves)
 var _last_safe := Vector3.ZERO
+var _crates_built := false      ## wreck field: the site crates are out (they need `ground`)
+var rng := RandomNumberGenerator.new()   ## the crates' prizes
 
 
 func setup(p_content, p_town, p_player: CharacterBody3D, p_rig: Node = null, p_location: String = "port_town") -> void:
@@ -113,7 +118,9 @@ func _ready() -> void:
 	lowest_floor = _lowest_floor()
 	if player != null:
 		_last_safe = player.global_position
+	rng.randomize()
 	_build_pickups()
+	_build_site_crates()
 	_build_vendors()
 	sync_gear()
 
@@ -180,6 +187,45 @@ func _build_pickups() -> void:
 		node.visible = not bool(entry.get("carried", false)) and str(entry.get("inside", "")) == ""
 		add_child(node)
 		pickups.append(node)
+
+
+## Wreck field: a supply crate on each wreck this ground holds, at its point in
+## the wreck's level frame, turned to the ground's up there. Once, when the ground
+## is here (it can come after the gear: _physics_process tries again).
+func _build_site_crates() -> void:
+	if _crates_built or ground == null:
+		return
+	_crates_built = true
+	for entry in content.get_site_crates(location_id):
+		var site := str(entry.get("site", ""))
+		if inv().is_taken(str(entry.get("id", ""))) or not StarcruiserWreck.has_wreck(ground, site):
+			continue
+		var pt: Array = entry.get("site_point", [0, 0, 0])
+		var at := StarcruiserWreck.site_point(ground, Vector3(float(pt[0]), float(pt[1]), float(pt[2])), "level", site)
+		var e: Dictionary = entry.duplicate()
+		e["crate"] = true
+		e["still"] = true
+		e["marked"] = true
+		e["reach"] = float(entry.get("reach", 2.4))
+		var node = PickupNode.new()
+		node.setup(items, e, { "look": "prize_crate" }, at)
+		node.transform = Transform3D(PlanetSphere.tilt_to(ground.up_at(at)), at)
+		add_child(node)
+		pickups.append(node)
+
+
+## A supply crate's prize: { credits } or { item, count }, rolled by weight.
+func roll_crate_prize() -> Dictionary:
+	var table: Array = content.get_crate_prizes(location_id)
+	var total := 0.0
+	for e in table:
+		total += float(e.get("weight", 1.0))
+	var r := rng.randf() * total
+	for e in table:
+		r -= float(e.get("weight", 1.0))
+		if r <= 0.0:
+			return e
+	return table.back() if not table.is_empty() else {}
 
 
 ## Issue #64: one loot box at a time. Contraband lying in the world (the desert
@@ -256,6 +302,7 @@ func _physics_process(dt: float) -> void:
 			hud.set_fuel(0.0, false, false)
 		return
 	sync_drop()
+	_build_site_crates()
 	focus = _find_focus()
 	if hud != null:
 		hud.set_prompt("" if menu.is_open() else prompt_text())
@@ -303,6 +350,8 @@ func prompt_text() -> String:
 	if focus.kind == "pickup":
 		if str(focus.node.pickup.get("inside", "")) != "":
 			return _l("open_droid")
+		if bool(focus.node.pickup.get("crate", false)):
+			return _l("open_crate")
 		var item: Dictionary = content.get_item(str(focus.node.pickup.get("item", "")))
 		return _l("pick_up") % _shown(item, str(focus.node.pickup.get("item", "")))
 	var v: Dictionary = focus.cfg
@@ -380,6 +429,8 @@ func interact() -> String:
 
 func _take(node) -> String:
 	var entry: Dictionary = node.pickup
+	if bool(entry.get("crate", false)):
+		return _open_crate(node)
 	var id := str(entry.get("item", ""))
 	var item: Dictionary = content.get_item(id)
 	if not inv().is_taken(str(entry.get("id", ""))) and not inv().room_for(id, item):
@@ -403,6 +454,36 @@ func _take(node) -> String:
 	if hud != null:
 		hud.toast(msg, 4.0)
 	return "picked_up"
+
+
+## Wreck field: open a supply crate. Its prize is rolled the first time you try
+## (so a full backpack does not re-roll it); goods need a free slot.
+func _open_crate(node) -> String:
+	var entry: Dictionary = node.pickup
+	if not entry.has("prize"):
+		entry["prize"] = roll_crate_prize()
+	var prize: Dictionary = entry.prize
+	var id := str(prize.get("item", ""))
+	var item: Dictionary = content.get_item(id) if id != "" else {}
+	if id != "" and not inv().room_for(id, item):
+		_full()
+		return "full"
+	inv().taken[str(entry.get("id", ""))] = true
+	var what := ""
+	if id != "":
+		inv().add(id, int(prize.get("count", 1)))
+		what = _l("crate_items") % [int(prize.get("count", 1)), str(item.get("label", id))]
+	else:
+		WorldState.credits += int(prize.get("credits", 0))
+		what = _l("crate_credits") % int(prize.get("credits", 0))
+	WorldState.log_event(_l("event_crate") % what)
+	pickups.erase(node)
+	node.queue_free()
+	focus = {}
+	sync_gear()
+	if hud != null:
+		hud.toast(_l("crate_opened") % what, 4.0)
+	return "opened"
 
 
 ## False while the stall's keeper will not deal (see vendor_open).
