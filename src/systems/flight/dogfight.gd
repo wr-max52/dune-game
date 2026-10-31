@@ -39,6 +39,7 @@ var player_id := -1
 var player_target_id := -1
 var arena_center := Vector3.ZERO
 var arena_radius := 1500.0
+var arena_follow := false   ## the arena moves with the player (ShipPilot, in the cruiser's sky: everyone comes along)
 ## Issue #46: the heading (radians about +Y) waves arrive from, so a fight that
 ## starts in the port's sky meets them ahead of the player. 0 = from -Z, as before.
 var wave_yaw := 0.0
@@ -233,6 +234,10 @@ func step(dt: float) -> Array:
 	if state != State.RUNNING:
 		return events
 	t += dt
+	if arena_follow:
+		var me = get_ship(player_id)
+		if not me.is_empty() and me.alive:
+			arena_center = me.flight.position
 	_run_waves(dt)
 
 	for s in ships:

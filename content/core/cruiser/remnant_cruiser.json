@@ -21,6 +21,13 @@
     "slow_within": 240.0,
     "note": "Z within radius metres of the cruiser (any altitude, a fight running or not) flies you round the hull, in through the bay's mouth at hold_y and sets you down on the dock pad. Z again gives you the stick back."
   },
+  "approach": {
+    "cone_deg": 40.0,
+    "floor": 1500.0,
+    "calm_radius": 1500.0,
+    "calm_out": 5000.0,
+    "note": "Flying to it. The ball curves away under the straight line from the edge of space to the cruiser, so that line dips below the edge: a fight running is not broken off by that while the nose is within cone_deg of the cruiser and you are no more than floor metres under the edge. Within calm_radius of it normal flight is held to the ship's space-fight speed (its 'flight' block: 48 m/s for an interceptor, not 680 at the edge of space), so a fight broken off by the hull does not hand you a ship you cannot line up with the bay; full speed again by calm_out. Any fight in the cruiser's sky follows you (Dogfight.arena_follow): both sides come along instead of turning back to where it started."
+  },
   "wake_distance": 2600.0,
   "sleep_distance": 460.0,
   "detail_altitude": 600.0,

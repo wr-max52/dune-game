@@ -36,6 +36,7 @@ var upper_start := 600.0
 var clearance := 1.0            ## origin to belly, metres (the scene may set it from the model)
 var body_radius := 2.0
 var reached_space := false
+var air_cap := INF              ## the most air_scale() may be here (ShipPilot eases it down by the cruiser)
 var last_hit := ""
 var crash_point := Vector3.ZERO
 
@@ -120,7 +121,7 @@ func space_fraction() -> float:
 ## How much faster thin air lets the ship go here (1 near the ground).
 func air_scale() -> float:
 	var k := clampf((altitude() - upper_start) / maxf(space_altitude - upper_start, 1.0), 0.0, 1.0)
-	return 1.0 + (p("edge_speed_mult", 4.0) - 1.0) * pow(k, p("speed_curve", 1.0))
+	return minf(1.0 + (p("edge_speed_mult", 4.0) - 1.0) * pow(k, p("speed_curve", 1.0)), air_cap)
 
 
 func can_land(known_agl: float = -INF) -> bool:
@@ -219,7 +220,7 @@ func _step_liftoff(dt: float) -> void:
 func _step_flying(dt: float) -> void:
 	var climb: float = flight.forward().dot(up())
 	flight.speed_scale = air_scale() * (1.0 - p("climb_drag", 0.3) * maxf(0.0, climb))
-	flight.accel_scale = air_scale()
+	flight.accel_scale = maxf(air_scale(), 1.0)   # capped under 1, she still brakes as hard as ever
 	flight.set_command_dict(_command)
 	var before: Vector3 = flight.position
 	flight.step(dt)
