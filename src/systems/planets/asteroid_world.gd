@@ -318,8 +318,9 @@ func dress_outside(env: LookEnvironment, mats: LookMaterials) -> void:
 	_mesh("RingWall", _cylinder(rc, rw, 0.0, wall_h, RING_SEG, 4, _ring_gap), metal, true)
 	_mesh("RingCap", _cylinder(rc, rw + 0.01, wall_h - 0.25, wall_h + 0.15, RING_SEG, 1, Callable()), metal, true)
 	_panelled_wall("RingWallExteriorPanels", rc, rw, wall_h, RING_SEG / 2, 1, panel, trim, dark, status, 1)
-	var dome := _mesh("Dome", _dome_triangles(), glass, true)
-	dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var dome := _mesh("Dome", _dome_triangles(), glass if club_dim() >= 1.0 else _club_glass(), true)
+	# Issue #261: a club dome is smoked glass that keeps the sun off the dance floor.
+	dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if club_dim() >= 1.0 else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_dome_ribs(metal)
 	_shield("GateShield", Vector3(rc.x + rw, float(hall.get("height", 5.0)) * 0.5, rc.z), Vector3(0.08, float(hall.get("height", 5.0)), gate_half * 2.0))
 	_mesh("Liner", _cylinder(pit_c, pit_r, 0.0, liner_h, LINER_SEG, 6, _liner_gap), metal, true)
@@ -342,10 +343,16 @@ func dress_inside() -> void:
 	_station_lighting(d.env, d.status, d.trim)
 	_dress_boulders()
 	if d.env != null:
-		(d.env as LookEnvironment).set_ambient_energy_scale(1.6)
+		(d.env as LookEnvironment).set_ambient_energy_scale(1.6 * maxf(club_dim(), 0.3))
 
 
 var _dressing: Dictionary = {}       ## dress_outside()'s materials, for dress_inside()
+
+
+## Issue #261: when the whole dome is the club (the town's "club"), its house
+## lights are turned down by "dim" (1 = as built).
+func club_dim() -> float:
+	return float(demo.town.data.get("club", {}).get("dim", 1.0))
 
 
 ## Repeated hull plates, seams, and service lights give the station walls the
@@ -423,7 +430,7 @@ func _station_lighting(env: LookEnvironment, status: StandardMaterial3D, cable: 
 	if env == null:
 		return
 	status.emission_energy_multiplier = 2.4
-	_add_wall_lamps(rc, rw, wall_h, 8, 1, status, 1.45, 15.0)
+	_add_wall_lamps(rc, rw, wall_h, 8, 1, status, 1.45 * club_dim(), 15.0)
 	_town_floods(status, cable)
 	_add_wall_lamps(pit_c, pit_r, liner_h, 8, -1, status, 1.6, 22.0)
 	_pit_floor_lights(status)
@@ -486,7 +493,7 @@ func _town_floods(status: StandardMaterial3D, cable: Material) -> void:
 			_box(root, at, Vector3(1.4, 0.18, 1.4), status)
 			var lamp := OmniLight3D.new()
 			lamp.light_color = Color("#f2f4f7")
-			lamp.light_energy = 2.2
+			lamp.light_energy = 2.2 * club_dim()
 			lamp.omni_range = 21.0
 			lamp.omni_attenuation = 0.7
 			lamp.shadow_enabled = false
@@ -554,6 +561,14 @@ func _glass() -> StandardMaterial3D:
 	g.metallic = 0.3
 	g.roughness = 0.05
 	g.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return g
+
+
+## Issue #261: the club dome's smoked glass: dark, still see-through to the stars.
+func _club_glass() -> StandardMaterial3D:
+	var g := _glass()
+	g.albedo_color = Color(0.08, 0.06, 0.12, 0.55)
+	g.roughness = 0.1
 	return g
 
 

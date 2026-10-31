@@ -1,0 +1,7 @@
+{
+  "id": "club_bassist",
+  "base": "club_dj",
+  "label": "Club Bassist",
+  "note": "Issue #261: the band's standing player, on an upright bass strung with colour-cycling lasers (ClubProps.upright_bass). Black body. Plays ClubMoves 'bass' up on the neck with both hands: the groove, walking up the neck, leaning in, a look round, hammering it, shifting from foot to foot. Everything else is the DJ's (base).",
+  "perform": "bass"
+}

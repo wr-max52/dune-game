@@ -24,6 +24,7 @@ signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
 signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search")
+signal vibe_changed(mood: String)              ## issue #261: she had the band change the song
 
 var last_hints: Array = []                     ## the hint lines the last line set off (tests)
 signal ended(reason: String)
@@ -205,6 +206,7 @@ func say(text: String) -> bool:
 		"place": _place(), "people": NameHooks.known("npc:"),
 		"story": Story.brief(id()),
 		"beast": PlanetBeast.brief(GameFlow.planet()),     # everyone here knows the planet's beast
+		"club_moods": Sound.lib().cfg.get("club", {}).get("moods", []),   # issue #261: what she can ask the band for
 		"extra": (extra_brief.call() if extra_brief.is_valid() else []) + last_hints,
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
@@ -347,6 +349,9 @@ func _apply(kept: Array) -> Array:
 				comrade_declared.emit()
 			"let_go", "search":
 				verdict.emit(t)
+			"club_vibe":
+				Sound.club_vibe(str(a.mood))
+				vibe_changed.emit(str(a.mood))
 			"end_conversation", "refuse_topic":
 				pass
 		applied.append(t)
@@ -397,7 +402,8 @@ func canned_reply(text: String) -> Dictionary:
 	var can: Array = builder.actions()
 	if can.has("offer_ship") and topic in ["buy", "recommend"]:
 		return _canned_ship(text, c)
-	var needs := { "smuggle": "offer_job", "job": "offer_job", "drink": "pour_drink", "buy": "offer_speeder", "rumor": "share_rumor" }
+	var needs := { "smuggle": "offer_job", "job": "offer_job", "drink": "pour_drink", "buy": "offer_speeder", "rumor": "share_rumor",
+		"vibe": "club_vibe" }
 	if needs.has(topic) and not can.has(needs[topic]):
 		topic = ""
 	match topic:
@@ -424,17 +430,32 @@ func canned_reply(text: String) -> Dictionary:
 			return { "say": _pick(c.get("sell", ["Yours for the price on the board."])), "actions": [{ "type": "offer_speeder" }] }
 		"bye":
 			return { "say": _pick(c.get("bye", ["Go on."])), "actions": [{ "type": "end_conversation" }] }
+		"vibe":
+			var mood := vibe_mood(text)
+			return { "say": _pick(c.get("vibe", ["Something %s, coming up."])) % mood, "actions": [{ "type": "club_vibe", "mood": mood }] }
 	return { "say": _pick(c.get("default", ["Hold on."])), "actions": [] }
 
 
 func _topic(text: String) -> String:
 	var low := text.to_lower()
 	var tw: Dictionary = card.get("topic_words", {})
-	for topic in ["bye", "recommend", "buy", "smuggle", "job", "rumor", "drink", "war"]:
+	for topic in ["bye", "vibe", "recommend", "buy", "smuggle", "job", "rumor", "drink", "war"]:
 		for w in tw.get(topic, []):
 			if low.contains(str(w)):
 				return topic
 	return ""
+
+
+## Issue #261: the club mood a music request asks for (the card's "vibe_words":
+## mood -> words), else the card's first listed mood.
+func vibe_mood(text: String) -> String:
+	var low := text.to_lower()
+	var vw: Dictionary = card.get("vibe_words", {})
+	for mood in vw:
+		for w in vw[mood]:
+			if low.contains(str(w)):
+				return str(mood)
+	return str(vw.keys()[0]) if not vw.is_empty() else "chill"
 
 
 ## T-89 offline: the ship whose "good_for" words they used (else the dearest they

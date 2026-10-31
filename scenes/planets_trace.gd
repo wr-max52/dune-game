@@ -289,7 +289,8 @@ func _run() -> void:
 	var guard = demo.npcs[0] if not demo.npcs.is_empty() else null
 	out("GUARD_AT_CANTINA_DOOR", guard != null and guard.post_pos.distance_to(t.marker_pos("cantina_door")) < 5.0)
 	var merchant = demo.locals.filter(func(n): return str(n.profile.get("id", "")) == "local_merchant")
-	out("MERCHANT_IN_FRONT", not merchant.is_empty() and merchant[0].post_pos.x > float(t.get_box("cantina_wall_e_s").max[0]))
+	# Issue #261: the station's club has no building; its stall is still past the bar's door.
+	out("MERCHANT_IN_FRONT", not merchant.is_empty() and merchant[0].post_pos.x > t.marker_pos("cantina_door").x - 1.5)
 	out("ARRIVED_PILOTING", pilot.piloting)
 	out("ARRIVED_STATE", pilot.atmo.state_label())
 	out("ARRIVED_ALTITUDE", arrived_altitude)      # on the first frame, before the staged build
