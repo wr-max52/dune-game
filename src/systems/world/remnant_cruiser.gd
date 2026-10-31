@@ -555,39 +555,11 @@ func _engines() -> void:
 		light.position = c + Vector3(0, 0, r * 1.5)
 
 
-## A flame out of a bell's mouth at `at`, aft: the jetpack's flame (ItemKit._flame)
-## grown to the cruiser's size and burning blue. `nr` is its radius at the mouth,
-## `fh` its length. Layered and additive: a white-hot mouth and core, a pale blue
-## body, a blue outer cone, a faint violet plume, and shock diamonds down the
-## middle. Its -y runs aft; _flicker() makes its length waver.
+## A flame out of a bell's mouth at `at`, aft: the jetpack's flame grown to the
+## cruiser's size and burning blue (EngineFlame, which the ships' engines share).
+## `nr` is its radius at the mouth, `fh` its length; _flicker() makes it waver.
 func _flame(at: Vector3, nr: float, fh: float) -> void:
-	var fl := Node3D.new()
-	fl.name = "Flame"
-	_hull.add_child(fl)
-	fl.transform = Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), at)
-	_flames.append(fl)
-	var hot := Color("#d9f3ff")
-	var body := Color("#5cb6ff")
-	var outer := Color("#2b6cff")
-	var tail := Color("#5b3dff")
-	var parts := [
-		[_cyl(nr * 0.95, nr * 0.95, 0.3, 32), _plume(hot.lerp(Color.WHITE, 0.5), 6.0, 1.0), -0.15],
-		[_cyl(nr * 0.55, 0.0, fh * 0.4, 24), _plume(hot.lerp(Color.WHITE, 0.3), 5.0, 0.9), -fh * 0.2],
-		[_cyl(nr * 0.85, nr * 0.1, fh * 0.75, 24), _plume(hot.lerp(body, 0.5), 3.0, 0.6), -fh * 0.375],
-		[_cyl(nr * 1.05, 0.0, fh, 24), _plume(body.lerp(outer, 0.5), 2.2, 0.45), -fh * 0.5],
-		[_cyl(nr * 1.4, nr * 0.3, fh * 0.85, 24), _plume(tail, 1.4, 0.16), -fh * 0.5],
-	]
-	for i in 4:
-		var s := SphereMesh.new()
-		s.radius = nr * (0.32 - i * 0.06)
-		s.height = s.radius * 2.0
-		s.radial_segments = 16
-		s.rings = 8
-		parts.append([s, _plume(hot.lerp(Color.WHITE, 0.6), 6.0, 0.8), -fh * (0.16 + i * 0.15)])
-	for p in parts:
-		var mi := _mesh(p[0], p[1], Transform3D(Basis.IDENTITY, Vector3(0, float(p[2]), 0)), fl)
-		if p[0] is SphereMesh:
-			mi.scale = Vector3(1.0, 1.8, 1.0)
+	_flames.append(EngineFlame.build(_hull, Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), at), nr, fh, EngineFlame.ION))
 
 
 ## The flames waver, each out of step with the others (as the jetpack's do).
@@ -597,16 +569,6 @@ func _flicker() -> void:
 		var k := 1.0 + 0.07 * sin(t * 17.0 + i * 2.1) + 0.04 * sin(t * 43.0 + i * 0.7)
 		var w := 1.0 + 0.025 * sin(t * 29.0 + i * 1.3)
 		(_flames[i] as Node3D).scale = Vector3(w, k, w)
-
-
-## An unshaded, additive flame layer: `alpha` sets how much it adds.
-static func _plume(color: Color, energy: float, alpha: float) -> StandardMaterial3D:
-	var m := _emissive(color, energy)
-	m.albedo_color.a = alpha
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	return m
 
 
 static func _cyl(top: float, bottom: float, h: float, seg: int, caps := true) -> CylinderMesh:

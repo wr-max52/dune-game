@@ -11,6 +11,11 @@ Plain English, newest on top. One entry per milestone.
   the bay's pads, a lamp every 15 m down the corridor, two per side room, one
   on every landing of the shaft plus side fills, and extra lamps over the
   bridge. The colours are the same as before.
+## Tab cycles weapons (2026-10-31)
+
+- **Tab steps through your weapons**: pistol, blade, rifle, then empty hands,
+  then back to the pistol. It skips any weapon you don't have yet. T-89's
+  tutorial now mentions it.
 
 ## The new frigate (2026-10-31)
 
