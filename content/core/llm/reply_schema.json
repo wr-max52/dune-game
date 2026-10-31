@@ -27,7 +27,8 @@
               "offer_ship",
               "comrade",
               "let_go",
-              "search"
+              "search",
+              "club_vibe"
             ]
           },
           "id": {
@@ -40,6 +41,9 @@
             "type": "string"
           },
           "name": {
+            "type": "string"
+          },
+          "mood": {
             "type": "string"
           }
         },

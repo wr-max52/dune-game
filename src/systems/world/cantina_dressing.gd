@@ -90,6 +90,8 @@ func dress(town, materials: LookMaterials) -> void:
 	# Warm hanging lamps over the counter and the room, on cords from the ceiling.
 	var roof: Dictionary = town.get_box("cantina_roof")
 	var ceiling := float(roof.min[1]) if not roof.is_empty() else 5.0
+	# Issue #261: a club can turn the house lights down ("club": { "dim" }).
+	var dim := float(town.data.get("club", {}).get("dim", 1.0))
 	var lamp_glow := mats.glow(Color("#ffb060"))
 	lamp_glow.emission_energy_multiplier = 3.0
 	var lamps := [Vector3(cmin.x + 0.5, 3.3, -4.0), Vector3(cmin.x + 0.5, 3.3, 0.0), Vector3(cmin.x + 0.5, 3.3, 3.5)]
@@ -110,18 +112,18 @@ func dress(town, materials: LookMaterials) -> void:
 		add_child(bulb)
 		var l := OmniLight3D.new()
 		l.light_color = Color("#ffb070")
-		l.light_energy = LAMP_ENERGY
+		l.light_energy = LAMP_ENERGY * dim
 		l.omni_range = 10.0
 		l.omni_attenuation = 1.0
 		l.shadow_enabled = false
 		l.position = p + Vector3(0, -0.25, 0)
 		add_child(l)
-	_add_fill(town, back_x, ceiling)
+	_add_fill(town, back_x, ceiling, dim)
 
 
 ## Soft warm light from under the roof over the four quarters of the room, so the
 ## corners and tables read without lifting the bar's pools of light.
-func _add_fill(town, west_x: float, ceiling: float) -> void:
+func _add_fill(town, west_x: float, ceiling: float, dim := 1.0) -> void:
 	var east: Dictionary = town.get_box("cantina_wall_e_s")
 	var north: Dictionary = town.get_box("cantina_wall_n")
 	var south: Dictionary = town.get_box("cantina_wall_s")
@@ -136,7 +138,7 @@ func _add_fill(town, west_x: float, ceiling: float) -> void:
 			var l := OmniLight3D.new()
 			l.name = "CantinaFill"
 			l.light_color = Color("#ffc890")
-			l.light_energy = FILL_ENERGY
+			l.light_energy = FILL_ENERGY * dim
 			l.omni_range = maxf(x1 - x0, z1 - z0) * 0.6
 			l.omni_attenuation = 0.8
 			l.shadow_enabled = false
@@ -157,6 +159,11 @@ func take_color() -> Color:
 
 ## A bottle (body and neck), origin at its base, in `color`.
 func make_bottle(color: Color) -> Node3D:
+	return bottle_mesh(color)
+
+
+## The same bottle for anyone (issue #261: the club crowd holds one).
+static func bottle_mesh(color: Color) -> Node3D:
 	var root := Node3D.new()
 	root.name = "ServedBottle"
 	var glass := StandardMaterial3D.new()

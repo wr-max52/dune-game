@@ -40,6 +40,7 @@ var state := State.LOCOMOTION
 var phase := 0.0               ## gait phase, radians
 var time := 0.0
 var dance_time := 0.0          ## continuous 10-second cantina loop
+var perform_time := 0.0        ## issue #261: seconds into a performer's set (ClubMoves)
 var land_left := 0.0
 var land_time := 0.18
 var smoothing := 14.0          ## per second; higher = snappier joints
@@ -64,12 +65,17 @@ var states_seen := {}          ## for tests/traces: every state name entered
 ##   ready:       0..1, how far a gun is raised (1 = aiming, the default; 0 = at rest)
 ##   aim_pitch:   radians, + is up (aim modes bend the chest toward it)
 ##   twist:       degrees of chest yaw the caller adds (sword swings)
-## Returns { joints: {name: Vector3 deg}, pelvis_y: float, pelvis_x: float, state: String }
+##   perform:     issue #261: a performer's set ("dj", "drum", "bass"; ClubMoves), at `bpm`
+## Returns { joints: {name: Vector3 deg}, pelvis_y: float, pelvis_x: float, state: String,
+##   hands / reach: a performer's hands on their instrument (ClubMoves) }
 func step(dt: float, inp: Dictionary) -> Dictionary:
 	time += dt
 	var dancing := bool(inp.get("dance", false))
 	if dancing:
 		dance_time = fposmod(dance_time + dt, DANCE_LOOP_S)
+	var performing := str(inp.get("perform", ""))
+	if performing != "":
+		perform_time += dt
 	var grounded: bool = inp.get("grounded", true)
 	var vy: float = inp.get("vy", 0.0)
 	var speed: float = inp.get("speed", 0.0)
@@ -111,8 +117,9 @@ func step(dt: float, inp: Dictionary) -> Dictionary:
 	pelvis_x = lerpf(pelvis_x, target.pelvis_x, k)
 	return {
 		"joints": _cur.duplicate(), "pelvis_y": pelvis_y, "pelvis_x": pelvis_x,
-		"state": "DANCE" if dancing else state_name(),
+		"state": "DANCE" if dancing else ("PERFORM" if performing != "" else state_name()),
 		"dance_yaw": float(target.get("yaw", 0.0)),
+		"hands": target.get("hands", {}), "reach": target.get("reach", {}),
 	}
 
 
@@ -286,6 +293,8 @@ static func _smooth01(x: float) -> float:
 func _target(inp: Dictionary, speed: float, crouch: bool, vy: float) -> Dictionary:
 	if bool(inp.get("dance", false)):
 		return dance_pose(dance_time)
+	if str(inp.get("perform", "")) != "":
+		return ClubMoves.pose(str(inp.perform), perform_time, float(inp.get("bpm", 110.0)))
 	var j := {}
 	for n in JOINTS:
 		j[n] = Vector3.ZERO
