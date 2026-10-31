@@ -11,8 +11,11 @@ extends RefCounted
 ##      "hauler"). Sizes and colours come from the look entry, shapes from here.
 ##
 ## Every built ship has the same contract, so the scene code never cares which path
-## made it: a root Node3D named after the look, with meta "look_id", and an
-## "Engines" child holding the engine glows (empty for a model that brings its own).
+## made it: a root Node3D named after the look, with meta "look_id", an "Engines"
+## child holding the engine glows (empty for a model that brings its own), and a
+## "Flames" child holding the engine flames, unlit until throttle_flames() opens the
+## throttle. A stand-in gets a flame at each glow; a model at each "flames_at"
+## nozzle ([x, y, z, radius] in the look, pointing aft along +Z).
 ##
 ## Design rules (docs/ART_DIRECTION.md, Ships): silhouette first; the smuggler side
 ## is warm, worn and asymmetric-friendly; the remnant side is dark plate with oxblood
@@ -60,6 +63,12 @@ func build(look_id: String) -> Node3D:
 	root.set_meta("look_id", look_id)
 	var engines := Node3D.new()
 	engines.name = "Engines"
+	var flames := Node3D.new()
+	flames.name = "Flames"
+	flames.set_meta("no_bounds", true)      # left out of the ship's measured size (TownDecor.visual_aabb)
+	flames.set_meta("flame_length", float(p.get("flame_length", 6.0)))
+	flames.set_meta("palette", EngineFlame.palette(_c(p, "engine", "#8fd8ff")))
+	root.add_child(flames)
 	var scene_path := str(p.get("scene", ""))
 	var model := _load_model(scene_path)
 	if model != null:
@@ -68,6 +77,9 @@ func build(look_id: String) -> Node3D:
 			darken(model, p.darken, _c(p, "trim", "#6b1e1e"))     # issue #76: the Remnant's dark ships
 		root.add_child(model)
 		root.add_child(engines)
+		for n in p.get("flames_at", []):
+			_flame(flames, Vector3(float(n[0]), float(n[1]), float(n[2])), float(n[3]))
+		throttle_flames(root, 0.0)
 		root.set_meta("source", "scene")
 		return root
 	var body := Node3D.new()
@@ -81,6 +93,7 @@ func build(look_id: String) -> Node3D:
 			_hauler(body, engines, p)
 		_:
 			_dart(body, engines, p)
+	throttle_flames(root, 0.0)
 	root.set_meta("source", "kit")
 	return root
 
@@ -248,11 +261,55 @@ func _prism(size: Vector3) -> PrismMesh:
 	return pm
 
 
-## Engine glow disc facing +Z (the exhaust side).
+## Engine glow disc facing +Z (the exhaust side), and its flame.
 func _engine(engines: Node3D, color: Color, pos: Vector3, r: float) -> void:
 	var mi := _mi(engines, _cyl(r, r, 0.12, 14), _glow(color, 5.0), pos, Vector3(PI * 0.5, 0, 0))
 	mi.name = "Glow%d" % engines.get_child_count()
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_flame(engines.get_parent().get_node("Flames"), pos + Vector3(0, 0, 0.06), r * 0.9)
+
+
+## A flame out of a nozzle at `pos` (radius `r`), running aft (+Z): the jetpack's
+## and the cruiser's flame (EngineFlame) in the ship's colours.
+func _flame(flames: Node3D, pos: Vector3, r: float) -> void:
+	var xf := Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), pos)
+	EngineFlame.build(flames, xf, r, r * float(flames.get_meta("flame_length")), flames.get_meta("palette"), 14)
+
+
+# ------------------------------------------------------------------ throttle flames
+
+const FLAME_IDLE := 0.05      ## throttle below this: engines idle, flames out (the glow stays)
+const FLAME_IGNITE := 4.0     ## how fast the flames bloom out of the nozzles (length per second)
+const FLAME_CUT := 3.0        ## how fast they die back when the throttle closes
+const FLAME_BOOST := 1.35     ## boost burns this much longer
+
+
+## The engines light when the throttle opens. Eases a built ship's flames toward
+## `throttle` (0..1; `boost` burns longer): they bloom out of the nozzles when the
+## throttle comes up off idle, die back when it closes, and waver while lit (as the
+## jetpack's and the cruiser's do). Call once a frame; `dt` 0 snaps straight there.
+static func throttle_flames(ship: Node3D, throttle: float, boost := false, dt := 0.0) -> void:
+	var f := ship.get_node_or_null("Flames") as Node3D
+	if f == null or f.get_child_count() == 0:
+		return
+	var want := 0.0 if throttle < FLAME_IDLE else lerpf(0.5, 1.0, clampf(throttle, 0.0, 1.0)) * (FLAME_BOOST if boost else 1.0)
+	var lit := float(f.get_meta("lit", 0.0))
+	if dt <= 0.0:
+		lit = want
+	else:
+		lit = move_toward(lit, want, dt * (FLAME_IGNITE if want > lit else FLAME_CUT))
+	f.set_meta("lit", lit)
+	f.visible = lit > 0.01
+	if not f.visible:
+		return
+	var t := Time.get_ticks_msec() * 0.001
+	var w0 := lerpf(0.4, 1.0, minf(lit * 1.6, 1.0))      # they open out as they lengthen
+	var i := 0
+	for fl in f.get_children():
+		var k := 1.0 + 0.07 * sin(t * 17.0 + i * 2.1) + 0.04 * sin(t * 43.0 + i * 0.7)
+		var w := w0 * (1.0 + 0.025 * sin(t * 29.0 + i * 1.3))
+		(fl as Node3D).scale = Vector3(w, maxf(lit * k, 0.001), w)
+		i += 1
 
 
 const ALONG_Z := Vector3(PI * 0.5, 0.0, 0.0)      # cylinder axis -> +/-Z
