@@ -625,20 +625,31 @@ func _lights() -> void:
 	var list: Array = []
 	for x: float in [-20.0, 24.0]:
 		for z: float in [-120.0, -64.0, -8.0]:
-			list.append([Vector3(x, CruiserHull.BAY_TOP - 6.0, z), "#e4edff", 5.0, 64.0])
+			list.append([Vector3(x, CruiserHull.BAY_TOP - 6.0, z), "#e4edff", 11.0, 80.0])
+	for x: float in [-24.0, 20.0]:
+		for z: float in [-128.0, -92.0, -56.0, -20.0, 14.0]:
+			list.append([Vector3(x, d + 12.0, z), "#dbe7ff", 5.0, 40.0])     # low fill over the pads
 	for z in [-110.0, -40.0, 10.0]:
-		list.append([Vector3(-38.0, d + 8.0, z), "#ffcf9a", 2.0, 30.0])      # warm fill along the cargo
-	for i in 8:
-		list.append([Vector3(0, CruiserHull.HALL_TOP - 1.5, 44.0 + i * 30.0), "#cfe6ff", 2.6, 21.0])
-	list.append([Vector3(16, CruiserHull.HALL_TOP - 1.5, 122), "#ffd9a8", 2.2, 17.0])
-	list.append([Vector3(-16, CruiserHull.HALL_TOP - 1.5, 188), "#ffd9a8", 2.2, 17.0])
-	for y in [d + 8.0, d + 32.0, d + 56.0, d + 80.0]:
-		list.append([Vector3(0, y, 298), "#c3dbff", 3.4, 40.0])
-	list.append([Vector3(0, 12, 318), "#7fc8ff", 4.0, 42.0])
-	for z: float in [226.0, 242.0, 258.0]:
-		list.append([Vector3(0, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 1.7, 30.0])
+		list.append([Vector3(-38.0, d + 8.0, z), "#ffcf9a", 3.5, 32.0])      # warm fill along the cargo
+	for i in 16:
+		list.append([Vector3(0, CruiserHull.HALL_TOP - 1.5, 36.0 + i * 15.0), "#cfe6ff", 3.5, 20.0])
+	for z: float in [116.0, 128.0]:
+		list.append([Vector3(16, CruiserHull.HALL_TOP - 1.5, z), "#ffd9a8", 5.0, 20.0])
+	for z: float in [182.0, 194.0]:
+		list.append([Vector3(-16, CruiserHull.HALL_TOP - 1.5, z), "#ffd9a8", 5.0, 20.0])
+	for i in CruiserHull.FLIGHTS:
+		list.append([Vector3(0, d + 6.0 + i * CruiserHull.FLIGHT_RISE, 298), "#c3dbff", 6.0, 36.0])
 	for x: float in [-18.0, 18.0]:
-		list.append([Vector3(x, CruiserHull.PIT_Y + 2.0, 242), "#38c8ff", 1.0, 14.0])
+		for y in [d + 14.0, d + 38.0, d + 62.0]:
+			list.append([Vector3(x, y, 298), "#c3dbff", 4.0, 30.0])         # fill on the landings
+	list.append([Vector3(0, 12, 318), "#7fc8ff", 5.0, 42.0])
+	for z: float in [226.0, 242.0, 258.0]:
+		list.append([Vector3(0, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 3.5, 30.0])
+	for x: float in [-16.0, 16.0]:
+		for z: float in [228.0, 256.0]:
+			list.append([Vector3(x, CruiserHull.BRIDGE_TOP - 2.0, z), "#dce8ff", 2.5, 26.0])
+	for x: float in [-18.0, 18.0]:
+		list.append([Vector3(x, CruiserHull.PIT_Y + 2.0, 242), "#38c8ff", 2.0, 16.0])
 	for l in list:
 		var o := OmniLight3D.new()
 		o.position = l[0]

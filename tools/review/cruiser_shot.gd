@@ -45,6 +45,8 @@ func _shots() -> Array:
 		["bay", Vector3(-30, -14, 10), Vector3(-34, -10.5, 14), Vector3(30, -8, -90), false],
 		["bay_mouth", Vector3(-30, -14, -60), Vector3(-40, -6, -40), Vector3(60, -4, -70), false],
 		["corridor", Vector3(0, -14, 60), Vector3(0, -12.2, 50), Vector3(0, -12.2, 200), false],
+		["armoury", Vector3(10, -14, 114), Vector3(8, -12.2, 112), Vector3(24, -12.5, 132), false],
+		["crew_room", Vector3(-10, -14, 180), Vector3(-8, -12.2, 178), Vector3(-24, -12.5, 198), false],
 		["shaft", Vector3(-12, -14, 280), Vector3(-16, -12.3, 276), Vector3(6, 40, 312), false],
 		["bridge", Vector3(0, 58, 262), Vector3(0, 60.2, 266), Vector3(0, 59.5, 214), false],
 		["bridge_window", Vector3(0, 58, 222), Vector3(-14, 59.8, 226), Vector3(10, 59.0, 212), false],
