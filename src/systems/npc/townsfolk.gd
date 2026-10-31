@@ -11,8 +11,9 @@ extends Node
 ##             (profile combat.hold_ground) duck behind the counter and shoot over
 ##             it, never leaving the stall. Everyone's pistol (profile "sidearm")
 ##             comes out when the alarm goes up and is put away after
-##   after     calm again when the player flees or is downed; the locals remember
-##             the face for memory_s and start again on sight
+##   after     calm again when the player flees or is downed. After fleeing the
+##             locals remember the face for memory_s and start again on sight;
+##             once the player wakes in the pit they forget it (forgive_player)
 ##
 ## Their own alarm, not the garrison's: shooting a local does not call the Remnant,
 ## and a gate fight does not turn the market on you. While the locals are up in
@@ -250,6 +251,21 @@ func _on_player_downed() -> void:
 		_say(_lead(_alive()), "downed")
 	alarm.stand_down()
 	_handle(alarm.drain())
+
+
+## The player died and woke in the pit (Garrison._wake_in_pit): like the guards,
+## the locals forget the fight and the face, whatever happened while the player
+## was out (a stray bolt landing then would have raised the alarm again).
+func forgive_player() -> void:
+	alarm.stand_down()
+	_handle(alarm.drain())
+	_attacked = false
+	claimed.clear()
+	for g in _alive():
+		g.perception = Perception.new(g.profile.get("perception", {}))
+		var b: GuardBrain = brains.get(g)
+		if b != null and b.state != GuardBrain.State.PATROL and b.state != GuardBrain.State.RETURN:
+			b.stand_down()
 
 
 # ------------------------------------------------------------------ helpers

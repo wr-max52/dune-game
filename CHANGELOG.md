@@ -2,6 +2,16 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The locals forget you when you die, like the guards (2026-10-30)
+
+- **Waking in the pit wipes the locals' grudge.** After you get away from a
+  fight with the port's locals they still remember your face for 4 minutes and
+  start again on sight. Getting knocked out was meant to clear that, but if
+  anything hit a local while you were out (your droid's last bolt, say) their
+  alarm went back up and you woke to 4 more minutes of it. Now, as with the
+  Remnant's garrison, the town's locals and every outpost's forget the fight
+  and your face the moment you wake in the pit.
+
 ## Assassin droids stand up straight to shoot (2026-10-30)
 
 - **No more frozen half step.** An assassin droid that stopped walking or
