@@ -69,7 +69,9 @@ var closed_line := Callable()
 var vendor_talk: Dictionary = {}
 
 var _packs: Dictionary = {}     ## item id -> Jetpack (fuel survives a detach)
-var menu: DroidMenu             ## issue #208: the fence's offers
+var menu: DroidMenu             ## a stall's trade menu: sell, buy, the fence's offers (issue #208)
+var last_trade := ""            ## what the last pick in it did: "sold", "bought", "cant_afford", ...
+var _trade_said := ""           ## the trade menu's body: the pitch, then what the last trade did
 var on_refit := Callable()      ## issue #208: () after an upgrade (the town refits the player's guns)
 var _armour_look := false       ## issue #209: the desert guard's look is on (story saves)
 var _last_safe := Vector3.ZERO
@@ -251,7 +253,7 @@ func _physics_process(dt: float) -> void:
 	sync_drop()
 	focus = _find_focus()
 	if hud != null:
-		hud.set_prompt(prompt_text())
+		hud.set_prompt("" if menu.is_open() else prompt_text())
 	if not player.locked:
 		if InputMap.has_action("interact") and Input.is_action_just_pressed("interact"):
 			interact()
@@ -304,43 +306,61 @@ func prompt_text() -> String:
 		return said if said != "" else _l("closed") % str(v.get("label", "vendor")).to_lower()
 	if bool(v.get("bounties", false)) and WorldState.bounty_collectable():
 		return str(Story.bounty_cfg().get("collect", "%s %d")) % [str(WorldState.bounty.name), int(WorldState.bounty.pay)]
-	var sell_id := _sellable(v)
-	if sell_id != "":
-		var it: Dictionary = content.get_item(sell_id)
-		return _l("sell") % [_shown(it, sell_id), str(v.get("label", "vendor")).to_lower(),
-			Inventory.sell_price(it, v)]
-	if v.has("offers") and not GearUpgrades.open_offers().is_empty():
-		return _l("browse") % str(v.get("label", "vendor")).to_lower()
-	if v.has("offers") and vendor_talk.has(str(v.get("id", ""))):
+	var opts := trade_options(v)
+	if opts.size() == 1 and str(opts[0].id) == "talk":
 		return _l("talk_to") % str(v.get("label", "vendor")).to_lower()
-	for id in inv().vendor_stock(v):
-		var it: Dictionary = content.get_item(str(id))
-		var cost := Inventory.buy_price(it, v)
-		if cost <= WorldState.credits:
-			return _l("buy") % [_shown(it, str(id)), str(v.get("label", "vendor")).to_lower(), cost]
-		return _l("cant_afford") % [str(it.get("label", id)), cost, WorldState.credits]
+	if not opts.is_empty():
+		return _l("trade") % str(v.get("label", "vendor")).to_lower()
 	if v.has("pitch"):
 		return str(v.pitch) % str(v.get("label", "vendor")).to_lower()
 	return _l("nothing_to_trade") % str(v.get("label", "vendor")).to_lower()
 
 
-## The first owned item this vendor buys (the attached one first).
-func _sellable(v: Dictionary) -> String:
+## Every owned item this vendor buys (the attached one first).
+func _sellable(v: Dictionary) -> Array:
 	var ids := inv().item_ids()
 	var back := inv().in_slot(SLOT_BACK)
 	if back != "":
 		ids.erase(back)
 		ids.push_front(back)
-	for id in ids:
-		if Inventory.sell_price(content.get_item(str(id)), v) >= 0:
-			return str(id)
-	return ""
+	return ids.filter(func(id): return Inventory.sell_price(content.get_item(str(id)), v) >= 0)
+
+
+## A stall's menu: talk (a keeper with a brain), what it buys from you, what it
+## sells, and the fence's offers. [{ id, text }]; empty = nothing to trade.
+func trade_options(v: Dictionary) -> Array:
+	var out: Array = []
+	if v.has("offers") and vendor_talk.has(str(v.get("id", ""))):
+		out.append({ "id": "talk", "text": _l("talk") })     # issue #188: the fence is an AI character
+	for id in _sellable(v):
+		var it: Dictionary = content.get_item(str(id))
+		var shown := _shown(it, str(id)) + (_l("worn") if inv().in_slot(str(it.get("slot", ""))) == str(id) else "")
+		var n := inv().count(str(id))
+		var price := Inventory.sell_price(it, v)
+		out.append({ "id": "sell:" + str(id),
+			"text": _l("sell_row_many") % [shown, n, price] if n > 1 else _l("sell_row") % [shown, price] })
+	var stock := inv().vendor_stock(v)
+	var seen := {}
+	for id in stock:
+		if seen.has(id):
+			continue
+		seen[id] = true
+		var it: Dictionary = content.get_item(str(id))
+		var cost := Inventory.buy_price(it, v)
+		var text := _l("buy_row") % [_shown(it, str(id)), cost]
+		if cost > WorldState.credits:
+			text = _l("buy_row_poor") % [_shown(it, str(id)), cost, WorldState.credits]
+		out.append({ "id": "buy:" + str(id), "text": text })
+	if v.has("offers"):
+		for o in GearUpgrades.open_offers():
+			out.append({ "id": "offer:" + str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
+	return out
 
 
 # ------------------------------------------------------------------ actions
 
-## Act on whatever is in reach. Returns what happened: "picked_up", "sold",
-## "bought", "cant_afford", "bounty" (paid one out), or "" for nothing.
+## Act on whatever is in reach. Returns what happened: "picked_up", "menu" (a
+## stall's trade menu opened), "bounty" (paid one out), or "" for nothing.
 func interact() -> String:
 	if focus.is_empty() and player != null:
 		focus = _find_focus()
@@ -390,59 +410,88 @@ func _trade(v: Dictionary) -> String:
 		if hud != null:
 			hud.toast(str(Story.bounty_cfg().get("collected", "%d %s")) % [pay, who], 4.0)
 		return "bounty"
-	var sell_id := _sellable(v)
-	if sell_id != "":
-		var it: Dictionary = content.get_item(sell_id)
-		var price := inv().sell(sell_id, it, v)
-		if price < 0:
-			return ""
-		WorldState.credits += price
-		WorldState.log_event(_l("event_sold") % str(it.get("label", sell_id)).to_lower())
-		_packs.erase(sell_id)
-		sync_gear()
-		if bool(it.get("contraband", false)):
-			WorldState.on_contraband_sold()     # issue #64: a smuggling run done?
-		if hud != null:
-			hud.toast(_l("sold") % [str(it.get("label", sell_id)), price])
-		return "sold"
-	if v.has("offers") and (not GearUpgrades.open_offers().is_empty() or vendor_talk.has(str(v.get("id", "")))):
-		open_offers(v)
-		return "menu"
-	for id in inv().vendor_stock(v):
-		var it: Dictionary = content.get_item(str(id))
-		var cost := inv().buy(str(id), it, v, WorldState.credits)
-		if cost < 0:
-			return "cant_afford"
-		WorldState.credits -= cost
-		WorldState.log_event(_l("event_bought") % str(it.get("label", id)).to_lower())
-		if inv().in_slot(str(it.get("slot", ""))) == "":
-			inv().attach(str(id), it)
-		sync_gear()
-		if hud != null:
-			hud.toast(_l("bought") % [str(it.get("label", id)), cost])
-		return "bought"
-	return ""
+	if trade_options(v).is_empty():
+		return ""
+	open_trade(v)
+	return "menu"
 
 
-# ------------------------------------------------------------------ the fence's offers (issues #208, #209)
+## Sell one `id` to vendor `v`. Returns "sold" or "" (it does not buy that, or
+## you have none).
+func sell_item(id: String, v: Dictionary) -> String:
+	var it: Dictionary = content.get_item(id)
+	var price := inv().sell(id, it, v)
+	if price < 0:
+		return ""
+	WorldState.credits += price
+	WorldState.log_event(_l("event_sold") % str(it.get("label", id)).to_lower())
+	if not inv().has(id):
+		_packs.erase(id)
+	sync_gear()
+	if bool(it.get("contraband", false)):
+		WorldState.on_contraband_sold()     # issue #64: a smuggling run done?
+	_trade_said = _l("sold") % [str(it.get("label", id)), price]
+	if hud != null:
+		hud.toast(_trade_said)
+	return "sold"
 
-func open_offers(v: Dictionary) -> void:
-	var opts: Array = []
-	var talk: Callable = vendor_talk.get(str(v.get("id", "")), Callable())
-	if talk.is_valid():
-		opts.append({ "id": "talk", "text": _l("talk") })     # issue #188: the fence is an AI character
-	for o in GearUpgrades.open_offers():
-		opts.append({ "id": str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
+
+## Buy one `id` from vendor `v`; it goes on if its slot is free. Returns "bought",
+## "cant_afford" or "" (not in stock).
+func buy_item(id: String, v: Dictionary) -> String:
+	if not inv().vendor_stock(v).has(id):
+		return ""
+	var it: Dictionary = content.get_item(id)
+	var cost := inv().buy(id, it, v, WorldState.credits)
+	if cost < 0:
+		_trade_said = _l("cant_afford") % [str(it.get("label", id)), Inventory.buy_price(it, v), WorldState.credits]
+		return "cant_afford"
+	WorldState.credits -= cost
+	WorldState.log_event(_l("event_bought") % str(it.get("label", id)).to_lower())
+	if inv().in_slot(str(it.get("slot", ""))) == "":
+		inv().attach(id, it)
+	sync_gear()
+	_trade_said = _l("bought") % [str(it.get("label", id)), cost]
+	if hud != null:
+		hud.toast(_trade_said)
+	return "bought"
+
+
+# ------------------------------------------------------------------ the trade menu (issues #208, #209)
+
+## A stall's menu. Each sale or buy leaves it open with the new prices and the
+## cursor where it was (keep_cursor); Esc walks away, Talk hands over to the chat.
+func open_trade(v: Dictionary, keep_cursor := false) -> void:
+	var opts := trade_options(v)
+	if opts.is_empty():
+		return
+	if not keep_cursor:
+		_trade_said = str(v.get("pitch", "")) % str(v.get("label", "vendor")).to_lower() if v.has("pitch") else ""
 	var lock: bool = player != null and not bool(player.get("locked"))
 	if lock:
 		player.locked = true
-	menu.open(_l("offers_title") % [str(v.get("label", "Fence")), WorldState.credits], opts, func(id):
+	var pick := func(id: String) -> void:
 		if lock:
 			player.locked = false
-		if id == "talk":
+		_on_trade(id, v)
+	menu.open(_l("offers_title") % [str(v.get("label", "Vendor")), WorldState.credits], opts, pick, _trade_said, keep_cursor)
+
+
+func _on_trade(id: String, v: Dictionary) -> void:
+	if id == "":
+		return
+	if id == "talk":
+		var talk: Callable = vendor_talk.get(str(v.get("id", "")), Callable())
+		if talk.is_valid():
 			talk.call()
-		elif id != "":
-			buy_offer(id))
+		return
+	if id.begins_with("sell:"):
+		last_trade = sell_item(id.substr(5), v)
+	elif id.begins_with("buy:"):
+		last_trade = buy_item(id.substr(4), v)
+	elif id.begins_with("offer:"):
+		last_trade = buy_offer(id.substr(6))
+	open_trade(v, true)
 
 
 ## Buy one of the fence's offers. Returns GearUpgrades.buy's answer.
@@ -451,10 +500,11 @@ func buy_offer(id: String) -> String:
 	var r := GearUpgrades.buy(id)
 	if r == "bought":
 		refit()
-		if hud != null:
-			hud.toast(_l("offer_bought") % str(o.label), 4.0)
-	elif r == "cant_afford" and hud != null:
-		hud.toast(_l("offer_cant_afford") % [str(o.label), int(o.price), WorldState.credits], 4.0)
+		_trade_said = _l("offer_bought") % str(o.label)
+	elif r == "cant_afford":
+		_trade_said = _l("offer_cant_afford") % [str(o.label), int(o.price), WorldState.credits]
+	if r in ["bought", "cant_afford"] and hud != null:
+		hud.toast(_trade_said, 4.0)
 	return r
 
 

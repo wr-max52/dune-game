@@ -99,8 +99,11 @@ func test_flying_out_of_town_lands_on_sand() -> void:
 
 func test_it_sells_at_the_market() -> void:
 	assert_eq(t.get("REACHED_TRADER"), "true")
-	assert_true(str(t.get("SELL_PROMPT", "")).contains("Sell Jetpack"))
+	assert_true(str(t.get("SELL_PROMPT", "")).contains("Trade with the gear trader"))
+	assert_eq(t.get("TRADE_MENU"), "menu", "[E] opens the trade menu")
+	assert_true(str(t.get("SELL_ROW", "")).contains("Sell Jetpack"))
 	assert_eq(t.get("SELL_RESULT"), "sold")
+	assert_eq(t.get("MENU_STAYS_OPEN"), "true", "a sale does not close the menu")
 	assert_eq(int(t.get("SOLD_FOR", 0)), 60, "half its 120 value")
 	assert_eq(t.get("AFTER_SALE_OWNS"), "false")
 	assert_eq(t.get("AFTER_SALE_ATTACHED"), "")
@@ -111,13 +114,13 @@ func test_it_sells_at_the_market() -> void:
 
 
 func test_it_can_be_bought_back() -> void:
-	assert_true(str(t.get("BUY_PROMPT", "")).contains("Buy Jetpack"))
+	assert_true(str(t.get("BUY_ROW", "")).contains("Buy Jetpack"))
 	assert_eq(t.get("BUY_RESULT"), "bought")
 	assert_eq(int(t.get("BOUGHT_FOR", 0)), 120)
 	assert_eq(t.get("BOUGHT_ATTACHED"), "jetpack", "bought gear goes on if the slot is free")
 	assert_eq(t.get("BOUGHT_PLAYER_HAS_JET"), "true")
 	assert_eq(t.get("RESELL_RESULT"), "sold")
-	assert_true(str(t.get("POOR_PROMPT", "")).contains("you have 60"))
+	assert_true(str(t.get("POOR_ROW", "")).contains("you have 60"))
 	assert_eq(t.get("POOR_RESULT"), "cant_afford")
 	assert_eq(int(t.get("END_CREDITS", 0)), 60, "60 + 60 - 120 + 60")
 

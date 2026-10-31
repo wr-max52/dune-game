@@ -2,6 +2,23 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Shop menus: keys, and they stay open (2026-10-30)
+
+- **Every NPC menu takes W/S or the arrows and Enter.** T-89, Dorrin, the droid
+  merchant, the general, the market stalls, the fence and the nomads' trade all
+  show a lit cursor bar; W/S or Up/Down moves it, Enter picks the row, 1-9 still
+  pick straight off and Esc walks away. Long menus scroll and wrap to fit the
+  screen at any text size.
+- **Buying or selling no longer closes the menu.** It reopens with the new
+  prices, your credits and what the keeper said, the cursor on the same row, so
+  you can sell three power cells in a row.
+- **The market stalls have a real trade menu.** [E] used to sell the first thing
+  the stall would take (your worn jetpack included) in one press. Now it opens a
+  list: everything they buy from you, with counts and prices, what they have for
+  sale, and at the fence its upgrades and Talk, all in one menu.
+- **Text size starts at 175%** (was 125%). A size you already set in F11 > HUD
+  is kept.
+
 ## Ship guns hit people hard; one hull in the air and in space (2026-10-30)
 
 - **A ship's cannon kills a man in one hit.** A direct hit from a ship's guns

@@ -603,7 +603,7 @@ func _hud_tab() -> Control:
 	row.add_child(shown)
 	var reset := Button.new()
 	reset.text = "Default"
-	reset.pressed.connect(func(): size.value = roundf(float(ui.get("text_scale", 1.25)) * 100.0); RetroUI.set_text_scale(get_tree(), size.value / 100.0))
+	reset.pressed.connect(func(): size.value = roundf(float(ui.get("text_scale", 1.75)) * 100.0); RetroUI.set_text_scale(get_tree(), size.value / 100.0))
 	row.add_child(reset)
 	_refreshers.append(func(): size.set_value_no_signal(roundf(RetroUI.text_scale * 100.0)); shown.text = "%d%%" % int(size.value))
 	_section(v, "KEYS")

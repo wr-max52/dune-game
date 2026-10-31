@@ -165,6 +165,13 @@ func talk() -> void:
 	if s == null:
 		_say(_line("no_speeder"))
 		return
+	_open(_line("hello"), top_options(), _on_top)
+
+
+func top_options() -> Array:
+	var s := speeder_in_bay()
+	if s == null:
+		return []
 	var fit := _fit(s)
 	var opts := [
 		{ "id": "group:paint", "text": _l("menu_paint") },
@@ -174,7 +181,7 @@ func talk() -> void:
 	for p in SpeederUpgrades.in_group("lifter"):
 		opts.append(_row(fit, p))
 	opts.append({ "id": "scrap", "text": _l("menu_scrap") % SpeederUpgrades.scrap_value(fit) })
-	_open(_line("hello"), opts, _on_top)
+	return opts
 
 
 func group_options(group: String) -> Array:
@@ -207,6 +214,7 @@ func _on_top(id: String) -> void:
 		_open(_line("hello"), group_options(g), _on_group.bind(g))
 	elif id.begins_with("buy:"):
 		buy(id.substr(4))
+		_reopen(top_options(), _on_top)
 	elif id == "scrap":
 		var s := speeder_in_bay()
 		if s != null:
@@ -219,8 +227,14 @@ func _on_group(id: String, group: String) -> void:
 		talk()
 	elif id.begins_with("buy:"):
 		buy(id.substr(4))
-		if speeder_in_bay() != null:
-			_open(said, group_options(group), _on_group.bind(group))
+		_reopen(group_options(group), _on_group.bind(group))
+
+
+## After a buy: the same menu again, with what he said and the new prices, the
+## cursor where it was. Esc walks away.
+func _reopen(opts: Array, pick: Callable) -> void:
+	if speeder_in_bay() != null:
+		menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, said, true)
 
 
 func _on_scrap(id: String) -> void:
