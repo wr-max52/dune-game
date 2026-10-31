@@ -23,6 +23,35 @@ Plain English, newest on top. One entry per milestone.
   walk back and board her. She can still be shot on the way down. You can't
   board another ship until she's down or towed.
 
+## The party barge (issue #269, 2026-10-31)
+
+- **A sail barge that is one long party.** Out in the home planet's desert,
+  about 650 m from town, the Gilded Wallow floats over the sand. It has two
+  striped sails, string lights, an awning over the dance floor and a bar.
+- **A band on the top deck** (horn, lute, drums, pipes) plays the same club
+  music as the cantina (the planet's `club` playlist). You hear it by distance
+  from the barge, and on board on every deck. A crowd dances on every deck: the
+  top deck, the lounge below and steerage at the bottom. They do the cantina's
+  dance loop.
+- **The boss, Grubba Vosk**, is big, wide and ugly, warts and all, on his dais
+  with two guards. [E] by him to talk. With enough credits, [E] buys the barge
+  (1500). Or shoot or cut him down (400 health). Either way he goes below to
+  the lounge and keeps partying, and the barge is yours (saved).
+- **Drive it.** Yours, [E] at the wheel by the stern takes the helm:
+  [W/S] throttle, [A/D] steer, like a speeder but slow and heavy (4.5 m/s
+  top). You stand at the wheel and ride along. **The party never stops**: the
+  band plays and everyone dances while it moves. [E] lets go.
+- **Walk inside.** A gangplank runs from the stern to the sand. A ramp on the
+  port side goes down to the lounge, and another on the starboard side down to
+  steerage (crates, hammocks, lamps). Everyone down there is partying too, and
+  the top deck is still going when you come back up.
+- **Any planet can have one.** Add a `"barge"` block to the planet's file (name,
+  boss, home; any number in content/core/barges/party_barge.json can be
+  overridden). PlanetGen passes it through and the town builds it (`with_barge`).
+- With more than one club in a scene (the cantina and the barge), the loudest
+  one plays (ClubMusic).
+- Trace: scenes/barge_trace.gd (in CI), tests/test_barge_trace.gut.gd. Stills:
+  docs/lookdev/barge/.
 ## The round port (issue #237, parts 1 and 2, 2026-10-31)
 
 - **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)
