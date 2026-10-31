@@ -2,6 +2,47 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The party barge, cleaned up (issue #269 follow-up, 2026-10-31)
+
+- **No more shaking.** The drifting barge used to get a fresh random turn every
+  physics tick (about 3° at a time), so the whole hull jittered. It now picks a
+  new heading every 12 to 25 seconds and turns onto it gently. It is also drawn
+  between physics ticks like the player (render smoothing), so it glides
+  instead of stepping against a smooth camera. Its parts are merged into one
+  mesh a finish (a few draw calls, not hundreds), small props and their lights
+  fade out far off, and the crowd animates at a quarter rate past 50 m.
+- **A new look.** Rusted iron hull plates in a skin that flares to the gunwale
+  and runs into a raked prow, lit portholes down both sides, blue repulsor pods
+  underneath. Wood plank decks. The sails are now **solar panels**: navy cells
+  with glowing blue lines between them, pulsing slowly with the music.
+- **A franchise of the cantina club.** The top deck has the cantina's band (the
+  hologram drums and the laser upright bass) on a stage at the bow, the club's
+  neon sign (the cocktail glass and the moon) over them, a checker dance floor,
+  velvet and panelling, warm and blue spots, a piano and a sax, candlelit tables
+  and a bar with bottles. **A DJ on the lower deck** runs a small rave: a light-up
+  floor, a hologram wall, speaker stacks with strobes, moving heads, a mirror
+  ball and neon strips, with a lounge of leather booths aft.
+- **Everyone on board can be killed**, and nobody fights back. It never touches
+  your standing with anyone. They are back on their feet after 3 minutes of play,
+  or the next time the town is built. Kill the whole band and the DJ and the
+  music stops until they are back. The old boss, once he has handed the barge
+  over, is just another partygoer.
+- **The control panel.** The wheel is gone. Yours, [E] at the panel by the stern:
+  [A/D] turns the course (a needle on its compass screen and a hologram arrow
+  over it show where), [W] engages the **autopilot**, [S] is all stop, [E] steps
+  away. On autopilot it swings round onto the course and cruises (4.5 m/s) while
+  you walk the decks; the gangplank comes up while it is under way.
+- **It stops dead if it runs into anything** (rocks, buildings, anything in the
+  world's data). Set a new course and go again. **Run it into the beast and it
+  blows up**: fire along the hull, anyone aboard hurt and thrown clear. It is
+  built again at its home 4 minutes of play later, still yours.
+- Numbers are in content/core/barges/party_barge.json (`drive`, `person_hp`,
+  `respawn_s`, `rebuild_s`, `blast_damage`). The look is
+  src/systems/world/barge_look.gd; new surfaces `ClubTextures.rust`, `solar`
+  and `local` (textures mapped in the mesh's own space, for things that move).
+- Trace: scenes/barge_trace.gd, tests/test_barge_trace.gut.gd. Stills:
+  docs/lookdev/barge/.
+
 ## The Lanner is a rocket with wings (2026-10-31)
 
 - **New Lanner model.** The Valcourt Kinetics Lanner, the fastest small ship
