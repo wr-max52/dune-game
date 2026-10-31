@@ -85,6 +85,76 @@ func build(look_id: String) -> Node3D:
 	return root
 
 
+## The upgrades T-89 fitted (ShipUpgrades ids), shown on a built ship: each id in
+## the look's "upgrades" is a list of parts bolted onto the model, so they stack.
+## Re-dressing replaces the last set; a ship whose look has none stays as built.
+## A part: { mesh: "box" (size) | "cyl" (top, bottom, h, open) | "torus" (r, t) |
+## "sphere" (r), pos, rot (degrees), mat: "glow" (energy) | "metal" | "plate",
+## color, mirror (a copy at -x) }.
+func dress(ship: Node3D, fits: Array) -> void:
+	var old := ship.get_node_or_null("Upgrades")
+	if old != null:
+		ship.remove_child(old)
+		old.free()
+	var ups: Dictionary = looks.get(str(ship.get_meta("look_id", "")), {}).get("upgrades", {})
+	var parts: Array = []
+	for id in ups:
+		if fits.has(id):
+			parts.append_array(ups[id])
+	if parts.is_empty():
+		return
+	var root := Node3D.new()
+	root.name = "Upgrades"
+	ship.add_child(root)
+	for part: Dictionary in parts:
+		var mesh := _part_mesh(part)
+		var col := Color(str(part.get("color", "#8a9099")))
+		var mat: Material
+		match str(part.get("mat", "metal")):
+			"glow":
+				mat = _glow(col, float(part.get("energy", 4.0)))
+			"plate":
+				mat = _plate(col)
+			_:
+				mat = mats.flat(col, 0.45, 0.55)
+		if bool(part.get("open", false)):
+			mat = (mat as BaseMaterial3D).duplicate()
+			(mat as BaseMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED
+		var pos := _v(part.get("pos", [0, 0, 0]))
+		var rot := _v(part.get("rot", [0, 0, 0])) * (PI / 180.0)
+		var mi := _mi(root, mesh, mat, pos, rot)
+		if str(part.get("mat", "")) == "glow":
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if bool(part.get("mirror", false)):
+			_mi(root, mesh, mat, Vector3(-pos.x, pos.y, pos.z), Vector3(rot.x, -rot.y, -rot.z)).cast_shadow = mi.cast_shadow
+
+
+func _part_mesh(part: Dictionary) -> Mesh:
+	match str(part.get("mesh", "box")):
+		"cyl":
+			var c := _cyl(float(part.get("top", 0.2)), float(part.get("bottom", 0.2)), float(part.get("h", 0.5)), 20)
+			if bool(part.get("open", false)):
+				c.cap_top = false
+				c.cap_bottom = false
+			return c
+		"torus":
+			var t := TorusMesh.new()
+			var r := float(part.get("r", 0.3))
+			var w := float(part.get("t", 0.04))
+			t.inner_radius = r - w
+			t.outer_radius = r + w
+			t.rings = 24
+			t.ring_segments = 8
+			return t
+		"sphere":
+			return _sphere(float(part.get("r", 0.2)))
+	return _box(_v(part.get("size", [0.2, 0.2, 0.2])))
+
+
+static func _v(a) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2])) if a is Array and a.size() >= 3 else Vector3.ZERO
+
+
 ## Issue #76: a ship model painted dark. Textured parts go through the dark-gun
 ## shader (PlayerAvatar._darken: grey texels down, painted panels kept); flat-colour
 ## parts (the interceptor's model) go dark the same way by hand, their bright

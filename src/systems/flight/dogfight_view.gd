@@ -36,6 +36,8 @@ func _sync_ships(df) -> void:
 			node = ShipNode.new()
 			add_child(node)
 			node.setup(kit, s.look, s.id, s.team)
+			if s.get("is_player", false):
+				kit.dress(node.visual, ShipUpgrades.fitted(str(s.ship_id)))
 			ship_nodes[s.id] = node
 		node.sync(s.flight, s.alive)
 

@@ -11,7 +11,8 @@ extends SceneTree
 ##          under neutral light: reference images for Hyper3D.
 ##   views: [ "front34", "side", "rear34", "top", "front", "back" ] (default: the first four)
 ##   cells: [ { name, label, and one of:
-##              ship_look: a look id in content/look/ships.json (built by ShipKit),
+##              ship_look: a look id in content/look/ships.json (built by ShipKit;
+##                         "fits" lists the ShipUpgrades ids to show on it),
 ##              speeder:   a vehicle id in content/core/vehicles (built by SpeederNode;
 ##                         "paint" picks one of its look.paints),
 ##              model:     a .glb path (loaded as-is),
@@ -91,7 +92,9 @@ func _build(cell: Dictionary) -> Node3D:
 	root.add_child(holder)
 	var v: Node3D = null
 	if cell.has("ship_look"):
-		v = ShipKit.new().build(str(cell.ship_look))
+		var kit := ShipKit.new()
+		v = kit.build(str(cell.ship_look))
+		kit.dress(v, cell.get("fits", []))
 	elif cell.has("speeder"):
 		# Just its look: the node itself wants a town to ride in.
 		var s := SpeederNode.new()

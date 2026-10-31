@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The Lanner is a rocket with wings (2026-10-31)
+
+- **New Lanner model.** The Valcourt Kinetics Lanner, the fastest small ship
+  in port, is now a wide silver and blue rocket with short swept wings: a long
+  needle nose, a teal canopy, one big engine at the back with booster pods on
+  each side, and blue pods on the wingtips. Made in Hyper3D from a concept sheet.
+- **T-89's upgrades show on the ship.** Each upgrade bolts parts onto the
+  Lanner, and they stack:
+  - **Boosted shields:** glowing cyan emitter rings on the wingtip pods and a
+    shield dish on its back.
+  - **Reinforced hull:** gunmetal armour on the nose cheeks, the wings' leading
+    edges, the booster pods and the belly.
+  - **Booster speed:** a longer, flared main nozzle with a hot orange glow, lit
+    side boosters and orange heat stripes.
+  The parts appear on the parked ship as soon as T-89 fits them, and on your
+  ship in a dogfight. Other ships don't have upgrade parts yet; a look adds them
+  under `upgrades` in `content/look/ships.json`.
+
 ## The round port (issue #237, parts 1 and 2, 2026-10-31)
 
 - **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)
