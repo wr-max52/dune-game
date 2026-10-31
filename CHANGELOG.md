@@ -2,6 +2,13 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Assassin droids stand up straight to shoot (2026-10-30)
+
+- **No more frozen half step.** An assassin droid that stopped walking or
+  running to shoot at you stayed stuck halfway between a stride and its ready
+  stance for the whole fight. Now it settles into the upright stance within a
+  fifth of a second and holds it while it fires. This applies to the
+  Remnant's, the locals' and your own.
 ## Shop menus: keys, and they stay open (2026-10-30)
 
 - **Every NPC menu takes W/S or the arrows and Enter.** T-89, Dorrin, the droid
