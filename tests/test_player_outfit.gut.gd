@@ -38,9 +38,10 @@ func test_catalog_lists_every_kit_piece_and_colour() -> void:
 		"the player's own piece first, then the kit's (the sand nomad head and its variations among them)")
 	assert_eq(cat.torso.keys(), ["player", "guard", "cantina_owner", "local"])
 	assert_eq(cat.legs.keys(), ["player", "cantina_owner", "guard", "local"])
-	assert_eq(cat.head.player, ["dusk", "olive", "rust", "sand"], "the player's head has its own textures")
-	assert_eq(cat.torso.player, ["dusk", "olive", "rust", "sand"])
-	assert_eq(cat.legs.guard, ["black", "desert", "gunmetal", "navy", "oxblood"])
+	assert_eq(cat.head.player, ["black", "dusk", "olive", "rust", "sand"], "the player's head has its own textures")
+	assert_eq(cat.torso.player, ["black", "dusk", "olive", "rust", "sand"])
+	# Issue #303: the generals' bright blood red and the dark master's void black too.
+	assert_eq(cat.legs.guard, ["black", "blood", "desert", "gunmetal", "locals", "navy", "oxblood", "void", "white"])
 	assert_eq(cat.head.goggles, ["oxblood", "sand", "violet"])
 	assert_eq(cat.head.nomad, [], "the nomad heads are baked sand: no colour variants")
 
@@ -95,7 +96,7 @@ func test_builder_saves_each_pick_and_sends_it_out() -> void:
 			piece.select(i)
 			piece.item_selected.emit(i)
 	var colour: OptionButton = b._colours.torso
-	assert_eq(colour.item_count, 6, "Original and the guard's five colours")
+	assert_eq(colour.item_count, 10, "Original and the guard's nine colours")
 	for i in colour.item_count:
 		if colour.get_item_metadata(i) == "oxblood":
 			colour.select(i)

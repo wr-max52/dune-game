@@ -26,7 +26,7 @@
       "model": {
         "scene": "res://assets/characters/kit/parts.glb",
         "pieces": true, "colors": "res://assets/characters/kit/colors/%s.png",
-        "parts": { "head": ["guard:oxblood"], "torso": ["guard:oxblood"], "legs": ["guard:oxblood"] },
+        "parts": { "head": ["guard:blood"], "torso": ["guard:blood"], "legs": ["guard:blood"] },
         "bones": {
           "pelvis": "Hips", "spine": "Spine", "chest": "Spine2", "neck": "Neck", "head": "Head",
           "l_shoulder": "LeftArm", "l_elbow": "LeftForeArm", "l_wrist": "LeftHand",

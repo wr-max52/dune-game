@@ -34,6 +34,11 @@ Plain English, newest on top. One entry per milestone.
   well (the garrison leaves town). The dark master is just an enemy: in the
   cruiser's bay after the general dies, and on the roof whenever the Remnant
   hold the planet.
+- **The generals wear bright blood red.** The cruiser's general and General
+  Vask in the barracks now wear a new `guard:blood` armour (bright red plates,
+  black stripes) instead of the dark oxblood, which stays for the bounty officer
+  and the honour guards. Blood red and the dark master's all-black `guard:void`
+  are in the character builder's guard colours too.
 - **Friends of the Remnant.** Friendly with them in free play, you can take
   their ships without an alarm (borrowed, not stolen: no chase, a little
   standing, and Skrugs won't buy one). The desert droid posts sell droids
