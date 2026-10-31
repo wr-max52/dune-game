@@ -6,8 +6,8 @@ extends CanvasLayer
 ## centred: the middle of the top is where arrival titles and toasts go.
 ##
 ## It only reads. `demo` (town_demo.gd) turns the objective's target word into a
-## place: live bodies, town markers, the range, the pit, the desert outposts, the
-## crashed cruiser ("wreck", issue #205).
+## place: live bodies, town markers, the smuggling drop (near it, issue #251),
+## the range, the pit, the desert outposts, the crashed cruiser ("wreck", issue #205).
 ##
 ## Issue #201: a new optional quest (Quests.take_news) shows a toast in the top
 ## right for TOAST_TIME seconds.
@@ -140,6 +140,14 @@ func where(target: String) -> Vector3:
 			if pl != null and pl.ground != null and StarcruiserWreck.has_wreck(pl.ground):
 				return StarcruiserWreck.frame(pl.ground).origin
 		"marker":
+			return _marker(id)
+		"drop":
+			# Issue #251: near the drop itself (its "near" offset, within
+			# WorldState.DROP_NEAR), once it is placed; till then its area's marker.
+			var g = demo.get("gear")
+			if g != null and g.drop != null and is_instance_valid(g.drop):
+				var near: Array = WorldState.smuggle.get("near", [0.0, 0.0])
+				return g.drop.global_position + Vector3(float(near[0]), 0.0, float(near[1]))
 			return _marker(id)
 		"range":
 			var r = demo.training_range

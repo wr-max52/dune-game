@@ -25,10 +25,13 @@ extends Node3D
 ##     pay_mult times the droid merchant's resale, each raising Remnant standing.
 ##     Not while you are hostile. In good standing he tells you about the crashed
 ##     cruiser (issue #205: the quest's event, heard_of_wreck).
+##   - His second job (j_general_repossess, issue #251): contraband smugglers
+##     stashed inside the town, offered in talk. [E] hands him what you found,
+##     for what the fence would have paid, and raises Remnant standing.
 ##   - Once the Remnant has left the moon (issue #214) he stays, in the desert armour.
 ##
 ## Config: content/core/npcs/general.json. The headless test calls talk_ended(),
-## on_insult(), decide(), take_job() and hand_over() directly.
+## on_insult(), decide(), take_job(), hand_over() and hand_over_contraband() directly.
 
 const CFG_PATH := "res://content/core/npcs/general.json"
 const CARD_PATH := "res://content/core/npcs/general_card.json"
@@ -303,8 +306,8 @@ func _physics_process(_dt: float) -> void:
 		open_menu()
 
 
-## [E]: talk (his AI), ask for work, hand over droids. keep_cursor: open again
-## after a hand-over, the cursor where it was.
+## [E]: talk (his AI), ask for work, hand over droids or his run's contraband.
+## keep_cursor: open again after a hand-over, the cursor where it was.
 func open_menu(keep_cursor := false) -> void:
 	var opts: Array = []
 	if spot != null:
@@ -313,6 +316,8 @@ func open_menu(keep_cursor := false) -> void:
 		opts.append({ "id": "work", "text": _l("work") })
 	for d in droids_to_hand_over():
 		opts.append({ "id": "hand:%d" % int(d.uid), "text": _l("hand_over") % [DroidRoster.label(str(d.kind)), droid_pay()] })
+	if WorldState.repossession_pay() > 0:
+		opts.append({ "id": "contraband", "text": _l("hand_contraband") % WorldState.repossession_pay() })
 	menu.open(_l("menu_title") % [npc_name(), int(WorldState.standing.get("imperial_remnant", 0))], opts, _on_menu, "", keep_cursor)
 	if player != null and not player.locked:
 		player.locked = true
@@ -326,8 +331,11 @@ func _on_menu(id: String) -> void:
 			host.start_talk(spot)
 	elif id == "work":
 		take_job()
-	elif id.begins_with("hand:"):
-		hand_over(int(id.substr(5)))
+	elif id.begins_with("hand:") or id == "contraband":
+		if id == "contraband":
+			hand_over_contraband()
+		else:
+			hand_over(int(id.substr(5)))
 		if _can_talk():
 			open_menu(true)     # a sale leaves the menu open (Esc walks away)
 
@@ -543,6 +551,16 @@ func hand_over(uid: int) -> int:
 	WorldState.bump("general_droids")
 	_say(_line("paid") % pay)
 	maybe_tip()
+	return pay
+
+
+## Issue #251: hand him the contraband of his run (WorldState.hand_over_contraband).
+## Returns the pay, or 0 when there is nothing of his to hand over.
+func hand_over_contraband() -> int:
+	var pay := WorldState.hand_over_contraband(int(cfg.get("contraband_standing", 3)))
+	if pay > 0:
+		_say(_line("repossessed") % pay)
+		maybe_tip()
 	return pay
 
 

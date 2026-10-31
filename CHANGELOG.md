@@ -2,6 +2,25 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The beast is a giant beetle-centipede (issue #266, 2026-10-31)
+
+- **No more purple ball.** The planet's beast (Old Murk on the home planet) is
+  now a giant armoured beetle-centipede. It has a beetle's head with a horn,
+  curved mandibles that open and close, swaying antennae and glowing eyes. Its
+  long body is 14 armoured segments, about 50 m from head to tail.
+- **It walks.** Each segment has a pair of legs that step in a wave as it
+  crawls. The body follows the exact path the head took over the dunes.
+- **Same behaviour as before.** It wanders with no pull toward or away from the
+  town, kills on touch, has 1000 health, chases you if you hurt it, stays dead
+  once killed, and still farts (now from its tail end).
+- **The whole body is deadly and can be hit.** Touching the head or any segment
+  kills you, on foot or on a speeder. Bolts and blades hit any segment.
+- **Dead, it slumps** and its legs curl up.
+- The locals' lore, the AI briefing and the beast's lines now describe the new
+  creature. Numbers and colours are in content/core/hazards/beast.json
+  (`segments`, `segment_gap`, `tail_scale`, `stride_m`, `look`).
+- Stills: docs/lookdev/hazards/desert_beast.jpg and desert_beast_head.jpg.
+
 ## The moon's dome rave (issue #261, part 2, 2026-10-31)
 
 - **Grit Station's whole dome is the club now.** The cantina building and the

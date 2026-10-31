@@ -103,7 +103,7 @@
     "button": "Carry on"
   },
   "objectives": {
-    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard), droid_post (issue #212: the nearest desert droid merchant's post). The jobs' lines take the job's own words (%s).",
+    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, drop:<area marker> (issue #251: a spot within 15 m of the smuggling drop, the area's marker until it is placed), range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard), droid_post (issue #212: the nearest desert droid merchant's post). The jobs' lines take the job's own words (%s). Issue #251: a 'general_' line is the smuggling-run line in the general's words, while his run (contraband inside the town, handed to him) is on.",
     "teller": { "text": "Talk to Oda at the cantina", "target": "npc:cantina_owner" },
     "chapters": {
       "general": { "text": "Answer the Remnant general", "target": "npc:general" },
@@ -119,6 +119,8 @@
     },
     "drop": "Find the drop %s",
     "sell": "Sell the goods to the fence",
+    "general_drop": "Find the stashed contraband %s",
+    "general_bring": "Hand the contraband to General Vask at the barracks",
     "hunt": "Kill %s at %s",
     "hunt_away": "Fly home: %s is at %s",
     "collect": "Collect the bounty on %s from the fence",
@@ -127,6 +129,9 @@
     "log_smuggle": "SMUGGLING RUN",
     "log_drop": "Somebody left %s %s. Keep it away from the gate.",
     "log_carry": "You have the goods. Sell them to the fence, and keep them away from the Remnant at the gate.",
+    "general_log_smuggle": "REPOSSESSION",
+    "general_log_drop": "Smugglers stashed %s %s. Repossess it for the general.",
+    "general_log_carry": "You have the contraband. Hand it to General Vask at the barracks: the garrison will put it to better use.",
     "log_bounty": "CONTRACT",
     "log_hunt": "%s, at %s. %d cr from the fence. %s",
     "log_collect": "%s is dead. Collect %d cr from the fence.",
