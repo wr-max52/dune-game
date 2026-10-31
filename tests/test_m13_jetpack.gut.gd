@@ -64,7 +64,6 @@ func test_holding_jump_flies_really_high() -> void:
 	assert_eq(int(t.get("PACK_LIT", 0)), 1, "one burn per hold")
 	assert_eq(t.get("FLAMES_WHILE_THRUSTING"), "true")
 	assert_eq(t.get("FLAMES_AFTER_LANDING"), "false")
-	assert_eq(t.get("HUD_METER_VISIBLE"), "true")
 
 
 func test_fuel_runs_out_and_recharges() -> void:

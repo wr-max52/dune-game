@@ -2,7 +2,8 @@ class_name PlayerWeapons
 extends Node
 ## The player's hand weapons in the port (M11): blaster pistol, energy sword and
 ## rifle, the swap between them, firing, the sword's swings and block, and turning
-## enemy bolts around. Owns the HUD bits for weapons (crosshair, ammo, stamina).
+## enemy bolts around. Owns the HUD bits for weapons (crosshair, ammo); stamina
+## shows in the RetroHud footer.
 ##
 ## Controls (project.godot actions):
 ##   1 / 2 / 3     blaster / energy sword / rifle   (same key again holsters)
@@ -60,7 +61,6 @@ var _hum: AudioStreamPlayer
 var _hud: CanvasLayer
 var _cross: Control
 var _ammo: Label
-var _stam: ProgressBar
 var _name: Label
 var _name_left := 0.0
 var feedback: HitFeedback           ## hit markers + thud (issue #65)
@@ -537,19 +537,6 @@ func _build_hud() -> void:
 		_cross.add_child(c)
 	_ammo = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -114), 26)
 	_name = _label(Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -148), 18)
-	_stam = ProgressBar.new()
-	_stam.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_stam.position = Vector2(-220, -80)
-	_stam.size = Vector2(190, 10)
-	_stam.offset_left = -220
-	_stam.offset_top = -80
-	_stam.offset_right = -30
-	_stam.offset_bottom = -70
-	_stam.show_percentage = false
-	_stam.max_value = 100
-	_stam.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_stam.visible = false          # until the blade is out or tired (a seated pilot never updates it)
-	_hud.add_child(_stam)
 
 
 func _label(preset: int, offset: Vector2, size: int) -> Label:
@@ -586,9 +573,5 @@ func _update_hud(dt: float) -> void:
 		_ammo.visible = true
 	else:
 		_ammo.visible = false
-	# The sprint spends this bar too, so it shows whenever it is not full.
-	_stam.visible = cur == "energy_blade" or combo.blade.stamina < combo.blade.max_stamina
-	if _stam.visible:
-		_stam.value = combo.blade.stamina
 	_name_left = maxf(0.0, _name_left - dt)
 	_name.visible = _name_left > 0.0
