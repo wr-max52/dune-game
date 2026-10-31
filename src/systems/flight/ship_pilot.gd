@@ -902,6 +902,7 @@ func _seated(dt: float) -> void:
 	elif bay_landing:
 		_bay_step(dt)
 	else:
+		atmo.air_cap = _cruiser_air_cap()
 		for e in atmo.step(dt):
 			_on_event(e)
 		_rearm_space()
@@ -1013,6 +1014,8 @@ func start_fight() -> bool:
 		f.queue_free()
 		return false
 	fight = f
+	if cruiser() != null:
+		f.df.arena_follow = true       # flying for the cruiser: both sides come along, not back to the start
 	# One hull and shield in the air and in space: the fight's bolts land on the
 	# ship's own defense, so you climb out as damaged as you are and come back
 	# down as damaged as the fight left you.
@@ -1059,8 +1062,39 @@ func _fight_step(dt: float) -> void:
 			"failed":
 				end_fight("failed")
 				return
-	if atmo.altitude() < atmo.space_altitude - space_exit_margin:
+	if atmo.altitude() < atmo.space_altitude - space_exit_margin and not _bound_for_cruiser():
 		end_fight("left")
+
+
+## Flying at the cruiser keeps the fight on: the ball curves away under the straight
+## line to it, so that line dips below the edge of space on the way. Only a real
+## dive (nose away from it, or below the approach's floor) breaks the fight off.
+func _bound_for_cruiser() -> bool:
+	var c = cruiser()
+	if c == null:
+		return false
+	var ap: Dictionary = c.cfg.get("approach", {})
+	if atmo.altitude() < atmo.space_altitude - float(ap.get("floor", 1500.0)):
+		return false
+	var to: Vector3 = c.frame.origin - atmo.position()
+	return atmo.flight.forward().dot(to.normalized()) >= cos(deg_to_rad(float(ap.get("cone_deg", 40.0))))
+
+
+## How fast normal flight may go by the cruiser: her space-fight speed (the ship's
+## "flight" block, a fraction of her atmosphere top speed) within the approach's
+## calm_radius, back to the full edge-of-space speed by calm_out. Otherwise a fight
+## broken off up here hands her from 48 m/s to 680, with the bay to line up with.
+func _cruiser_air_cap() -> float:
+	var c = cruiser()
+	if c == null:
+		return INF
+	var ap: Dictionary = c.cfg.get("approach", {})
+	var inner := float(ap.get("calm_radius", 1500.0))
+	var k := clampf((c.distance(atmo.position()) - inner) / maxf(float(ap.get("calm_out", 5000.0)) - inner, 1.0), 0.0, 1.0)
+	if k >= 1.0:
+		return INF
+	var calm := float(ship_cfg.get("flight", {}).get("max_speed", 48.0)) / maxf(atmo.p("max_speed", 170.0), 1.0)
+	return lerpf(minf(calm, 1.0), atmo.p("edge_speed_mult", 4.0), k)
 
 
 ## Issue #181: a hit in the fight. Theirs on you flashes the screen's edge; yours on

@@ -123,7 +123,7 @@ in the desert: a landmark of the home world (`kind: "cruiser"` in
 way to it. A planet's scene is a town on a ball; a space fight ends at a handoff;
 and Oda's job is a fight on the way up you can run from straight into the bay.
 
-- **Where:** 4.6 km up over a point 6.5 km east along the ground, past the curve:
+- **Where:** 7 km up over a point 6.5 km east along the ground, past the curve:
   hidden from the port, plain to see from space.
 - **Level with the port:** its decks are square to world up, not to the ground
   below it, and its own gravity (`PlanetSphere.gravity_zones`) makes world up the

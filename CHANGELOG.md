@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Flying to the star cruiser (2026-10-30)
+
+- **The cruiser holds orbit higher**, 7 km up (was 4.6), so the fight on the
+  way up runs most of the way there.
+- **Flying at the cruiser no longer breaks the fight off.** The planet curves
+  away under the straight line to it, which used to dip you under the edge of
+  space and end the fight. With your nose on the cruiser the fight carries on;
+  a real dive still breaks it off.
+- **The fight comes with you.** Both sides used to turn back to where the fight
+  started; now they stay with you all the way to the cruiser.
+- **No more zooming off near the cruiser.** Within a few km of it normal flight
+  slows to the ship's space-fight speed (48 m/s for an interceptor, not 680), so
+  a fight broken off by the hull leaves you a ship you can line up with the bay.
+  Z within reach still flies you in and onto the pad, fight or no fight.
+
 ## Nomads trade for sand pig (2026-10-30)
 
 - **Food is now called sand pig.** The item, the nomads' trade menu, their

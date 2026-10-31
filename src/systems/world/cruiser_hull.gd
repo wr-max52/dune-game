@@ -96,7 +96,7 @@ static func data() -> Dictionary:
 static func frame_for(sp: PlanetSphere, lm: Dictionary) -> Transform3D:
 	var at := WorldGround._v3(lm.get("at", [6500, 0, 0]))
 	var dir := sp.map_dir(at.x, at.z)
-	var pos := sp.center + dir * (sp.radius + float(lm.get("altitude", 4600.0)))
+	var pos := sp.center + dir * (sp.radius + float(lm.get("altitude", 7000.0)))
 	var to_port := Vector3(-pos.x, 0.0, -pos.z)
 	if to_port.length() < 0.01:
 		to_port = Vector3.LEFT

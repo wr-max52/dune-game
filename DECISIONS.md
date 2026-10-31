@@ -26,7 +26,7 @@ Every significant technical choice, the alternative, and why. Newest on top.
   Alternative: the cruiser level with the ground below it and every NPC system
   made frame-aware. Rejected for now: dozens of world-up assumptions, for a ship
   in orbit, which can hold any attitude it likes.
-- **Hidden by the curve.** 4.6 km up over a point 6.5 km east along the ground,
+- **Hidden by the curve.** 7 km up (4.6 at first) over a point 6.5 km east along the ground,
   the line from the port to it passes through the ball: you cannot see it from
   town, and it is plain to see from space.
 
