@@ -959,9 +959,9 @@ def main():
 	if errors:
 		sys.exit(1)
 	if not check:
-		out.write_text(tmp.read_text())
-		PICKUPS.write_text(gn.inline_numbers(json.dumps(pickups, indent=2, ensure_ascii=False)) + "\n")
-		print("wrote", out.relative_to(ROOT), "and", PICKUPS.relative_to(ROOT))
+		for path, data, text in ((out, town, tmp.read_text()),
+				(PICKUPS, pickups, gn.inline_numbers(json.dumps(pickups, indent=2, ensure_ascii=False)) + "\n")):
+			print(("wrote " if gn.write_if_changed(path, data, text) else "unchanged ") + str(path.relative_to(ROOT)))
 
 
 if __name__ == "__main__":

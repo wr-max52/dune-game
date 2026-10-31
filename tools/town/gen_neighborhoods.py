@@ -47,6 +47,16 @@ def inline_numbers(text):
 	return re.sub(r"\[\s+(-?[\d.]+(?:,\s+-?[\d.]+)*)\s+\]", lambda m: "[" + ", ".join(re.split(r",\s+", m.group(1))) + "]", text)
 
 
+def write_if_changed(path, data, text):
+	"""Write `text` to `path` only when the JSON in it would change: other work
+	edits these files by hand too, and a re-run that only reformats them makes
+	merge conflicts for nothing. Returns whether it wrote."""
+	if path.exists() and json.loads(path.read_text()) == data:
+		return False
+	path.write_text(text)
+	return True
+
+
 def seg_dist(p, a, b):
 	ax, az = a; bx, bz = b; px, pz = p
 	dx, dz = bx - ax, bz - az
@@ -416,9 +426,9 @@ def main():
 	if errors:
 		sys.exit(1)
 	if not check:
-		TOWN.write_text(json.dumps(town, indent=1, ensure_ascii=False) + "\n")
-		PICKUPS.write_text(inline_numbers(json.dumps(pickups, indent=2, ensure_ascii=False)) + "\n")
-		print("wrote", TOWN.relative_to(ROOT), "and", PICKUPS.relative_to(ROOT))
+		for path, data, text in ((TOWN, town, json.dumps(town, indent=1, ensure_ascii=False) + "\n"),
+				(PICKUPS, pickups, inline_numbers(json.dumps(pickups, indent=2, ensure_ascii=False)) + "\n")):
+			print(("wrote " if write_if_changed(path, data, text) else "unchanged ") + str(path.relative_to(ROOT)))
 
 
 if __name__ == "__main__":
