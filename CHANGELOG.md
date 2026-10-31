@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The new frigate (2026-10-31)
+
+- **The Frigatebird has a new model.** It is the strongest ship and the big
+  cargo hauler: a thick, boxy disc with a forked front, three engines on the
+  back and no wings. It is a new Hyper3D model built from a concept sheet. The
+  Remnant's dark frigates (the one in the cruiser hangar and the ones at the
+  outposts) use the same airframe in their dark paint.
+- **Upgrades repaint it.** Each upgrade T-89 fits to a Frigatebird has its own
+  paint: blue for boosted shields, steel grey for a reinforced hull, red for
+  booster speed. With more than one fitted, the last one shows. The parked ship
+  changes colour as soon as he fits it, and it keeps that paint in the air and
+  in space. Other ships keep their stock paint.
+
 ## Space fights at real speed, and a seeker rack (2026-10-31)
 
 - **No more slowing to a crawl when a fight starts.** Space fights used to run
