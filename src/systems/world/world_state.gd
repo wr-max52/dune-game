@@ -249,14 +249,8 @@ static func on_flight_returned(arrival: Dictionary) -> void:
 		change_standing("imperial_remnant", -15, "A Remnant patrol in orbit was shot to pieces.")
 		change_standing("locals", 4)
 		change_standing("smuggler", 5)
-		if Story.chapter() == "fleet":
-			# Issue #64: the Remnant fleet. The locals' purse, and the garrison leaves town.
-			credits += Story.fleet_reward()
-			set_flag("remnant_fleet_beaten")
-			log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
-			Story.event("fleet_beaten")
-		else:
-			credits += int(arrival.get("payout", 0))
+		# The fleet's fighters are only in the way: the story waits on the cruiser's general.
+		credits += int(arrival.get("payout", 0))
 		_complete_jobs("flight_complete")
 	else:
 		set_flag("ship_limped_home")
@@ -806,6 +800,8 @@ static func from_save(d: Dictionary) -> void:
 	wreck_ship = str(d.get("wreck_ship", ""))
 	gear_fits = d.get("gear_fits", []).duplicate()
 	control = d.get("control", {}).duplicate(true)
+	if story.has("chapter"):
+		Story.catch_up()       # the general dead in a save from when the fleet chapter waited on a dogfight
 
 
 static func _read_json(path: String) -> Variant:

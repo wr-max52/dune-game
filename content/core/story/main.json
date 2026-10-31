@@ -75,9 +75,11 @@
     {
       "id": "fleet",
       "teller": "cantina_owner",
-      "done_on": "fleet_beaten",
-      "intro": "That made noise. The Remnant has a fleet up in orbit now, and the locals will pay five thousand to see it gone. Take your own ship up there. If you haven't got one, T-89 in the pit will see you right.",
-      "remind": "The fleet's still up there. Take your own ship up."
+      "done_on": "cruiser_taken",
+      "done_flag": "cruiser_taken",
+      "note": "Issue #64/#193: the space mission is the general on the Remnant cruiser's bridge, far out east in orbit. The fleet's fighters (the cruiser's escort) meet you on the way up; beating them is not the mission.",
+      "intro": "That made noise. The Remnant has its fleet up in orbit now, round a star cruiser way out east, and the general who runs every Remnant on this rock never leaves its bridge. The locals will pay twenty thousand to see him dead. Take your own ship up, land in the cruiser's bay and kill him. Expect fighters on the way up. If you haven't got a ship, T-89 in the pit will see you right.",
+      "remind": "The general's still up there on the cruiser's bridge, far out east past the curve. Take your own ship up, land in its bay and kill him. Expect fighters on the way."
     },
     {
       "id": "end",
@@ -112,7 +114,7 @@
       "smuggle_1": { "text": "Ask Oda about the drop", "target": "npc:cantina_owner" },
       "droid_merchant": { "text": "Take cargo droids to the nearest droid merchant's post", "target": "droid_post" },
       "bounty": { "text": "Ask Oda about the bounty", "target": "npc:cantina_owner" },
-      "fleet": { "text": "Take your own ship up to the Remnant fleet", "target": "pad" },
+      "fleet": { "text": "Fly to the Remnant cruiser, far east in orbit, and kill the general on its bridge", "target": "cruiser" },
       "free": { "text": "Ask Oda for work", "target": "npc:cantina_owner" }
     },
     "drop": "Find the drop %s",
@@ -152,7 +154,6 @@
     { "id": "crashed_cruiser", "title": "The crashed cruiser", "target": "wreck", "unlocked_by": "heard_of_wreck", "done_on": "red_saber_taken",
       "text": "The general says the old cruiser in the sand is worth a look. Something red is still aboard." }
   ],
-  "fleet_reward": 5000,
   "ship_locked": "Locked. The keys aren't yours to take yet.",
   "opening_view": "V: change view",
   "opening_exit": "E: get out",

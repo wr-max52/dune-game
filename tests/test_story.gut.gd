@@ -115,9 +115,16 @@ func test_the_whole_story_in_order() -> void:
 	assert_true(Story.ships_unlocked())
 	assert_true(_offers("j_patrol_bounty"), "the patrol job opens with the ships")
 
+	assert_true(Story.cruiser_mission(), "the fleet chapter is the general on the cruiser")
 	var c0 := WorldState.credits
 	WorldState.on_flight_returned({ "outcome": "complete", "payout": 150 })
-	assert_eq(WorldState.credits, c0 + 5000, "the fleet pays 5000")
+	assert_eq(WorldState.credits, c0 + 150, "the fighters on the way up pay their own payout")
+	assert_eq(Story.chapter(), "fleet", "beating them is not the mission")
+	assert_false(Story.remnant_hostile())
+	var reward: Dictionary = CruiserHull.data().get("reward", {})
+	c0 = WorldState.credits
+	WorldState.on_cruiser_taken("General Test", reward, "%s fell.")
+	assert_eq(WorldState.credits, c0 + int(reward.credits), "the general pays")
 	assert_true(Story.remnant_hostile(), "the Remnant turn hostile")
 	assert_false(Story.town_garrison(), "and leave town")
 	assert_eq(Story.chapter(), "end", "issue #214: the end card")
@@ -144,7 +151,7 @@ func test_the_whole_story_in_order() -> void:
 func test_a_later_flight_pays_as_before() -> void:
 	var c0 := WorldState.credits
 	WorldState.on_flight_returned({ "outcome": "complete", "payout": 150 })
-	assert_eq(WorldState.credits, c0 + 150, "outside the fleet chapter a sortie pays its own payout")
+	assert_eq(WorldState.credits, c0 + 150, "a sortie pays its own payout")
 	assert_false(Story.remnant_hostile())
 
 
@@ -372,7 +379,7 @@ func test_after_the_fleet_the_town_is_free_and_outposts_shoot_on_sight() -> void
 	var town_troopers: int = t.npcs.filter(func(n): return not n.has_meta("outpost")).size()
 	assert_gt(town_troopers, 0)
 	Story.skip_to("fleet")
-	WorldState.on_flight_returned({ "outcome": "complete", "payout": 0 })
+	WorldState.on_cruiser_taken("General Test", {})
 	await wait_physics_frames(3)
 	assert_eq(t.npcs.filter(func(n): return is_instance_valid(n) and not n.has_meta("outpost")).size(), 0, "the garrison left town")
 	assert_null(t.garrison.members.filter(func(n): return is_instance_valid(n) and not n.dead).front() if not t.garrison.members.is_empty() else null, "the town's garrison is empty")
