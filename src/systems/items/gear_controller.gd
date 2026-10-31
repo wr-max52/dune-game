@@ -354,6 +354,8 @@ func trade_options(v: Dictionary) -> Array:
 	if v.has("offers"):
 		for o in GearUpgrades.open_offers():
 			out.append({ "id": "offer:" + str(o.id), "text": _l("offer") % [str(o.label), int(o.price), str(o.get("about", ""))] })
+		for o in GearUpgrades.locked_offers():
+			out.append({ "id": "locked:" + str(o.id), "text": _l("offer_locked") % [str(o.label), int(o.price), str(o.locked)] })
 	return out
 
 
@@ -491,6 +493,10 @@ func _on_trade(id: String, v: Dictionary) -> void:
 		last_trade = buy_item(id.substr(4), v)
 	elif id.begins_with("offer:"):
 		last_trade = buy_offer(id.substr(6))
+	elif id.begins_with("locked:"):
+		var o := GearUpgrades.offer(id.substr(7))
+		_trade_said = _l("offer_locked_toast") % [str(o.label), str(o.locked)]
+		last_trade = "locked"
 	open_trade(v, true)
 
 

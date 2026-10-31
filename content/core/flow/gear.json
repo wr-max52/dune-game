@@ -27,6 +27,8 @@
     "offer": "%s  (%d cr): %s",
     "offer_bought": "%s: done.",
     "offer_cant_afford": "%s is %d cr. You have %d.",
+    "offer_locked": "%s  (%d cr): locked, %s",
+    "offer_locked_toast": "%s: the fence only sells it %s.",
     "open_droid": "[E] Open the cargo droid",
     "wear": "Wear",
     "take_off": "Take off"
