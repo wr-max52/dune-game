@@ -80,7 +80,7 @@ func test_downed_player() -> void:
 	a.stand_down()
 	assert_false(a.active())
 	assert_true(a.drain().any(func(e): return e.type == "calm" and e.why == "downed"))
-	assert_true(a.remembers())
+	assert_false(a.remembers(), "downed: they forget your face")
 
 
 func test_escape_distance_beats_the_leash() -> void:
