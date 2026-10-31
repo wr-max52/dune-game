@@ -36,7 +36,7 @@
   "offer_tutorial": "New in port? I can walk you through the basics. It only takes a minute.",
   "tutorial": [
     "Walking first. W A S D to move, Shift to run, Space to jump, C to crouch. The mouse looks around; V swaps between first and third person.",
-    "You are already armed: I checked. 1 is your blaster pistol, 2 your energy blade, 3 your rifle. The mouse wheel cycles them, Q goes back to the last one, H puts them away.",
+    "You are already armed: I checked. 1 is your blaster pistol, 2 your energy blade, 3 your rifle. Tab steps to the next one, and after the last one your hands go empty. The mouse wheel cycles them too, Q goes back to the last one, H puts them away.",
     "Left mouse fires the blasters, or swings the blade. Right mouse aims down a blaster's sights. With the blade out, right mouse blocks: block a bolt at the right moment and it goes back where it came from. R reloads.",
     "A word of advice: the Remnant at the gate do not like drawn weapons. Holster with H before you walk past them, unless you want a fight.",
     "E does most things here: talk, pick things up, trade, board a ship. The cantina owner will talk about anything. Market stalls buy and sell gear. I opens your inventory, G puts gear like a jetpack on or takes it off. With a jetpack on, hold Space in the air.",

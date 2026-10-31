@@ -1,5 +1,5 @@
 {
-  "note": "Issue #76: a look with 'darken' { body_mul, accent_mul, glow } shows its model through the dark-gun shader (weapon_dark.gdshader): the Remnant's dark interceptor and freighter. Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md. Issue #43: the four flyable ships (interceptor, freighter, courier, gunship) use Hyper3D models from assets/vehicles/ (content/look/vehicle_models.json, tools/look/prep_vehicle.gd); their stand-in fields stay as the fallback.",
+  "note": "Issue #76: a look with 'darken' { body_mul, accent_mul, glow } shows its model through the dark-gun shader (weapon_dark.gdshader): the Remnant's dark interceptor and freighter. Ship looks, keyed by the 'look' id in content/core/ships/*.json. Shapes for the stand-ins live in src/systems/look/ship_kit.gd; colours and sizes live here. To use a real model, set 'scene' to a .tscn/.glb path (forward = -Z, 1 unit = 1 metre); the stand-in is then skipped. See docs/ADDING_SHIPS.md. Issue #43: the four flyable ships (interceptor, freighter, courier, gunship) use Hyper3D models from assets/vehicles/ (content/look/vehicle_models.json, tools/look/prep_vehicle.gd); their stand-in fields stay as the fallback. 'flames_at' [[x, y, z, radius], ...] puts an engine flame (lit by the throttle, ShipKit.throttle_flames) at each of a model's nozzles, pointing aft (+Z); a stand-in gets one at each engine glow. 'flame_length' (default 6) is a flame's length in nozzle radii.",
   "looks": {
     "interceptor": {
       "frame": "dart",
@@ -11,7 +11,8 @@
       "trim": "#d99a2b",
       "dark": "#2a2c33",
       "canopy": "#1f7a78",
-      "engine": "#8fd8ff"
+      "engine": "#8fd8ff",
+      "flames_at": [[-0.82, -0.48, 4.38, 0.28], [0.79, -0.48, 4.38, 0.28]]
     },
     "remnant_fighter": {
       "frame": "blade",
@@ -47,8 +48,12 @@
       "trim": "#a8582a",
       "dark": "#2a2c33",
       "canopy": "#1f2a33",
-      "engine": "#8fd8ff"
+      "engine": "#8fd8ff",
+      "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]]
     },
+    "freighter_shields": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_shields.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]]},
+    "freighter_hull": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_hull.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]]},
+    "freighter_boost": {"frame": "hauler", "scene": "res://assets/vehicles/freighter_boost.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#d8cfbf", "trim": "#a8582a", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]]},
     "courier": {
       "frame": "dart",
       "scene": "res://assets/vehicles/courier.glb",
@@ -59,7 +64,8 @@
       "trim": "#a8322a",
       "dark": "#2a2c33",
       "canopy": "#1f7a78",
-      "engine": "#8fd8ff"
+      "engine": "#8fd8ff",
+      "flames_at": [[-0.78, 0.35, 3.6, 0.22], [0.78, 0.35, 3.6, 0.22]]
     },
     "gunship": {
       "frame": "hauler",
@@ -71,10 +77,11 @@
       "trim": "#d99a2b",
       "dark": "#2a2c33",
       "canopy": "#1f7a78",
-      "engine": "#8fd8ff"
+      "engine": "#8fd8ff",
+      "flames_at": [[-1.9, 0.0, 1.95, 0.44], [1.9, 0.0, 1.95, 0.44], [-0.39, 0.19, 3.4, 0.2], [0.36, 0.19, 3.4, 0.2], [-0.4, -0.44, 3.38, 0.2], [0.36, -0.44, 3.38, 0.2]]
     },
-    "interceptor_dark": {"frame": "dart", "scene": "res://assets/vehicles/interceptor.glb", "length": 9.0, "span": 7.6, "height": 1.6, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f7a78", "engine": "#8fd8ff", "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}},
-    "freighter_dark": {"frame": "hauler", "scene": "res://assets/vehicles/freighter.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}}
+    "interceptor_dark": {"frame": "dart", "scene": "res://assets/vehicles/interceptor.glb", "length": 9.0, "span": 7.6, "height": 1.6, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f7a78", "engine": "#8fd8ff", "flames_at": [[-0.82, -0.48, 4.38, 0.28], [0.79, -0.48, 4.38, 0.28]], "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}},
+    "freighter_dark": {"frame": "hauler", "scene": "res://assets/vehicles/freighter.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]], "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}}
   },
   "bolts": {
     "player": {

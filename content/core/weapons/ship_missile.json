@@ -4,17 +4,18 @@
   "label": "Seeker Missile",
   "fire_group": "secondary",
   "homing": true,
-  "damage": 55,
+  "damage": 85,
   "bolt_speed": 130.0,
-  "turn_rate": 2.2,
-  "rate": 1.0,
+  "turn_rate": 2.6,
+  "rate": 0.3,
   "recoil": 0.0,
   "range": 1500.0,
-  "mag": 2,
+  "mag": 4,
   "reload_time": 12.0,
+  "reload_each": 1.5,
   "lock_time": 1.4,
   "lock_cone_deg": 20.0,
   "lock_range": 1100.0,
   "visible_bolt": true,
-  "note": "IP-neutral. Needs a lock: keep the target in the cone for lock_time seconds."
+  "note": "IP-neutral. Needs a lock: keep the target in the cone for lock_time seconds. A rack of four (mag): holding the key with a lock fires them off one every rate seconds, and the lock holds through the salvo (AI pilots lock afresh for each). reload_each: one seeker comes back every 1.5 s while the rack is short (reload_time is unused then). In a space fight its speed and ranges are scaled (content/core/flow/space_fight.json)."
 }
