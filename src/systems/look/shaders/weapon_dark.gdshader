@@ -4,6 +4,11 @@ shader_type spatial;
 // multiplied down hard; saturated texels (the painted orange/red glow panels) keep
 // most of their colour and get a little emission so they still read as glowing.
 
+// Both sides drawn: where the model is cut open (its old optic and front sight, and
+// aimed in the near_clip below) the inside shows as solid dark metal, not a hole
+// that reads as a see-through gun.
+render_mode cull_disabled;
+
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform sampler2D orm_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
@@ -44,5 +49,12 @@ void fragment() {
 	} else {
 		ROUGHNESS = 0.55;
 		METALLIC = 0.0;
+	}
+	if (!FRONT_FACING) {
+		ALBEDO = vec3(0.012, 0.012, 0.014);
+		EMISSION = vec3(0.0);
+		ROUGHNESS = 0.9;
+		METALLIC = 0.0;
+		RIM = 0.0;
 	}
 }
