@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://k8widgsrvn51"
-path="res://.godot/imported/courier_texture_diffuse.png-0eb2f96c0d3c1c8641a2ad3d0a5bf95f.ctex"
+uid="uid://j4cntgph7uph"
+path="res://.godot/imported/courier_model_albedo.png-f4cfd4c7e6cf839af1e66e09cbdadcf6.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "2bd096f2199e26c14cdbbb544989f537"
+"md5": "c2c3bc1085573d8f3aa48bcf33815f2c"
 }
 
 [deps]
 
-source_file="res://assets/vehicles/courier_texture_diffuse.png"
-dest_files=["res://.godot/imported/courier_texture_diffuse.png-0eb2f96c0d3c1c8641a2ad3d0a5bf95f.ctex"]
+source_file="res://assets/vehicles/courier_model_albedo.png"
+dest_files=["res://.godot/imported/courier_model_albedo.png-f4cfd4c7e6cf839af1e66e09cbdadcf6.ctex"]
 
 [params]
 

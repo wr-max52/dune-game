@@ -19,7 +19,13 @@
     "out": "res://assets/vehicles/courier.glb",
     "yaw_deg": 180,
     "length": 8.4,
-    "max_span": 7.6
+    "max_span": 7.6,
+    "paint": {
+      "body": "#a6adb7",
+      "glow_energy": 0.0,
+      "metallic": 0.55,
+      "roughness": 0.4
+    }
   },
   "gunship": {
     "source": "res://assets/vehicles/source/gunship.glb",

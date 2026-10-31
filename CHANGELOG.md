@@ -8,6 +8,9 @@ Plain English, newest on top. One entry per milestone.
   in port, is now a wide silver and blue rocket with short swept wings: a long
   needle nose, a teal canopy, one big engine at the back with booster pods on
   each side, and blue pods on the wingtips. Made in Hyper3D from a concept sheet.
+- **Brushed silver, not white.** The prep step repaints its light panels
+  silver and gives them a metal finish, so it reads as metal in the desert
+  light too. The blue bands stay blue.
 - **T-89's upgrades show on the ship.** Each upgrade bolts parts onto the
   Lanner, and they stack:
   - **Boosted shields:** glowing cyan emitter rings on the wingtip pods and a
