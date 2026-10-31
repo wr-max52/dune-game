@@ -4,6 +4,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tools/look/recolor_fitted.gd -- id=smuggler
 ##   godot --headless --path . -s res://tools/look/recolor_fitted.gd -- id=smuggler analyze=1
+##   godot --headless --path . -s res://tools/look/recolor_fitted.gd -- id=kit only=void
 ##
 ## Reads "part_colors" from content/look/character_models.json:
 ##   out:   res:// path with %s for the part and %s for the colour name
@@ -53,6 +54,8 @@ func _init() -> void:
 			push_error("recolor: no textured mesh for '%s'" % part)
 			continue
 		for name in p.variants:
+			if args.has("only") and str(name) != str(args.only):
+				continue        # one new variant: leave the others' files alone
 			var out := ProjectSettings.globalize_path(str(pc.out) % [part, name])
 			DirAccess.make_dir_recursive_absolute(out.get_base_dir())
 			var v := img

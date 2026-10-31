@@ -105,7 +105,7 @@ static func general_hunted() -> bool:
 
 func _place() -> void:
 	var want := station()
-	var armour := Story.remnant_hostile()
+	var armour := Story.remnant_gone()
 	if want == _where and armour == _armoured and (body != null or want == ""):
 		return
 	_where = want

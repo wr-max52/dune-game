@@ -24,7 +24,7 @@ signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal ship_buy_offered(item: Dictionary)      ## issue #295: Skrugs would buy their ship { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
-signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search")
+signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search"); issue #303: the dark master heard "join" or "refuse"
 signal vibe_changed(mood: String)              ## issue #261: she had the band change the song
 
 var last_hints: Array = []                     ## the hint lines the last line set off (tests)
@@ -352,7 +352,7 @@ func _apply(kept: Array) -> Array:
 				WorldState.change_standing("locals", -2, "Someone got thrown out of the cantina.")
 			"comrade":
 				comrade_declared.emit()
-			"let_go", "search":
+			"let_go", "search", "join", "refuse":
 				verdict.emit(t)
 			"club_vibe":
 				Sound.club_vibe(str(a.mood))

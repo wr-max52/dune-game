@@ -10,8 +10,13 @@ extends RefCounted
 ##   bounty at a Remnant outpost -> the Remnant fleet in orbit (the port's ships
 ##   unlock): one mission, the general on the bridge of their star cruiser far out
 ##   east (issue #193; the fleet's fighters meet you on the way up, and beating
-##   them is not the mission) -> the end card -> free play: smuggling runs and
+##   them is not the mission) -> back to Oda (issue #303: the debrief; the kill is
+##   paid and saved on the spot) -> the end card -> free play: smuggling runs and
 ##   bounty contracts on repeat.
+##
+## Issue #303: after the general dies a dark master waits in the cruiser's bay
+## (DarkMasterPost). Join him and the debrief can end the other way: clear the
+## barracks' local guards and the Remnant hold the moon (DarkPact).
 ##
 ## Chapters and every line: content/core/story/main.json. Systems report what
 ## happened with event() (WorldState does most of it); a teller asks beat() when
@@ -19,7 +24,9 @@ extends RefCounted
 ##
 ## The Remnant follow the story too: before the fleet is beaten the town's
 ## garrison respawns behind the barracks; after, the town is free of them (issue
-## #187: the locals hold the barracks), and the desert outposts are always hostile.
+## #187: the locals hold the barracks), and the desert outposts are always hostile
+## (issue #303: unless you swore the dark master's oath; and the Remnant take the
+## town back if its barracks guards all die).
 ## Who holds the outposts in between: Territory.
 
 const PATH := "res://content/core/story/main.json"
@@ -101,7 +108,8 @@ static func skip_to(id: String) -> void:
 	WorldState.story = { "chapter": id, "told": false }
 	if reached("fleet"):
 		WorldState.set_flag("ships_unlocked")
-	if reached("end"):
+	if reached("debrief"):
+		WorldState.set_flag("cruiser_taken")
 		WorldState.set_flag("remnant_fleet_beaten")    # issue #214: the Remnant have left
 	if id == "free":
 		WorldState.story.told = true
@@ -116,7 +124,7 @@ static func skip_to(id: String) -> void:
 static func event(name: String) -> bool:
 	Quests.event(name)
 	var c := chapter_cfg()
-	if c.is_empty() or str(c.get("done_on", "")) != name or name == "":
+	if c.is_empty() or name == "" or not ends_on(c, name):
 		return false
 	var next := chapter()
 	for later in chapters().slice(index(chapter()) + 1):
@@ -125,11 +133,19 @@ static func event(name: String) -> bool:
 			break
 	WorldState.story = { "chapter": next, "told": false }
 	WorldState.log_event("Story: " + next.replace("_", " ") + ".")
-	if reached("end") and not remnant_hostile():
+	if reached("debrief") and not remnant_gone():
+		# Issue #303: at the kill, not the end card: the locals hold the barracks by
+		# the time you are home (the dark master's oath needs their guards there).
 		WorldState.set_flag("remnant_fleet_beaten")
 		WorldState.log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
 	catch_up()
 	return true
+
+
+## Issue #303: chapter `c` ends on event `name` ("done_on": one event, or a list).
+static func ends_on(c: Dictionary, name: String) -> bool:
+	var want = c.get("done_on", "")
+	return (want as Array).has(name) if want is Array else str(want) == name
 
 
 ## Issue #193: the chapter is done before it was asked (the cruiser taken before
@@ -137,8 +153,9 @@ static func event(name: String) -> bool:
 static func catch_up() -> void:
 	var c := chapter_cfg()
 	var flag := str(c.get("done_flag", ""))
+	var on = c.get("done_on", "")
 	if flag != "" and WorldState.has_flag(flag):
-		event(str(c.get("done_on", "")))
+		event(str(on[0]) if on is Array and not on.is_empty() else str(on))
 
 
 # ------------------------------------------------------------------ tellers
@@ -154,6 +171,8 @@ static func beat(teller: String) -> Dictionary:
 		return {}
 	var first := not bool(WorldState.story.get("told", false))
 	WorldState.story.told = true
+	if first and str(c.id) == "debrief":
+		DarkPact.on_debrief()            # issue #303: telling Oda first breaks the oath
 	var out := _tell(c, first)
 	if first:
 		# Issue #201/#215: "told:<chapter>" unlocks quests (the blade on the tower) and
@@ -186,7 +205,8 @@ static func _tell(c: Dictionary, first: bool) -> Dictionary:
 ## talks as usual, and the smuggling job is hers to offer).
 static func _free_beat(first: bool) -> Dictionary:
 	var c := chapter_cfg()
-	var lead := str(c.get("intro", "")) + " " if first else ""
+	var intro := str(c.get("intro_dark" if DarkPact.town_retaken() and c.has("intro_dark") else "intro", ""))
+	var lead := intro + " " if first else ""
 	if WorldState.open_jobs("confidant").any(func(j): return str(j.id) == "j_bounty"):
 		return { "say": lead + str(WorldState.job("j_bounty").get("text", "")), "job": "j_bounty" }
 	return { "say": lead.strip_edges(), "job": "" } if lead != "" else {}
@@ -266,9 +286,16 @@ static func ships_unlocked() -> bool:
 	return WorldState.has_flag("ships_unlocked")
 
 
-## The fleet is beaten: the garrison has left town and the outposts shoot on sight.
-static func remnant_hostile() -> bool:
+## The fleet is beaten: the garrison has left town (the barracks are the locals'
+## until the Remnant take them back) and the general wears the desert armour.
+static func remnant_gone() -> bool:
 	return WorldState.has_flag("remnant_fleet_beaten")
+
+
+## What is left of the Remnant shoots on sight: the fleet is beaten and you did not
+## swear the dark master's oath (issue #303: with it they are on your side).
+static func remnant_hostile() -> bool:
+	return remnant_gone() and not DarkPact.joined()
 
 
 ## The Remnant hold the town's barracks (issue #187: until the story is done or

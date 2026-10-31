@@ -122,14 +122,16 @@ func remove(uid: int) -> bool:
 
 ## Buy a droid of `kind` with `credits` available. Returns { cost, droid }, or
 ## { error: "full" | "cant_afford" | "unknown" }.
-func buy(kind: String, variant: String, credits: int) -> Dictionary:
+## `cost`: what this stall asks (issue #303: friends pay less), -1 = the list price.
+func buy(kind: String, variant: String, credits: int, cost: int = -1) -> Dictionary:
 	if kind_cfg(kind).is_empty():
 		return { "error": "unknown" }
 	if is_full():
 		return { "error": "full" }
-	if price(kind) > credits:
+	var pay := price(kind) if cost < 0 else cost
+	if pay > credits:
 		return { "error": "cant_afford" }
-	return { "cost": price(kind), "droid": add(kind, variant) }
+	return { "cost": pay, "droid": add(kind, variant) }
 
 
 ## Sell a droid back to the merchant. Returns the credits paid, or -1.

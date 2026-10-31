@@ -31,6 +31,8 @@ const ACTION_DOCS := {
 	"call_guards": '{"type": "call_guards"}  only if they threaten you or keep insulting you',
 	"let_go": '{"type": "let_go"}  when you are done with them and let them go on their way (this ends the talk)',
 	"search": '{"type": "search"}  when you order your guards to search them (this ends the talk)',
+	"join": '{"type": "join"}  only when the player clearly says yes to joining you (this ends the talk)',
+	"refuse": '{"type": "refuse"}  only when the player clearly says no to joining you (this ends the talk, and you fight)',
 	"club_vibe": '{"type": "club_vibe", "mood": "<one of THE BAND CAN PLAY>"}  when they ask for different music ("something harder", "slow it down"): free, and you never refuse',
 }
 ## A card with no "actions" list gets the Cantina Owner's set (the M12 default).

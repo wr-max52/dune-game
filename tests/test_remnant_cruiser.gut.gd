@@ -104,7 +104,7 @@ func test_the_general_ends_the_fleet_chapter_and_the_dogfight_does_not() -> void
 	assert_eq(Story.chapter(), "fleet", "the dogfight is only in the way")
 	assert_false(Story.remnant_hostile(), "the garrison stays")
 	WorldState.on_cruiser_taken("General Test", {})
-	assert_eq(Story.chapter(), "end")
+	assert_eq(Story.chapter(), "debrief", "issue #303: back to Oda before the end card")
 	assert_true(Story.remnant_hostile(), "the garrison leaves town")
 	assert_false(Story.cruiser_mission())
 
@@ -128,7 +128,7 @@ func test_taken_before_oda_asked_skips_her_chapter() -> void:
 	Story.skip_to("bounty")
 	WorldState.set_flag("cruiser_taken")
 	Story.event("bounty_paid")
-	assert_eq(Story.chapter(), "end")
+	assert_eq(Story.chapter(), "debrief")
 	assert_true(Story.remnant_hostile())
 
 
@@ -136,5 +136,5 @@ func test_an_old_save_with_the_general_dead_catches_up() -> void:
 	Story.skip_to("fleet")
 	WorldState.set_flag("cruiser_taken")
 	WorldState.from_save(WorldState.to_save())
-	assert_eq(Story.chapter(), "end", "the save's fleet chapter ends on load")
+	assert_eq(Story.chapter(), "debrief", "the save's fleet chapter ends on load")
 	assert_true(Story.remnant_hostile(), "and the garrison leaves town")

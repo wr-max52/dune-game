@@ -2,6 +2,44 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Divergent endings: the dark master (issue #303, 2026-10-31)
+
+- **The general's death is locked in.** Killing him on the cruiser still pays
+  the 20,000 credits on the spot, and now the game saves right there too. The
+  end card no longer pops up on the bridge: the story says "go back to Oda", and
+  her telling brings the end card.
+- **A dark master waits in the cruiser's bay.** After the general dies, a figure
+  in all-black armour with a red energy sword stands by your ship. Walk up and
+  he talks to you (an AI character): "There is a dark energy emerging. Join me,
+  and realize more power than you could know." You can't walk away; answer him,
+  and if the talk drags on the game asks you outright: Join or Refuse.
+- **Refuse,** and he says "Then I must destroy you." and fights you with the
+  sword: he runs you down, slashes and swings, bounds across the deck, and turns
+  most shots from the front aside with his blade. Block his blows with your own
+  blade and he reels. Kill him and his red blade is yours.
+- **Join,** and your Remnant standing jumps to friendly: their fighters,
+  outposts and the cruiser's crew stop shooting. Your new quest is to clear the
+  local guards from the town's barracks. They still think you're on their side.
+  Kill all five and the Remnant take the town back, and the end card says the
+  Remnant hold the moon. Go back to Oda before that and the oath is broken: the
+  normal ending, and the Remnant and the dark master are your enemies.
+- **The town can change hands.** Whenever every local guard at the barracks
+  dies, the Remnant move back in (troopers, droids and the gate checkpoint).
+  Holding all seven outposts gives it back to the locals.
+- **On the barracks roof.** While the Remnant hold the whole planet, the dark
+  master stands on top of the barracks facing the gate (on his oath in a story
+  game; always in free roam). He fights back if you attack him, and killing him
+  while sworn to him turns the Remnant against you.
+- **Free roam diverges too.** Killing the general breaks the fleet there as
+  well (the garrison leaves town). The dark master is just an enemy: in the
+  cruiser's bay after the general dies, and on the roof whenever the Remnant
+  hold the planet.
+- **Friends of the Remnant.** Friendly with them in free play, you can take
+  their ships without an alarm (borrowed, not stolen: no chase, a little
+  standing, and Skrugs won't buy one). The desert droid posts sell droids
+  cheaper to friends of the Remnant, and the port's market to friends of the
+  locals, never below what the merchant pays back.
+
 ## Skrugs's yard, garages and stolen ships (2026-10-31)
 
 - **Skrugs moved in.** In the round port his stall is inside the wall now,

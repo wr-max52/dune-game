@@ -5,6 +5,9 @@ extends CanvasLayer
 ## general lived (content/core/story/main.json "end_card"). Closing it ends the
 ## chapter and Oda has her last word (the "free" chapter). Never in a headless
 ## run (tests call text() and close()).
+## Issue #303: on the dark master's oath, with the town retaken, the Remnant hold
+## the moon instead (dark_title, dark). It waits for any talk to end, too (Oda's
+## debrief is told in one).
 ##
 ## It waits for nothing else to be pausing the game (the AI notice on launch, the
 ## new game menu, the dev settings): opened behind one of those it took their
@@ -13,8 +16,19 @@ extends CanvasLayer
 var _panel: Control
 
 
+static func dark() -> bool:
+	return DarkPact.joined() and DarkPact.town_retaken()
+
+
+static func title() -> String:
+	var c: Dictionary = Story.data().get("end_card", {})
+	return str(c.get("dark_title" if dark() else "title", "THE END"))
+
+
 static func text() -> String:
 	var c: Dictionary = Story.data().get("end_card", {})
+	if dark():
+		return str(c.get("dark", ""))
 	return str(c.get("general_dead" if WorldState.has_flag("general_dead") else "general_alive", ""))
 
 
@@ -32,8 +46,16 @@ func _ready() -> void:
 
 func _process(_dt: float) -> void:
 	if _panel == null and Story.chapter() == "end" and not get_tree().paused \
-			and DisplayServer.get_name() != "headless":
+			and DisplayServer.get_name() != "headless" and not _talking():
 		_open()
+
+
+## Someone is talking to the player (the card waits for the talk to end).
+func _talking() -> bool:
+	for h in get_tree().get_nodes_in_group(ConversationHost.GROUP):
+		if h.is_talking():
+			return true
+	return false
 
 
 func _open() -> void:
@@ -54,7 +76,7 @@ func _open() -> void:
 	v.add_theme_constant_override("separation", 22)
 	_panel.add_child(v)
 	var title := Label.new()
-	title.text = str(c.get("title", "THE END"))
+	title.text = title()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color("#e0a050"))

@@ -53,6 +53,11 @@ static var wreck_ship := ""                ## issue #207: the ship id of the wre
 static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 static var control: Dictionary = {}        ## issue #187: who holds each outpost, and the supply run out (Territory)
 
+## Issue #303: called (with a reason) whenever the game must be saved right now: the
+## general's death, the dark master's answer, the town changing hands. The town's
+## ConversationHost (which owns the save) adds its save here.
+static var checkpoint_hooks: Array[Callable] = []
+
 static var _rumors: Array = []
 static var _board: Array = []
 static var _cooldowns: Dictionary = {}
@@ -688,7 +693,24 @@ static func on_cruiser_taken(general: String, reward: Dictionary, line: String =
 	set_flag("locals_hero")
 	log_event(line % general if line.contains("%s") else ("%s was killed aboard the Remnant cruiser." % general))
 	Story.event("cruiser_taken")
+	if not Story.remnant_gone():
+		# Issue #303: free roam too (no story chapter waits for it): the fleet is broken.
+		set_flag("remnant_fleet_beaten")
+		log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
+	checkpoint("cruiser_taken")
 	return pay
+
+
+## Issue #303: save the game now (checkpoint_hooks). Returns how many saves ran.
+static func checkpoint(why: String) -> int:
+	var ran := 0
+	for h in checkpoint_hooks.duplicate():
+		if h.is_valid():
+			h.call(why)
+			ran += 1
+		else:
+			checkpoint_hooks.erase(h)
+	return ran
 
 
 ## Issue #213: Oda's first bounty in a story save goes on the general himself

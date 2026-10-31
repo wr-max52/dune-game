@@ -54,7 +54,7 @@ func test_the_story_walks_every_chapter() -> void:
 	for i in 3:
 		Story.on_droid_delivered()
 	assert_eq(Story.chapter(), "bounty")
-	for s in [["bounty_paid", "fleet"], ["cruiser_taken", "end"]]:
+	for s in [["bounty_paid", "fleet"], ["cruiser_taken", "debrief"], ["told:debrief", "end"]]:
 		Story.event(s[0])
 		assert_eq(Story.chapter(), s[1])
 	EndCard.close()

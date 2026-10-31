@@ -97,8 +97,8 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["mood"] = mood
 			"refuse_topic", "end_conversation", "comrade":
 				pass
-			"let_go", "search":
-				if seen_types.has("let_go") or seen_types.has("search"):
+			"let_go", "search", "join", "refuse":
+				if seen_types.has("let_go") or seen_types.has("search") or seen_types.has("join") or seen_types.has("refuse"):
 					why = "one verdict only"
 			"call_guards":
 				if int(ctx.get("trust", 0)) >= GUARDS_MAX_TRUST:
