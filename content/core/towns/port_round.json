@@ -71,12 +71,12 @@
   {
    "id": "cantina",
    "min": [
-    -117.0,
-    -16.0
+    -119,
+    -18
    ],
    "max": [
-    -77.0,
-    16.0
+    -81,
+    20
    ]
   },
   {
@@ -2138,156 +2138,6 @@
    "note": "Issue #237: a surface pad on the ring round the bowl. No collision: you walk across it."
   },
   {
-   "id": "cantina_wall_w",
-   "zone": "cantina",
-   "kind": "wall",
-   "min": [
-    -115.0,
-    0,
-    -14.0
-   ],
-   "max": [
-    -114.5,
-    9.0,
-    14.0
-   ]
-  },
-  {
-   "id": "cantina_wall_n",
-   "zone": "cantina",
-   "kind": "wall",
-   "min": [
-    -114.5,
-    0,
-    13.5
-   ],
-   "max": [
-    -83.5,
-    9.0,
-    14.0
-   ]
-  },
-  {
-   "id": "cantina_wall_s",
-   "zone": "cantina",
-   "kind": "wall",
-   "min": [
-    -114.5,
-    0,
-    -14.0
-   ],
-   "max": [
-    -83.5,
-    9.0,
-    -13.5
-   ]
-  },
-  {
-   "id": "cantina_wall_e_s",
-   "zone": "cantina",
-   "kind": "wall",
-   "min": [
-    -83.5,
-    0,
-    -14.0
-   ],
-   "max": [
-    -83.0,
-    9.0,
-    -2.0
-   ]
-  },
-  {
-   "id": "cantina_wall_e_n",
-   "zone": "cantina",
-   "kind": "wall",
-   "min": [
-    -83.5,
-    0,
-    2.0
-   ],
-   "max": [
-    -83.0,
-    9.0,
-    14.0
-   ]
-  },
-  {
-   "id": "cantina_door_lintel",
-   "zone": "cantina",
-   "kind": "overhead",
-   "min": [
-    -83.5,
-    3,
-    -2.0
-   ],
-   "max": [
-    -83.0,
-    9.0,
-    2.0
-   ]
-  },
-  {
-   "id": "cantina_roof",
-   "zone": "cantina",
-   "kind": "roof",
-   "min": [
-    -115.0,
-    9.0,
-    -14.0
-   ],
-   "max": [
-    -83.0,
-    9.3,
-    7.1
-   ]
-  },
-  {
-   "id": "cantina_roof_e",
-   "zone": "cantina",
-   "kind": "roof",
-   "min": [
-    -107.8,
-    9.0,
-    7.1
-   ],
-   "max": [
-    -83.0,
-    9.3,
-    14.0
-   ]
-  },
-  {
-   "id": "cantina_roof_w",
-   "zone": "cantina",
-   "kind": "roof",
-   "min": [
-    -115.0,
-    9.0,
-    7.1
-   ],
-   "max": [
-    -114.2,
-    9.3,
-    14.0
-   ]
-  },
-  {
-   "id": "cantina_roof_n",
-   "zone": "cantina",
-   "kind": "roof",
-   "min": [
-    -114.2,
-    9.0,
-    13.5
-   ],
-   "max": [
-    -107.8,
-    9.3,
-    14.0
-   ]
-  },
-  {
    "id": "cantina_stage",
    "zone": "cantina",
    "kind": "cover",
@@ -2306,45 +2156,6 @@
    "note": "The stage in the middle of the cantina. Issue #261: the band plays here (band markers), back to back, facing out; no microphone.",
    "band": true,
    "standable": true
-  },
-  {
-   "id": "stair_tower",
-   "zone": "cantina",
-   "kind": "spiral",
-   "min": [
-    -114.2,
-    0,
-    7.1
-   ],
-   "max": [
-    -107.8,
-    15,
-    13.5
-   ],
-   "door": "-z",
-   "rise": 3.0,
-   "wall": 0.35,
-   "core": 0.55,
-   "look": "stair_tower",
-   "note": "Round tower behind the bar: a helical ramp (rise m per turn) around a core, door on the bar side. Built by src/systems/world/stair_tower.gd."
-  },
-  {
-   "id": "lookout",
-   "zone": "cantina",
-   "kind": "lookout",
-   "min": [
-    -115.4,
-    15,
-    5.9
-   ],
-   "max": [
-    -106.6,
-    18.4,
-    14.7
-   ],
-   "stair": "stair_tower",
-   "look": "lookout",
-   "note": "The lookout room on top of the stair tower, open on all sides over the town."
   },
   {
    "id": "bar_counter",
@@ -2467,6 +2278,107 @@
     -3.2
    ],
    "note": "Gate checkpoint barricade, south side."
+  },
+  {
+   "id": "cantina_body",
+   "zone": "cantina",
+   "kind": "ring",
+   "min": [
+    -115.82,
+    0.0,
+    -16.82
+   ],
+   "max": [
+    -82.18,
+    9.0,
+    16.82
+   ],
+   "hollow": true,
+   "thickness": 0.5,
+   "piece": 2.0,
+   "gaps": [
+    {
+     "id": "door",
+     "deg": 0.0,
+     "half": 2.0
+    },
+    {
+     "id": "stair_tower",
+     "deg": 135.0,
+     "half": 1.0
+    }
+   ],
+   "note": "Issue #237: the club's round body (src/systems/world/ring_wall.gd), the same floor as the square port's room."
+  },
+  {
+   "id": "cantina_roof",
+   "zone": "cantina",
+   "kind": "roof",
+   "min": [
+    -115.82,
+    9.0,
+    -16.82
+   ],
+   "max": [
+    -82.18,
+    9.3,
+    16.82
+   ],
+   "shape": "round"
+  },
+  {
+   "id": "cantina_door_lintel",
+   "zone": "cantina",
+   "kind": "overhead",
+   "min": [
+    -82.68,
+    3.0,
+    -2.0
+   ],
+   "max": [
+    -82.18,
+    9.0,
+    2.0
+   ]
+  },
+  {
+   "id": "stair_tower",
+   "zone": "cantina",
+   "kind": "spiral",
+   "min": [
+    -116.39,
+    0.0,
+    10.99
+   ],
+   "max": [
+    -109.99,
+    15.0,
+    17.39
+   ],
+   "rise": 3.0,
+   "wall": 0.35,
+   "core": 0.55,
+   "look": "stair_tower",
+   "note": "Round tower behind the bar: a helical ramp (rise m per turn) around a core, door on the bar side. Built by src/systems/world/stair_tower.gd.",
+   "door_deg": -45.0
+  },
+  {
+   "id": "lookout",
+   "zone": "cantina",
+   "kind": "lookout",
+   "min": [
+    -117.59,
+    15.0,
+    9.79
+   ],
+   "max": [
+    -108.79,
+    18.4,
+    18.59
+   ],
+   "stair": "stair_tower",
+   "look": "lookout",
+   "note": "The lookout room on top of the stair tower, open on all sides over the town."
   },
   {
    "id": "stall_01",
@@ -5374,17 +5286,18 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -126.5,
+    -130.0,
     0.0,
-    -19.5
+    -18.5
    ],
    "max": [
-    -119.5,
-    12.0,
-    -9.5
+    -122.0,
+    17.0,
+    -10.5
    ],
-   "look": "tower_wide",
-   "face": "+x"
+   "look": "tower_round",
+   "face": "+x",
+   "shape": "round"
   },
   {
    "id": "house_e_02",
@@ -5530,37 +5443,21 @@
    "zone": "residential_e",
    "kind": "solid",
    "min": [
-    -111.0,
+    -105.0,
     0.0,
-    41.5
+    42.5
    ],
    "max": [
-    -103.0,
-    12.0,
-    49.5
+    -97.0,
+    17.0,
+    50.5
    ],
-   "look": "tower_block",
-   "face": "-x"
+   "look": "tower_round",
+   "face": "+x",
+   "shape": "round"
   },
   {
    "id": "house_e_11",
-   "zone": "residential_e",
-   "kind": "solid",
-   "min": [
-    -99.5,
-    0.0,
-    43.0
-   ],
-   "max": [
-    -92.5,
-    14.0,
-    49.0
-   ],
-   "look": "tower_block",
-   "face": "+z"
-  },
-  {
-   "id": "house_e_12",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5578,7 +5475,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_13",
+   "id": "house_e_12",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5595,7 +5492,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_14",
+   "id": "house_e_13",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5613,7 +5510,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_15",
+   "id": "house_e_14",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5630,7 +5527,7 @@
    "face": "-x"
   },
   {
-   "id": "house_e_16",
+   "id": "house_e_15",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5647,7 +5544,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_17",
+   "id": "house_e_16",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5664,7 +5561,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_18",
+   "id": "house_e_17",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5682,7 +5579,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_19",
+   "id": "house_e_18",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5699,7 +5596,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_20",
+   "id": "house_e_19",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5716,7 +5613,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_21",
+   "id": "house_e_20",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5733,7 +5630,7 @@
    "face": "-x"
   },
   {
-   "id": "house_e_22",
+   "id": "house_e_21",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5750,7 +5647,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_23",
+   "id": "house_e_22",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5767,7 +5664,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_24",
+   "id": "house_e_23",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5785,7 +5682,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_25",
+   "id": "house_e_24",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5802,7 +5699,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_26",
+   "id": "house_e_25",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5820,7 +5717,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_27",
+   "id": "house_e_26",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5837,7 +5734,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_28",
+   "id": "house_e_27",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5854,7 +5751,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_29",
+   "id": "house_e_28",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5871,7 +5768,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_30",
+   "id": "house_e_29",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5888,7 +5785,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_31",
+   "id": "house_e_30",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5905,7 +5802,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_32",
+   "id": "house_e_31",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5922,7 +5819,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_33",
+   "id": "house_e_32",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5939,7 +5836,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_34",
+   "id": "house_e_33",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5956,7 +5853,7 @@
    "face": "+z"
   },
   {
-   "id": "house_e_35",
+   "id": "house_e_34",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5974,7 +5871,7 @@
    "shape": "round"
   },
   {
-   "id": "house_e_36",
+   "id": "house_e_35",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -5991,7 +5888,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_37",
+   "id": "house_e_36",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -6008,7 +5905,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_38",
+   "id": "house_e_37",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -6025,7 +5922,7 @@
    "face": "+x"
   },
   {
-   "id": "house_e_39",
+   "id": "house_e_38",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -6042,7 +5939,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_40",
+   "id": "house_e_39",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -6059,7 +5956,7 @@
    "face": "-z"
   },
   {
-   "id": "house_e_41",
+   "id": "house_e_40",
    "zone": "residential_e",
    "kind": "solid",
    "min": [
@@ -6097,40 +5994,6 @@
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -125.35,
-    9.4,
-    -9.5
-   ],
-   "max": [
-    -123.15,
-    10.0,
-    -6.5
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_02",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -47.0,
-    13.4,
-    102.9
-   ],
-   "max": [
-    -44.0,
-    14.0,
-    105.1
-   ],
-   "look": "bridge",
-   "axis": "x"
-  },
-  {
-   "id": "bridge_e_03",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
     -44.5,
     13.4,
     74.15
@@ -6144,7 +6007,7 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_04",
+   "id": "bridge_e_02",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6161,7 +6024,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_05",
+   "id": "bridge_e_03",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6178,7 +6041,24 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_06",
+   "id": "bridge_e_04",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -47.0,
+    13.4,
+    102.9
+   ],
+   "max": [
+    -44.0,
+    14.0,
+    105.1
+   ],
+   "look": "bridge",
+   "axis": "x"
+  },
+  {
+   "id": "bridge_e_05",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6195,7 +6075,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_07",
+   "id": "bridge_e_06",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6212,24 +6092,24 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_08",
+   "id": "bridge_e_07",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -103.0,
-    11.4,
-    44.9
+    -127.1,
+    9.4,
+    -10.5
    ],
    "max": [
-    -99.5,
-    12.0,
-    47.1
+    -124.9,
+    10.0,
+    -6.5
    ],
    "look": "bridge",
-   "axis": "x"
+   "axis": "z"
   },
   {
-   "id": "bridge_e_09",
+   "id": "bridge_e_08",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6246,7 +6126,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_10",
+   "id": "bridge_e_09",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6258,6 +6138,23 @@
     -102.0,
     10.0,
     34.6
+   ],
+   "look": "bridge",
+   "axis": "x"
+  },
+  {
+   "id": "bridge_e_10",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -21.0,
+    13.4,
+    89.4
+   ],
+   "max": [
+    -16.0,
+    14.0,
+    91.6
    ],
    "look": "bridge",
    "axis": "x"
@@ -6284,40 +6181,6 @@
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
-    -21.0,
-    13.4,
-    89.4
-   ],
-   "max": [
-    -16.0,
-    14.0,
-    91.6
-   ],
-   "look": "bridge",
-   "axis": "x"
-  },
-  {
-   "id": "bridge_e_13",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
-    -98.85,
-    9.4,
-    37.5
-   ],
-   "max": [
-    -96.65,
-    10.0,
-    43.0
-   ],
-   "look": "bridge",
-   "axis": "z"
-  },
-  {
-   "id": "bridge_e_14",
-   "zone": "residential_e",
-   "kind": "overhead",
-   "min": [
     -55.0,
     13.4,
     117.4
@@ -6331,7 +6194,7 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_15",
+   "id": "bridge_e_13",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6348,7 +6211,7 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_16",
+   "id": "bridge_e_14",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6365,7 +6228,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_17",
+   "id": "bridge_e_15",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6382,7 +6245,24 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_18",
+   "id": "bridge_e_16",
+   "zone": "residential_e",
+   "kind": "overhead",
+   "min": [
+    -96.0,
+    9.4,
+    31.9
+   ],
+   "max": [
+    -88.5,
+    10.0,
+    34.1
+   ],
+   "look": "bridge",
+   "axis": "x"
+  },
+  {
+   "id": "bridge_e_17",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6399,7 +6279,7 @@
    "axis": "x"
   },
   {
-   "id": "bridge_e_19",
+   "id": "bridge_e_18",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6416,7 +6296,7 @@
    "axis": "z"
   },
   {
-   "id": "bridge_e_20",
+   "id": "bridge_e_19",
    "zone": "residential_e",
    "kind": "overhead",
    "min": [
@@ -6683,9 +6563,9 @@
   {
    "id": "patron_booth",
    "pos": [
-    -86.0,
+    -87.43,
     0,
-    -10.6
+    -9.43
    ],
    "role": "ambient",
    "soldier": "local_patron",
@@ -7544,260 +7424,256 @@
      0.0
     ],
     [
-     -104.0,
-     6.1
+     -103.5,
+     6.6
     ],
     [
-     -111.0,
-     6.1
+     -109.83,
+     10.83
     ],
     [
-     -111.0,
-     8.0
+     -110.93,
+     11.93
     ],
     [
-     -109.78,
-     9.12
+     -111.49,
+     14.22
     ],
     [
-     -109.35,
-     9.88
+     -111.73,
+     15.06
     ],
     [
-     -109.36,
-     10.76
+     -112.37,
+     15.68
     ],
     [
-     -109.82,
-     11.52
+     -113.22,
+     15.89
     ],
     [
-     -110.58,
-     11.95
+     -114.06,
+     15.65
     ],
     [
-     -111.46,
-     11.94
+     -114.68,
+     15.02
     ],
     [
-     -112.22,
-     11.48
+     -114.89,
+     14.17
     ],
     [
-     -112.65,
-     10.72
+     -114.65,
+     13.32
     ],
     [
-     -112.64,
-     9.84
+     -114.02,
+     12.71
     ],
     [
-     -112.18,
-     9.08
+     -113.17,
+     12.49
     ],
     [
-     -111.42,
-     8.65
+     -112.32,
+     12.73
     ],
     [
-     -110.54,
-     8.66
+     -111.71,
+     13.37
     ],
     [
-     -109.78,
-     9.12
+     -111.49,
+     14.22
     ],
     [
-     -109.35,
-     9.88
+     -111.73,
+     15.06
     ],
     [
-     -109.36,
-     10.76
+     -112.37,
+     15.68
     ],
     [
-     -109.82,
-     11.52
+     -113.22,
+     15.89
     ],
     [
-     -110.58,
-     11.95
+     -114.06,
+     15.65
     ],
     [
-     -111.46,
-     11.94
+     -114.68,
+     15.02
     ],
     [
-     -112.22,
-     11.48
+     -114.89,
+     14.17
     ],
     [
-     -112.65,
-     10.72
+     -114.65,
+     13.32
     ],
     [
-     -112.64,
-     9.84
+     -114.02,
+     12.71
     ],
     [
-     -112.18,
-     9.08
+     -113.17,
+     12.49
     ],
     [
-     -111.42,
-     8.65
+     -112.32,
+     12.73
     ],
     [
-     -110.54,
-     8.66
+     -111.71,
+     13.37
     ],
     [
-     -109.78,
-     9.12
+     -111.49,
+     14.22
     ],
     [
-     -109.35,
-     9.88
+     -111.73,
+     15.06
     ],
     [
-     -109.36,
-     10.76
+     -112.37,
+     15.68
     ],
     [
-     -109.82,
-     11.52
+     -113.22,
+     15.89
     ],
     [
-     -110.58,
-     11.95
+     -114.06,
+     15.65
     ],
     [
-     -111.46,
-     11.94
+     -114.68,
+     15.02
     ],
     [
-     -112.22,
-     11.48
+     -114.89,
+     14.17
     ],
     [
-     -112.65,
-     10.72
+     -114.65,
+     13.32
     ],
     [
-     -112.64,
-     9.84
+     -114.02,
+     12.71
     ],
     [
-     -112.18,
-     9.08
+     -113.17,
+     12.49
     ],
     [
-     -111.42,
-     8.65
+     -112.32,
+     12.73
     ],
     [
-     -110.54,
-     8.66
+     -111.71,
+     13.37
     ],
     [
-     -109.78,
-     9.12
+     -111.49,
+     14.22
     ],
     [
-     -109.35,
-     9.88
+     -111.73,
+     15.06
     ],
     [
-     -109.36,
-     10.76
+     -112.37,
+     15.68
     ],
     [
-     -109.82,
-     11.52
+     -113.22,
+     15.89
     ],
     [
-     -110.58,
-     11.95
+     -114.06,
+     15.65
     ],
     [
-     -111.46,
-     11.94
+     -114.68,
+     15.02
     ],
     [
-     -112.22,
-     11.48
+     -114.89,
+     14.17
     ],
     [
-     -112.65,
-     10.72
+     -114.65,
+     13.32
     ],
     [
-     -112.64,
-     9.84
+     -114.02,
+     12.71
     ],
     [
-     -112.18,
-     9.08
+     -113.17,
+     12.49
     ],
     [
-     -111.42,
-     8.65
+     -112.32,
+     12.73
     ],
     [
-     -110.54,
-     8.66
+     -111.71,
+     13.37
     ],
     [
-     -109.78,
-     9.12
+     -111.49,
+     14.22
     ],
     [
-     -109.35,
-     9.88
+     -111.73,
+     15.06
     ],
     [
-     -109.36,
-     10.76
+     -112.37,
+     15.68
     ],
     [
-     -109.82,
-     11.52
+     -113.22,
+     15.89
     ],
     [
-     -110.58,
-     11.95
+     -114.06,
+     15.65
     ],
     [
-     -111.46,
-     11.94
+     -114.68,
+     15.02
     ],
     [
-     -112.22,
-     11.48
+     -114.89,
+     14.17
     ],
     [
-     -112.65,
-     10.72
+     -114.65,
+     13.32
     ],
     [
-     -112.64,
-     9.84
+     -114.02,
+     12.71
     ],
     [
-     -112.18,
-     9.08
+     -113.17,
+     12.49
     ],
     [
-     -111.42,
-     8.65
+     -112.32,
+     12.73
     ],
     [
-     -110.54,
-     8.66
-    ],
-    [
-     -107.88,
-     8.71
+     -111.71,
+     13.37
     ]
    ]
   },
@@ -8033,8 +7909,8 @@
      -7.4
     ],
     [
-     -85.6,
-     -7.4
+     -85.94,
+     -7.21
     ],
     [
      -85.6,

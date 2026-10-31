@@ -29,6 +29,8 @@ static func info(tower: Dictionary) -> Dictionary:
 	var rise := float(tower.get("rise", 3.0))
 	var h := mx.y - mn.y
 	var door_th: float = { "+x": 0.0, "+z": PI * 0.5, "-x": PI, "-z": -PI * 0.5 }.get(str(tower.get("door", "-z")), -PI * 0.5)
+	if tower.has("door_deg"):            # issue #237: a door at any angle (0 = +x, 90 = +z)
+		door_th = deg_to_rad(float(tower.door_deg))
 	var th0 := door_th + 0.5
 	return {
 		"c": Vector3((mn.x + mx.x) * 0.5, mn.y, (mn.z + mx.z) * 0.5),

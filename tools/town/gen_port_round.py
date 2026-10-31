@@ -250,6 +250,88 @@ def zone_of(zid, rects, grow_by=1.0):
 	return {"id": zid, "min": [math.floor(bb[0]), math.floor(bb[1])], "max": [math.ceil(bb[2]), math.ceil(bb[3])]}
 
 
+CANTINA_SHELL = ("cantina_wall_", "cantina_roof", "cantina_door_lintel", "stair_tower", "lookout")
+
+
+def round_cantina(cfg, boxes, markers, routes, zones, pickups):
+	"""Issue #237 part 4: the cantina (the club) in a round body of the same floor
+	area, its stair tower a turret outside the wall. Runs on the moved boxes."""
+	cc = cfg["cantina"]
+	by = {b["id"]: b for b in boxes}
+	w, e, n, s_ = by["cantina_wall_w"], by["cantina_wall_e_s"], by["cantina_wall_n"], by["cantina_wall_s"]
+	x0, x1, z0, z1 = w["max"][0], e["min"][0], s_["max"][2], n["min"][2]
+	c = ((x0 + x1) / 2, (z0 + z1) / 2)
+	ri = math.sqrt((x1 - x0) * (z1 - z0) / math.pi)
+	t = cc["thickness"]
+	ro = ri + t
+	h = n["max"][1]
+	roof, lintel, tower, look = by["cantina_roof"], by["cantina_door_lintel"], by["stair_tower"], by["lookout"]
+	door_deg = math.degrees(math.atan2((lintel["min"][2] + lintel["max"][2]) / 2 - c[1], (lintel["min"][0] + lintel["max"][0]) / 2 - c[0]))
+	boxes[:] = [b for b in boxes if not str(b["id"]).startswith(CANTINA_SHELL)]
+	tg = cc["tower"]
+	boxes.append(box("cantina_body", "cantina", "ring", [c[0] - ro, 0, c[1] - ro], [c[0] + ro, h, c[1] + ro], hollow=True,
+		thickness=t, piece=2.0, gaps=[{"id": "door", "deg": round(door_deg, 2), "half": cc["door_half"]},
+			{"id": "stair_tower", "deg": tg["deg"], "half": tg["gap_half"]}],
+		note="Issue #237: the club's round body (src/systems/world/ring_wall.gd), the same floor as the square port's room."))
+	boxes.append(box("cantina_roof", "cantina", "roof", [c[0] - ro, roof["min"][1], c[1] - ro], [c[0] + ro, roof["max"][1], c[1] + ro], shape="round"))
+	dx, dz = math.cos(math.radians(door_deg)), math.sin(math.radians(door_deg))
+	boxes.append(box("cantina_door_lintel", "cantina", "overhead",
+		[c[0] + dx * ri if dx >= 0 else c[0] + dx * ro, lintel["min"][1], c[1] - cc["door_half"]],
+		[c[0] + dx * ro if dx >= 0 else c[0] + dx * ri, h, c[1] + cc["door_half"]]))
+	rt = min(tower["max"][0] - tower["min"][0], tower["max"][2] - tower["min"][2]) / 2
+	tc = pol(ro + rt + 0.05, tg["deg"])
+	tc = (c[0] + tc[0], c[1] + tc[1])
+	tw = {k: v for k, v in tower.items() if k not in ("id", "zone", "kind", "min", "max", "door")}
+	tw["door_deg"] = round((tg["deg"] + 180.0 + 180.0) % 360.0 - 180.0, 2)
+	boxes.append(box("stair_tower", "cantina", "spiral", [tc[0] - rt, tower["min"][1], tc[1] - rt], [tc[0] + rt, tower["max"][1], tc[1] + rt], **tw))
+	grow_l = (look["max"][0] - look["min"][0]) / 2 - rt
+	lk = {k: v for k, v in look.items() if k not in ("id", "zone", "kind", "min", "max")}
+	boxes.append(box("lookout", "cantina", "lookout", [tc[0] - rt - grow_l, look["min"][1], tc[1] - rt - grow_l],
+		[tc[0] + rt + grow_l, look["max"][1], tc[1] + rt + grow_l], **lk))
+	# What the curve now squeezes against the wall comes in to `inset`.
+	lim = ri - cc["inset"]
+
+	def pull(x, z):
+		d = math.hypot(x - c[0], z - c[1])
+		if d <= lim:
+			return x, z
+		return r2(c[0] + (x - c[0]) * lim / d), r2(c[1] + (z - c[1]) * lim / d)
+	inside = lambda x, z: x0 - 1 <= x <= x1 + 1 and z0 - 1 <= z <= z1 + 1
+	for m in markers:
+		x, y, z = m["pos"]
+		if inside(x, z) and m["id"] != "cantina_door":
+			m["pos"][0], m["pos"][2] = pull(x, z)
+	for r in routes:
+		if r["id"] != "cantina_to_lookout" and all(inside(*p) for p in r["points"]):
+			r["points"] = [list(pull(*p)) for p in r["points"]]
+	# The walk up: round the north end of the bar, out through the tower's gap, up the ramp.
+	mk = {m["id"]: m for m in markers}
+	bf = mk["bar_front"]["pos"]
+	bar = by["bar_counter"]
+	north = [bf[0], r2(bar["max"][2] + 1.6)]
+	gin = [r2(v) for v in (c[0] + math.cos(math.radians(tg["deg"])) * (ri - 1.0), c[1] + math.sin(math.radians(tg["deg"])) * (ri - 1.0))]
+	door_th = math.radians(tw["door_deg"])
+	dp = [r2(tc[0] + math.cos(door_th) * rt), r2(tc[1] + math.sin(door_th) * rt)]
+	rc, rw = tower.get("core", 0.55), rt - tower.get("wall", 0.35)
+	th0 = door_th + 0.5
+	th_end = th0 + 2 * math.pi * (tower["max"][1] - tower["min"][1]) / tower.get("rise", 3.0)
+	walk, th = [], th0 + 0.3
+	while th < th_end:
+		walk.append([r2(tc[0] + math.cos(th) * (rc + rw) / 2), r2(tc[1] + math.sin(th) * (rc + rw) / 2)])
+		th += math.pi / 6
+	old = next(r for r in routes if r["id"] == "cantina_to_lookout")
+	old["points"] = [[bf[0], bf[2]], north, gin, dp] + walk
+	# The blade lies on the lookout floor over the tower's middle, as before.
+	owner = mk["cantina_owner"]["pos"]
+	for pk in pickups["pickups"]:
+		if pk["id"] == "tower_blade":
+			pk.setdefault("layouts", {})[cfg["layout"]] = {"offset": [r2(tc[0] - owner[0]), r2(tower["max"][1] - owner[1]), r2(tc[1] - owner[2])]}
+	for z in zones:
+		if z["id"] == "cantina":
+			zr = grow(bbox([rect_of(b) for b in boxes if b["zone"] == "cantina"]), 1.0)
+			z["min"], z["max"] = [math.floor(zr[0]), math.floor(zr[1])], [math.ceil(zr[2]), math.ceil(zr[3])]
+
+
 def market(cfg, boxes, markers, routes, zones):
 	"""Issue #237 part 3: three curved aisles of taller stalls, two cross aisles,
 	shops on the far side of the outer aisle, merchants and shoppers."""
@@ -541,6 +623,7 @@ def main():
 	pz = math.ceil(max(pz, abs(db["at"][0]) + db["size"][0], abs(db["at"][1]) + db["size"][2]))
 	zones.append({"id": "spaceport", "min": [-pz, -pz], "max": [pz, pz]})
 
+	round_cantina(cfg, boxes, markers, routes, zones, pickups)
 	market(cfg, boxes, markers, routes, zones)
 	barracks(cfg, boxes, markers, routes, zones)
 

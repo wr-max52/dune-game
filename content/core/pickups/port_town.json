@@ -48,7 +48,12 @@
       "story_only": true,
       "event": "blade_taken",
       "taken_flag": "tower_blade_taken",
-      "note": "Issue #210: an energy blade somebody stashed on top of the cantina's stair tower (its top is 15 m up). Story saves only. Oda tells you about it after the droid merchant chapter."
+      "note": "Issue #210: an energy blade somebody stashed on top of the cantina's stair tower (its top is 15 m up). Story saves only. Oda tells you about it after the droid merchant chapter.",
+      "layouts": {
+        "port_round": {
+          "offset": [-4.19, 15.0, 14.19]
+        }
+      }
     },
     {
       "id": "desert_cache",
@@ -107,8 +112,8 @@
               [-0.56, 0.0, -18.97],
               [-61.06, 0.0, 27.53],
               [31.19, 0.0, -33.72],
-              [-18.31, 0.0, 188.28],
-              [17.19, 0.0, 196.78]
+              [30.69, 0.0, 157.78],
+              [-10.06, 0.0, 126.53]
             ]
           }
         }
@@ -128,10 +133,10 @@
           "port_round": {
             "marker": "resident_w",
             "spots": [
+              [37.44, 3.5, -15.22],
               [20.44, 4.0, -46.22],
-              [-8.56, 3.5, 20.78],
-              [-22.56, 4.0, -24.22],
-              [28.94, 4.0, -12.22]
+              [-21.06, 3.5, 26.78],
+              [-22.56, 3.5, -8.22]
             ]
           }
         }

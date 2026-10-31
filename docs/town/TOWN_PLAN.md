@@ -1012,6 +1012,11 @@ A planet picks one with `town_layout`. The town keeps its id, `port_town`.
 - The round port's market and barracks are built, not moved: `round.market`
   (aisles, cross aisles, stall size, stall count, shops, merchants, shoppers)
   and `round.barracks` (its boxes, markers and routes, by id) in the kit.
+- `round.cantina`: the club's round body (`cantina_body`, a `ring` with the door
+  and the stair tower's gaps), the same floor as the square room; the tower is a
+  turret outside it (`door_deg` faces the room). The club, bar and decor dress
+  a round room from that ring.
+- V5 treats a round box (shape "round", a spiral, a lookout) as its circle.
 
 ## Appendix — Tuning later (no code changes needed)
 

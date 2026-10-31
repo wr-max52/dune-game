@@ -23,12 +23,16 @@ extends Node3D
 ## Visual only (no collision): the town's boxes are what block. Positions come
 ## from the cantina's wall, stage, table and counter boxes.
 
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
+
 var props: ClubProps
 var cfg: Dictionary = {}
 var inner := Rect2()          ## the cantina's floor inside its walls (x, z)
 var ceiling := 5.0
 var stage_c := Vector3.ZERO   ## the stage's centre on its top
 var stage_r := 0.0
+var round_c := Vector3.ZERO   ## issue #237: a round room (a "cantina_body" ring): its centre
+var round_r := 0.0            ## and inside radius; 0 for the square room
 
 
 func dress(town, scene: Node) -> void:
@@ -57,6 +61,12 @@ func _measure(town) -> void:
 	var s: Dictionary = town.get_box("cantina_wall_s")
 	if not (w.is_empty() or e.is_empty() or n.is_empty() or s.is_empty()):
 		inner = Rect2(float(w.max[0]), float(s.max[2]), float(e.min[0]) - float(w.max[0]), float(n.min[2]) - float(s.max[2]))
+	var body: Dictionary = town.get_box("cantina_body")
+	if not body.is_empty():
+		var info := RingWall.info(body)
+		round_c = info.c
+		round_r = float(info.ri)
+		inner = Rect2(round_c.x - round_r, round_c.z - round_r, round_r * 2.0, round_r * 2.0)
 	var roof: Dictionary = town.get_box("cantina_roof")
 	if not roof.is_empty():
 		ceiling = float(roof.min[1])
@@ -107,7 +117,10 @@ func _jazz(town, scene: Node) -> void:
 	var z1 := inner.end.y
 	var mid := Vector3((x0 + x1) * 0.5, 0, (z0 + z1) * 0.5)
 	# The floor: dark planks wall to wall, a checker floor round the stage.
-	_slab(Vector3(x1 - x0, 0.012, z1 - z0), Vector3(mid.x, 0.006, mid.z), ClubTextures.wood(Color("#4a2c1a"), 0.16))
+	if round_r > 0.0:
+		props._cyl(props, round_r - 0.02, 0.012, Vector3(round_c.x, 0.006, round_c.z), ClubTextures.wood(Color("#4a2c1a"), 0.16))
+	else:
+		_slab(Vector3(x1 - x0, 0.012, z1 - z0), Vector3(mid.x, 0.006, mid.z), ClubTextures.wood(Color("#4a2c1a"), 0.16))
 	if stage_r > 0.0:
 		var side := stage_r * 2.0 + 4.0
 		_slab(Vector3(side, 0.014, side), Vector3(stage_c.x, 0.008, stage_c.z), ClubTextures.checker(Color("#151312"), Color("#d6c8a8"), 0.55))
@@ -132,6 +145,9 @@ func _jazz(town, scene: Node) -> void:
 ## Panelled wainscot to 1.3 m on every wall it fits (not the door, the back bar or
 ## the stair tower), velvet drapes above it between the hall's pilasters.
 func _walls(town) -> void:
+	if round_r > 0.0:
+		_round_walls(town)
+		return
 	var x0 := inner.position.x
 	var x1 := inner.end.x
 	var z0 := inner.position.y
@@ -190,6 +206,62 @@ func _walls(town) -> void:
 		x += 4.0
 
 
+## Issue #237: the round room's walls: the same wainscot and drapes, in straight
+## runs round the curve, clear of its gaps (the door, the tower) and the back bar.
+func _round_walls(town) -> void:
+	var panel := ClubTextures.panels(Color("#3e2414"), 1.1)
+	var rail := ClubTextures.brushed(Color("#b08e50"), 0.9)
+	var velvet := ClubTextures.velvet(Color("#5a1420"))
+	var keep_out := _round_keep_out(town)
+	var run := 2.4
+	var n := int(TAU * round_r / run)
+	for i in n:
+		var a := TAU * (i + 0.5) / n
+		if _round_blocked(keep_out, a, run * 0.5 / round_r):
+			continue
+		var at := _on_wall(a, 0.03)
+		_slab_at(Vector3(run, 1.3, 0.05), at, 0.65, panel)
+		_slab_at(Vector3(run, 0.05, 0.09), _on_wall(a, 0.05), 1.32, rail)
+		if i % 2 == 0:
+			var h := minf(4.2, ceiling - 3.0)
+			_slab_at(Vector3(run * 0.9, h, 0.06), _on_wall(a, 0.07), 1.45 + h * 0.5, velvet)
+			_slab_at(Vector3(run, 0.08, 0.12), _on_wall(a, 0.09), 1.45 + h + 0.04, rail)
+
+
+## Angle ranges [centre, half] (radians, round the room's centre) kept clear of
+## wall dressing: the ring's gaps and the back bar behind the counter.
+func _round_keep_out(town) -> Array:
+	var out: Array = []
+	var info := RingWall.info(town.get_box("cantina_body"))
+	for g in info.gaps:
+		out.append([float(g[0]), float(g[1]) + 0.12])
+	var counter: Dictionary = town.get_box("bar_counter")
+	if not counter.is_empty():
+		var cz := (float(counter.min[2]) + float(counter.max[2])) * 0.5 - round_c.z
+		var half := (float(counter.max[2]) - float(counter.min[2])) * 0.5 + 1.2
+		out.append([atan2(cz, -sqrt(maxf(round_r * round_r - cz * cz, 0.0))), asin(clampf(half / round_r, 0.0, 1.0))])
+	return out
+
+
+func _round_blocked(keep_out: Array, a: float, half: float) -> bool:
+	for k in keep_out:
+		if absf(wrapf(a - float(k[0]), -PI, PI)) < float(k[1]) + half:
+			return true
+	return false
+
+
+## A point on the inside of the round wall at angle `a`, `off` metres in from it,
+## with the yaw that faces it into the room (local +z inward, x along the wall).
+func _on_wall(a: float, off: float) -> Transform3D:
+	var d := Vector3(cos(a), 0, sin(a))
+	return Transform3D(Basis(Vector3.UP, atan2(-d.x, -d.z)), round_c + d * (round_r - off))
+
+
+func _slab_at(size: Vector3, at: Transform3D, y: float, mat: Material) -> void:
+	var mi := _slab(size, Vector3.ZERO, mat)
+	mi.transform = Transform3D(at.basis, at.origin + Vector3(0, y, 0))
+
+
 ## Leather booths along the side walls, each with a candlelit table.
 func _booths(town) -> void:
 	var x0 := inner.position.x
@@ -206,6 +278,11 @@ func _booths(town) -> void:
 		var p: Vector3 = s[0]
 		var yaw: float = s[1]
 		var len: float = s[2]
+		if round_r > 0.0:
+			# Issue #237: the same spot, on the curved wall, facing into the room.
+			var at := _on_wall(atan2(p.z - round_c.z, p.x - round_c.x), 0.05 + len * len / (8.0 * round_r))
+			p = at.origin
+			yaw = at.basis.get_euler().y
 		props.booth(Transform3D(Basis(Vector3.UP, yaw), p), len, Color("#5a1e1a"))
 		var fwd := Basis(Vector3.UP, yaw) * Vector3(0, 0, 1)
 		props.cocktail_table(p + fwd * 1.15, 0.38, 0.72)
@@ -249,6 +326,8 @@ func _sign(town) -> void:
 	var y := 5.6 if ceiling > 7.0 else ceiling - 1.4
 	if not counter.is_empty():
 		zc = (float(counter.min[2]) + float(counter.max[2])) * 0.5
+	if round_r > 0.0:          # issue #237: on the curved back wall, its widest point clear of it
+		x = round_c.x - sqrt(maxf(round_r * round_r - pow(absf(zc - round_c.z) + 1.4, 2.0), 0.0)) + 0.12
 	var pink := Color("#ff4aa0")
 	var teal := Color("#3fe8d8")
 	var amber := Color("#ffb040")
@@ -282,6 +361,9 @@ func _piano_and_sax(_town) -> void:
 	if stage_r <= 0.0:
 		return
 	var z1 := inner.end.y
+	if round_r > 0.0:          # issue #237: against the curved north wall
+		var dx := stage_c.x - 4.6 - round_c.x
+		z1 = round_c.z + sqrt(maxf(round_r * round_r - pow(absf(dx) + 0.8, 2.0), 0.0)) - 0.2
 	var root := props._group("Piano", Transform3D(Basis(Vector3.UP, PI), Vector3(stage_c.x - 4.6, 0, z1 - 0.4)))
 	var lacquer := StandardMaterial3D.new()
 	lacquer.albedo_color = Color("#0e0b0a")
