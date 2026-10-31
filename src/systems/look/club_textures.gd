@@ -65,6 +65,45 @@ static func plate(tint := Color("#5a5c62")) -> StandardMaterial3D:
 	return _mat("plate_" + tint.to_html(), func(): return _paint_plate(tint), 2.5, 0.38, 0.8, 1.2)
 
 
+## #269 cleanup: rusty hull plating: riveted steel plates, two to a `plate`-metre
+## tile, rust blooming out of the seams and running down in streaks.
+static func rust(tint := Color("#5a5450"), plate := 3.2) -> StandardMaterial3D:
+	return _mat("rust_%s_%s" % [tint.to_html(), plate], func(): return _paint_rust(tint), 1.0 / plate, 0.82, 0.45, 1.1)
+
+
+## #269 cleanup: a solar panel: navy cells `cell` metres across in a dark frame,
+## the lines between them glowing `line` (emission from the same tile).
+static func solar(line := Color("#3aa8ff"), cell := 0.5, energy := 1.4) -> StandardMaterial3D:
+	var key := "solar_%s_%s_%s" % [line.to_html(), cell, energy]
+	if _mats.has(key):
+		return _mats[key]
+	var m := _mat("solar_base_%s" % cell, func(): return _paint_solar(), 1.0 / (cell * 4.0), 0.5, 0.15, 0.6).duplicate() as StandardMaterial3D
+	if not _images.has("solar_glow"):
+		var g := _paint_solar_glow()
+		g.generate_mipmaps()
+		_images["solar_glow"] = ImageTexture.create_from_image(g)
+	m.emission_enabled = true
+	m.emission_texture = _images["solar_glow"]
+	m.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY     # only the lines glow
+	m.emission = line
+	m.emission_energy_multiplier = energy
+	_mats[key] = m
+	return m
+
+
+## #269 cleanup: the same material mapped in the mesh's own space instead of the
+## world's, for things that move (the barge): world triplanar slides the pattern
+## across a moving hull. Cached per material.
+static func local(m: StandardMaterial3D) -> StandardMaterial3D:
+	var key := "local_%d" % m.get_instance_id()
+	if _mats.has(key):
+		return _mats[key]
+	var l := m.duplicate() as StandardMaterial3D
+	l.uv1_world_triplanar = false
+	_mats[key] = l
+	return l
+
+
 ## Emission on top of any of these (a glowing edge, a lit sign), not cached.
 static func glow(color: Color, energy := 3.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -348,3 +387,84 @@ static func _paint_plate(tint: Color) -> Array:
 			out[0].set_pixel(x, y, c)
 			out[1].set_pixel(x, y, _gray(0.85 if on else 0.4))
 	return out
+
+
+## #269 cleanup: steel plates with a seam and a row of rivets round each, rust in
+## patches that grow out of the seams, and streaks running down from them.
+static func _paint_rust(tint: Color) -> Array:
+	var out := _pair()
+	var patch := _noise(71, 0.018, 4)
+	var pit := _noise(73, 0.15, 2)
+	var streak := _noise(79, 0.05, 2)
+	var orange := Color("#8a4a22")
+	var dark := Color("#4a2a18")
+	var plates := 2
+	var pw := TEX / plates
+	for y in TEX:
+		for x in TEX:
+			var u := x % pw
+			var v := (y + (pw / 2 if (x / pw) % 2 == 1 else 0)) % pw
+			var e := mini(mini(u, pw - 1 - u), mini(v, pw - 1 - v))
+			var seam := e < 2
+			var rivet := e >= 5 and e <= 8 and (u + v) % 14 < 4 and (e == 6 or e == 7)
+			var near_seam := clampf(1.0 - float(e) / 40.0, 0.0, 1.0)
+			# Streaks: noise squeezed across x and stretched down y, so they run.
+			var s := streak.get_pixel((x * 5) % TEX, (y / 3) % TEX).r
+			var r := clampf((patch.get_pixel(x, y).r - 0.48) * 4.0 + near_seam * 0.6 + (s - 0.55) * 1.2, 0.0, 1.0)
+			var p := pit.get_pixel(x, y).r
+			var c := tint * (0.85 + p * 0.3)
+			c = c.lerp(orange * (0.8 + p * 0.4), r * 0.85)
+			c = c.lerp(dark, clampf(r - 0.6, 0.0, 1.0) * 1.5)
+			var h := 0.55 - r * 0.15 * p
+			if seam:
+				c = c.darkened(0.55)
+				h = 0.15
+			elif rivet:
+				c = c.lightened(0.12)
+				h = 0.9
+			c.a = 1.0
+			out[0].set_pixel(x, y, c)
+			out[1].set_pixel(x, y, _gray(h))
+	return out
+
+
+## #269 cleanup: 4 x 4 navy cells a tile, each with a faint crystal grain and two thin
+## bus bars, in a dark frame.
+static func _paint_solar() -> Array:
+	var out := _pair()
+	var grain := _noise(83, 0.2, 2)
+	var navy := Color("#0e1c3e")
+	var cell := TEX / 4
+	for y in TEX:
+		for x in TEX:
+			var u := x % cell
+			var v := y % cell
+			var e := mini(mini(u, cell - 1 - u), mini(v, cell - 1 - v))
+			var g := grain.get_pixel(x, y).r
+			var c := navy * (0.85 + g * 0.35)
+			var h := 0.6
+			if e < 3:
+				c = Color("#05080f")
+				h = 0.3
+			elif u == cell / 3 or u == cell * 2 / 3:
+				c = navy.lightened(0.25)
+				h = 0.65
+			c.a = 1.0
+			out[0].set_pixel(x, y, c)
+			out[1].set_pixel(x, y, _gray(h))
+	return out
+
+
+## #269 cleanup: the glow of the solar tile: a thin bright line down the middle of
+## each gap between cells (thin, so far off it doesn't wash the navy out).
+static func _paint_solar_glow() -> Image:
+	var img := Image.create(TEX, TEX, false, Image.FORMAT_RGBA8)
+	var cell := TEX / 4
+	for y in TEX:
+		for x in TEX:
+			var u := x % cell
+			var v := y % cell
+			var d := float(mini(mini(u, cell - 1 - u), mini(v, cell - 1 - v)))
+			var k := clampf(1.0 - d / 1.5, 0.0, 1.0)
+			img.set_pixel(x, y, _gray(k))
+	return img

@@ -21,25 +21,24 @@ speeder trace was updated but not run.
 - **Speeders past the fourth park on top of the first spots**, as before.
 
 ## After issue #269, the party barge (2026-10-31)
+## After the party barge cleanup (issue #269 follow-up, 2026-10-31)
 
-**Checked:** one headless trace run (`scenes/barge_trace.gd`, every step
-passed) and three rendered stills. The full test suite was not run. Walking up
-the gangplank and down the inside ramps was **not** tried by hand; the trace
-puts the player on each deck directly.
+**Checked:** the barge trace, run as a main scene (every line true), and rendered
+stills. The full test suite was not run. The `-s` way CI runs the traces fails
+to compile right now for every trace that touches WorldState ("Identifier not
+found: NpcVoice"); that is not the barge's doing.
 
-- **The partygoers are look-only.** You walk through them, they can't be hurt
-  and they don't talk. Only the boss can be hit.
-- **The guards don't fight.** Hurting the boss doesn't make anyone hostile.
+- **It floats level along the planet's up, not the dunes.** It lifts to keep
+  the sand under its ends below the keel, but it never tilts.
+- **It only stops for the world's data** (boxes, rocks, columns). A parked ship
+  or a speeder is not in the way.
 - **The barge goes back home on a reload.** Ownership is saved; where you
-  parked it is not.
-- **It floats level along the planet's up, not the dunes.** Big dunes poke
-  through the hull, and the gangplank's foot can hang above the sand or sink
-  into it.
-- **The hull is plain boxes** in flat colours (no planks, no shader yet).
-- **Driving: the player is pinned at the wheel.** You can't walk around the deck
-  while it moves.
-- **The cantina still has no on-stage band.** The barge's band is built in
-  party_barge.gd and isn't shared with the cantina yet.
+  parked it is not, and nor is a wreck.
+- **The dead fall over stiffly** (a tip backwards, not a ragdoll), so they ride
+  along with the deck.
+- **The band and DJ are look-only bodies** posed by the barge (ClubMoves, the
+  cantina's instruments), not NpcBody performers like the cantina's.
+
 ## After issue #266, the beetle-centipede beast (2026-10-31)
 
 **Checked:** the headless beast trace (`scenes/beast_trace.gd`, every step
