@@ -235,15 +235,18 @@ func test_segment_rect() -> void:
 
 
 func test_town_has_cover_at_the_gate() -> void:
-	var t = preload("res://src/systems/world/town_layout.gd").new()
-	t.load_town("port_town")
-	var spots := CoverPicker.candidates(t.boxes(), t.marker_pos("gate"), 28.0)
-	var outside := Vector3(110, 0, 0)
-	var hiding := 0
-	for s in spots:
-		if (s.pos as Vector3).x < 98.0 and CoverPicker.covers(s, outside):
-			hiding += 1
-	assert_gte(hiding, 4, "the barricades and walls give the guards somewhere to hide from the desert side")
+	# Issue #237: in both ports, measured from the gate.
+	for layout in ["port_square", "port_round"]:
+		var t = preload("res://src/systems/world/town_layout.gd").new()
+		t.load_town("port_town", layout)
+		var gate: Vector3 = t.marker_pos("gate")
+		var spots := CoverPicker.candidates(t.boxes(), gate, 28.0)
+		var outside := gate + Vector3(11, 0, 0)
+		var hiding := 0
+		for s in spots:
+			if (s.pos as Vector3).x < gate.x - 1.0 and CoverPicker.covers(s, outside):
+				hiding += 1
+		assert_gte(hiding, 4, "%s: the barricades and walls give the guards somewhere to hide from the desert side" % layout)
 
 
 # ------------------------------------------------------------------ player health

@@ -9,15 +9,25 @@ const StairTower := preload("res://src/systems/world/stair_tower.gd")
 const CharacterController := preload("res://src/systems/player/character_controller.gd")
 
 
+## Issue #237: the home port is round now; the tests written for the square port
+## keep running against it, as the saved layout port_square.
 func _town() -> TownLayout:
 	var t := TownLayout.new()
-	assert_true(t.load_town("port_town"), "port_town loads from content/core")
+	assert_true(t.load_town("port_town", "port_square"), "port_square loads from content/core")
 	return t
+
+
+func test_home_port_is_round() -> void:
+	var t := TownLayout.new()
+	assert_true(t.load_town("port_town"), "port_town loads from content/core")
+	assert_eq(str(t.data.layout), "port_round", "the home planet builds the round port")
+	assert_eq(t.validate(), [], "and it is valid")
 
 
 ## Issue #237: port_town is its planet's saved layout, and either layout loads.
 func test_port_town_is_a_saved_layout() -> void:
-	var t := _town()
+	var t := TownLayout.new()
+	assert_true(t.load_town("port_town"))
 	assert_eq(str(t.data.id), "port_town")
 	assert_ne(str(t.data.get("layout", "")), "", "built to a named layout")
 	var sq := TownLayout.new()
