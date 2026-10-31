@@ -47,6 +47,8 @@ const DROID_LAYER := 2              ## bolts' sweep rays find them; bodies walk 
 const TRAIL_STEP_S := 0.25          ## how often your trail drops a point
 const REJOIN_LAG_S := 5.0           ## a lost droid turns up where you were this long ago...
 const REJOIN_MAX := 25.0            ## ...or nearer, if that is further back than this (m)
+const BLOCK_PROBE_H := 0.5          ## an engaged droid looks for walls this high off the ground (m)...
+const BLOCK_PROBE_R := 0.4          ## ...this far past its next step (about half a body)
 
 var demo                            ## the town scene (town, terrain, garrison, npcs, training_range)
 var player: CharacterBody3D
@@ -827,8 +829,10 @@ func _follow(dt: float) -> void:
 		elif u.engaged != null and is_instance_valid(u.engaged):
 			var to_goal := _flat(_advance_goal(u) - pos, _up(pos))
 			if to_goal.length() > 0.15:
-				speed = float(f.get("speed", 7.0)) * 0.7
-				pos += to_goal.normalized() * minf(speed * dt, to_goal.length())
+				var step := to_goal.normalized() * minf(float(f.get("speed", 7.0)) * 0.7 * dt, to_goal.length())
+				if not _blocked(u, pos, step):
+					speed = float(f.get("speed", 7.0)) * 0.7
+					pos += step
 			_face(u, u.engaged.global_position - pos)
 		elif u.following:
 			speed = float(f.get("speed", 7.0)) * (0.85 + me.y * 0.3) * (2.0 if dist > 8.0 else clampf(dist / 1.5, 0.3, 1.0))
@@ -850,6 +854,21 @@ func _advance_goal(u: DroidUnit) -> Vector3:
 	var to := _flat(u.engaged.global_position - u.engage_from, up)
 	var reach := minf(float(e.get("advance", 7.5)), maxf(0.0, to.length() - float(e.get("standoff", 3.0))))
 	return u.engage_from + (to.normalized() * reach if to.length() > 0.01 else Vector3.ZERO)
+
+
+## Whether a step from `at` runs u into something (a wall, a crate, a hull): a ray
+## at knee height a body's width past the step. An engaged droid that would hit one
+## stops where it is and fights from there; once the fight is over it trails back
+## to you as usual. Sloped ground (a dune, a ramp) does not count.
+func _blocked(u: DroidUnit, at: Vector3, step: Vector3) -> bool:
+	if not is_inside_tree() or step.length() < 0.001:
+		return false
+	var up := _up(at)
+	var from := at + up * BLOCK_PROBE_H
+	var q := PhysicsRayQueryParameters3D.create(from, from + step + step.normalized() * BLOCK_PROBE_R, 1)
+	q.exclude = [u.get_rid(), player.get_rid()] if player != null else [u.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return not hit.is_empty() and (hit.normal as Vector3).dot(up) < 0.7
 
 
 ## Go after what it sees (a kind with "engage"), keep after it while it lives, and
