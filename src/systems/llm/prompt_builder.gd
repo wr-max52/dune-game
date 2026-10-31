@@ -30,6 +30,7 @@ const ACTION_DOCS := {
 	"call_guards": '{"type": "call_guards"}  only if they threaten you or keep insulting you',
 	"let_go": '{"type": "let_go"}  when you are done with them and let them go on their way (this ends the talk)',
 	"search": '{"type": "search"}  when you order your guards to search them (this ends the talk)',
+	"club_vibe": '{"type": "club_vibe", "mood": "<one of THE BAND CAN PLAY>"}  when they ask for different music ("something harder", "slow it down"): free, and you never refuse',
 }
 ## A card with no "actions" list gets the Cantina Owner's set (the M12 default).
 const DEFAULT_ACTIONS := ["share_rumor", "offer_job", "hint_secret", "pour_drink", "trust", "refuse_topic", "end_conversation", "call_guards"]
@@ -153,6 +154,10 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 		L.append("WHAT YOU WANT FROM THE PLAYER NOW: " + str(world.story))   # issue #64
 	L.append("YOU FEEL: %s. YOUR TRUST IN THE PLAYER: %d/100 (%s). VISITS: %d." % [rel.mood, rel.trust, rel.tier(), rel.visits])
 	L.append("PLAYER'S CREDITS: %d. THEIR TAB: %d." % [int(world.get("credits", 0)), rel.tab])
+	# Issue #261: the club's moods, for a music request (club_vibe).
+	var moods: Array = world.get("club_moods", []) if actions().has("club_vibe") else []
+	if not moods.is_empty():
+		L.append("THE BAND CAN PLAY: " + ", ".join(PackedStringArray(moods)) + ".")
 	var rumor_ids: Array = []
 	if rumors.is_empty():
 		L.append("YOU KNOW AND MAY SHARE: nothing new worth repeating.")
@@ -193,7 +198,7 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 	return {
 		"message": { "role": "system", "content": "YOUR BRIEFING (true right now):\n" + "\n".join(L) },
 		"ids": { "rumors": rumor_ids, "jobs": job_ids, "secrets": secret_ids, "drinks": drinks,
-			"allowed": actions(), "sale": card.get("sale", {}), "ships": ship_ids },
+			"allowed": actions(), "sale": card.get("sale", {}), "ships": ship_ids, "moods": moods },
 	}
 
 

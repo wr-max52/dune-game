@@ -13,7 +13,7 @@ const TRUST_PER_VISIT := 6
 const GUARDS_MAX_TRUST := 15
 
 ## briefing: the ids she was shown { rumors: [..], jobs: [..], secrets: [..], drinks: {id: {name, price}},
-##   ships: {id: {name, price}} }
+##   ships: {id: {name, price}}, moods: [..] (issue #261: what the club's band can play) }
 ## ctx: { trust, trust_this_visit, hostile (bool), insults (int) }
 ## -> { kept: [..], dropped: [{action, why}] }
 static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> Dictionary:
@@ -78,6 +78,14 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["id"] = sid
 					out["name"] = str(ships[sid].name)
 					out["price"] = int(ships[sid].price)          # the game's price, never the model's
+			"club_vibe":
+				# Issue #261: a music request. Free and never refused, but only a mood
+				# the club's playlist has.
+				var mood := str(a.get("mood", "")).to_lower().strip_edges()
+				if not (briefing.get("moods", []) as Array).has(mood):
+					why = "not a mood the band plays"
+				else:
+					out["mood"] = mood
 			"refuse_topic", "end_conversation", "comrade":
 				pass
 			"let_go", "search":
