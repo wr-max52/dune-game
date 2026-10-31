@@ -241,8 +241,7 @@ func interact() -> String:
 	match str(focus.get("kind", "")):
 		"vendor":
 			_select_vendor(int(focus.get("site", -1)))
-			_open_menu(_l("menu_trade") % [_vendor_label(int(focus.get("site", -1))), WorldState.credits,
-				roster().owned.size(), DroidRoster.max_owned()], trade_options(), _on_trade)
+			_open_trade(int(focus.get("site", -1)))
 			return "menu"
 		"wreck":
 			var uid := int(focus.uid)
@@ -303,13 +302,25 @@ func _at_post() -> bool:
 	return false
 
 
-func _on_trade(id: String) -> void:
+## keep_cursor: open again after a buy or a sale, the cursor where it was.
+func _open_trade(site: int, keep_cursor := false) -> void:
+	var title := _l("menu_trade") % [_vendor_label(site), WorldState.credits, roster().owned.size(), DroidRoster.max_owned()]
+	if keep_cursor:
+		menu.open(title, trade_options(), _on_trade.bind(site), "", true)
+	else:
+		_open_menu(title, trade_options(), _on_trade.bind(site))
+
+
+## A buy or a sale leaves the stall open (Esc walks away).
+func _on_trade(id: String, site: int) -> void:
 	if id.begins_with("buy:"):
 		buy(id.substr(4))
 	elif id.begins_with("sell:"):
 		sell(int(id.substr(5)))
 	elif id.begins_with("deliver:"):
 		deliver(int(id.substr(8)))
+	if id != "":
+		_open_trade(site, true)
 
 
 ## Issue #212: hand a droid over for Oda's friend (no pay: it is a favour to

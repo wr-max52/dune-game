@@ -921,8 +921,9 @@ func trade_pack() -> Dictionary:
 
 
 ## Issue #211: E at a friendly pack's leader: food for quartz as ever, or any of
-## their goods (whatever the town's vendors sell) for meat.
-func open_trade(p: Dictionary) -> void:
+## their goods (whatever the town's vendors sell) for meat. A trade leaves the
+## menu open (Esc walks away); keep_cursor holds the cursor where it was.
+func open_trade(p: Dictionary, keep_cursor := false) -> void:
 	if menu == null:
 		menu = DroidMenu.new()
 		add_child(menu)
@@ -934,13 +935,18 @@ func open_trade(p: Dictionary) -> void:
 	var lock: bool = player != null and not bool(player.get("locked"))
 	if lock:
 		player.locked = true
-	menu.open(_line("trade_menu") % [str(p.label), WorldState.inventory.count("food")], opts, func(id):
+	var pick := func(id: String) -> void:
 		if lock:
 			player.locked = false
+		if id == "":
+			return
 		if id == "quartz":
 			trade(str(p.id))
-		elif id != "":
-			trade_goods(str(p.id), id))
+		else:
+			trade_goods(str(p.id), id)
+		if bool(p.rec.friendly):
+			open_trade(p, true)
+	menu.open(_line("trade_menu") % [str(p.label), WorldState.inventory.count("food")], opts, pick, "", keep_cursor)
 
 
 ## The goods a pack trades for meat: [{ item, food }].
