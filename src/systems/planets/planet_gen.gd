@@ -18,6 +18,9 @@ extends RefCounted
 ##   natives   -- issue #96: its native packs and wild animals (NativesData.resolve)
 ##   beast     -- its beast, if it has one: the "beast" block of its file ({} if none;
 ##                PlanetBeast.config lays it over content/core/hazards/beast.json)
+##   barge     -- issue #269: its party barge, if it has one: the "barge" block of its
+##                file ({} if none; PartyBarge.config lays it over
+##                content/core/barges/party_barge.json)
 ##
 ## Pure and cheap: no nodes. Town scenes ask for the current planet
 ## (GameFlow.planet()); tests can build any planet without a scene.
@@ -154,6 +157,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 		"neighbours": neighbours(id, cc),
 		"natives": natives,
 		"beast": cfg.get("beast", {}),
+		"barge": cfg.get("barge", {}),
 	}
 
 

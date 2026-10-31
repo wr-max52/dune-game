@@ -42,8 +42,14 @@ extends Node
 ##     takes damage; in space the fight's own hits and kills), being hit flashes the
 ##     screen's edge red, and the HUD is a flight-sim HUD in the chase view and a
 ##     cockpit with working instruments in the cockpit view (FlightHud).
+##   - issue #275: hold B in the air (not in space, a fight or the opening landing)
+##     to eject: you are thrown clear with the ship's speed and fall on foot (falls
+##     hurt, issue #274). Issue #276: the empty ship goes ADRIFT (AtmoFlight): zero
+##     throttle, her momentum and gravity bring her down. Damaged by the fall she
+##     crashes and is towed home like any crash; slow enough, she rests where she
+##     came down and you can walk back to her.
 ##
-## The headless trace drives it with board(), takeoff(), land(), exit_ship() and
+## The headless trace drives it with board(), takeoff(), land(), exit_ship(), eject() and
 ## set_external_command(): the same code paths the keys use.
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
@@ -58,6 +64,7 @@ const CRASH_TOW_TIME := 2.5
 
 signal boarded
 signal exited
+signal ejected                   ## issue #275: out of the seat in the air
 signal left_atmosphere
 signal fight_started
 signal fight_ended(outcome: String)
@@ -118,6 +125,8 @@ var dockings := 0                 ## times that brought her down there (traces, 
 var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
 var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
+var ejections := 0                ## issue #275: times the pilot ejected (traces, tests)
+var _eject_hold := 0.0            ## seconds B has been held
 
 
 func setup(town_scene) -> void:
@@ -399,8 +408,13 @@ func nearest_berth() -> int:
 	var reach := float(pad.get("board_reach", 9.0))
 	var best := -1
 	var best_d := INF
+	# Issue #276: while the ship you ejected from is still coming down (or waiting
+	# for her tow) she is the berth flown: no switching to another until she is down.
+	var settling := atmo.state == AtmoFlight.State.ADRIFT or crash_left >= 0.0
 	for i in berths.size():
 		if i == berth and atmo.state != AtmoFlight.State.PARKED:
+			continue
+		if i != berth and settling:
 			continue
 		if bool(berths[i].get("destroyed", false)):
 			continue
@@ -457,8 +471,63 @@ func board() -> bool:
 func exit_ship() -> bool:
 	if not piloting or atmo.state != AtmoFlight.State.PARKED:
 		return false
-	var p := player()
 	var spot := _exit_spot()
+	_leave_seat(spot)
+	if opening:
+		opening = false
+		chase.fit_to(_look_length())
+		Story.event("landed")          # issue #202: out of the ship; the general is waiting
+	exited.emit()
+	return true
+
+
+## Issue #275: B held in the air. Not on the ground (E gets you out), in space or a
+## fight, or while an autopilot the story needs has her.
+func can_eject() -> bool:
+	return piloting and not opening and not docking and fight == null \
+		and (atmo.state == AtmoFlight.State.FLYING or atmo.state == AtmoFlight.State.LANDING) \
+		and atmo.altitude() < atmo.space_altitude
+
+
+## Out of the seat in mid air: thrown clear (above and behind) with the ship's own
+## speed and a kick up, falling on foot from there. The empty ship flies on ADRIFT.
+func eject() -> bool:
+	if not can_eject():
+		return false
+	var u := atmo.up()
+	var v: Vector3 = atmo.flight.velocity()
+	var b: Basis = atmo.flight.basis
+	var spot := atmo.position() + u * (atmo.clearance + GameFlow.setting("eject_clear_up", 4.0)) \
+		+ b.z * GameFlow.setting("eject_clear_back", 6.0)
+	bay_landing = false
+	_eject_hold = 0.0
+	if atmo.state == AtmoFlight.State.LANDING:
+		v -= u * atmo.p("land_descent", 12.0)
+	atmo.abandon()
+	_leave_seat(spot)
+	var p := player()
+	var climb := v.dot(u)
+	var flat := (v - u * climb).limit_length(GameFlow.setting("eject_push_max", 60.0))
+	var rise := u * (climb + GameFlow.setting("eject_kick", 12.0))
+	if p.has_method("launch"):
+		p.call("launch", rise, flat, GameFlow.setting("eject_push_fade", 14.0))   # her way on, fading in the air
+	else:
+		p.velocity = rise
+	if demo.terrain != null:
+		demo.terrain.prefetch(spot)
+	ejections += 1
+	var e := { "type": "ejected", "at": spot, "speed": v.length(), "altitude": atmo.altitude() }
+	e["t"] = flight_time
+	log_events.append(e)
+	ejected.emit()
+	return true
+
+
+## Out of the seat at `spot`: the player is back on foot (seen, solid, moving), the
+## camera theirs again, the flight HUD gone. Motion is cleared: an ejection
+## gives them the ship's afterwards.
+func _leave_seat(spot: Vector3) -> void:
+	var p := player()
 	piloting = false
 	_motion_basis_valid = false
 	if demo.detail != null:
@@ -492,13 +561,7 @@ func exit_ship() -> bool:
 	_ground_follow(p)
 	hud.visible = false
 	if sky != null:
-		sky.update_for(0.0, spot)
-	if opening:
-		opening = false
-		chase.fit_to(_look_length())
-		Story.event("landed")          # issue #202: out of the ship; the general is waiting
-	exited.emit()
-	return true
+		sky.update_for(ground.altitude(spot), spot)
 
 
 func takeoff() -> bool:
@@ -803,6 +866,8 @@ func _physics_process(dt: float) -> void:
 		return
 	if not piloting:
 		_on_foot()
+		if atmo.state == AtmoFlight.State.ADRIFT:
+			_adrift_step(dt)
 	else:
 		_seated(dt)
 	_engine_step()
@@ -880,6 +945,14 @@ func _on_foot() -> void:
 		board()
 
 
+## Issue #276: the empty ship after an ejection, coming down on her own. Her
+## crash (or her touchdown) goes through the same events as a flown ship's.
+func _adrift_step(dt: float) -> void:
+	for e in atmo.step(dt):
+		_on_event(e)
+	_sync_visual()
+
+
 func _seated(dt: float) -> void:
 	var st := atmo.state
 	if _external.is_empty():
@@ -948,6 +1021,14 @@ func _read_keys(dt: float) -> void:
 		if _just("jump") or _axis("flight_throttle_down", "flight_throttle_up") > 0.5:
 			takeoff()
 		return
+	if _held("flight_eject") and can_eject():
+		if _eject_hold == 0.0:
+			hud.toast(GameFlow.label("eject_hold"), 1.0)
+		_eject_hold += dt
+		if _eject_hold >= GameFlow.setting("eject_hold", 0.5) and eject():
+			return
+	else:
+		_eject_hold = 0.0
 	if st == AtmoFlight.State.FLYING and _just("crouch_act"):
 		bay_landing = false
 		docking = false
@@ -1187,10 +1268,11 @@ func _tow_home() -> void:
 	_set_hull(true)
 	_sync_visual()
 	defense = ShipDefense.new(ship_cfg)       # patched up at the pad
+	var seated := piloting
 	if piloting:
 		exit_ship()
 	if bool(berths[berth].get("stolen", false)):
-		_lose_stolen()
+		_lose_stolen(seated)
 		return
 	hud.toast(GameFlow.label("towed"), 4.0)
 	if demo.pads.size() > 0:
@@ -1354,10 +1436,12 @@ func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
 	if i < berths.size() and _parked_target(i, shooter):
 		_hit_parked(i, amount)
 		return
-	if i != berth or not piloting or fight != null or atmo.state == AtmoFlight.State.CRASHED:
+	var adrift := atmo.state == AtmoFlight.State.ADRIFT    # issue #276: the empty ship still takes hits
+	if i != berth or not (piloting or adrift) or fight != null or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	defense.apply_damage(amount)
-	hud.flash_damage()                            # issue #181
+	if piloting:
+		hud.flash_damage()                        # issue #181
 	if defense.is_alive():
 		return
 	var at := atmo.position()
@@ -1438,10 +1522,13 @@ func _steal(i: int) -> void:
 
 
 ## A stolen ship that went down is gone; you wake in the pit, flying your own again.
-func _lose_stolen() -> void:
+## Issue #276: one you ejected from just goes (you are wherever you came down).
+func _lose_stolen(wake_in_pit: bool = true) -> void:
 	var p := player()
 	var i := berth
 	_wreck_berth(i, false)
+	if not wake_in_pit:
+		return
 	if p != null and demo.town != null:
 		p.global_position = demo.town.spawn_pos() + Vector3(0, 0.05, 0)
 		if p.has_method("align_to_ground"):

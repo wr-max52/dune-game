@@ -1,0 +1,41 @@
+{
+  "id": "party_barge",
+  "note": "IP-neutral. Issue #269: a planet's party barge, a big sail barge floating over the sand that is one long party. These are the defaults every barge shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"barge\" block, which gives it a name, its boss, a home spot, and may override anything here. A band plays the planet's cantina club music on the top deck; the crowd dances on every deck, steerage included, and never stops: not when the boss is gone, not while it is driven. Buy it from the boss or beat him, and it is yours (WorldState flag barge_owned_<planet id>): take the helm and drive it, slowly, like a speeder. Read by src/systems/world/party_barge.gd.",
+  "name": "the party barge",
+  "boss": { "name": "the boss", "hp": 400, "price": 1500, "reach_m": 4.5 },
+  "home": [-420, 520],
+  "roam_m": 250.0,
+  "drift_speed": 0.7,
+  "turn_jitter_deg": 25.0,
+  "hover_m": 1.2,
+  "length": 40.0,
+  "width": 12.0,
+  "deck_gap": 3.4,
+  "drive": { "max_speed": 4.5, "reverse_speed": 1.5, "accel": 0.6, "brake": 1.2, "turn_rate": 0.22 },
+  "crowd": { "top": 12, "lower": 7, "steerage": 9 },
+  "crowd_looks": ["local", "cantina_dancer", "smuggler", "desert_nomad"],
+  "band_size": 4,
+  "guards": 2,
+  "anim_m": 160.0,
+  "colors": {
+    "hull": "#6e5034", "deck": "#a8865a", "trim": "#3a2a1c", "sail": "#d9c9a3", "sail_stripe": "#a8322a",
+    "awning": "#c9b896", "awning_stripe": "#1f7a78", "gold": "#c9a040", "lamp": "#ffb860", "steerage": "#5a4430"
+  },
+  "lines": {
+    "talk": [
+      "{boss}: Welcome aboard {name}! Nobody stops dancing on MY barge.",
+      "{boss}: You want my barge? {price} credits. Or try and take it, little one.",
+      "{boss}: Hah! Look at you. Have a drink. Have three.",
+      "{boss}: The band never stops. I pay them extra to never stop."
+    ],
+    "buy_prompt": "[E]  Buy {name} from {boss} ({price} cr)",
+    "talk_prompt": "[E]  Talk to {boss}",
+    "bought": "{boss} snatches your credits and waddles below deck to keep partying. {name} is yours.",
+    "boss_hurt": "{boss}: OW! Guards! ...Guards? Ah, they're dancing.",
+    "boss_beaten": "{boss} tumbles below deck, still laughing. {name} is yours.",
+    "helm_prompt": "[E]  Take the helm",
+    "helm_locked": "The helm is the boss's. Buy the barge or take it.",
+    "at_helm": "At the helm of {name}.  [W/S] Throttle   [A/D] Steer   [E] Let go",
+    "let_go": "You let go of the helm. The party goes on."
+  }
+}

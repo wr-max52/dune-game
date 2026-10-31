@@ -34,6 +34,8 @@ var command := { "dir": Vector2(0.0, 0.0), "sprint": false, "crouch": false, "ju
 # before step(). While it is on, upward speed is capped at max_rise (0 = no cap).
 var lift := 0.0
 var max_rise := 0.0
+# Issue #274: the fastest the body falls, m/s (0 = no cap). Only the player sets it.
+var max_fall := 0.0
 # A shove on top of the walk (m/s, world XZ): the jetpack's kick as it lights.
 # It fades by push_fade m/s every second and ends when you touch the ground.
 var push := Vector3.ZERO
@@ -183,6 +185,8 @@ func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 		velocity.y += (lift - gravity) * delta
 		if lift > 0.0 and max_rise > 0.0:
 			velocity.y = minf(velocity.y, max_rise)
+		if max_fall > 0.0:
+			velocity.y = maxf(velocity.y, -max_fall)
 
 	# Ground contact.
 	if body_pos.y + velocity.y * delta <= ground_y:
