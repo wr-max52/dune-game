@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The round port (issue #237, parts 1 and 2, 2026-10-31)
+
+- **Towns are saved layouts.** Today's port is kept as `port_square` (size 50)
+  in `content/core/towns/`, and a planet picks its layout with `town_layout`.
+  The town is still `port_town` whichever layout it has, so saves carry over.
+- **A second layout: the round port** (`port_round`, size 67). A round wall,
+  about twice the floor space (61,600 m² inside), two manned gate towers, a
+  76 m bowl with eight surface pads round it, and huts and towers that wrap
+  round the back until they nearly meet behind the cantina, with only the back
+  lane to the back gate between them. The market, barracks and cantina are
+  today's for now; they grow in the next parts.
+- **The home planet still uses the square port** until the round one is done.
+  F11 > World > Town builds it to the round one for the rest of the run.
+- **New box kind `ring`**: a round wall cut open at gates, which any layout can
+  use. The validators check it (V9).
+- `tools/town/gen_port_round.py` makes the round port from the numbers in
+  `town_kit.json` (`round`). Don't edit the layout file by hand.
+
 ## The moon's dome rave (issue #261, part 2, 2026-10-31)
 
 - **Grit Station's whole dome is the club now.** The cantina building and the

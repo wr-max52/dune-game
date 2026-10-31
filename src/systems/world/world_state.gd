@@ -481,6 +481,17 @@ static func _roll_smuggle(j: Dictionary) -> void:
 	var goods: Array = j.get("goods", [])
 	var d = _read_json(PICKUP_DIR + "/" + str(j.get("location", "")) + ".json")
 	var areas: Array = d.get("drops", {}).get("areas", []) if d is Dictionary else []
+	# Issue #237: in a town built to a saved layout, an area's "layouts" block (its
+	# spots in that layout) is laid over it.
+	if str(j.get("location", "")) == current_town_id():
+		var layout := str(GameFlow.planet().get("town", {}).get("layout", ""))
+		areas = areas.map(func(a):
+			var over: Dictionary = a.get("layouts", {}).get(layout, {})
+			if over.is_empty():
+				return a
+			var m: Dictionary = a.duplicate(true)
+			m.merge(over, true)
+			return m)
 	var last := str(smuggle.get("area", ""))
 	var choices := areas.filter(func(a): return str(a.get("id", "")) != last and not (a.get("spots", []) as Array).is_empty())
 	if goods.is_empty() or choices.is_empty():
