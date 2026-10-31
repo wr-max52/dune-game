@@ -2,6 +2,12 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Tab cycles weapons (2026-10-31)
+
+- **Tab steps through your weapons**: pistol, blade, rifle, then empty hands,
+  then back to the pistol. It skips any weapon you don't have yet. T-89's
+  tutorial now mentions it.
+
 ## The new frigate (2026-10-31)
 
 - **The Frigatebird has a new model.** It is the strongest ship and the big
