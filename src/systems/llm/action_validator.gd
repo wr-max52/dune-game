@@ -78,6 +78,15 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["id"] = sid
 					out["name"] = str(ships[sid].name)
 					out["price"] = int(ships[sid].price)          # the game's price, never the model's
+			"offer_ship_buy":
+				# Issue #295: only the ship the game says is parked by his post, at the game's price.
+				var sb: Dictionary = briefing.get("ship_buy", {})
+				if sb.is_empty() or str(a.get("id", sb.get("id", ""))) != str(sb.get("id", "")):
+					why = "no such ship to buy"
+				else:
+					out["id"] = str(sb.id)
+					out["name"] = str(sb.name)
+					out["price"] = int(sb.price)          # the game's price, never the model's
 			"club_vibe":
 				# Issue #261: a music request. Free and never refused, but only a mood
 				# the club's playlist has.

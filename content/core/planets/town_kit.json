@@ -79,7 +79,12 @@
     },
     "back_gate": {
       "deg": -166.0,
-      "half": 1.5
+      "half": 2.0,
+      "note": "Issue #295: just wide enough for a speeder (body_radius 1.3, so 2.6 m across) to drive through with room to spare: about 3.9 m between the wall pieces."
+    },
+    "skrugs_yard": {
+      "rect": [-139.0, -30.0, -117.0, 10.0],
+      "note": "Issue #295: Skrugs's yard right behind the cantina, between its round body and the wall ([x0, z0, x1, z1], town frame). The towers, their clutter and the hiding places keep out of it, and it is its own zone; his house, stall, garage and display pad are the skrugs_post landmark (content/core/locations/skrugs_post_round.json), not town boxes. The stair tower at z 11..17 stays where it is."
     },
     "ground_strip": 6.5,
     "ground_overhang": 4.0,

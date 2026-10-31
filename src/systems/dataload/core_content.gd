@@ -246,12 +246,35 @@ func get_world(id: String) -> Dictionary:
 	return worlds.get(id, {})
 
 
-## The world a town sits in (an empty dictionary when none names it).
-func world_for_town(town_id: String) -> Dictionary:
+## The world a town sits in (an empty dictionary when none names it), its
+## landmarks where they stand in a town built to `layout` (issue #295; "" = the
+## layout the town's planet names).
+func world_for_town(town_id: String, layout: String = "") -> Dictionary:
 	for id in worlds:
 		if str(worlds[id].get("town", "")) == town_id:
-			return worlds[id]
+			return resolve_layout(worlds[id], layout if layout != "" else layout_of(town_id))
 	return {}
+
+
+## Issue #295: the saved layout the planet holding `town_id` is built to ("" if none).
+func layout_of(town_id: String) -> String:
+	for pid in planets:
+		if str(planets[pid].get("town", "")) == town_id:
+			return str(planets[pid].get("town_layout", ""))
+	return ""
+
+
+## Issue #295: a copy of `world` with each landmark where it stands in a town built
+## to `layout`: its "layouts": { <layout>: { at, yaw_deg, location } } block is laid
+## over it and dropped, so every reader (the ground, SpeederPost, the tests) sees
+## one landmark in one place. A layout it has no block for keeps its own fields.
+static func resolve_layout(world: Dictionary, layout: String) -> Dictionary:
+	var out: Dictionary = world.duplicate(true)
+	for lm in out.get("landmarks", []):
+		var over: Dictionary = lm.get("layouts", {}).get(layout, {})
+		lm.erase("layouts")
+		lm.merge(over, true)
+	return out
 
 
 ## Vendors whose stall is in a location.

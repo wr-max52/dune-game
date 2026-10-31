@@ -88,11 +88,26 @@
     },
     {
       "id": "skrugs_post",
-      "note": "Issue #237: out in the sand about 90 m past the round port's back gate, straight out from it, far enough that a speeder starts to make sense. +x faces the gate.",
+      "note": "Issue #295: Skrugs's post, a different place in each town layout ('layouts', resolved once by CoreContent.resolve_layout where the world is loaded). Round port: his yard inside the wall right behind the cantina (skrugs_post_round, turned so +x faces the back lane). Square port: out in the sand past its back gate, where it stood before issue #237 (skrugs_post, +x facing the gate).",
       "kind": "location",
-      "location": "skrugs_post",
-      "at": [-226, 0, -56],
-      "yaw_deg": -14
+      "location": "skrugs_post_round",
+      "at": [-126, 0, -8],
+      "yaw_deg": 90,
+      "layouts": {
+        "port_round": { "at": [-126, 0, -8], "yaw_deg": 90, "location": "skrugs_post_round" },
+        "port_square": { "at": [-135, 0, -60], "yaw_deg": 0, "location": "skrugs_post" }
+      }
+    },
+    {
+      "id": "skrugs_ramp",
+      "note": "Issue #295: Skrugs's sand ramp, out past the back gate (it was part of his post until his round-port yard moved inside the wall). Round port: where it stood when his post was out in the sand. Square port: where it always was, past his post. Rises toward -z.",
+      "kind": "location",
+      "location": "skrugs_ramp",
+      "at": [-218.5, 0, -86],
+      "yaw_deg": 0,
+      "layouts": {
+        "port_square": { "at": [-135, 0, -91] }
+      }
     },
     {
       "id": "remnant_outpost_near",

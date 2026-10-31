@@ -6,6 +6,9 @@ shader_type spatial;
 //   u round the part, v along it. Bumped, with bright worn tips.
 // - Grooves: rings cut round the part every `groove` of v (the power ring).
 // - Edge wear: lighter metal where the noise is high on a knurled or grooved part.
+// - Weave: the rifle's fine twill (its body texture), so the scope reads as the
+//   same kit; in metres round and along the part, faded out before it shimmers.
+// - Glow: emission on the painted accent bands, like the rifle's orange panels.
 // Back faces cull, so aimed in, the open tube is see-through round the reticle
 // (GunSights hides the outside hardware then, or it would show through).
 // Aimed in, the parts left in view are pinned to the eye (viewmodel_pin).
@@ -19,6 +22,8 @@ uniform float roughness = 0.42;
 uniform float metallic = 0.55;
 uniform float knurl = 0.0;          // diamonds round the part (0 = smooth)
 uniform float groove = 0.0;         // grooves along the part (0 = none)
+uniform float weave = 0.0;          // twill strand width in metres (0 = none)
+uniform float glow = 0.0;           // emission (x the colour) for painted accents
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 
 varying vec3 lpos;
@@ -50,6 +55,18 @@ void fragment() {
 				* (1.0 - smoothstep(0.0, 0.12, h)) * 0.6;
 		col *= 0.75 + 0.35 * smoothstep(0.05, 0.25, h);
 	}
+	if (weave > 0.0) {
+		// The mesh is a cylinder along its local Y: unroll it to metres.
+		vec2 m = vec2(atan(lpos.x, lpos.z) * length(lpos.xz), lpos.y) / weave;
+		vec2 cell = floor(m);
+		vec2 f = fract(m);
+		bool along = mod(cell.x + floor(cell.y * 0.5), 2.0) < 1.0;
+		float strand = along ? sin(f.x * PI) : sin(f.y * PI);
+		float fade = 1.0 - smoothstep(0.35, 0.8, length(fwidth(m)));
+		col *= mix(1.0, 0.78 + 0.4 * strand, fade);
+		slope += (along ? vec2(cos(f.x * PI), 0.0) : vec2(0.0, cos(f.y * PI))) * 0.35 * fade;
+		rough += (0.5 - strand) * 0.08 * fade;
+	}
 	if (groove > 0.0) {
 		float g = abs(fract(UV.y * groove) - 0.5);
 		col *= 0.7 + 0.3 * smoothstep(0.1, 0.25, g);
@@ -61,6 +78,7 @@ void fragment() {
 	rough = mix(rough, 0.25, worn);
 
 	ALBEDO = col;
+	EMISSION = col * glow;
 	METALLIC = metallic;
 	ROUGHNESS = clamp(rough, 0.15, 1.0);
 	NORMAL_MAP = normalize(vec3(-slope.x, -slope.y, 1.0)) * 0.5 + 0.5;

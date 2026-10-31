@@ -509,8 +509,9 @@ func _add_landmark(lm: Dictionary, content) -> void:
 				# Issue #42: a building may be a ramp ("rise": the side its top slopes up
 				# to, in the world frame; ramps are ground, not obstacles) and may skip
 				# the placeholder box when something else dresses it ("visual": false).
+				# Issue #295: its position's y lifts it off the sand (a garage roof).
 				add_box(str(lm.get("id", "")) + "/" + str(b.get("id", "")), "solid",
-					Vector3(c.x - hx, base, c.z - hz), Vector3(c.x + hx, base + s.y, c.z + hz),
+					Vector3(c.x - hx, base + p.y, c.z - hz), Vector3(c.x + hx, base + p.y + s.y, c.z + hz),
 					str(b.get("rise", "")), bool(b.get("visual", true)))
 
 
@@ -536,7 +537,7 @@ func _add_landmark_on_ball(lm: Dictionary, content, at: Vector3) -> void:
 				# "rise" is in the world frame on a flat world; here the box's own frame
 				# carries the yaw, so turn it back into the landmark's frame.
 				add_box(str(lm.get("id", "")) + "/" + str(b.get("id", "")), "solid",
-					Vector3(c.x - s.x * 0.5, 0.0, c.z - s.z * 0.5), Vector3(c.x + s.x * 0.5, s.y, c.z + s.z * 0.5),
+					Vector3(c.x - s.x * 0.5, c.y, c.z - s.z * 0.5), Vector3(c.x + s.x * 0.5, c.y + s.y, c.z + s.z * 0.5),
 					_rise_local(str(b.get("rise", "")), yaw), bool(b.get("visual", true)), xf)
 
 

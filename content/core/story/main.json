@@ -69,7 +69,7 @@
       "teller": "cantina_owner",
       "done_on": "bounty_paid",
       "job": "j_bounty",
-      "intro": "My friend's happy, so here's the weapon: somebody stashed an energy blade up on top of this cantina's tower, and it's still there. Climb up and take it. Now, two things. If you need to cross the desert, Skrugs sells speeders outside the back gate. And there's a bounty.",
+      "intro": "My friend's happy, so here's the weapon: somebody stashed an energy blade up on top of this cantina's tower, and it's still there. Climb up and take it. Now, two things. If you need to cross the desert, Skrugs sells speeders by the back gate, out behind this cantina. And there's a bounty.",
       "remind": "The bounty's still open. Do it, then collect from the fence in the market."
     },
     {

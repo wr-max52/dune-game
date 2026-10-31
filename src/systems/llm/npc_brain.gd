@@ -22,6 +22,7 @@ signal line_done(turn: Dictionary)            ## final { say, mood, kept, droppe
 signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
+signal ship_buy_offered(item: Dictionary)      ## issue #295: Skrugs would buy their ship { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
 signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search")
 signal vibe_changed(mood: String)              ## issue #261: she had the band change the song
@@ -51,6 +52,7 @@ var log_dir := LOG_ROOT + "/cantina_owner"
 var last_turn: Dictionary = {}       ## for the debug overlay
 var turns: Array = []                ## every finished turn this session (tests read it)
 var extra_brief: Callable            ## () -> Array of lines: this character's own facts each turn (T-89: the pad)
+var ship_offer: Callable             ## issue #295: () -> { id, name, price, stolen } a ship they would buy now, or {}
 
 var _turn_id := -1
 var _raw := ""
@@ -208,6 +210,7 @@ func say(text: String) -> bool:
 		"beast": PlanetBeast.brief(GameFlow.planet()),     # everyone here knows the planet's beast
 		"club_moods": Sound.lib().cfg.get("club", {}).get("moods", []),   # issue #261: what she can ask the band for
 		"extra": (extra_brief.call() if extra_brief.is_valid() else []) + last_hints,
+		"ship_buy": _ship_offer(),
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
 	_messages = built.messages
@@ -341,6 +344,8 @@ func _apply(kept: Array) -> Array:
 				_pour(a)
 			"offer_speeder", "offer_ship":
 				sale_offered.emit({ "id": a.id, "name": a.name, "price": int(a.price) })
+			"offer_ship_buy":
+				ship_buy_offered.emit({ "id": a.id, "name": a.name, "price": int(a.price) })
 			"call_guards":
 				rel.banned_until = WorldState.clock + 90.0
 				rel.add_trust(-5, "threatened you in your own bar")
@@ -384,6 +389,11 @@ func _credit_jobs() -> void:
 			rel.add_trust(5, "finished the job " + str(WorldState.job(id).get("title", id)))
 
 
+## Issue #295: the ship this character would buy right now ({} for anyone but Skrugs).
+func _ship_offer() -> Dictionary:
+	return ship_offer.call() if ship_offer.is_valid() else {}
+
+
 ## The player accepted a job she offered (from the job card).
 func accept_job(id: String) -> bool:
 	if not WorldState.accept_job(id):
@@ -406,7 +416,15 @@ func canned_reply(text: String) -> Dictionary:
 		"vibe": "club_vibe" }
 	if needs.has(topic) and not can.has(needs[topic]):
 		topic = ""
+	if topic == "sell_ship" and not can.has("offer_ship_buy"):
+		topic = ""
 	match topic:
+		"sell_ship":
+			var o := _ship_offer()
+			if o.is_empty():
+				return { "say": _pick(c.get("no_ship_buy", ["Bring it round first."])), "actions": [] }
+			return { "say": _pick(c.get("ship_buy", ["%s? %d credits."])) % [str(o.name), int(o.price)],
+				"actions": [{ "type": "offer_ship_buy", "id": o.id }] }
 		"rumor":
 			var rs := WorldState.rumors(rel.tier(), rel.known_rumors, 1)
 			if rs.is_empty():
@@ -439,7 +457,7 @@ func canned_reply(text: String) -> Dictionary:
 func _topic(text: String) -> String:
 	var low := text.to_lower()
 	var tw: Dictionary = card.get("topic_words", {})
-	for topic in ["bye", "vibe", "recommend", "buy", "smuggle", "job", "rumor", "drink", "war"]:
+	for topic in ["bye", "vibe", "recommend", "sell_ship", "buy", "smuggle", "job", "rumor", "drink", "war"]:
 		for w in tw.get(topic, []):
 			if low.contains(str(w)):
 				return topic

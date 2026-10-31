@@ -392,17 +392,23 @@ static func fpv_pole(shoulder: Vector3, hand: Vector3, d: Vector3, base: Vector3
 ## After the arm has reached the grip: the sword turned about the fist toward the
 ## plane square to the forearm, and set in it. `elbow` = the elbow in chest space
 ## (the forearm runs down its -Y, the thumb is +Z, the hand at `reach` along it).
+## `seat` = where the closed fingers' hollow is, past that point: x toward the palm,
+## y further down the hand (fpv_arms.json hand "fist_seat"). Without it the hilt sits
+## against the palm's middle and the fingers close beyond it, so from the eye they
+## stick out past the hilt.
 ## Returns [the sword's transform, the wrist's roll about the forearm in radians].
-static func fpv_fist(xf: Transform3D, grip: Vector3, elbow: Transform3D, reach: float) -> Array:
+static func fpv_fist(xf: Transform3D, grip: Vector3, elbow: Transform3D, reach: float, seat := Vector2.ZERO) -> Array:
 	var e := elbow.basis.orthonormalized()
 	var fore := -e.y
-	var hand := elbow.origin + fore * reach
 	var g := xf * grip
 	var d := xf.basis.y.normalized()
 	var across := d - fore * d.dot(fore)
 	if across.length() < 0.15:          # blade along the arm: keep the thumb where it is
 		across = e.z
 	across = across.normalized()
+	# The rolled wrist's palm side: the hand's +X once its +Z (the thumb) is `across`.
+	var palm := across.cross(fore).normalized()
+	var hand := elbow.origin + fore * (reach + seat.y) + palm * seat.x
 	var turn := d.angle_to(across)
 	var to := d.slerp(across, minf(1.0, deg_to_rad(FIST_TURN) / turn)) if turn > 0.001 else d
 	var q := Basis(Quaternion(d, to.normalized()))

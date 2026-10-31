@@ -16,6 +16,9 @@ Nothing was played by hand; no fight against the new droids was tried.
   origin) they keep about a millimetre of wobble. Aimed with the pistol (1.25x,
   26 cm from the eye) that is a few pixels. The fix would be the same pin on the
   weapon and glove materials.
+- **Scoped in far out, the barrel under the scope casts no shadow.** It is pinned
+  to the eye with the scope (its vertices are in the camera's space), so it is
+  left out of the shadow pass while you aim; its shadow is back at the hip.
 - **The scope's last few frames of aiming in** use world positions (the weapon is
   still blending in), so they can wobble that millimetre once.
 - **The holo map is not to scale off the ball.** Heights are squeezed so the orbit
@@ -26,26 +29,43 @@ Nothing was played by hand; no fight against the new droids was tried.
 - **The cruiser trace still builds no crew** when run with `-s` (the NpcVoice
   autoload compile issue), as before.
 
+## After issue #295, Skrugs's yard (2026-10-31)
+
+**Checked:** `tests/test_skrugs_yard.gut.gd` (19/19: landmark per layout, the round
+yard inside the wall and clear of every town box, the back gate's gap, a speeder
+driven out of his garage and through the gate, both garages driven into and their
+walls blocking, the bench in free roam and not in story, ship buying),
+`test_speeder_upgrades` (19/19) and `test_speeders` (18/19: "no job board" also
+fails on main, since #188 gave Skrugs jobs). The smoke test and a boot check. The
+speeder trace was updated but not run.
+
+- **The back gate is tight on purpose.** A speeder lined up on the lane goes
+  through; swing into it fast off the turn from his garage and you scrape.
+- **His bench box is there in story too.** Only its menu is free roam.
+- **A sold stolen ship is back at its outpost next session**, as a lost one is
+  (outpost ships are not saved).
+- **The yard has no decor of its own** beyond his buildings: no crates, no lamps.
+- **Speeders past the fourth park on top of the first spots**, as before.
+
 ## After issue #269, the party barge (2026-10-31)
+## After the party barge cleanup (issue #269 follow-up, 2026-10-31)
 
-**Checked:** one headless trace run (`scenes/barge_trace.gd`, every step
-passed) and three rendered stills. The full test suite was not run. Walking up
-the gangplank and down the inside ramps was **not** tried by hand; the trace
-puts the player on each deck directly.
+**Checked:** the barge trace, run as a main scene (every line true), and rendered
+stills. The full test suite was not run. The `-s` way CI runs the traces fails
+to compile right now for every trace that touches WorldState ("Identifier not
+found: NpcVoice"); that is not the barge's doing.
 
-- **The partygoers are look-only.** You walk through them, they can't be hurt
-  and they don't talk. Only the boss can be hit.
-- **The guards don't fight.** Hurting the boss doesn't make anyone hostile.
+- **It floats level along the planet's up, not the dunes.** It lifts to keep
+  the sand under its ends below the keel, but it never tilts.
+- **It only stops for the world's data** (boxes, rocks, columns). A parked ship
+  or a speeder is not in the way.
 - **The barge goes back home on a reload.** Ownership is saved; where you
-  parked it is not.
-- **It floats level along the planet's up, not the dunes.** Big dunes poke
-  through the hull, and the gangplank's foot can hang above the sand or sink
-  into it.
-- **The hull is plain boxes** in flat colours (no planks, no shader yet).
-- **Driving: the player is pinned at the wheel.** You can't walk around the deck
-  while it moves.
-- **The cantina still has no on-stage band.** The barge's band is built in
-  party_barge.gd and isn't shared with the cantina yet.
+  parked it is not, and nor is a wreck.
+- **The dead fall over stiffly** (a tip backwards, not a ragdoll), so they ride
+  along with the deck.
+- **The band and DJ are look-only bodies** posed by the barge (ClubMoves, the
+  cantina's instruments), not NpcBody performers like the cantina's.
+
 ## After issue #266, the beetle-centipede beast (2026-10-31)
 
 **Checked:** the headless beast trace (`scenes/beast_trace.gd`, every step
@@ -106,6 +126,17 @@ boot. Five stacked PRs: arms, scope, sword, feel and sprint, animations.
   after a few minutes), so `shoot_fpv.sh` is best run a few shots at a time.
 - `test_sword_combo`'s `test_early_press_does_not_buffer` and
   `test_pose_keys_are_continuous` fail, on main too.
+
+**Follow-up polish (2026-10-31):** the sword hilt now sits in the closed fingers
+(`fist_seat`), an upper arm that shows only near the elbow ends the floating
+forearms when you look down, the muzzle light no longer turns the arm flat
+orange, aimed in the rifle's barrel stays under the scope, and the scope has the
+rifle's twill and an orange band. Checked from stills and the smoke test only.
+- **The hilt is thicker than the closed fingers' hollow**, so the fingers sink a
+  little into it; from the eye only the knuckles show, which is the intent.
+- **The muzzle flash still tints the hand** warm for its few frames; that is meant.
+- **Aimed in, the top of the barrel and rail reach into the bottom of the scope's
+  front lens**, under the reticle; through the open tube they fill the lower ring.
 
 ## After issue #96, desert pack camps (2026-10-29)
 

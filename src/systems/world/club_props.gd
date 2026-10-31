@@ -28,6 +28,7 @@ var cycles: Array = []        ## [material or Light3D, hue turns a second, hue o
 var fades: Array = []         ## [StandardMaterial3D, low alpha, high alpha, beats a pulse, phase] (holograms)
 var pops: Array = []          ## [Node3D, swell, beats a pulse, phase]: grows on the hit, settles back
 var scans: Array = []         ## [Node3D, Vector3 from, Vector3 to, seconds a pass, phase]: glides from one to the other, again and again
+var live_fn := Callable()     ## #269 cleanup: optional () -> bool, the barge's own "is the party on" (else Sound.club_live)
 
 
 func _init(p_style := "jazz", p_bpm := 100.0) -> void:
@@ -75,6 +76,8 @@ func _process(dt: float) -> void:
 
 
 func _live() -> bool:
+	if live_fn.is_valid():
+		return bool(live_fn.call())
 	return Sound.lib().club_live
 
 
