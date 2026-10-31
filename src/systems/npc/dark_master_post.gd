@@ -154,7 +154,7 @@ func build_at(where: String) -> NpcBody:
 	b.set_meta("dark_master", where)
 	b.display_name = npc_name()
 	b.disable_mode = CollisionObject3D.DISABLE_MODE_KEEP_ACTIVE
-	b.hold_blade(Color(str(cfg.get("blade_color", "#ff2a2a"))), str(cfg.get("hilt", "")), float(cfg.get("blade_length", -1.0)))
+	b.hold_blade(Color(str(cfg.get("blade_color", "#ff2a2a"))), str(cfg.get("hilt", "")), float(cfg.get("blade_length", -1.0)), grip())
 	var pose: Dictionary = {}
 	for jn in cfg.get("guard_pose", {}):
 		pose[jn] = _v(cfg.guard_pose[jn])
@@ -167,6 +167,15 @@ func build_at(where: String) -> NpcBody:
 	fighters[where] = f
 	hostile[where] = DarkPact.hostile_at(where)
 	return b
+
+
+## His blade in the rigged hand (cfg "grip"), or null for NpcBody's own.
+func grip():
+	var g: Dictionary = cfg.get("grip", {})
+	if g.is_empty():
+		return null
+	var r := _v(g.get("rot", [0, 0, 0]))
+	return Transform3D(Basis.from_euler(Vector3(deg_to_rad(r.x), deg_to_rad(r.y), deg_to_rad(r.z))), _v(g.get("offset", [0, 0, 0])))
 
 
 ## Gone from there (he left, or you are far away): a living body only.
