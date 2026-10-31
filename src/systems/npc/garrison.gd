@@ -698,6 +698,14 @@ func _wake_in_pit() -> void:
 		for og in outs.garrisons.values():
 			if og != self and is_instance_valid(og):
 				og.forgive_player()
+	# The locals let it go too, the town's and every outpost's.
+	var folk = demo.get("townsfolk")
+	if folk != null and is_instance_valid(folk):
+		folk.forgive_player()
+	if outs != null:
+		for tf in outs.folks.values():
+			if is_instance_valid(tf):
+				tf.forgive_player()
 	var dr = demo.get("droids")
 	if dr != null and is_instance_valid(dr):
 		dr.forgive_player()
