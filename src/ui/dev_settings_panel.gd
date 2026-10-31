@@ -17,11 +17,11 @@ extends CanvasLayer
 ## it had happened in play.
 ##
 ## A story save earns what free roam hands out: there the controls that would give
-## it (credits, game speed, the space fight switch, standing and trust, god mode,
-## heal, the jetpack, endless fuel, teleport, guard senses, flags) are greyed out,
-## each page saying why. The look, HUD, sound, the AI brain and the smuggler's own
-## outfit stay the player's. A stuck player may still skip ahead a chapter, after a
-## warning that points them at the characters first.
+## it (credits, the space fight switch, standing and trust, god mode, heal, the
+## jetpack, endless fuel, teleport, guard senses, flags) are greyed out, each page
+## saying why. Game speed, the look, HUD, sound, the AI brain and the smuggler's
+## own outfit stay the player's. A stuck player may still skip ahead a chapter,
+## after a warning that points them at the characters first.
 
 const MOODS := ["wary", "warm", "amused", "irritated"]
 const SPEEDS := [0.25, 0.5, 1.0, 2.0, 4.0]
@@ -242,8 +242,8 @@ func _world_tab() -> Control:
 		_show_hour())
 
 	_section(v, "Game")
-	_story_note(v, "credits are earned, the game runs at its own speed and the Remnant fleet always meets you in orbit.")
-	var speed: OptionButton = _cheat(OptionButton.new())
+	_story_note(v, "credits are earned and the Remnant fleet always meets you in orbit.")
+	var speed := OptionButton.new()
 	for s in SPEEDS:
 		speed.add_item("%sx" % str(s))
 	speed.item_selected.connect(func(i): Engine.time_scale = SPEEDS[i])
@@ -600,7 +600,6 @@ func new_game(mode: String, reload := true) -> void:
 	ShipSalesman.greeted = false
 	if WorldState.story_mode():
 		# what free roam may have switched, which outlives the town reloading
-		Engine.time_scale = 1.0
 		GameFlow.dogfight_override = null
 		NpcBody.show_debug = false
 	if demo != null and demo.bar != null:

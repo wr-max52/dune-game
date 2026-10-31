@@ -154,10 +154,8 @@ func test_story_skip_asks_first_and_only_goes_ahead() -> void:
 
 func test_new_story_game_drops_free_roam_tweaks() -> void:
 	var town = _town()
-	Engine.time_scale = 0.25
 	GameFlow.set_space_dogfight(false)
 	NpcBody.show_debug = true
 	town.dev_settings.new_game(WorldState.STORY, false)
-	assert_eq(Engine.time_scale, 1.0)
 	assert_true(GameFlow.space_dogfight(), "the fleet always meets you in orbit")
 	assert_false(NpcBody.show_debug)
