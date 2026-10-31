@@ -544,6 +544,7 @@ func _add_club_music() -> void:
 
 func _spawn_player() -> void:
 	_player = CharacterBody.new()
+	_player.fall_damage = CharacterBody.FallDamage.cfg()      # issue #274: the player's falls hurt
 	_player.position = town.spawn_pos() + Vector3(0, 0.05, 0)  # origin is at the feet
 	var yaw := 0.0
 	# Back from a flight: stand at the pad's arrive marker, facing the ship.

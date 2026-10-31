@@ -18,13 +18,20 @@ extends RefCounted
 ##   LANDING  -- land() within `land_max_agl` of the ground: brakes to a stop,
 ##               levels, and settles straight down onto whatever is below.
 ##   CRASHED  -- stopped; the scene decides what happens next.
+##   ADRIFT   -- issue #276: nobody at the controls (the pilot ejected). Zero
+##               throttle, so nothing holds her up: she carries on with the momentum
+##               she had, air drag (`adrift_drag`, per second) bleeding it off and
+##               gravity (`adrift_gravity`) pulling her down, her nose turning
+##               (`adrift_nose_rate`) the way she is going. Hitting the ground or a
+##               building faster than `crash_speed` damages her: she crashes. Slower,
+##               she comes to rest there, PARKED.
 ##
 ## Every number comes from the ship's "atmosphere" block (and its turn rates from
 ## "flight") in content/core/ships/*.json; where space starts comes from the world.
 
 const FlightModel := preload("res://src/systems/flight/flight_model.gd")
 
-enum State { PARKED, LIFTOFF, FLYING, LANDING, CRASHED }
+enum State { PARKED, LIFTOFF, FLYING, LANDING, CRASHED, ADRIFT }
 
 var cfg: Dictionary = {}        ## the ship's "atmosphere" block
 var flight                      ## FlightModel (atmosphere speeds)
@@ -39,6 +46,7 @@ var reached_space := false
 var air_cap := INF              ## the most air_scale() may be here (ShipPilot eases it down by the cruiser)
 var last_hit := ""
 var crash_point := Vector3.ZERO
+var drift := Vector3.ZERO       ## issue #276: her velocity while ADRIFT (m/s, world)
 
 var _command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.0, "boost": false }
 
@@ -180,6 +188,20 @@ func takeoff() -> bool:
 	return true
 
 
+## Issue #276: the pilot is gone. From the air only; she keeps the velocity she
+## had and goes ADRIFT.
+func abandon() -> bool:
+	if state != State.FLYING and state != State.LANDING:
+		return false
+	drift = flight.velocity()
+	if state == State.LANDING:
+		drift -= up() * p("land_descent", 12.0)   # she was settling as well
+	flight.throttle = 0.0
+	_command = { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.0, "boost": false }
+	state = State.ADRIFT
+	return true
+
+
 func land() -> bool:
 	if not can_land():
 		return false
@@ -200,6 +222,8 @@ func step(dt: float) -> Array:
 			_step_flying(dt)
 		State.LANDING:
 			_step_landing(dt)
+		State.ADRIFT:
+			_step_adrift(dt)
 	return events
 
 
@@ -273,6 +297,45 @@ func _collide(before: Vector3, dt: float) -> void:
 		else:
 			flight.speed = move_toward(flight.speed, 0.0, p("land_brake", 45.0) * dt)  # skidding
 			events.append({ "type": "scrape" })
+
+
+func _step_adrift(dt: float) -> void:
+	var u := up()
+	drift -= u * p("adrift_gravity", 20.0) * dt
+	drift -= drift * minf(1.0, p("adrift_drag", 0.12) * dt)
+	var before: Vector3 = flight.position
+	flight.position = before + drift * dt
+	flight.speed = drift.length()
+	# The nose follows her way through the air, as far as she is going somewhere:
+	# dropped from a hover she falls flat.
+	var across := (drift - u * drift.dot(u)).length()
+	if across > 1.0:
+		var dir: Vector3 = drift / flight.speed
+		var hint: Vector3 = flight.basis.y if absf(dir.dot(flight.basis.y)) < 0.99 else flight.basis.z
+		var want := Basis.looking_at(dir, hint)
+		var w := minf(1.0, p("adrift_nose_rate", 0.7) * dt * across / flight.speed)
+		var q: Quaternion = flight.basis.get_rotation_quaternion().slerp(want.get_rotation_quaternion(), w)
+		flight.basis = Basis(q).orthonormalized()
+	if ground == null:
+		return
+	var hit_id := ground.hit(flight.position, body_radius)
+	if hit_id != "":
+		last_hit = hit_id
+		if flight.speed > p("crash_speed", 32.0):
+			_crash(flight.position, hit_id)
+			return
+		flight.position = before                  # against it: only fall from here
+		drift = -u * maxf(0.0, -drift.dot(u))
+		flight.speed = drift.length()
+		events.append({ "type": "bump", "what": hit_id })
+		return
+	var h := agl()
+	if h <= 0.0:
+		if flight.speed > p("crash_speed", 32.0):
+			_crash(flight.position - u * (clearance + h), "ground")
+			return
+		drift = Vector3.ZERO
+		_touch_down()
 
 
 func _touch_down() -> void:
