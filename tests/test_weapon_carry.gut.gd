@@ -56,3 +56,41 @@ func test_sprinting_drops_the_gun_at_once() -> void:
 		c.step(1.0 / 60.0, true, true)
 	assert_almost_eq(c.ready, 0.0, 0.001, "down within the lower time")
 	assert_false(c.on_target())
+
+
+func test_sprinting_rifle_is_at_port_arms_clear_of_the_legs() -> void:
+	# Issue #229: at REST the rifle hung across the thighs and a running leg swung
+	# through it. Sprinting, it is up across the chest: muzzle up, the whole gun
+	# (stock -0.47 m to muzzle +0.48 m along it) in front of the chest and above the hips.
+	var grip := Vector3(0.0, -0.08, -0.11)
+	var xf := WeaponCarry.rest_xf("rifle", grip, true)
+	assert_almost_eq((xf * grip - WeaponCarry.SPRINT.rifle[0]).length(), 0.0, 0.0001, "grip on target")
+	assert_gt((xf.basis * Vector3(0, 0, 1)).y, 0.4, "muzzle up")
+	for z in [-0.47, 0.0, 0.48]:
+		var p := xf * Vector3(0, 0, z)
+		assert_gt(p.y, -0.42, "above the hips at %.2f" % z)
+		assert_gt(p.z, 0.08, "in front of the chest at %.2f" % z)
+	assert_eq(WeaponCarry.rest_xf("pistol", Vector3.ZERO, true), WeaponCarry.rest_xf("pistol", Vector3.ZERO), "a pistol keeps its rest")
+
+
+func test_aim_at_points_the_bore_at_the_target_about_the_stock() -> void:
+	# Third person: the camera sits off the right shoulder, so the gun turns about its
+	# stock (the pivot stays put) until the bore line through the muzzle hits the target.
+	var pivot := Vector3(0.0, -0.02, -0.475)
+	var muzzle := Vector3(0.0, 0.11, 0.48)
+	var xf := Transform3D(Basis(), Vector3(-0.13, 0.17, 0.5))
+	var target := Vector3(0.6, 0.9, 12.0)
+	var aimed := WeaponCarry.aim_at(xf, pivot, muzzle, target)
+	assert_almost_eq((aimed * pivot - xf * pivot).length(), 0.0, 0.0001, "stock stays on the shoulder")
+	var m := aimed * muzzle
+	assert_lt(aimed.basis.z.angle_to((target - m).normalized()), 0.002, "bore on the target")
+	assert_almost_eq(aimed.basis.x.y, 0.0, 0.0001, "no cant")
+
+
+func test_aim_at_leaves_a_target_behind_or_too_far_off_alone_or_capped() -> void:
+	var pivot := Vector3(0, 0, -0.4)
+	var muzzle := Vector3(0, 0.1, 0.5)
+	var xf := Transform3D(Basis(), Vector3(0, 0, 0.4))
+	assert_true(WeaponCarry.aim_at(xf, pivot, muzzle, Vector3(0, 0, -5)).is_equal_approx(xf), "behind: as posed")
+	var wide := WeaponCarry.aim_at(xf, pivot, muzzle, Vector3(10, 0, 0.5))
+	assert_almost_eq(wide.basis.z.angle_to(Vector3(0, 0, 1)), WeaponCarry.AIM_TURN_MAX, 0.001, "turn capped")

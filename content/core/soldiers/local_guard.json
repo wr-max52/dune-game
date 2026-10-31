@@ -1,0 +1,48 @@
+{
+  "id": "local_guard",
+  "base": "local_resident",
+  "label": "Local guard",
+  "archetype": "desert_guard",
+  "role": "yard",
+  "sidearm": false,
+  "note": "Issue #187: the locals' own soldiers, in desert armour with a rifle, posted wherever the locals hold (the barracks' gate and yard, content/core/story/territory.json). Run by Townsfolk like every local: they leave you alone until you hurt one of the port's people, then fight. As good as a Remnant trooper. Only the blocks below differ from local_resident.json.",
+  "naming": {
+    "kind": "person_dune",
+    "nameplate_range": 8.0
+  },
+  "hp": 70,
+  "walk_speed": 3.0,
+  "sprint_speed": 6.0,
+  "turn_rate_deg": 250.0,
+  "perception": {
+    "sight_range": 40.0,
+    "fov_deg": 130.0,
+    "reaction_s": 0.8
+  },
+  "weapon": {
+    "base": "rifle_blaster",
+    "damage": 11,
+    "bolt_speed": 44.0,
+    "rate": 0.16,
+    "range": 90.0,
+    "mag": 24,
+    "reload_time": 2.0,
+    "noise_radius": 50.0,
+    "bolt_color": "#ffb02a"
+  },
+  "combat": {
+    "aim_error_deg": 2.0,
+    "burst_min": 3,
+    "burst_max": 5,
+    "windup_s": 0.35,
+    "cover_search_radius": 24.0,
+    "cover_max_threat_dist": 40.0,
+    "alert_radius": 60.0,
+    "chase_leash": 45.0
+  },
+  "patrol": {
+    "pause_s": 5.0,
+    "look_around_deg": 60.0,
+    "look_every_s": 2.5
+  }
+}

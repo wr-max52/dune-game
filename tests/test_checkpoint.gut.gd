@@ -331,7 +331,7 @@ func test_downed_player_stands_them_down() -> void:
 	var ev := c.drain()
 	assert_true(_types(ev).has("calm"))
 	assert_eq(c.state, Checkpoint.State.IDLE)
-	assert_gt(c.memory_left, 0.0, "but they remember")
+	assert_eq(c.memory_left, 0.0, "and forget the fight")
 
 
 func test_cleared_lasts_then_lapses() -> void:

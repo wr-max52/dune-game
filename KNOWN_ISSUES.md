@@ -27,6 +27,30 @@ are fired), and runs the locals itself since it turns the NPC brains off.
   planets get none unless their file adds one, and every beast is the same purple
   blob (only its numbers and colours can change per planet).
 
+## After issue #229, first person graphics (2026-10-30)
+
+**Checked:** rendered stills and frame strips (`tools/fpv/shoot_fpv.sh`, HUD
+hidden), plus `test_weapon_motion`, `test_weapon_carry`, `test_weapons`,
+`test_ads`, `test_sword_combo`, `test_fpv_arms`, `test_smoke`, and a headless
+boot. Five stacked PRs: arms, scope, sword, feel and sprint, animations.
+
+**Not done, honestly:**
+- **Nothing here was felt by hand.** The sway, bob, landing dip, wall pull-back,
+  reload, draw and the sword's first person swings are judged from stills and
+  strips at 60 fps only. Spring rates and amplitudes will want a play pass.
+- **The rifle reload shows little of the left hand**: its cell sits low, so the
+  hand only shows at the bottom edge in a few frames. The pistol's reads well.
+- **Walking unarmed, the hands stay out of view** (they pump into view only when
+  sprinting).
+- **The wall pull-back is one ray from the eye**: a rail or doorway edge not
+  straight ahead does not pull the gun back.
+- **The sword's first person swings hit from where the blade is drawn**, which is
+  close to but not the same as third person. Not tested against the duelist.
+- **The town turns hostile in long screenshot runs** (guards, bolts and smoke
+  after a few minutes), so `shoot_fpv.sh` is best run a few shots at a time.
+- `test_sword_combo`'s `test_early_press_does_not_buffer` and
+  `test_pose_keys_are_continuous` fail, on main too.
+
 ## After issue #96, desert pack camps (2026-10-29)
 
 **Checked:** headless only. `scenes/natives_trace.gd` (real physics, the real
@@ -337,11 +361,9 @@ health bars (hidden calm, filled after damage, gone on death), the new arms.
 **Not done, honestly:**
 - **Bounty targets lost their floating name** (it showed from 30 m). Nothing
   marks them now.
-- **The sword view shows only a sliver of glove** at the bottom edge.
-- **Unarmed, the arms hang out of view** unless you look down.
-- **The pistol stays one-handed while aimed in.**
-- **The rifle scope sits on the model's own optic hump** (one mesh, so the hump
-  stays).
+- ~~The sword view shows only a sliver of glove~~, ~~unarmed arms out of view~~,
+  ~~the pistol one-handed aimed in~~, ~~the scope on the model's optic hump~~:
+  fixed in issue #229 (see below).
 - **Not felt by hand yet:** the slide, the camera tilt and the thud were checked
   headless and in still renders only.
 - **The m11 body trace hangs on this Mac** (also on a clean main), so

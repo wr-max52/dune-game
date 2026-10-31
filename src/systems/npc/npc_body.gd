@@ -695,8 +695,8 @@ func target_chest_height() -> float:
 func apply_damage_from(amount: float, shooter: Node) -> void:
 	if dead:
 		return
-	if shooter is NpcBody and (shooter as NpcBody).faction == faction and faction != "":
-		return
+	if shooter != null and is_instance_valid(shooter) and "faction" in shooter and str(shooter.faction) == faction and faction != "":
+		return                         # (issue #187: a droid on the same side too)
 	last_hit_by = shooter
 	if shooter is Node3D and is_instance_valid(shooter):
 		last_hit_from = (shooter as Node3D).global_position

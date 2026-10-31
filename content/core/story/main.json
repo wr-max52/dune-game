@@ -59,6 +59,7 @@
       "id": "droid_merchant",
       "teller": "cantina_owner",
       "done_on": "droids_delivered",
+      "job": "j_droid_merchant",
       "deliver": { "kind": "cargo", "count": 3 },
       "intro": "A friend of mine is in need of three cargo droids. You could buy them, or fix some up in the desert. Take them to any of the droid merchants' posts out there. Get that done and I'll tell you about an incredible weapon.",
       "remind": "My friend still needs %d more cargo droids. Any droid merchant's post in the desert will take them."
@@ -100,7 +101,7 @@
     "button": "Carry on"
   },
   "objectives": {
-    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard). The jobs' lines take the job's own words (%s).",
+    "note": "The HUD's objective pointer and the job log on I (src/systems/flow/objective.gd). 'chapters' is what each story chapter wants once Oda has told it; until she has, the pointer says 'teller'. 'target' is where the arrow points: npc:<marker> (a live body, else its marker), marker:<town marker>, range, remote (the sparring droid), pad (the pit), outpost:<location id>, fence (the town's contraband buyer), cruiser (issue #193: its bay from outside, its general once aboard), droid_post (issue #212: the nearest desert droid merchant's post). The jobs' lines take the job's own words (%s).",
     "teller": { "text": "Talk to Oda at the cantina", "target": "npc:cantina_owner" },
     "chapters": {
       "general": { "text": "Answer the Remnant general", "target": "npc:general" },
@@ -109,7 +110,7 @@
       "range": { "text": "Shoot the targets at the range in the landing pit", "target": "range" },
       "remote": { "text": "Try the sparring droid in the pit, then go back to Oda", "target": "remote" },
       "smuggle_1": { "text": "Ask Oda about the drop", "target": "npc:cantina_owner" },
-      "droid_merchant": { "text": "Take cargo droids to a droid merchant's post in the desert", "target": "" },
+      "droid_merchant": { "text": "Take cargo droids to the nearest droid merchant's post", "target": "droid_post" },
       "bounty": { "text": "Ask Oda about the bounty", "target": "npc:cantina_owner" },
       "fleet": { "text": "Take your own ship up to the Remnant fleet", "target": "pad" },
       "free": { "text": "Ask Oda for work", "target": "npc:cantina_owner" }
@@ -168,6 +169,7 @@
     "target_title": "Remnant officer",
     "offer": "There's a price on %s, a Remnant officer at the %s. %s Kill them and the fence pays %d.",
     "event_killed": "%s, a Remnant officer, was found dead at an outpost in the desert.",
+    "event_general": "%s, the Remnant general, was shot dead in the barracks yard.",
     "crimes": [
       "They burned a water hauler's tanks so a whole street went dry for a week.",
       "They shot a fisherman's boy for walking past the gate after curfew.",

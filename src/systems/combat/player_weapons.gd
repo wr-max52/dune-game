@@ -191,6 +191,8 @@ func _physics_process(dt: float) -> void:
 	# Guns tick every frame (cooldowns, reloads) whether or not the trigger is down.
 	# Issue #87: in third person a resting gun comes up first, then fires.
 	avatar.aim_wanted = enabled and not sprinting and (_fire_held or _alt_on)
+	# Third person: the gun points where the crosshair does, not straight out of the chest.
+	avatar.aim_target = aim_point() if not avatar.first_person and guns.has(cur) else Vector3.INF
 	for id in guns:
 		var g: Weapon = guns[id]
 		var trigger: bool = enabled and id == cur and holder.is_ready() and _fire_held and avatar.gun_up() \
@@ -222,6 +224,7 @@ func _physics_process(dt: float) -> void:
 	avatar.sword_trail_on = cur == "energy_blade" and combo.cutting()
 	avatar.current = cur
 	avatar.drawn = holder.drawn()
+	avatar.reload = (guns[cur] as Weapon).reload_progress() if guns.has(cur) else -1.0
 	_update_hud(dt)
 
 
@@ -376,6 +379,7 @@ func _sword_hits() -> void:
 			else:
 				target.apply_damage(dmg)
 			sword_hits += 1
+			ExplosionFx.bolt(player.get_parent(), p)      # sparks where the blade bit
 			var heavy: bool = combo.swing_def().heavy
 			_hitstop = 0.09 if heavy else 0.06          # the combo's centre chop lands harder
 			_play("blade_clash")

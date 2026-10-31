@@ -227,8 +227,10 @@ func _physics_process(dt: float) -> void:
 	var night := (profile.get("checkpoint", {}).get("night_times", ["dusk"]) as Array).has(WorldState.time_of_day)
 	var vehicle := _hostile_vehicle()
 
-	# The gate.
+	# The gate. Issue #187: edgier for every outpost the Remnant have lost.
 	var gate_alive := alive.filter(func(g): return guards.has(g))
+	checkpoint.strict = Territory.gate_strict()
+	checkpoint.bribe_mult = Territory.bribe_mult()
 	checkpoint.update(dt, {
 		"standing": int(WorldState.standing.get("imperial_remnant", 0)), "night": night,
 		"credits": WorldState.credits, "player_pos": ppos, "gate_pos": gate_pos, "gate_x": gate_pos.x,
@@ -641,6 +643,12 @@ func _on_player_downed() -> void:
 	if _ko_left > 0.0:
 		return
 	knockouts += 1
+	# The town's garrison sleeps with the town's people while you are high up (the
+	# altitude detail tier): downed up there (aboard the cruiser) it must still
+	# count you out and wake you in the pit. The pit brings the tier back down,
+	# and that sets this back with the rest of the people.
+	if not can_process():
+		process_mode = Node.PROCESS_MODE_INHERIT
 	var lead := _lead(_alive())
 	if lead != null:
 		_say(lead, "downed")
@@ -667,17 +675,15 @@ func _tick_locks(dt: float) -> void:
 
 func _wake_in_pit() -> void:
 	var taken := WorldState.on_player_downed()
-	# Downed by the Remnant: they let it go, just. Their standing comes up to the
-	# lowest they do not shoot on sight (never down: it only ever helps), and they
-	# forget the fight (below).
-	var by = player.get("last_shooter")
-	var by_remnant: bool = is_instance_valid(by) and by is NpcBody and (by as NpcBody).faction == "imperial_remnant"
+	# Downed, by whoever: the Remnant let it go, just. Their standing comes up to
+	# the lowest they do not shoot on sight (never down: it only ever helps), and
+	# every garrison forgets the fight and your face (forgive_player), so you do
+	# not wake to troopers waiting at the pit.
 	player.set("last_shooter", null)
-	if by_remnant:
-		var now := int(WorldState.standing.get("imperial_remnant", 0))
-		var floor_ok := checkpoint.lowest_tolerated()
-		if now < floor_ok:
-			WorldState.change_standing("imperial_remnant", floor_ok - now, "The Remnant dragged you to the pit and let it go.")
+	var now := int(WorldState.standing.get("imperial_remnant", 0))
+	var floor_ok := checkpoint.lowest_tolerated()
+	if now < floor_ok:
+		WorldState.change_standing("imperial_remnant", floor_ok - now, "The Remnant dragged you to the pit and let it go.")
 	player.global_position = town.spawn_pos() + Vector3(0, 0.05, 0)
 	if player.has_method("align_to_ground"):
 		player.call("align_to_ground", true)
@@ -686,16 +692,46 @@ func _wake_in_pit() -> void:
 		player.controller.velocity = Vector3.ZERO
 	player.revive()
 	player.locked = false
+	forgive_player()
+	var outs = demo.get("outposts")
+	if outs != null:
+		for og in outs.garrisons.values():
+			if og != self and is_instance_valid(og):
+				og.forgive_player()
+	# The locals let it go too, the town's and every outpost's.
+	var folk = demo.get("townsfolk")
+	if folk != null and is_instance_valid(folk):
+		folk.forgive_player()
+	if outs != null:
+		for tf in outs.folks.values():
+			if is_instance_valid(tf):
+				tf.forgive_player()
+	var dr = demo.get("droids")
+	if dr != null and is_instance_valid(dr):
+		dr.forgive_player()
+	hud.toast("You wake up in the pit. They took %d cr." % taken, 4.0)
+
+
+## The player died and woke in the pit: this garrison lets it go. The alarm and
+## its klaxon stop, the fight and the player's face are forgotten, the gate starts
+## over and every trooper goes back to its round with fresh eyes.
+func forgive_player() -> void:
 	alarm.stand_down()
 	checkpoint.on_player_downed()
-	if by_remnant:
-		alarm.memory_left = 0.0
-		checkpoint.memory_left = 0.0
 	_handle(checkpoint.drain())
 	_handle(alarm.drain())
+	_attacked = false
+	_warn_left.clear()
+	_card = {}
+	klaxon_left = 0.0
+	if klaxon != null:
+		klaxon.stop()
+	claimed.clear()
 	for g in _alive():
 		g.perception = Perception.new(g.profile.get("perception", {}))
-	hud.toast("You wake up in the pit. They took %d cr." % taken, 4.0)
+		var b: GuardBrain = brains.get(g)
+		if b != null and b.state != GuardBrain.State.PATROL and b.state != GuardBrain.State.RETURN:
+			b.stand_down()
 
 
 ## Where the garrison's target is: the player on foot, or the speeder / ship they

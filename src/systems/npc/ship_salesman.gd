@@ -179,9 +179,13 @@ func _physics_process(dt: float) -> void:
 	_tick_focus()
 
 
-## Something else has the player: flying, a menu, a conversation.
+## Something else has the player: flying, a menu, a conversation, the general
+## (his pit meeting, and a moment after it: his last word is his).
 func _busy() -> bool:
 	if player.piloting or player.locked or menu.is_open():
+		return true
+	var g = demo.get("general_post") if demo != null else null
+	if g != null and is_instance_valid(g) and g.holding():
 		return true
 	return demo != null and demo.bar != null and demo.bar.is_talking()
 
@@ -235,11 +239,15 @@ func _on_offer(id: String) -> void:
 ## [E] beside him: a chat (when he has a brain), the shop, and the tutorial again.
 func talk() -> void:
 	_beep()
+	_open(_line("hello_again") + _repair_line() + _story_line(), _talk_options(), _on_shop)
+
+
+func _talk_options() -> Array:
 	var opts := shop_options()
 	if spot != null:
 		opts.push_front({ "id": "chat", "text": _l("chat") })
 	opts.append({ "id": "tutorial", "text": _l("tutorial") })
-	_open(_line("hello_again") + _repair_line() + _story_line(), opts, _on_shop)
+	return opts
 
 
 ## Issue #64: while the story starts with him, he sends you to Oda.
@@ -360,18 +368,29 @@ func shop_options() -> Array:
 func _on_shop(id: String) -> void:
 	if id.begins_with("buy:"):
 		buy(id.substr(4))
+		_reopen_shop()
 	elif id == "sell":
 		sell()
+		_reopen_shop()
 	elif id == "rebuild":
 		rebuild()
+		_reopen_shop()
 	elif id.begins_with("fit:"):
 		fit(id.get_slice(":", 1), id.get_slice(":", 2))
+		_reopen_shop()
 	elif id == "comrade":
 		comrade()
+		_reopen_shop()
 	elif id == "tutorial":
 		start_tutorial()
 	elif id == "chat":
 		chat()
+
+
+## A buy or a sale does not end the talk: the shop again, with what he just said
+## and the new prices, the cursor where it was. Esc walks away.
+func _reopen_shop() -> void:
+	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], _talk_options(), _on_shop, said, true)
 
 
 ## Buy a ship: it lands on the spare pad. Returns "bought", "taken",

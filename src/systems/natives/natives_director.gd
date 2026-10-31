@@ -921,8 +921,9 @@ func trade_pack() -> Dictionary:
 
 
 ## Issue #211: E at a friendly pack's leader: food for quartz as ever, or any of
-## their goods (whatever the town's vendors sell) for meat.
-func open_trade(p: Dictionary) -> void:
+## their goods (whatever the town's vendors sell) for meat. A trade leaves the
+## menu open (Esc walks away); keep_cursor holds the cursor where it was.
+func open_trade(p: Dictionary, keep_cursor := false) -> void:
 	if menu == null:
 		menu = DroidMenu.new()
 		add_child(menu)
@@ -934,13 +935,18 @@ func open_trade(p: Dictionary) -> void:
 	var lock: bool = player != null and not bool(player.get("locked"))
 	if lock:
 		player.locked = true
-	menu.open(_line("trade_menu") % [str(p.label), WorldState.inventory.count("food")], opts, func(id):
+	var pick := func(id: String) -> void:
 		if lock:
 			player.locked = false
+		if id == "":
+			return
 		if id == "quartz":
 			trade(str(p.id))
-		elif id != "":
-			trade_goods(str(p.id), id))
+		else:
+			trade_goods(str(p.id), id)
+		if bool(p.rec.friendly):
+			open_trade(p, true)
+	menu.open(_line("trade_menu") % [str(p.label), WorldState.inventory.count("food")], opts, pick, "", keep_cursor)
 
 
 ## The goods a pack trades for meat: [{ item, food }].
@@ -962,6 +968,9 @@ func trade_goods(id: String, item: String) -> String:
 			price = int(g.food)
 	if price < 0:
 		return ""
+	if WorldState.inventory.count("food") >= price and not WorldState.inventory.room_after_paying(item, "food", price):
+		_toast(Inventory.full_line())
+		return "full"
 	if not swap_food(item, price):
 		_toast(_line("prompt_no_food"))
 		return "no_food"
@@ -1005,6 +1014,9 @@ func trade(id: String) -> String:
 			lead.act("gesture_no")
 			lead.say(str(people.get("voice", {}).get("gesture_no_food", "")), 3.5)
 		return "no_food"
+	if not inv.room_after_paying(str(tcfg.get("gives", "quartz")), food, 1):
+		_toast(Inventory.full_line())
+		return "full"
 	inv.remove(food)
 	Story.event("nomad_traded")          # issue #211: the quest is any trade
 	var n := int(tcfg.get("per_food", 1)) + (int(tcfg.get("adults_only_bonus", 1)) if bool(p.adults_only) else 0)
@@ -1085,6 +1097,9 @@ func chest_near_player() -> Dictionary:
 func take_chest(p: Dictionary, i: int) -> Dictionary:
 	var items := chest_items(p, i)
 	if items.is_empty():
+		return {}
+	if not WorldState.inventory.room_for_all(items):
+		_toast(Inventory.full_line())
 		return {}
 	for k in items:
 		WorldState.inventory.add(str(k), int(items[k]))
@@ -1313,6 +1328,9 @@ func carcass_near(reach: float = 2.8) -> SandPig:
 
 ## Cut food from a dead animal into the player's pockets. Returns how many.
 func butcher(pig: SandPig) -> int:
+	if not WorldState.inventory.room_for(str(pig.cfg.get("food", {}).get("item", "food"))):
+		_toast(Inventory.full_line())
+		return 0
 	var got := pig.butcher()
 	if got.is_empty():
 		return 0

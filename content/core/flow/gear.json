@@ -1,14 +1,24 @@
 {
   "note": "Words the gear prompts use (M13). Read by src/systems/items/gear_controller.gd. %s is an item or vendor label, %d a price or a credit balance. Kept here so code stays name-free.",
+  "backpack": {
+    "slots": 5,
+    "fixed": ["Pistol"],
+    "full": "Your backpack is full (%d of %d slots).",
+    "note": "The player's backpack (Inventory.slots_used). The pistol always holds the first slot; each other kind of item you own takes one (a stack is one slot): the rifle, a saber, food, quartz, every contraband good. The jetpack and the armour take one too, but not while they are activated (worn: listed as '(activated)'). Picking up, buying, trading, unloading a cargo droid and taking gear off all need a free slot."
+  },
   "labels": {
     "pick_up": "[E]  Pick up %s",
     "picked_up": "Picked up: %s",
     "attached": "%s attached.  Hold Space in the air to fly.  [G] takes it off",
     "detached": "%s off.  [G] puts it back on",
     "nothing_to_attach": "No gear to put on",
-    "sell": "[E]  Sell %s to the %s  (+%d cr)",
+    "trade": "[E]  Trade with the %s",
+    "sell_row": "Sell %s  (+%d cr)",
+    "sell_row_many": "Sell %s  x%d  (+%d cr each)",
+    "worn": " (worn)",
+    "buy_row": "Buy %s  (%d cr)",
+    "buy_row_poor": "Buy %s  (%d cr, you have %d)",
     "sold": "Sold %s for %d cr",
-    "buy": "[E]  Buy %s from the %s  (%d cr)",
     "cant_afford": "%s: %d cr  (you have %d)",
     "bought": "Bought %s for %d cr",
     "nothing_to_trade": "The %s buys gear",
@@ -17,13 +27,17 @@
     "recovered": "You drifted out over the walls. Back in port.",
     "event_sold": "Sold a %s at the market",
     "event_bought": "Bought a %s at the market",
-    "browse": "[E] See what the %s has for sale",
     "offers_title": "%s  -  you have %d cr",
+    "talk": "Talk",
+    "talk_to": "[E] Talk to the %s",
     "offer": "%s  (%d cr): %s",
     "offer_bought": "%s: done.",
     "offer_cant_afford": "%s is %d cr. You have %d.",
+    "offer_locked": "%s  (%d cr): locked, %s",
+    "offer_locked_toast": "%s: the fence only sells it %s.",
     "open_droid": "[E] Open the cargo droid",
     "wear": "Wear",
-    "take_off": "Take off"
+    "take_off": "Take off",
+    "no_room_to_take_off": "No free slot in your backpack to put the %s in."
   }
 }

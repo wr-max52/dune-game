@@ -72,5 +72,13 @@ func is_reloading() -> bool:
 	return _reloading
 
 
+## 0..1 through a reload (issue #229: the reload is animated from it); -1 when not.
+func reload_progress() -> float:
+	if not _reloading:
+		return -1.0
+	var total := maxf(float(config.get("reload_time", 1.5)), 0.001)
+	return clampf(1.0 - _reload_left / total, 0.0, 1.0)
+
+
 func recoil() -> float:
 	return float(config.get("recoil", 0.0))

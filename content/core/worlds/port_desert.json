@@ -71,6 +71,39 @@
       "clear": 45
     },
     {
+      "id": "remnant_outpost_north",
+      "kind": "location",
+      "location": "remnant_outpost_north",
+      "note": "Issue #187: the four outposts round the other sides of the town, each turned so its door (+x) faces the town.",
+      "at": [80, 0, 520],
+      "yaw_deg": 99,
+      "clear": 45
+    },
+    {
+      "id": "remnant_outpost_south",
+      "kind": "location",
+      "location": "remnant_outpost_south",
+      "at": [-60, 0, -540],
+      "yaw_deg": 276,
+      "clear": 45
+    },
+    {
+      "id": "remnant_outpost_west",
+      "kind": "location",
+      "location": "remnant_outpost_west",
+      "at": [-560, 0, 180],
+      "yaw_deg": 18,
+      "clear": 45
+    },
+    {
+      "id": "remnant_outpost_southwest",
+      "kind": "location",
+      "location": "remnant_outpost_southwest",
+      "at": [-520, 0, -380],
+      "yaw_deg": 324,
+      "clear": 45
+    },
+    {
       "id": "mechanic_yard",
       "kind": "location",
       "location": "mechanic_yard",

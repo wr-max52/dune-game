@@ -108,10 +108,10 @@ func test_droid_jobs_pay_three_times_and_raise_standing() -> void:
 	assert_eq(WorldState.credits, c0 + 3 * DroidRoster.resale("assassin"))
 	assert_eq(int(WorldState.standing.imperial_remnant), 5)
 	assert_false(g.job_active(), "open again for the next droid")
-	WorldState.standing.imperial_remnant = -49
-	assert_true(g.take_job(), "-49 still gets jobs")
+	WorldState.standing.imperial_remnant = -39
+	assert_true(g.take_job(), "-39 still gets jobs")
 	WorldState.jobs_taken.erase(GeneralPost.job_id())
-	WorldState.standing.imperial_remnant = -50
+	WorldState.standing.imperial_remnant = -40
 	assert_false(g.take_job(), "hostile: no work")
 
 
@@ -192,6 +192,35 @@ func test_gun_and_jetpack_upgrades() -> void:
 	WorldState.from_save(WorldState.to_save())
 	assert_almost_eq(float(GearUpgrades.apply(jet, "jetpack").jetpack.fuel), float(jet.jetpack.fuel) * 2.0, 0.01, "saved")
 	assert_eq(WorldState.credits, 1000 - 150 - 250)
+
+
+func test_the_fence_shows_the_armour_locked_until_the_bounty() -> void:
+	var ids := func(a: Array): return a.map(func(o): return str(o.id))
+	assert_true(ids.call(GearUpgrades.locked_offers()).has("quantonium_armour"), "on the menu, locked")
+	assert_false(ids.call(GearUpgrades.open_offers()).has("quantonium_armour"))
+	var labels: Dictionary = CharacterKit._read_json("res://content/core/flow/gear.json").labels
+	var o := GearUpgrades.offer("quantonium_armour")
+	assert_string_contains(str(labels.offer_locked) % [str(o.label), int(o.price), str(o.locked)], "bounty")
+	var gear := GearController.new()
+	gear.content = content
+	gear.labels = labels
+	var fence_cfg: Dictionary = CharacterKit._read_json(GearUpgrades.FENCE_PATH)
+	var rows: Array = gear.trade_options(fence_cfg).map(func(r): return str(r.id))
+	assert_true(rows.has("locked:quantonium_armour"), "the stall's menu shows it locked")
+	gear._trade_said = ""
+	gear.last_trade = ""
+	gear.menu = DroidMenu.new()
+	gear._on_trade("locked:quantonium_armour", fence_cfg)
+	assert_eq(gear.last_trade, "locked", "picking it buys nothing")
+	assert_string_contains(gear._trade_said, "after your first bounty")
+	assert_false(WorldState.inventory.has("quantonium_armour"))
+	gear.menu.free()
+	gear.free()
+	WorldState.bump("bounties_paid")
+	assert_false(ids.call(GearUpgrades.locked_offers()).has("quantonium_armour"), "unlocked")
+	assert_true(ids.call(GearUpgrades.open_offers()).has("quantonium_armour"))
+	var fence := NpcBrain.new(null, "res://content/core/npcs/fence_card.json")
+	assert_string_contains(str(fence.card.voice), "quantonium armour", "he is always selling it")
 
 
 func test_armour_after_the_bounty_triples_health() -> void:

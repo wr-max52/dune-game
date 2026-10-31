@@ -1,0 +1,49 @@
+{
+  "id": "territory",
+  "note": "Issue #187: who holds each place (src/systems/flow/territory.gd). The seven desert outposts (three out the front gate, four round the other sides) start with the Remnant; killing every trooper at one hands it to the locals, who move in with their own desert guards and a white assassin droid. The locals hold it for hold_s seconds of play; a supply run from Oda (j_supply on the bar board) resets that. When it runs out (or the locals' guards there are all dead) the Remnant take it back, and their troopers return. Holding all seven at once drives the Remnant off the planet: nothing is retaken after that and the locals take the town's barracks too. The barracks also go to the locals when the story is done (the fleet beaten). 'posts': which soldier profile the locals put on each post (outposts: the location's guard points; barracks: the town's trooper markers; a post left out stays empty).",
+  "hold_s": 1200.0,
+  "supply_warn_s": 480.0,
+  "supply_pay": 120,
+  "supply_reach": 25.0,
+  "swap_dist": 110.0,
+  "move_in_s": 30.0,
+  "outposts": {
+    "posts": {
+      "guard_a": "local_sentry",
+      "guard_b": "local_sentry"
+    }
+  },
+  "barracks": {
+    "posts": {
+      "trooper_gate_n": "local_guard",
+      "trooper_gate_s": "local_guard",
+      "trooper_tower": "local_sentry",
+      "trooper_yard_a": "local_guard",
+      "trooper_yard_b": "local_guard"
+    }
+  },
+  "standing": {
+    "outpost_taken": 6,
+    "supplied": 3
+  },
+  "gate": {
+    "note": "While the Remnant hold the gate, each outpost they have lost makes them edgier: from strict_from lost outposts the checkpoint band is one worse, and every lost outpost raises bribes by bribe_per_lost (0.25 = +25%). Seven outposts: strict from three lost, bribes up to 2.75x.",
+    "strict_from": 3,
+    "bribe_per_lost": 0.25
+  },
+  "fence_per_held": 0.08,
+  "lines": {
+    "taken": "The locals move into %s.",
+    "retaken": "The Remnant have taken %s back.",
+    "supplied": "Supplies delivered to %s. +%d cr",
+    "warn": "The locals at %s are running short.",
+    "driven_off": "The Remnant have pulled out of the desert. The port is the locals' now.",
+    "barracks": "The locals hold the barracks now.",
+    "objective": "Take the supplies to the locals at %s"
+  },
+  "labels": {
+    "remnant": "REMNANT",
+    "locals": "LOCALS",
+    "short": "LOCALS, LOW"
+  }
+}

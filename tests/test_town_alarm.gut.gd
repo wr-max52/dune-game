@@ -80,7 +80,7 @@ func test_downed_player() -> void:
 	a.stand_down()
 	assert_false(a.active())
 	assert_true(a.drain().any(func(e): return e.type == "calm" and e.why == "downed"))
-	assert_true(a.remembers())
+	assert_false(a.remembers(), "downed: they forget your face")
 
 
 func test_escape_distance_beats_the_leash() -> void:
@@ -207,11 +207,12 @@ func test_inventory_panel_lists_and_tags() -> void:
 	assert_false(panel.is_open())
 	panel.toggle()
 	assert_true(panel.is_open())
-	assert_eq(panel.rows.size(), 2)
-	var cells := panel.rows.filter(func(r): return r.begins_with("Unmarked"))
+	assert_eq(panel.rows.size(), 5, "pistol, cells, jetpack, two empty slots")
+	assert_eq(panel.rows[0], "[1]  Pistol")
+	var cells := panel.rows.filter(func(r): return r.contains("Unmarked"))
 	assert_eq(cells.size(), 1)
 	assert_true(cells[0].contains("x2") and cells[0].contains("CONTRABAND"))
-	assert_false(panel.rows.filter(func(r): return r.begins_with("Jetpack"))[0].contains("CONTRABAND"))
+	assert_false(panel.rows.filter(func(r): return r.contains("Jetpack"))[0].contains("CONTRABAND"))
 	panel.toggle()
 	assert_false(panel.is_open())
 	assert_true(InputMap.has_action("inventory"), "bound in project.godot")

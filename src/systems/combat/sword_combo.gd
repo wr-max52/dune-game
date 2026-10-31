@@ -23,9 +23,14 @@ enum { LEFT, RIGHT, CENTER }
 
 const GUARD := { "pos": Vector3(-0.1, -0.1, 0.32), "dir": Vector3(0.22, 0.86, 0.46), "twist": 0.0 }
 ## First person: the guard sits low on the right so the blade frames the view
-## instead of crossing it. Swings and the block use the same keys in both views.
-const GUARD_FPV := { "pos": Vector3(-0.2, -0.06, 0.4), "dir": Vector3(-0.32, 0.88, 0.36), "twist": 0.0 }
+## instead of crossing it, high enough that the hilt and the right hand show. The
+## sword is one-handed from the eye (hand_weapons.json aim_fpv "one_hand"): two
+## hands on a short hilt overlapped through the level cuts.
+const GUARD_FPV := { "pos": Vector3(-0.15, 0.01, 0.44), "dir": Vector3(-0.26, 0.88, 0.4), "twist": 0.0 }
 const BLOCK := { "pos": Vector3(-0.04, 0.06, 0.4), "dir": Vector3(0.92, 0.36, 0.12), "twist": 12.0 }
+## Issue #229: a level block across the view crossed the arms (the left hand sits
+## past the right on the hilt); from the eye it is a diagonal, hilt low right.
+const BLOCK_FPV := { "pos": Vector3(-0.13, 0.02, 0.44), "dir": Vector3(0.62, 0.76, 0.18), "twist": 4.0 }
 
 ## Two clicks this close together (seconds) are a double click: the combo.
 const DOUBLE_CLICK := 0.3
@@ -37,6 +42,12 @@ const BLEND := 0.09
 ## Each swing: duration, the [start, end] fraction it can hit, the fraction after
 ## which a buffered next swing takes over (chain_at), and its keys. Left and right
 ## are mirror images, high to low, so a flurry draws an X.
+## fpv_keys (issue #229): the same swing seen from the eye. The third person keys
+## wind up behind the shoulder and whip the chest round, so from the eye the blade
+## vanished behind the camera and the hilt smeared across the lens. These wind up
+## in view (upper right, or overhead), cut as a diagonal sweep across the view at
+## about the same reach (the hits come from where the blade is), and twist a
+## third as much. Same timing and active windows.
 const SWINGS := [
 	{ "name": "left", "duration": 0.42, "active": [0.32, 0.64], "chain_at": 0.74, "heavy": false, "keys": [
 		[0.0, GUARD],
@@ -45,7 +56,14 @@ const SWINGS := [
 		[0.48, { "pos": Vector3(-0.02, 0.02, 0.56), "dir": Vector3(0.04, 0.02, 1.0), "twist": 0.0 }],
 		[0.62, { "pos": Vector3(0.3, -0.14, 0.32), "dir": Vector3(0.88, -0.3, 0.36), "twist": 36.0 }],
 		[0.8, { "pos": Vector3(0.24, -0.18, 0.22), "dir": Vector3(0.74, -0.34, 0.1), "twist": 30.0 }],
-		[1.0, GUARD]] },
+		[1.0, GUARD]], "fpv_keys": [
+		[0.0, GUARD_FPV],
+		[0.22, { "pos": Vector3(-0.27, 0.2, 0.36), "dir": Vector3(-0.42, 0.88, 0.2), "twist": -12.0 }],
+		[0.36, { "pos": Vector3(-0.2, 0.16, 0.46), "dir": Vector3(-0.3, 0.7, 0.65), "twist": -8.0 }],
+		[0.48, { "pos": Vector3(-0.03, 0.06, 0.52), "dir": Vector3(0.5, 0.42, 0.76), "twist": 0.0 }],
+		[0.62, { "pos": Vector3(0.14, -0.08, 0.44), "dir": Vector3(0.86, -0.12, 0.5), "twist": 10.0 }],
+		[0.8, { "pos": Vector3(0.1, -0.06, 0.42), "dir": Vector3(0.78, -0.18, 0.6), "twist": 6.0 }],
+		[1.0, GUARD_FPV]] },
 	{ "name": "right", "duration": 0.42, "active": [0.32, 0.64], "chain_at": 0.74, "heavy": false, "keys": [
 		[0.0, GUARD],
 		[0.24, { "pos": Vector3(0.28, 0.24, 0.08), "dir": Vector3(0.62, 0.6, -0.5), "twist": 36.0 }],
@@ -53,7 +71,14 @@ const SWINGS := [
 		[0.48, { "pos": Vector3(-0.04, 0.02, 0.56), "dir": Vector3(-0.04, 0.02, 1.0), "twist": 0.0 }],
 		[0.62, { "pos": Vector3(-0.34, -0.14, 0.3), "dir": Vector3(-0.88, -0.3, 0.36), "twist": -38.0 }],
 		[0.8, { "pos": Vector3(-0.3, -0.18, 0.2), "dir": Vector3(-0.74, -0.34, 0.1), "twist": -32.0 }],
-		[1.0, GUARD]] },
+		[1.0, GUARD]], "fpv_keys": [
+		[0.0, GUARD_FPV],
+		[0.22, { "pos": Vector3(0.06, 0.2, 0.38), "dir": Vector3(0.42, 0.88, 0.2), "twist": 10.0 }],
+		[0.36, { "pos": Vector3(0.02, 0.16, 0.46), "dir": Vector3(0.3, 0.7, 0.65), "twist": 6.0 }],
+		[0.48, { "pos": Vector3(-0.08, 0.06, 0.52), "dir": Vector3(-0.5, 0.42, 0.76), "twist": 0.0 }],
+		[0.62, { "pos": Vector3(-0.24, -0.08, 0.42), "dir": Vector3(-0.86, -0.12, 0.5), "twist": -10.0 }],
+		[0.8, { "pos": Vector3(-0.22, -0.06, 0.4), "dir": Vector3(-0.78, -0.18, 0.6), "twist": -6.0 }],
+		[1.0, GUARD_FPV]] },
 	{ "name": "center", "duration": 0.58, "active": [0.44, 0.7], "chain_at": 1.0, "heavy": true, "keys": [
 		[0.0, GUARD],
 		[0.3, { "pos": Vector3(-0.06, 0.42, 0.02), "dir": Vector3(-0.04, 0.42, -0.9), "twist": -6.0 }],
@@ -61,7 +86,14 @@ const SWINGS := [
 		[0.54, { "pos": Vector3(-0.04, 0.16, 0.56), "dir": Vector3(0.0, 0.5, 0.86), "twist": 2.0 }],
 		[0.68, { "pos": Vector3(-0.03, -0.26, 0.5), "dir": Vector3(0.0, -0.62, 0.78), "twist": 4.0 }],
 		[0.82, { "pos": Vector3(-0.03, -0.3, 0.46), "dir": Vector3(0.0, -0.68, 0.72), "twist": 3.0 }],
-		[1.0, GUARD]] },
+		[1.0, GUARD]], "fpv_keys": [
+		[0.0, GUARD_FPV],
+		[0.3, { "pos": Vector3(-0.07, 0.3, 0.36), "dir": Vector3(-0.05, 0.96, -0.26), "twist": -2.0 }],
+		[0.42, { "pos": Vector3(-0.06, 0.34, 0.36), "dir": Vector3(-0.02, 0.86, -0.5), "twist": -1.0 }],
+		[0.54, { "pos": Vector3(-0.05, 0.16, 0.5), "dir": Vector3(0.0, 0.62, 0.78), "twist": 1.0 }],
+		[0.68, { "pos": Vector3(-0.04, -0.16, 0.48), "dir": Vector3(0.0, -0.5, 0.86), "twist": 1.0 }],
+		[0.82, { "pos": Vector3(-0.04, -0.2, 0.44), "dir": Vector3(0.0, -0.58, 0.8), "twist": 1.0 }],
+		[1.0, GUARD_FPV]] },
 ]
 const COMBO := [LEFT, RIGHT, CENTER]
 
@@ -81,6 +113,7 @@ var _since_press := INF
 var _rest := 0.0                ## seconds back in guard
 var _from: Dictionary = {}      ## the blade's pose when a chained swing began
 var _blend := 1.0               ## 0..1 through that blend (1 = none)
+var _fp := false                ## posing for first person (set by pose())
 
 
 func _init(blade_cfg: Dictionary) -> void:
@@ -234,32 +267,24 @@ func update(dt: float) -> Array:
 	return ev
 
 
-## Where the sword is right now: { pos, dir, twist } in chest space.
+## Where the sword is right now: { pos, dir, twist } in chest space. First person
+## has its own keys (fpv_keys, GUARD_FPV, BLOCK_FPV).
 func pose(first_person: bool = false) -> Dictionary:
-	match mode:
-		Mode.BLOCK:
-			return BLOCK
-		Mode.SWING:
-			var p := _raw_pose()
-			if first_person and _blend >= 1.0:
-				# Ease out of / back into the low first-person guard at the ends.
-				var e := 1.0 - absf(progress() * 2.0 - 1.0)
-				p = mix(p, GUARD_FPV, clampf(1.0 - e * 4.0, 0.0, 1.0))
-			return p
-	return GUARD_FPV if first_person else GUARD
+	_fp = first_person
+	return _raw_pose()
 
 
 ## The swing's own pose, blended in from where the blade was when it chained.
 func _raw_pose() -> Dictionary:
 	match mode:
 		Mode.BLOCK:
-			return BLOCK
+			return BLOCK_FPV if _fp else BLOCK
 		Mode.SWING:
-			var p := sample(swing_index, progress())
+			var p := sample(swing_index, progress(), _fp)
 			if _blend < 1.0 and not _from.is_empty():
 				p = mix(_from, p, _blend * _blend * (3.0 - 2.0 * _blend))
 			return p
-	return GUARD
+	return GUARD_FPV if _fp else GUARD
 
 
 static func mix(a: Dictionary, b: Dictionary, f: float) -> Dictionary:
@@ -273,8 +298,8 @@ static func mix(a: Dictionary, b: Dictionary, f: float) -> Dictionary:
 
 ## The pose `p` (0..1) through swing `i`: a curve through its keys (Hermite, each
 ## key's tangent from its neighbours), at rest on the first and last key.
-static func sample(i: int, p: float) -> Dictionary:
-	var keys: Array = SWINGS[i].keys
+static func sample(i: int, p: float, first_person := false) -> Dictionary:
+	var keys: Array = SWINGS[i].get("fpv_keys", SWINGS[i].keys) if first_person else SWINGS[i].keys
 	var n := keys.size()
 	for k in range(1, n):
 		var t1: float = keys[k][0]
@@ -317,3 +342,69 @@ static func pose_transform(p: Dictionary) -> Transform3D:
 	var x := hint.cross(y).normalized()
 	var z := x.cross(y).normalized()
 	return Transform3D(Basis(x, y, z), p.pos)
+
+
+
+## First person, one hand (issue #229): a real fist holds the hilt across the palm,
+## square to the forearm, the blade out past the thumb. Two steps: fpv_pole swings
+## the elbow round its circle so the forearm comes square to the blade (the swing
+## keeps its blade path), then fpv_fist turns the blade the rest of the way, at
+## most FIST_TURN degrees (more tips the level follow-through down), and rolls the
+## wrist so the thumb faces the blade.
+const FIST_TURN := 30.0
+## How far (degrees) the elbow may leave its usual side (the arm's pole) to get there.
+const FIST_POLE := 75.0
+## The elbow stays this far under the shoulder: raised higher, the sleeve's cut
+## end swings into view.
+const FIST_ELBOW_DROP := 0.12
+
+
+## The IK pole for the sword arm: `base` turned about the shoulder-hand line to put
+## the forearm square to blade direction `d` (or as near as the arm allows), the
+## elbow kept low. Same arm as CharacterKit._reach: upper arm `l1`, forearm plus
+## hand `l2`. Searches the elbow's circle in 2.5 degree steps.
+static func fpv_pole(shoulder: Vector3, hand: Vector3, d: Vector3, base: Vector3, l1: float, l2: float) -> Vector3:
+	var to := hand - shoulder
+	var dist := clampf(to.length(), absf(l1 - l2) + 0.01, l1 + l2 - 0.005)
+	var dn := to.normalized()
+	var a := acos(clampf((l1 * l1 + dist * dist - l2 * l2) / (2.0 * l1 * dist), -1.0, 1.0))
+	var p0 := (base - dn * base.dot(dn)).normalized()
+	var p1 := dn.cross(p0)
+	var c := shoulder + dn * l1 * cos(a)
+	var r := l1 * sin(a)
+	var at := hand if to.length() <= dist else shoulder + dn * dist
+	var best := INF
+	var pick := p0
+	var lim := int(FIST_POLE / 2.5)
+	for i in range(-lim, lim + 1):
+		var t := deg_to_rad(i * 2.5)
+		var p := p0 * cos(t) + p1 * sin(t)
+		var elbow := c + p * r
+		var square := absf((at - elbow).normalized().dot(d))
+		var high := maxf(0.0, elbow.y - (shoulder.y - FIST_ELBOW_DROP))
+		var cost := square + high * 8.0 + absf(t) * 0.05
+		if cost < best:
+			best = cost
+			pick = p
+	return pick
+
+
+## After the arm has reached the grip: the sword turned about the fist toward the
+## plane square to the forearm, and set in it. `elbow` = the elbow in chest space
+## (the forearm runs down its -Y, the thumb is +Z, the hand at `reach` along it).
+## Returns [the sword's transform, the wrist's roll about the forearm in radians].
+static func fpv_fist(xf: Transform3D, grip: Vector3, elbow: Transform3D, reach: float) -> Array:
+	var e := elbow.basis.orthonormalized()
+	var fore := -e.y
+	var hand := elbow.origin + fore * reach
+	var g := xf * grip
+	var d := xf.basis.y.normalized()
+	var across := d - fore * d.dot(fore)
+	if across.length() < 0.15:          # blade along the arm: keep the thumb where it is
+		across = e.z
+	across = across.normalized()
+	var turn := d.angle_to(across)
+	var to := d.slerp(across, minf(1.0, deg_to_rad(FIST_TURN) / turn)) if turn > 0.001 else d
+	var q := Basis(Quaternion(d, to.normalized()))
+	var out := Transform3D(q * xf.basis, hand + q * (xf.origin - g))
+	return [out, atan2(across.dot(e.x), across.dot(e.z))]

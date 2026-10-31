@@ -11,8 +11,9 @@ extends Node
 ##             (profile combat.hold_ground) duck behind the counter and shoot over
 ##             it, never leaving the stall. Everyone's pistol (profile "sidearm")
 ##             comes out when the alarm goes up and is put away after
-##   after     calm again when the player flees or is downed; the locals remember
-##             the face for memory_s and start again on sight
+##   after     calm again when the player flees or is downed. After fleeing the
+##             locals remember the face for memory_s and start again on sight;
+##             once the player wakes in the pit they forget it (forgive_player)
 ##
 ## Their own alarm, not the garrison's: shooting a local does not call the Remnant,
 ## and a gate fight does not turn the market on you. While the locals are up in
@@ -64,19 +65,38 @@ func setup(town_demo, all: Array) -> void:
 	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
 	_beast_cfg = PlanetBeast.config(demo.get("planet") if demo.get("planet") is Dictionary else {})
 	_beast_next = float(_beast_cfg.get("locals_say_first_s", 6.0))
-	var i := 0
 	for g in members:
-		var b := GuardBrain.new(g.profile, 211 + i * 37)
-		var m: Dictionary = town.get_marker(g.post_id)
-		var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
-		b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
-		b.set_post_facing(g.post_facing)
-		brains[g] = b
-		g.died.connect(_on_local_died.bind(g))
-		g.hit_by.connect(_on_local_hit.bind(g))
-		i += 1
+		if not g.has_meta("outpost") or not is_same(members, demo.locals):
+			_adopt(g)              # (issue #187: the town's leaves the outposts' locals to theirs)
 	if player != null and player.has_signal("downed"):
 		player.downed.connect(_on_player_downed)
+
+
+func _adopt(g: NpcBody) -> void:
+	var b := GuardBrain.new(g.profile, 211 + brains.size() * 37)
+	var m: Dictionary = town.get_marker(g.post_id)
+	var pts: Array = town.route_points_3d(str(m.get("patrol", ""))) if m.has("patrol") else []
+	b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
+	b.set_post_facing(g.post_facing)
+	brains[g] = b
+	g.died.connect(_on_local_died.bind(g))
+	g.hit_by.connect(_on_local_hit.bind(g))
+
+
+## Issue #187: a local joins after setup (the locals' guards moving into the
+## barracks or an outpost), and leaves (the Remnant take the outpost back).
+func add_member(g: NpcBody) -> void:
+	if g == null or brains.has(g):
+		return
+	if not members.has(g):
+		members.append(g)
+	_adopt(g)
+
+
+func remove_member(g: NpcBody) -> void:
+	members.erase(g)
+	brains.erase(g)
+	claimed.erase(g)
 
 
 func _physics_process(dt: float) -> void:
@@ -103,7 +123,7 @@ func _physics_process(dt: float) -> void:
 	_handle(alarm.drain())
 	for g in alive:
 		var b: GuardBrain = brains[g]
-		g.drawn = alarm.active()       # pistols out while the port is up in arms
+		g.drawn = alarm.active() or not g.sidearm   # pistols out while the port is up in arms (a guard's rifle always is)
 		if alarm.active():
 			b.engage()
 			b.alarm_pos = alarm.last_known
@@ -243,6 +263,21 @@ func _on_player_downed() -> void:
 	_handle(alarm.drain())
 
 
+## The player died and woke in the pit (Garrison._wake_in_pit): like the guards,
+## the locals forget the fight and the face, whatever happened while the player
+## was out (a stray bolt landing then would have raised the alarm again).
+func forgive_player() -> void:
+	alarm.stand_down()
+	_handle(alarm.drain())
+	_attacked = false
+	claimed.clear()
+	for g in _alive():
+		g.perception = Perception.new(g.profile.get("perception", {}))
+		var b: GuardBrain = brains.get(g)
+		if b != null and b.state != GuardBrain.State.PATROL and b.state != GuardBrain.State.RETURN:
+			b.stand_down()
+
+
 # ------------------------------------------------------------------ helpers
 
 func _player_pos() -> Vector3:
@@ -251,10 +286,12 @@ func _player_pos() -> Vector3:
 	return player.global_position
 
 
+## (Only those it runs: the town's members list is the scene's own locals, which
+## also holds the locals at the outposts, each run by its outpost's Townsfolk.)
 func _alive() -> Array:
 	var out: Array = []
 	for g in members:
-		if is_instance_valid(g) and not g.dead:
+		if is_instance_valid(g) and not g.dead and brains.has(g):
 			out.append(g)
 	return out
 

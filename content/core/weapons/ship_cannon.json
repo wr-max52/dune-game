@@ -4,6 +4,7 @@
   "label": "Ship Cannon",
   "fire_group": "primary",
   "damage": 9,
+  "personnel_damage": 130,
   "bolt_speed": 300.0,
   "rate": 0.16,
   "recoil": 0.0,
@@ -13,5 +14,5 @@
   "visible_bolt": true,
   "splash_radius": 3.5,
   "splash_damage": 22,
-  "note": "IP-neutral. Fixed forward ship gun; 'mag' + 'reload_time' act as a heat limit. Issue #64: in the atmosphere a bolt bursts where it lands (on the ground too), hurting everything within splash_radius by splash_damage, so strafing people on the ground works."
+  "note": "IP-neutral. Fixed forward ship gun; 'mag' + 'reload_time' act as a heat limit. Issue #64: in the atmosphere a bolt bursts where it lands (on the ground too), hurting everything within splash_radius by splash_damage, so strafing people on the ground works. 'damage' is what a hit does to a ship's hull (the same in the air and in space); 'personnel_damage' what a hit does to anything else (people, droids, beasts, speeders), so a direct hit kills most troopers outright, the cruiser's too. Both are times the ship's blaster_power."
 }

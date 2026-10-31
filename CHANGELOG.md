@@ -35,6 +35,87 @@ Plain English, newest on top. One entry per milestone.
 - **Trace:** scenes/beast_trace.gd (in CI), read by tests/test_beast_trace.gut.gd.
   Still: docs/lookdev/hazards/desert_blob.jpg.
 
+## The locals forget you when you die, like the guards (2026-10-30)
+
+- **Waking in the pit wipes the locals' grudge.** After you get away from a
+  fight with the port's locals they still remember your face for 4 minutes and
+  start again on sight. Getting knocked out was meant to clear that, but if
+  anything hit a local while you were out (your droid's last bolt, say) their
+  alarm went back up and you woke to 4 more minutes of it. Now, as with the
+  Remnant's garrison, the town's locals and every outpost's forget the fight
+  and your face the moment you wake in the pit.
+
+## Assassin droids stand up straight to shoot (2026-10-30)
+
+- **No more frozen half step.** An assassin droid that stopped walking or
+  running to shoot at you stayed stuck halfway between a stride and its ready
+  stance for the whole fight. Now it settles into the upright stance within a
+  fifth of a second and holds it while it fires. This applies to the
+  Remnant's, the locals' and your own.
+## Shop menus: keys, and they stay open (2026-10-30)
+
+- **Every NPC menu takes W/S or the arrows and Enter.** T-89, Dorrin, the droid
+  merchant, the general, the market stalls, the fence and the nomads' trade all
+  show a lit cursor bar; W/S or Up/Down moves it, Enter picks the row, 1-9 still
+  pick straight off and Esc walks away. Long menus scroll and wrap to fit the
+  screen at any text size.
+- **Buying or selling no longer closes the menu.** It reopens with the new
+  prices, your credits and what the keeper said, the cursor on the same row, so
+  you can sell three power cells in a row.
+- **The market stalls have a real trade menu.** [E] used to sell the first thing
+  the stall would take (your worn jetpack included) in one press. Now it opens a
+  list: everything they buy from you, with counts and prices, what they have for
+  sale, and at the fence its upgrades and Talk, all in one menu.
+- **Text size starts at 175%** (was 125%). A size you already set in F11 > HUD
+  is kept.
+
+## Ship guns hit people hard; one hull in the air and in space (2026-10-30)
+
+- **A ship's cannon kills a man in one hit.** A direct hit from a ship's guns
+  now does 130 damage to anything that is not a ship (times the ship's blaster
+  power): every trooper, sentry and guard, the cruiser's troopers and assassin
+  droids included, goes down to one bolt, in the atmosphere or aboard the
+  cruiser. Honour guards, bounty targets and the general take two or more.
+  Before, a direct hit did 9 (less than the 22 of a near miss's burst).
+- **Ship against ship is unchanged** and the same everywhere: 9 a bolt on a
+  hull, through the shield first, in the air as in space.
+- **Your ship keeps its damage between the air and space.** Climbing into an
+  orbital fight used to give you a fresh hull and shield, and coming back down
+  forgot what the fight did to you. Now it is the same hull and shield all the
+  way up and back.
+
+## Who holds the desert: the Remnant or the locals (2026-10-30, issue #187)
+
+- **Seven Remnant outposts now.** Besides the three out the front gate, four new
+  ones sit round the other sides of the town, 500-650 m out: the salt pan
+  outpost (north), the old well outpost (south), the glass flats outpost (west)
+  and the dust gap outpost (southwest). Each has its own building, ship,
+  troopers, droids and cover, and can be the bounty contract's outpost.
+- **The outposts change hands.** Kill every trooper at a Remnant outpost and the
+  locals take it: two of their guards in desert armour and a white assassin
+  droid move in once you are out of sight (or after half a minute). The
+  Remnant's troopers and droids stop coming back there.
+- **The Remnant take it back** after 20 minutes of play, or straight away if the
+  locals' guards there are all killed. They return once you are 110 m away.
+- **Supply runs from Oda.** When an outpost the locals hold is running short
+  (8 minutes left), Oda offers "Supplies for the locals". Walk up to that
+  outpost with the job on: the hold is full again and the locals pay 120 cr.
+  The objective pointer points at it.
+- **Hold all seven at once and the Remnant are driven off** the planet: nothing is
+  retaken after that, and the locals take the barracks too.
+- **When the story ends the locals own the barracks.** Once the fleet is beaten
+  and the Remnant leave town, desert guards stand at the gate, the tower and the
+  yard, and two white assassin droids walk the main street. They leave you alone
+  until you hurt a local, then fight like the Remnant did.
+- **What it changes:** with three outposts lost, the Remnant's gate checkpoint is a
+  band stricter, and every lost outpost makes bribes 25% dearer. The fence pays
+  8% more for contraband per outpost the locals hold. Oda has new rumors about
+  it. F1 shows a CONTROL section: who holds each place and how long the locals'
+  hold lasts.
+- Numbers and lines: `content/core/story/territory.json`. Not in yet: Remnant
+  raids or an interceptor hunting you after big losses, and the Remnant
+  retaking the gate.
+
 ## T-89 talks: returning hello, ship advice, and he is solid (2026-10-29)
 
 - **A returning line instead of the tutorial.** The first game, T-89 says hello

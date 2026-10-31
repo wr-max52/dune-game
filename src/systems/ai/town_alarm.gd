@@ -10,8 +10,8 @@ extends RefCounted
 ## a trooper spotting a face it remembers (or one wanted on sight by day). Calm
 ## again when every trooper is down, or the player has been out of everyone's
 ## sight for disengage_unseen_s and is disengage_dist from the nearest trooper
-## (fled), or the player is knocked out (downed). After fleeing or being downed the
-## garrison remembers the player for memory_s.
+## (fled), or the player is knocked out (downed). After fleeing the garrison
+## remembers the player for memory_s; after being downed it forgets them.
 ##
 ## Events (drain `events`): { type: "alarm", why }, { type: "calm", why },
 ##   { type: "standing", delta, why, cooldown }, { type: "flag", name }
@@ -89,12 +89,13 @@ func update(dt: float, s: Dictionary) -> void:
 		events.append({ "type": "calm", "why": "fled" })
 
 
-## The player was knocked out and dragged off.
+## The player was knocked out and dragged off: the fight is over, and so is any
+## memory of their face (they wake in the pit, not to a garrison shooting on sight).
 func stand_down() -> void:
+	memory_left = 0.0
 	if state != State.ALARM:
 		return
 	state = State.CALM
-	memory_left = n("memory_s", 300.0)
 	events.append({ "type": "calm", "why": "downed" })
 
 

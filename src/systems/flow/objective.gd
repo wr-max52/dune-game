@@ -5,10 +5,12 @@ extends RefCounted
 ## WorldState and the content, and never rolls a job or moves the story on.
 ##
 ## Most urgent first: a bounty to collect, a bounty to hunt, contraband to sell,
-## a drop to find, then what the story's chapter wants (home planet only).
+## a drop to find, supplies for the locals (issue #187), then what the story's
+## chapter wants (home planet only).
 ##
 ## A target is a word the town scene turns into a place (ObjectiveHud.where):
-## npc:<marker>, marker:<marker>, range, remote, pad, outpost:<location id>, cruiser.
+## npc:<marker>, marker:<marker>, range, remote, pad, outpost:<location id>, cruiser,
+## droid_post.
 ## The drop's target is its area's marker, not the exact spot: finding it is the job.
 ##
 ## Every line: content/core/story/main.json "objectives".
@@ -54,6 +56,9 @@ static func current() -> Dictionary:
 		return { "text": line("drop") % hint, "target": "marker:" + str(drop.marker) if str(drop.marker) != "" else "" }
 	if not home():
 		return {}
+	var to := Territory.supply_out()
+	if to != "":
+		return { "text": Territory.line("objective") % Story.outpost_label(to), "target": "outpost:" + to }
 	return chapter_objective()
 
 

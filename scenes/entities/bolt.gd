@@ -22,6 +22,10 @@ var friends: Array = []        ## issue #64: never hits these either (your droid
 ## (ground_at: (x, z) -> height; the desert's collider is not where a ship flies).
 var splash_radius := 0.0
 var splash_damage := 0.0
+## A ship's cannon is built to hurt ships: `damage` is what a hit does to a ship's hull
+## (ShipHull, the same in the air as in space), soft_damage what it does to anything
+## else it hits (a trooper, a droid, a beast, a speeder). 0 = `damage` to everything.
+var soft_damage := 0.0
 var ground_at: Callable
 ## Issue #93: on the home planet's ball the ground is not a function of (x, z) (past the
 ## equator the same x, z is under the planet), so a ship's bolt there asks how high it is over
@@ -52,6 +56,7 @@ func integrate(dt: float) -> Vector3:
 	_traveled += step.length()
 	if _traveled >= range_m:
 		_die()
+	_trail()
 	return step
 
 
@@ -61,6 +66,10 @@ func apply_to(target: Object) -> void:
 	if not _alive:
 		return
 	_die()
+	# Whatever it landed on (a body, the ground, a blade that blocked it) gets the
+	# bolt pop of sparks; a rock just thuds. One that runs out of range does not.
+	if not matte and is_inside_tree():
+		ExplosionFx.bolt(get_parent(), global_position)
 	handle_hit(target)
 	if splash_radius > 0.0:
 		_splash(target)
@@ -96,14 +105,15 @@ func _splash(direct: Object) -> void:
 func handle_hit(target: Object) -> void:
 	if target == null:
 		return
+	var amount := damage if soft_damage <= 0.0 or target is ShipHull else soft_damage
 	# A target that cares who shot it (an NPC: no friendly fire, and "the player
 	# shot me" starts a fight) gets the shooter too.
 	if target.has_method("apply_damage_from"):
-		target.apply_damage_from(damage, shooter)
+		target.apply_damage_from(amount, shooter)
 	elif target.has_method("apply_damage"):
-		target.apply_damage(damage)
+		target.apply_damage(amount)
 	elif target.get_parent() != null and target.get_parent().has_method("apply_damage"):
-		target.get_parent().apply_damage(damage)
+		target.get_parent().apply_damage(amount)
 	on_hit.emit(target)
 
 
@@ -168,6 +178,21 @@ func _orient() -> void:
 	var hint := Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT
 	var x := hint.cross(y).normalized()
 	_streak.basis = Basis(x, y, x.cross(y))
+	_trail()
+
+
+## Issue #229: the streak's head is the bolt; its tail trails only as far as the
+## bolt has come (since it was fired or turned). Centred on the bolt, a fresh one
+## reached half its length back past the muzzle: from the eye, a pale slab over
+## the shooter's own hand.
+func _trail() -> void:
+	if _streak == null or direction.length() < 0.01:
+		return
+	var vis := clampf(_traveled + 0.08, 0.12, streak_length)
+	var k := vis / streak_length
+	var y := direction.normalized()
+	_streak.basis = Basis(_streak.basis.x.normalized(), y * k, _streak.basis.z.normalized())
+	_streak.position = -y * (vis * 0.5 - streak_radius)
 
 
 ## A blade sent it back: new heading, new owner, a little faster.
@@ -200,6 +225,12 @@ func _physics_process(dt: float) -> void:
 				skip.append((f as CollisionObject3D).get_rid())
 		q.exclude = skip
 		var hit := space.intersect_ray(q)
+		# Issue #193: a body marked "bolts_pass" (the cruiser bay's shield) stops
+		# people, not shots.
+		while not hit.is_empty() and (hit.collider as Object).has_meta("bolts_pass"):
+			skip.append(hit.rid)
+			q.exclude = skip
+			hit = space.intersect_ray(q)
 		if not hit.is_empty():
 			global_position = hit.position
 			apply_to(hit.collider if hit_target == null else hit_target)
@@ -233,7 +264,7 @@ func _on_body_entered(body: Node3D) -> void:
 		shooter = null
 	if shooter != null and body == shooter:
 		return
-	if friends.has(body):
+	if friends.has(body) or body.has_meta("bolts_pass"):
 		return
 	if hit_target != null:
 		apply_to(hit_target)

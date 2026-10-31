@@ -11,6 +11,8 @@ extends RefCounted
 ##       "jetpack.fuel"), put on by apply() where that data is used,
 ##   { id, label, price, item, requires }  an item, sold once (requires: WorldState's
 ##       conditions, e.g. a bounty paid).
+## An offer with a "locked" hint shows on the menu before its conditions hold
+## (locked_offers), so the player knows it is there and what opens it.
 
 const FENCE_PATH := "res://content/core/vendors/fence.json"
 
@@ -42,14 +44,23 @@ static func open_offers() -> Array:
 		and WorldState._conditions_hold(o.get("requires", {}), "stranger"))
 
 
+## Offers not on sale yet but shown with their "locked" hint: not bought, and
+## their conditions do not hold.
+static func locked_offers() -> Array:
+	return offers().filter(func(o): return o.has("locked") and not bought(str(o.id)) \
+		and not WorldState._conditions_hold(o.get("requires", {}), "stranger"))
+
+
 ## Pay for an offer: an upgrade goes on, an item goes in your pockets. Returns
-## "bought", "cant_afford" or "" (not on offer).
+## "bought", "cant_afford", "full" (no backpack slot for the item) or "" (not on offer).
 static func buy(id: String) -> String:
 	var o := offer(id)
 	if o.is_empty() or not open_offers().has(o):
 		return ""
 	if WorldState.credits < int(o.get("price", 0)):
 		return "cant_afford"
+	if o.has("item") and not WorldState.inventory.room_for(str(o.item)):
+		return "full"
 	WorldState.credits -= int(o.get("price", 0))
 	WorldState.gear_fits.append(id)
 	if o.has("item"):

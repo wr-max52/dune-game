@@ -23,6 +23,7 @@ signal job_offered(job: Dictionary)
 signal drink_poured(drink: Dictionary)
 signal sale_offered(item: Dictionary)          ## issue #42: { id, name, price }; the player confirms
 signal comrade_declared                        ## issue #206: T-89 heard the player hates the Remnant
+signal verdict(kind: String)                   ## the general let them go ("let_go") or had them searched ("search")
 
 var last_hints: Array = []                     ## the hint lines the last line set off (tests)
 signal ended(reason: String)
@@ -148,7 +149,18 @@ func baseline_mood() -> String:
 ## Issue #204: the open jobs that are this character's to give ("giver" on the
 ## board; Oda's by default).
 func my_jobs(tier: String) -> Array:
-	return WorldState.open_jobs(tier).filter(func(j): return str(j.get("giver", "cantina_owner")) == id())
+	return WorldState.open_jobs(tier).filter(gives)
+
+
+## Issue #188: "giver" is one card id or a list of them (the smuggling run and the
+## contract are Oda's, the fence's, Skrugs's and T-89's). A planet's own Oda
+## (cantina_owner_<planet>) gives what Oda gives.
+func gives(j: Dictionary) -> bool:
+	var g = j.get("giver", "cantina_owner")
+	for who in (g if g is Array else [g]):
+		if id() == str(who) or id().begins_with(str(who) + "_"):
+			return true
+	return false
 
 
 # ------------------------------------------------------------------ hints (issues #204, #205, #210, #211)
@@ -333,6 +345,8 @@ func _apply(kept: Array) -> Array:
 				WorldState.change_standing("locals", -2, "Someone got thrown out of the cantina.")
 			"comrade":
 				comrade_declared.emit()
+			"let_go", "search":
+				verdict.emit(t)
 			"end_conversation", "refuse_topic":
 				pass
 		applied.append(t)

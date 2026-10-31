@@ -23,7 +23,7 @@ static func build(kind: String, variant: Dictionary, mats: LookMaterials, look: 
 	var body := Color(str(variant.get("body", "#808080")))
 	var trim := Color(str(variant.get("trim", "#404040")))
 	var eye := Color(str(variant.get("eye", "#4ad0ff")))
-	if _from_model(model, look, body, eye, mats):
+	if _from_model(model, look, body, eye, mats, variant.get("shine", {})):
 		root.set_meta("source", "model")
 		# Issue #76: an enemy droid's gun is the dark variant (the variant's "dark_gun").
 		var gun := model.find_child("Carry", true, false) as Node3D
@@ -43,8 +43,11 @@ static func build(kind: String, variant: Dictionary, mats: LookMaterials, look: 
 
 ## The kind's model, tinted toward the body colour (look.tint: 0 = as generated,
 ## 1 = full body colour), with an "Eye" per look.eyes entry and a "Muzzle" at
-## look.muzzle. False when there is no model to load.
-static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color, mats: LookMaterials) -> bool:
+## look.muzzle. False when there is no model to load. `shine` (a variant's
+## { metallic, roughness, clearcoat }): the upgraded droids' polished look, all
+## over metal instead of the model's own worn metal map.
+static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color, mats: LookMaterials,
+		shine: Dictionary = {}) -> bool:
 	var path := str(look.get("model", ""))
 	if path == "" or not ResourceLoader.exists(path):
 		return false
@@ -61,6 +64,13 @@ static func _from_model(model: Node3D, look: Dictionary, body: Color, eye: Color
 				continue
 			var m := src.duplicate() as BaseMaterial3D
 			m.albedo_color = Color.WHITE.lerp(body, k)
+			if not shine.is_empty():
+				m.metallic_texture = null
+				m.metallic = float(shine.get("metallic", 0.9))
+				m.roughness = float(shine.get("roughness", 0.3))      # times the model's roughness map
+				m.clearcoat_enabled = float(shine.get("clearcoat", 0.0)) > 0.0
+				m.clearcoat = float(shine.get("clearcoat", 0.0))
+				m.clearcoat_roughness = 0.08
 			mi.set_surface_override_material(s, m)
 	_animations(n, look)
 	var r := float(look.get("eye_radius", 0.04))
@@ -196,6 +206,8 @@ static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) ->
 		return false
 	if ap.current_animation != clip:
 		ap.play(clip, blend)
+	elif ap.has_section():
+		ap.reset_section()          # coming out of hold_pose on the same clip (idle = aim)
 	ap.speed_scale = speed
 	return true
 
@@ -203,6 +215,9 @@ static func play_anim(look: Node3D, role: String, speed := 1.0, blend := 0.2) ->
 ## Issue #64: hold one frame of a clip, still (a droid in a fight stands in its
 ## ready stance instead of running the idle's shuffle). look.anims[role] at
 ## `at` seconds. False when the look has no rig or no such clip.
+## It loops a sliver of the clip at full speed rather than pausing it: a paused
+## player never finishes its crossfade, so a droid that stopped mid-stride to
+## shoot stayed frozen halfway between the walk and the stance.
 static func hold_pose(look: Node3D, role: String, at := 0.0, blend := 0.2) -> bool:
 	var holder: Node = null
 	for n in look.find_children("*", "Node3D", true, false):
@@ -215,10 +230,9 @@ static func hold_pose(look: Node3D, role: String, at := 0.0, blend := 0.2) -> bo
 	var clip := str((holder.get_meta("anims") as Dictionary).get(role, ""))
 	if clip == "" or not ap.has_animation(clip):
 		return false
-	if ap.current_animation != clip or ap.speed_scale != 0.0:
-		ap.play(clip, blend)
-		ap.seek(at, true)
-	ap.speed_scale = 0.0
+	if ap.current_animation != clip or not ap.has_section() or not is_equal_approx(ap.get_section_start_time(), at):
+		ap.play_section(clip, at, at + 0.001, blend)
+	ap.speed_scale = 1.0
 	return true
 
 

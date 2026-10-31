@@ -8,6 +8,11 @@ extends CanvasLayer
 ## and the item data; it only reads. Issue #201: under the jobs, the optional
 ## quests (Quests.entries) with a waypoint toggle each; the mouse is free while
 ## the panel is open so the toggles can be clicked.
+##
+## The backpack (Inventory.slots_used): its numbered slots, the pistol in the
+## first, one kind of item in each of the rest, then the empty ones. Activated
+## gear (the jetpack on, the armour on) is listed under them, "(activated)",
+## without a slot.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
@@ -23,6 +28,7 @@ var wear_buttons: Dictionary = {}  ## item id -> its Wear / Take off button (tes
 var panel: PanelContainer
 var title: Label
 var credits_label: Label
+var backpack_label: Label
 var list: VBoxContainer
 var jobs: VBoxContainer
 var rows: Array = []              ## the text of each row, for tests
@@ -70,6 +76,7 @@ func _ready() -> void:
 	cols.add_child(v)
 	title = _text(v, "INVENTORY", 20, AMBER)
 	credits_label = _text(v, "", 17, INK)
+	backpack_label = _text(v, "", 15, AMBER)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
 	v.add_child(list)
@@ -145,28 +152,40 @@ func refresh() -> void:
 		c.queue_free()
 	credits_label.text = "Credits:  %d cr" % WorldState.credits
 	var inv: Inventory = inventory if inventory != null else WorldState.inventory
-	var ids: Array = inv.item_ids()
-	_droid_rows()
-	if ids.is_empty():
-		if not rows.is_empty():
-			return
-		rows.append("Nothing but the clothes on your back.")
-		_wrap(_text(list, rows[0], 16, Color(INK, 0.7)))
-		return
-	for id in ids:
-		var it: Dictionary = content.get_item(str(id)) if content != null else {}
-		var shown: String = name_of.call(it, str(id)) if name_of.is_valid() else str(it.get("label", id))
-		var row := "%s  x%d" % [shown, inv.count(str(id))]
+	backpack_label.text = "BACKPACK   %d of %d slots" % [inv.slots_used(), Inventory.backpack_slots()]
+	var n := 0
+	for label in Inventory.fixed_slots():
+		n += 1
+		rows.append("[%d]  %s" % [n, str(label)])
+		_wrap(_text(list, rows[-1], 16, INK))
+	for id in inv.packed_ids():
+		n += 1
+		_item_row(inv, str(id), "[%d]  " % n)
+	for i in range(n, Inventory.backpack_slots()):
+		rows.append("[%d]  - empty -" % (i + 1))
+		_text(list, rows[-1], 16, Color(INK, 0.45))
+	for id in inv.item_ids():
 		if inv.is_attached(str(id)):
-			row += "   (worn)"
-		row += "   %d cr" % int(it.get("value", 0))
-		var illegal := bool(it.get("contraband", false))
-		if illegal:
-			row += "   CONTRABAND"
-		rows.append(row)
-		_wrap(_text(list, row, 16, RED if illegal else INK))
-		if toggle_item.is_valid() and str(it.get("slot", "")) != "":
-			_wear_button(str(id), inv.is_attached(str(id)))
+			_item_row(inv, str(id), "")
+	_droid_rows()
+
+
+## One kind of item: name, how many, (activated), value, CONTRABAND, and the
+## Wear / Take off button for gear.
+func _item_row(inv: Inventory, id: String, prefix: String) -> void:
+	var it: Dictionary = content.get_item(id) if content != null else {}
+	var shown: String = name_of.call(it, id) if name_of.is_valid() else str(it.get("label", id))
+	var row := "%s%s  x%d" % [prefix, shown, inv.count(id)]
+	if inv.is_attached(id):
+		row += "   (activated)"
+	row += "   %d cr" % int(it.get("value", 0))
+	var illegal := bool(it.get("contraband", false))
+	if illegal:
+		row += "   CONTRABAND"
+	rows.append(row)
+	_wrap(_text(list, row, 16, RED if illegal else INK))
+	if toggle_item.is_valid() and str(it.get("slot", "")) != "":
+		_wear_button(id, inv.is_attached(id))
 
 
 ## The job log, from Objective: a title over each entry's line, then the tally.
@@ -234,11 +253,15 @@ func _wrap(l: Label) -> void:
 	l.custom_minimum_size.x = 200
 
 
-## Issue #51: your droids, one row each. What a cargo droid carries is not
-## listed (and not in the inventory): the gate never sees it either.
+## Issue #51: your droids, one row each, with their health and hold size. What
+## a cargo droid carries is not listed (and not in the inventory): the gate never
+## sees it either.
 func _droid_rows() -> void:
 	for d in WorldState.droids.owned:
-		var row := "%s   (droid)   %d cr" % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))]
+		var row := "%s   (droid)   %d hp" % [DroidRoster.label(str(d.kind)), int(DroidRoster.health(d))]
+		if DroidRoster.cargo_slots(d) > 0:
+			row += "   hold %d of %d" % [(d.get("cargo", {}) as Dictionary).size(), DroidRoster.cargo_slots(d)]
+		row += "   %d cr" % DroidRoster.resale(str(d.kind))
 		rows.append(row)
 		_wrap(_text(list, row, 16, AMBER))
 

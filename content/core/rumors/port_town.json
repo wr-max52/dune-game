@@ -38,6 +38,30 @@
     ]
    },
    "weight": 3
+  },
+  {
+   "id": "r_locals_outpost",
+   "text": "The locals run one of the Remnant's desert outposts now. Desert armour, white droids, the lot. The Remnant will want it back.",
+   "requires": { "flags": ["locals_hold_outpost"], "not_flags": ["remnant_driven_off"] },
+   "weight": 4
+  },
+  {
+   "id": "r_outpost_short",
+   "text": "Our people out at the outposts are short of water. Anyone with a hold to spare could make good money, and keep the Remnant off them.",
+   "requires": { "flags": ["outpost_short"] },
+   "weight": 5
+  },
+  {
+   "id": "r_outpost_retaken",
+   "text": "The Remnant marched back into an outpost the locals had taken. Nobody brought them supplies in time.",
+   "requires": { "flags": ["outpost_retaken"], "not_flags": ["remnant_driven_off"] },
+   "weight": 3
+  },
+  {
+   "id": "r_driven_off",
+   "text": "No more Remnant in the desert. The locals have the outposts and the barracks, and the gate is ours.",
+   "requires": { "flags": ["remnant_driven_off"] },
+   "weight": 5
   }
   ]
 }

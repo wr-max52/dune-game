@@ -28,6 +28,8 @@ const ACTION_DOCS := {
 	"refuse_topic": '{"type": "refuse_topic"}  when you will not talk about something',
 	"end_conversation": '{"type": "end_conversation"}  when you are done with them',
 	"call_guards": '{"type": "call_guards"}  only if they threaten you or keep insulting you',
+	"let_go": '{"type": "let_go"}  when you are done with them and let them go on their way (this ends the talk)',
+	"search": '{"type": "search"}  when you order your guards to search them (this ends the talk)',
 }
 ## A card with no "actions" list gets the Cantina Owner's set (the M12 default).
 const DEFAULT_ACTIONS := ["share_rumor", "offer_job", "hint_secret", "pour_drink", "trust", "refuse_topic", "end_conversation", "call_guards"]
@@ -35,6 +37,7 @@ const DEFAULT_ACTIONS := ["share_rumor", "offer_job", "hint_secret", "pour_drink
 var card: Dictionary = {}
 var world_text: Dictionary = {}
 var schema: Dictionary = {}
+var extra_actions: Array = []         ## for a while only (the general's verdict in the pit meeting)
 
 
 func _init(persona_card: Dictionary = {}, briefing_text: Dictionary = {}, reply_schema: Dictionary = {}) -> void:
@@ -88,9 +91,14 @@ func persona_message() -> Dictionary:
 	return { "role": "system", "content": "\n\n".join(lines) }
 
 
-## The actions this character may take (their card's "actions").
+## The actions this character may take (their card's "actions", and any
+## extra_actions for now).
 func actions() -> Array:
-	return card.get("actions", DEFAULT_ACTIONS)
+	var out: Array = card.get("actions", DEFAULT_ACTIONS).duplicate()
+	for a in extra_actions:
+		if not out.has(a):
+			out.append(a)
+	return out
 
 
 ## The static rules + reply contract message.

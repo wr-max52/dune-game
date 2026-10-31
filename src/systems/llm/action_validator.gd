@@ -80,6 +80,9 @@ static func validate(actions: Array, briefing: Dictionary, ctx: Dictionary) -> D
 					out["price"] = int(ships[sid].price)          # the game's price, never the model's
 			"refuse_topic", "end_conversation", "comrade":
 				pass
+			"let_go", "search":
+				if seen_types.has("let_go") or seen_types.has("search"):
+					why = "one verdict only"
 			"call_guards":
 				if int(ctx.get("trust", 0)) >= GUARDS_MAX_TRUST:
 					why = "trust too high to throw them out"
