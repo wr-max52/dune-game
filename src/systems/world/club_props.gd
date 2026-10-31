@@ -426,7 +426,7 @@ func spot(from: Vector3, to: Vector3, color: Color, energy := 6.0, sweep := 0.0,
 	var pivot := Node3D.new()
 	pivot.name = "Spot"
 	add_child(pivot)
-	pivot.look_at_from_position(from, to, Vector3.UP if absf((to - from).normalized().y) < 0.99 else Vector3.FORWARD)
+	pivot.transform = Transform3D(Basis.looking_at(to - from, Vector3.UP if absf((to - from).normalized().y) < 0.99 else Vector3.FORWARD), from)
 	var can := _cyl(pivot, 0.12, 0.3, Vector3(0, 0, 0.0), ClubTextures.brushed(Color("#1a1a1c"), 0.6), Vector3(90, 0, 0))
 	can.name = "Can"
 	_cyl(pivot, 0.1, 0.01, Vector3(0, 0, -0.155), ClubTextures.glow(color, 4.0), Vector3(90, 0, 0))
@@ -500,7 +500,7 @@ func mirror_ball(pos: Vector3, ceiling: float, r := 0.35) -> void:
 			var e := -0.9 + rk * 0.6
 			var d := Vector3(cos(a) * cos(e), sin(e), sin(a) * cos(e))
 			var tile := _box(ball, Vector3(0.06, 0.06, 0.005), d * (r + 0.002), mirror)
-			tile.look_at_from_position(d * (r + 0.002), d * 2.0, Vector3.UP if absf(d.y) < 0.99 else Vector3.RIGHT)
+			tile.basis = Basis.looking_at(d, Vector3.UP if absf(d.y) < 0.99 else Vector3.RIGHT)
 	spins.append([ball, 0.4])
 
 
