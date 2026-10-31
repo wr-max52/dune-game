@@ -23,11 +23,13 @@ GALLERY_W = 4.0     # walkway round the gap, where the bridges land
 HALL_W = 6.0        # outer hallway, glass outer wall
 SPOKE_W = 4.0       # corridor from the gallery out to the hallway
 BRIDGE_W = 3.0
-FLOOR_H = 10.0      # floor to floor
-MAIN_R = 56.0       # main tower floors (the market floor is smaller)
-MAIN_MARKET_R = 44.0
-T2_R = 48.0         # second tower floors
-T2_MARKET_R = 40.0
+STOREY = 14.0       # each floor is tall: floor to ceiling
+GAP = 12.0          # open space between floors: the elevator crosses it in a glass tube
+LEVEL = STOREY + GAP
+TUBE_R = 6.0        # the elevator's glass tube between floors
+# Floor radii: the top floor is the biggest, each one below smaller (levels counted from the bottom, 0 = floor 1).
+MAIN_RS = {3: 70.0, 2: 60.0, 1: 50.0, 0: 42.0}    # top, homes, markets, engines
+T2_RS = {3: 54.0, 2: 46.0, 1: 40.0}               # homes, outpost, markets
 T2_X = 170.0        # second tower centre, east of the main tower
 BAY_R = 38.0        # landing bay: the port's round pit bowl (port_round pit_bowl)
 BAY_X = -175.0      # west of the main tower, off the market floor
@@ -209,8 +211,9 @@ def floor_label(svg, v, c, r_out, text, sub):
 
 
 def main_top(svg, v, c):
-	floor_shell(svg, v, c, MAIN_R, "ns")
-	r0, r1 = SHAFT_R + GALLERY_W, MAIN_R - HALL_W
+	r_out = MAIN_RS[3]
+	floor_shell(svg, v, c, r_out, "ns")
+	r0, r1 = SHAFT_R + GALLERY_W, r_out - HALL_W
 	room(svg, v, c, r0, r1, -84, 34, COL["cantina"], "CANTINA\nbar, stage,\nbooths")
 	room(svg, v, c, r0, r1, 37, 86, "#8796a1", "stores", 9)
 	room(svg, v, c, r0, r1, 94, 200, COL["barracks"], "BARRACKS\nbunks, lockers")
@@ -228,14 +231,14 @@ def main_top(svg, v, c):
 	owner = v.p(*pol(r0 + 8, -25, c))
 	svg.circle(owner, 3.4, COL["home"], COL["ink"], 1.0)
 	npc_dots(svg, v, c, r0 + 10, r1 - 2, -78, 28, 9)
-	tunnel_stub(svg, v, c, MAIN_R, 0, "to tower 2 (homes)")
-	floor_label(svg, v, c, MAIN_R, "Floor 4 (top)", "N-S bridges · general + honour guard on the bridge")
+	tunnel_stub(svg, v, c, r_out, 0, "to tower 2 (homes)")
+	floor_label(svg, v, c, r_out, "Floor 4 (top, biggest)", "N-S bridges · general + honour guard on the bridge")
 
 
 def main_homes(svg, v, c):
-	homes_floor(svg, v, c, MAIN_R, "ew")
-	tunnel_stub(svg, v, c, MAIN_R, 0, "to tower 2 (outpost)")
-	floor_label(svg, v, c, MAIN_R, "Floor 3: homes", "E-W bridges · 25 homes, 8 open")
+	homes_floor(svg, v, c, MAIN_RS[2], "ew")
+	tunnel_stub(svg, v, c, MAIN_RS[2], 0, "to tower 2 (outpost)")
+	floor_label(svg, v, c, MAIN_RS[2], "Floor 3: homes", "E-W bridges · 25 homes, 8 open")
 
 
 def market_floor(svg, v, c, r_out, axis, bay=False, n_huts=6):
@@ -272,15 +275,16 @@ def market_floor(svg, v, c, r_out, axis, bay=False, n_huts=6):
 
 
 def main_markets(svg, v, c):
-	market_floor(svg, v, c, MAIN_MARKET_R, "ns")
-	tunnel_stub(svg, v, c, MAIN_MARKET_R, 0, "to tower 2 (markets)")
-	tunnel_stub(svg, v, c, MAIN_MARKET_R, 180, "to the landing bay", 14)
-	floor_label(svg, v, c, MAIN_R, "Floor 2: markets", "N-S bridges · stalls + grey metal huts, no rooms")
+	market_floor(svg, v, c, MAIN_RS[1], "ns")
+	tunnel_stub(svg, v, c, MAIN_RS[1], 0, "to tower 2 (markets)")
+	tunnel_stub(svg, v, c, MAIN_RS[1], 180, "to the landing bay", 14)
+	floor_label(svg, v, c, MAIN_RS[1], "Floor 2: markets", "N-S bridges · stalls + grey metal huts, no rooms")
 
 
 def main_engines(svg, v, c):
-	floor_shell(svg, v, c, MAIN_R, "ew")
-	r0, r1 = SHAFT_R + GALLERY_W, MAIN_R - HALL_W
+	r_out = MAIN_RS[0]
+	floor_shell(svg, v, c, r_out, "ew")
+	r0, r1 = SHAFT_R + GALLERY_W, r_out - HALL_W
 	room(svg, v, c, r0, r1, -84, 0, COL["engine"], "ENGINE\nROOM")
 	reactor = v.p(*pol(r1 - 9, -20, c))
 	svg.circle(reactor, 5 * v.s, COL["reactor"], "#fff", 1.0, ' opacity="0.9"')
@@ -288,21 +292,22 @@ def main_engines(svg, v, c):
 	room(svg, v, c, r0, r1, 96, 176, "#6a5a48", "CARGO\nHOLD\ncrates, droids")
 	room(svg, v, c, r0, r1, 184, 266, "#4f5964", "workshop")
 	# drop hatch to the wrecks, on the hallway at the south
-	h = v.p(*pol(MAIN_R - HALL_W / 2, 90, c))
+	h = v.p(*pol(r_out - HALL_W / 2, 90, c))
 	svg.circle(h, 4.2 * v.s, COL["hatch"], "#fff", 1.2)
 	svg.text(h[0], h[1] + 4.2 * v.s + 11, "drop hatch to the wrecks", size=9, anchor="middle", fill=COL["hatch"], weight="bold")
 	npc_dots(svg, v, c, r0 + 3, r1 - 3, 100, 170, 3)
 	npc_dots(svg, v, c, r0 + 3, r1 - 3, -80, -5, 2)
-	floor_label(svg, v, c, MAIN_R, "Floor 1 (bottom): engines", "E-W bridges · no tunnel")
+	floor_label(svg, v, c, r_out, "Floor 1 (bottom, smallest): engines", "E-W bridges · no tunnel")
 
 
 def t2_homes(svg, v, c):
-	homes_floor(svg, v, c, T2_R, "ew")
-	tunnel_stub(svg, v, c, T2_R, 180, "to main (top)")
-	floor_label(svg, v, c, T2_R + 8, "Floor 4: homes", "E-W bridges · 25 homes, 8 open")
+	homes_floor(svg, v, c, T2_RS[3], "ew")
+	tunnel_stub(svg, v, c, T2_RS[3], 180, "to main (top)")
+	floor_label(svg, v, c, T2_RS[3], "Floor 4: homes", "E-W bridges · 25 homes, 8 open")
 
 
 def t2_outpost(svg, v, c):
+	T2_R = T2_RS[2]
 	floor_shell(svg, v, c, T2_R, "ns")
 	r0, r1 = SHAFT_R + GALLERY_W, T2_R - HALL_W
 	room(svg, v, c, r0, r1, -84, -6, COL["outpost"], "COMMAND\nROOM", 9)
@@ -315,13 +320,13 @@ def t2_outpost(svg, v, c):
 	for a in list(range(-70, -10, 15)) + list(range(110, 170, 18)) + [175, 185]:
 		svg.circle(v.p(*pol((r0 + r1) / 2 if a < 170 else T2_R - 3, a, c)), 2.6, COL["remnant"], "#fff", 0.6)
 	tunnel_stub(svg, v, c, T2_R, 180, "to main (homes)")
-	floor_label(svg, v, c, T2_R + 8, "Floor 3: Remnant outpost", "N-S bridges · taken / retaken")
+	floor_label(svg, v, c, T2_R, "Floor 3: Remnant outpost", "N-S bridges · taken / retaken")
 
 
 def t2_markets(svg, v, c):
-	market_floor(svg, v, c, T2_MARKET_R, "ew", n_huts=5)
-	tunnel_stub(svg, v, c, T2_MARKET_R, 180, "to main (markets)")
-	floor_label(svg, v, c, T2_R + 8, "Floor 2: markets", "E-W bridges · stalls + grey metal huts")
+	market_floor(svg, v, c, T2_RS[1], "ew", n_huts=5)
+	tunnel_stub(svg, v, c, T2_RS[1], 180, "to main (markets)")
+	floor_label(svg, v, c, T2_RS[1], "Floor 2: markets", "E-W bridges · stalls + grey metal huts")
 
 
 # ------------------------------------------------------------------ side section
@@ -339,79 +344,90 @@ def space_backdrop(svg, x, y, w, h, rocks=55, keep_clear=None):
 
 
 def section(svg, x, y, w, h):
-	"""The station from the south: both towers, the tunnels and the bay."""
+	"""The station from the south: both towers, the gaps between floors, the tunnels and the bay."""
 	panel(svg, x, y, w, h, "Station side section, looking north",
-		"Floors 10 m apart, counted from the bottom. Tunnels join the towers at every level they share. The bay's tunnel leaves the main market floor.")
-	s = 2.1
+		"Tall floors (~14 m), the top one biggest and each one below smaller. Open space (~12 m) between floors: the elevator crosses it in a glass tube. "
+		"Tunnels join the towers at every level they share.")
+	s = 2.05
 	ox = x + 40 + (BAY_R - BAY_X) * s
-	base = y + 330                # floor 1 (engines) level
+	base = y + 368                # underside of floor 1 (engines)
 	v = View(ox, base, s)
 	def P(xm, ym):
 		return v.p(xm, -ym)
-	space_backdrop(svg, x, y, w, h, 40, (x + 20, y + 120, x + w - 20, y + 360))
+	space_backdrop(svg, x, y, w, h, 40, (x + 20, y + 120, x + w - 20, y + h - 10))
 
-	def tower(cx, levels, r, labels, rmarket, side):
-		for i, lv in enumerate(levels):
-			yy = lv * FLOOR_H
-			rr = rmarket if labels[i] == "markets" else r
-			a, b = P(cx - rr, yy), P(cx + rr, yy + 6.5)
-			svg.rect(a[0], b[1], b[0] - a[0], a[1] - b[1], "#aab3be", ' stroke="%s" stroke-width="1.6"' % COL["glass"])
-			sl, sr = P(cx - SHAFT_R, yy), P(cx + SHAFT_R, yy + 6.5)
-			svg.rect(sl[0], sr[1], sr[0] - sl[0], sl[1] - sr[1], COL["space"])
-			# the bridges: drawn across the gap on N-S floors (seen end on: a short stub on E-W ones)
-			ns = (lv % 2 == 0) if cx == 0 else (lv % 2 == 1)
-			bl, br = (P(cx - SHAFT_R, yy + 0.4), P(cx + SHAFT_R, yy + 1.2)) if not ns else (P(cx - BRIDGE_W / 2, yy + 0.4), P(cx + BRIDGE_W / 2, yy + 1.2))
-			svg.rect(bl[0], br[1], br[0] - bl[0], bl[1] - br[1], COL["bridge"])
-			t = P(cx + (rr + 3) * side, yy + 3)
-			svg.text(t[0], t[1] + 4, "%d: %s" % (lv + 1, labels[i]), size=10, fill="#e6ebf2", halo=False,
+	def box(x0, y0, x1, y1, fill, extra=""):
+		a, b = P(x0, y0), P(x1, y1)
+		svg.rect(a[0], b[1], b[0] - a[0], a[1] - b[1], fill, extra)
+
+	def tower(cx, rs, labels, side, lift_level):
+		levels = sorted(rs)
+		# the glass tubes between floors
+		for lv in levels[:-1]:
+			y0, y1 = lv * LEVEL + STOREY, (lv + 1) * LEVEL
+			box(cx - TUBE_R, y0, cx + TUBE_R, y1, "#9fd8ff", ' fill-opacity="0.18" stroke="%s" stroke-width="1.4"' % COL["glass"])
+		for lv in levels:
+			rr = rs[lv]
+			y0 = lv * LEVEL
+			box(cx - rr, y0, cx + rr, y0 + STOREY, "#aab3be", ' stroke="%s" stroke-width="2"' % COL["glass"])
+			box(cx - rr + 1, y0 + 1.5, cx + rr - 1, y0 + STOREY - 1, "#8d97a3")       # the tall rooms
+			box(cx - rr + 1, y0 + 4, cx + rr - 1, y0 + STOREY - 3, COL["glass"], ' fill-opacity="0.35"')  # big windows
+			box(cx - SHAFT_R, y0, cx + SHAFT_R, y0 + STOREY, COL["space"])
+			ns = (lv % 2 == 1) if cx == 0 else (lv % 2 == 0)
+			bw = SHAFT_R if not ns else BRIDGE_W / 2
+			box(cx - bw, y0 + 0.2, cx + bw, y0 + 1.4, COL["bridge"])
+			lift_label = (side < 0 and lv == 1)          # clear of the bay tunnel
+			t = P(cx + (rr + 3) * side, y0 + STOREY / 2 + (10 if lift_label else 0))
+			svg.text(t[0], t[1] + 4, "%d: %s" % (lv + 1, labels[lv]), size=10, fill="#e6ebf2", halo=False,
 				anchor="start" if side > 0 else "end")
-		top = P(cx, levels[-1] * FLOOR_H + 12)
-		bot = P(cx, levels[0] * FLOOR_H)
-		svg.line(top, bot, COL["lift"], 1.6, ' stroke-dasharray="4 3"')
-		lp = P(cx, levels[1] * FLOOR_H + 1.2)
-		svg.rect(lp[0] - LIFT_R * s, lp[1] - 3, 2 * LIFT_R * s, 4, COL["lift"])
+		top = P(cx, levels[-1] * LEVEL + STOREY)
+		bot = P(cx, levels[0] * LEVEL)
+		svg.line(top, bot, COL["lift"], 1.4, ' stroke-dasharray="4 3"')
+		# the elevator caught between floors: in the space tunnel
+		ly = lift_level * LEVEL + STOREY + GAP * 0.45
+		lp = P(cx, ly)
+		svg.rect(lp[0] - LIFT_R * s, lp[1] - 2, 2 * LIFT_R * s, 4, COL["lift"])
 		for k in range(2):
-			svg.circle((lp[0] - 3 + 6 * k, lp[1] - 7), 2.6, COL["npc"], "#fff", 0.6)
-		capc = P(cx, levels[-1] * FLOOR_H + 6.5)
+			svg.circle((lp[0] - 4 + 8 * k, lp[1] - 7), 2.8, COL["npc"], "#fff", 0.6)
+		capc = P(cx, levels[-1] * LEVEL + STOREY)
+		r = rs[levels[-1]]
 		svg.add('<path d="M %.1f %.1f A %.1f %.1f 0 0 1 %.1f %.1f" fill="#9fd8ff" fill-opacity="0.15" stroke="%s" stroke-width="1.4"/>'
-			% (capc[0] - r * 0.8 * s, capc[1], r * 0.8 * s, 9 * s, capc[0] + r * 0.8 * s, capc[1], COL["glass"]))
+			% (capc[0] - r * 0.8 * s, capc[1], r * 0.8 * s, 8 * s, capc[0] + r * 0.8 * s, capc[1], COL["glass"]))
+		t = P(cx, levels[-1] * LEVEL + STOREY + 8)
+		return t
 
-	tower(0, [0, 1, 2, 3], MAIN_R, ["engines", "markets", "homes", "cantina, barracks, bridge"], MAIN_MARKET_R, -1)
-	tower(T2_X, [1, 2, 3], T2_R, ["markets", "outpost", "homes"], T2_MARKET_R, 1)
-	t = P(0, 4 * FLOOR_H + 12)
-	svg.text(t[0], t[1] - 4, "MAIN TOWER", size=12, anchor="middle", fill="#fff", weight="bold", halo=False)
-	t = P(T2_X, 4 * FLOOR_H + 12)
-	svg.text(t[0], t[1] - 4, "SECOND TOWER", size=12, anchor="middle", fill="#fff", weight="bold", halo=False)
-	for lv, r_main, r_t2 in ((1, MAIN_MARKET_R, T2_MARKET_R), (2, MAIN_R, T2_R), (3, MAIN_R, T2_R)):
-		a, b = P(r_main, lv * FLOOR_H + 1), P(T2_X - r_t2, lv * FLOOR_H + 5)
-		svg.rect(a[0], b[1], b[0] - a[0], a[1] - b[1], COL["tunnel"], ' stroke="%s" stroke-width="0.6"' % COL["ink"])
-	t = P(T2_X / 2 + 3, 4 * FLOOR_H - 3)
-	svg.text(t[0], t[1], "tunnel at every shared level", size=10, anchor="middle", fill="#cfe3ef", halo=False)
-	# landing bay: covered, as big as the port's pit, shield mouth to the west
-	ta, tb = P(BAY_X + BAY_R, FLOOR_H + 1), P(-MAIN_MARKET_R, FLOOR_H + 5)
-	svg.rect(ta[0], tb[1], tb[0] - ta[0], ta[1] - tb[1], COL["tunnel"], ' stroke="%s" stroke-width="0.6"' % COL["ink"])
-	t = P((BAY_X + BAY_R - MAIN_MARKET_R) / 2, FLOOR_H + 7)
+	t = tower(0, MAIN_RS, {0: "engines", 1: "markets", 2: "homes", 3: "cantina, barracks, bridge"}, -1, 1)
+	svg.text(t[0], t[1] - 6, "MAIN TOWER", size=12, anchor="middle", fill="#fff", weight="bold", halo=False)
+	t = tower(T2_X, T2_RS, {1: "markets", 2: "outpost", 3: "homes"}, 1, 2)
+	svg.text(t[0], t[1] - 6, "SECOND TOWER", size=12, anchor="middle", fill="#fff", weight="bold", halo=False)
+	lp = P(0, 1 * LEVEL + STOREY + GAP * 0.45)
+	svg.text(lp[0] + 16, lp[1] + 4, "elevator in the space tunnel", size=9, fill=COL["lift"], halo=False)
+	for lv in (1, 2, 3):
+		box(MAIN_RS[lv], lv * LEVEL + 3, T2_X - T2_RS[lv], lv * LEVEL + 8, COL["tunnel"], ' stroke="%s" stroke-width="0.6"' % COL["ink"])
+	t = P(T2_X / 2 + 8, 2 * LEVEL + STOREY + GAP / 2 - 1)
+	svg.text(t[0], t[1], "tunnels at every shared level", size=10, anchor="middle", fill="#cfe3ef", halo=False)
+	# landing bay: covered, as big as the port's pit, level with the main market floor, shield mouth to the west
+	by = LEVEL
+	box(BAY_X + BAY_R, by + 3, -MAIN_RS[1], by + 8, COL["tunnel"], ' stroke="%s" stroke-width="0.6"' % COL["ink"])
+	t = P((BAY_X + BAY_R - MAIN_RS[1]) / 2, by + 10)
 	svg.text(t[0], t[1], "bay tunnel", size=10, anchor="middle", fill="#cfe3ef", halo=False)
-	ba, bb = P(BAY_X - BAY_R, FLOOR_H - 4), P(BAY_X + BAY_R, FLOOR_H + 20)
-	svg.rect(ba[0], bb[1], bb[0] - ba[0], ba[1] - bb[1], "#5d6a75", ' stroke="%s" stroke-width="1.6"' % COL["glass"])
-	fl = P(BAY_X - BAY_R, FLOOR_H - 4)
-	svg.rect(fl[0], fl[1] - 3, 2 * BAY_R * s, 3, "#aab3be")
-	sh1, sh2 = P(BAY_X - BAY_R, FLOOR_H - 4), P(BAY_X - BAY_R, FLOOR_H + 20)
-	svg.line(sh1, sh2, "#5ee0ff", 3.0)
+	box(BAY_X - BAY_R, by - 2, BAY_X + BAY_R, by + 24, "#5d6a75", ' stroke="%s" stroke-width="1.6"' % COL["glass"])
+	box(BAY_X - BAY_R, by - 2, BAY_X + BAY_R, by, "#aab3be")
+	svg.line(P(BAY_X - BAY_R, by - 2), P(BAY_X - BAY_R, by + 24), "#5ee0ff", 3.0)
 	for sx_, col in ((BAY_X - 14, "#58646d"), (BAY_X + 16, "#6d7a84")):
-		sp = P(sx_, FLOOR_H - 4)
-		svg.poly([(sp[0] - 20, sp[1] - 3), (sp[0] + 20, sp[1] - 3), (sp[0] + 10, sp[1] - 13), (sp[0] - 14, sp[1] - 13)], col)
-	tp = P(BAY_X + 30, FLOOR_H - 4)
-	svg.circle((tp[0], tp[1] - 9), 3.4, "#c9cdd2", COL["ink"], 1.0)
-	svg.text(tp[0], tp[1] - 16, "T-99", size=10, anchor="middle", fill="#fff", weight="bold", halo=False)
-	t = P(BAY_X, FLOOR_H + 20)
+		sp = P(sx_, by)
+		svg.poly([(sp[0] - 20, sp[1]), (sp[0] + 20, sp[1]), (sp[0] + 10, sp[1] - 10), (sp[0] - 14, sp[1] - 10)], col)
+	tp = P(BAY_X + 30, by)
+	svg.circle((tp[0], tp[1] - 6), 3.4, "#c9cdd2", COL["ink"], 1.0)
+	svg.text(tp[0], tp[1] - 13, "T-99", size=10, anchor="middle", fill="#fff", weight="bold", halo=False)
+	t = P(BAY_X, by + 24)
 	svg.text(t[0], t[1] - 8, "COVERED LANDING BAY", size=12, anchor="middle", fill="#fff", weight="bold", halo=False)
-	t = P(BAY_X, FLOOR_H - 4)
-	svg.text(t[0], t[1] + 16, "~76 m across, the port pit's size", size=10, anchor="middle", fill="#cfe3ef", halo=False)
-	t = P(BAY_X - BAY_R - 2, FLOOR_H + 9)
+	t = P(BAY_X, by - 2)
+	svg.text(t[0], t[1] + 15, "~76 m across, the port pit's size", size=10, anchor="middle", fill="#cfe3ef", halo=False)
+	t = P(BAY_X - BAY_R - 2, by + 12)
 	svg.text(t[0], t[1], "shield", size=10, anchor="end", fill="#5ee0ff", halo=False)
 	# hatch down to the wrecks
-	h0, h1 = P(0, 0), P(0, -18)
+	h0, h1 = P(0, 0), P(0, -12)
 	svg.line(h0, h1, COL["hatch"], 2.0, ' stroke-dasharray="4 3"')
 	svg.text(h1[0] + 6, h1[1] + 4, "drop hatch: ~35 m down to wreck 1 (panel below)", size=10, fill="#ff9a8a", halo=False)
 
@@ -429,9 +445,9 @@ def wrecks(svg, x, y, w, h):
 		return v.p(xm, -ym)
 	space_backdrop(svg, x, y, w, h, 70, (x + 40, y + 80, x + 60 + 1000 * s, y + 380))
 	# the station's underside for reference
-	st_a, st_b = P(BAY_X - BAY_R, 4), P(T2_X + T2_R, 0)
+	st_a, st_b = P(-MAIN_RS[0], 4), P(MAIN_RS[0], 0)
 	svg.rect(st_a[0], st_a[1], st_b[0] - st_a[0], 6, "#aab3be")
-	svg.text(st_a[0], st_a[1] - 6, "station underside", size=10, fill="#e6ebf2", halo=False)
+	svg.text(st_a[0], st_a[1] - 6, "engine floor underside", size=10, fill="#e6ebf2", halo=False)
 	rows = [(-300.0, -35.0, 0.0, "wreck 1: level", 1.0), (-60.0, -75.0, -3.0, "wreck 2: tilted, a hull-width north", 0.75), (190.0, -115.0, 3.5, "wreck 3: tilted, a hull-width further north", 0.55)]
 	rows.reverse()
 	for x0, tp, tilt, lbl, op in rows:
@@ -538,28 +554,28 @@ def legend(svg, x, y):
 
 
 def main():
-	W, H = 1800, 1790
+	W, H = 1800, 1900
 	svg = Svg(W, H)
 	svg.rect(0, 0, W, H, COL["bg"])
 	svg.text(32, 44, "Nitrogen Belt City plan", size=26, weight="bold")
 	svg.text(32, 66, "Sketch, not data: floors, rooms, bridges, tunnels and wrecks, and roughly how big. "
 		"+X (right) is east, north is up. Every number is tunable in content data.", size=13, fill=COL["muted"])
 
-	space_map(svg, 24, 84, 560, 440)
-	section(svg, 596, 84, 1180, 440)
-	wrecks(svg, 24, 540, 1752, 400)
+	space_map(svg, 24, 84, 560, 470)
+	section(svg, 596, 84, 1180, 470)
+	wrecks(svg, 24, 570, 1752, 400)
 
 	# Floor plans: one scale for every floor in both towers.
 	s = 1.85
-	py = 956
-	panel(svg, 24, py, 1752, 350, "Main tower: 4 floors, top to bottom",
-		"Every floor: elevator in the open middle, 2 bridges to it, a gallery round the gap, rooms, then the outer hallway behind a glass wall. Room windows face space through it.")
+	py = 986
+	panel(svg, 24, py, 1752, 400, "Main tower: 4 floors, top to bottom",
+		"One scale for all floors: the top floor is the biggest, each one below smaller. Every floor: elevator in the open middle, 2 bridges to it, a gallery round the gap, rooms, then the outer hallway behind a glass wall.")
 	for fn, xx in zip((main_top, main_homes, main_markets, main_engines), (254, 684, 1114, 1544)):
-		fn(svg, View(xx, py + 195, s), (0.0, 0.0))
+		fn(svg, View(xx, py + 215, s), (0.0, 0.0))
 
-	py = 1322
+	py = 1402
 	panel(svg, 24, py, 1290, 444, "Second tower: 3 floors, top to bottom",
-		"Smaller across. Its floors line up with the main tower's floors 4, 3 and 2, and a tunnel joins each pair.")
+		"Smaller than the main tower, and also shrinking downward. Its floors line up with the main tower's floors 4, 3 and 2, and a tunnel joins each pair.")
 	for fn, xx in zip((t2_homes, t2_outpost, t2_markets), (254, 684, 1114)):
 		fn(svg, View(xx, py + 225, s), (0.0, 0.0))
 
@@ -568,7 +584,7 @@ def main():
 	sb = (1346, py + 252)
 	svg.rect(sb[0], sb[1], 50 * s, 5, COL["ink"])
 	svg.text(sb[0], sb[1] + 20, "50 m (floor plans)", size=10)
-	svg.rect(1346, py + 284, 50 * 2.1, 5, COL["ink"])
+	svg.rect(1346, py + 284, 50 * 2.05, 5, COL["ink"])
 	svg.text(1346, py + 304, "50 m (station section)", size=10)
 	svg.rect(1346, py + 316, 100 * 1.05, 5, COL["ink"])
 	svg.text(1346, py + 336, "100 m (wrecks)", size=10)
