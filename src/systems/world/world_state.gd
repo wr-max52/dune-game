@@ -458,7 +458,7 @@ static func _smuggle_job(j: Dictionary) -> Dictionary:
 		return {}
 	var out := j.duplicate()
 	out["text"] = str(j.get("text", "%s %s")) % [smuggle_goods_text(j, s), str(s.hint)]
-	out["pays"] = int(s.count) * maxi(0, Inventory.sell_price(_item(str(s.item)), _fence(str(s.get("location", "")))))
+	out["pays"] = roundi(float(j.get("pay_mult", 1.0)) * int(s.count) * maxi(0, Inventory.sell_price(_item(str(s.item)), _fence(str(s.get("location", ""))))))
 	return out
 
 
@@ -590,8 +590,8 @@ static func smuggle_run() -> int:
 
 
 ## Issue #251: the general's run. What he pays for the contraband in your
-## pockets (what the fence would have), or 0 when the run on is not his or its
-## drop is still lying out there.
+## pockets (his job's pay_mult times what the fence would have: he outbids the
+## fence), or 0 when the run on is not his or its drop is still lying out there.
 static func repossession_pay() -> int:
 	if smuggle_to() != "general" or not bool(smuggle.get("out", false)) or not smuggle_drop().is_empty():
 		return 0
@@ -601,7 +601,11 @@ static func repossession_pay() -> int:
 		var it := _item(str(id))
 		if bool(it.get("contraband", false)):
 			pay += inventory.count(str(id)) * maxi(0, Inventory.sell_price(it, fence))
-	return pay
+	var mult := 1.0
+	for j in board():
+		if str(j.get("id", "")) == str(smuggle.get("job", "")):
+			mult = float(j.get("pay_mult", 1.0))
+	return roundi(mult * pay)
 
 
 ## Hand the general the contraband in your pockets: he pays repossession_pay(),

@@ -186,7 +186,8 @@ func briefing(world: Dictionary, rel, rumors: Array, jobs: Array) -> Dictionary:
 		var js: PackedStringArray = []
 		for j in jobs:
 			job_ids.append(str(j.id))
-			js.append("[%s] %s Pays %d." % [j.id, j.text, int(j.get("pays", 0))])
+			var pay := int(j.get("pays", 0))
+			js.append("[%s] %s%s" % [j.id, j.text, " Pays %d." % pay if pay > 0 else ""])   # 0: the text says the pay
 		L.append("JOBS ON YOUR BOARD:\n" + "\n".join(js))
 	for line in world.get("extra", []):
 		L.append(str(line))        # the character's own facts for this turn (T-89: what is on their pad)

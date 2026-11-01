@@ -254,7 +254,8 @@ func show_job(job: Dictionary) -> void:
 	_job_id = str(job.get("id", ""))
 	_job_kind = "job"
 	_job_title.text = str(job.get("title", "A job"))
-	_job_text.text = "%s\n\nPays %d credits." % [str(job.get("text", "")), int(job.get("pays", 0))]
+	var pay := int(job.get("pays", 0))
+	_job_text.text = str(job.get("text", "")) + ("\n\nPays %d credits." % pay if pay > 0 else "")   # 0: the text says the pay
 	_yes.text = "Take the job"
 	_yes.disabled = false
 	_job.visible = true

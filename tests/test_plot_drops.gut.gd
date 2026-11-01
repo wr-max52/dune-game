@@ -106,8 +106,11 @@ func test_both_offers_hold_and_only_one_drop_is_out() -> void:
 func test_the_general_pays_for_his_contraband_and_the_story_waits() -> void:
 	var drop := _take(GENERAL)
 	var fence: Dictionary = content.get_vendor("fence")
-	var want := int(drop.count) * Inventory.sell_price(content.get_item(str(drop.item)), fence)
-	assert_eq(WorldState.repossession_pay(), want, "what the fence would have paid")
+	var fence_pays := int(drop.count) * Inventory.sell_price(content.get_item(str(drop.item)), fence)
+	var want := roundi(1.5 * fence_pays)
+	assert_gt(want, fence_pays, "he outbids the fence")
+	assert_eq(WorldState.repossession_pay(), want, "half again what the fence would have paid")
+	assert_eq(int(WorldState.job(GENERAL).pays), want, "and the card said so")
 	var c0 := WorldState.credits
 	var r0 := int(WorldState.standing.imperial_remnant)
 	assert_eq(WorldState.hand_over_contraband(3), want)
@@ -155,3 +158,20 @@ func test_a_drop_saved_before_the_split_still_goes_to_the_fence() -> void:
 	assert_eq(WorldState.smuggle_to(), "fence")
 	assert_eq(WorldState.smuggle_goods_text(), "2 cases of holocrystals")
 	assert_true(_offered(ODA).is_empty(), "the old drop is still out")
+
+
+func test_his_job_card_matches_what_he_says() -> void:
+	WorldState.standing.imperial_remnant = 0
+	var b := _brain("general_card")
+	b._ids = { "jobs": ["j_general_droids", GENERAL] }
+	var v := { "kept": [{ "type": "offer_job", "id": GENERAL }], "dropped": [] }
+	b._match_job_offer(v, "Five droids. I need them.")
+	assert_eq(str(v.kept[0].id), "j_general_droids", "talking droids: the droid job's card")
+	v = { "kept": [{ "type": "offer_job", "id": GENERAL }], "dropped": [] }
+	b._match_job_offer(v, "Smugglers stashed contraband on a roof. Repossess it.")
+	assert_eq(str(v.kept[0].id), GENERAL, "the right card stays")
+	b._ids = { "jobs": [GENERAL] }
+	v = { "kept": [{ "type": "offer_job", "id": GENERAL }], "dropped": [] }
+	b._match_job_offer(v, "Five droids. I need them.")
+	assert_true((v.kept as Array).is_empty(), "the droid job is not on offer: no wrong card")
+	assert_eq(str(b.canned_reply("any droid work?").actions[0].id), "j_general_droids")
