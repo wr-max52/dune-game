@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The fence buys anything, a droid post by the gate, Skrugs's stall (2026-10-31)
+
+- **The fence buys anything you carry**, not just contraband: guns, blades,
+  gear, armour, quartz, food. Contraband still pays twice its value; everything
+  else half, the gear trader's rate, so nothing bought in town sells there at a
+  profit. Same for the station's fence. (`"*"` in a vendor's `buys`, paid at its
+  `any_rate`.)
+- **A droid merchant you can see from town.** The Drywash Droid Relay moved a
+  kilometre closer, to about 310 m straight out from the front gate. Its hut and
+  tall mast show through the gate from the street, and its counter faces the town.
+- **Skrugs's stall is at the gate end of his yard**, right in front of the
+  display speeder and beside his garage, facing the back gate: the first thing
+  you see walking in from the desert. It used to be tucked behind his house.
+- **Skrugs buys a stolen ship within 100 m of his stall** (it was 30 m from a
+  spot outside the gate). Land it outside the back gate, or on the port's two
+  nearest pads, and talk to him: he opens with his price and the chat box offers
+  the sale at once, no asking needed. Click Sell and the ship is gone.
+
 ## The Albatross is a black Lanner gunship (2026-10-31)
 
 - **New look for the pit's gunship.** The Ashford Albatross Mk VI in bay 4 was

@@ -2,6 +2,25 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the fence, droid post and Skrugs's stall pass (2026-10-31)
+
+**Checked:** `test_skrugs_yard` (22/22, three new: the 100 m reach, the offer
+the moment you talk, the stall by the gate and garage), `test_inventory` (the new
+fence test passes; two old count checks fail on main too), `test_droid_merchant_outposts`,
+`test_smoke`, a headless boot, and rendered stills of the stall from the back
+gate and the droid post through the front gate. Nothing was played by hand.
+
+- **Selling the gun in your hand to the fence** (story game) leaves it drawn
+  until you switch weapons; after that it stays holstered.
+- **The fence will buy the quantonium armour** it sold you, at half its value,
+  and never sells it again (its offers are once each).
+- **Skrugs opens with a stolen ship only.** The ship T-89 sold you is still
+  bought, but only when you ask him.
+- **The 100 m reaches the port's two nearest landing pads** (surface pads 4
+  and 5); a stolen ship parked there is his to buy too.
+- **The droid post is small through the gate** at 310 m: a hut and a thin mast
+  in the gap, easy to miss from the far side of the plaza.
+
 ## After the cruiser pass: scope shake, computers, holo map, more droids (2026-10-31)
 
 **Checked:** a rendered probe measuring the reticle scoped in on the cruiser's deck

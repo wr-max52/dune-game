@@ -5,13 +5,15 @@
   "marker": "vendor_1",
   "reach": 3.5,
   "buys": [
-    "contraband"
+    "contraband",
+    "*"
   ],
   "bounties": false,
   "buy_rate": 2.0,
+  "any_rate": 0.5,
   "resells": false,
   "sell_rate": 1.6,
   "stock": [],
   "pitch": "The %s pays well for things with no serial numbers",
-  "note": "The merchant in front of the station cantina. Buys Oda's rock drops at twice their value and asks no questions. 'resells': false = what it buys is not sold on (it pays more than it would ask). Bounties stay at the port's fence: the Remnant officers are out in the home planet's desert."
+  "note": "The merchant in front of the station cantina. Buys Oda's rock drops at twice their value and asks no questions. It buys anything else you carry too ('*' in 'buys') at 'any_rate' of its value, the gear trader's rate, so nothing bought in town sells here at a profit. 'resells': false = what it buys is not sold on (it pays more than it would ask). Bounties stay at the port's fence: the Remnant officers are out in the home planet's desert."
 }

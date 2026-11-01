@@ -20,10 +20,11 @@ extends Node3D
 ##     (WorldState counter "speeders_owned") and parked there again next time.
 ##   - issue #295, free roam only: [E] at his garage bench is Dorrin's parts menu
 ##     (SpeederShop) for the speeder in his garage,
-##   - issue #295: he buys ships. One of yours landed by his post (a stolen
-##     outpost ship, for stolen_rate times its list price, or the one T-89 sold you,
-##     at T-89's buy-back price): his chat offers it (offer_ship_buy), and only the
-##     player's click sells.
+##   - issue #295: he buys ships. One of yours landed within ship_buy's radius
+##     (100 m) of his stall (a stolen outpost ship, for stolen_rate times its list
+##     price, or the one T-89 sold you, at T-89's buy-back price): his chat offers
+##     it (offer_ship_buy), and only the player's click sells. A stolen one he
+##     offers for the moment you talk to him (the spot's opener).
 
 const LANDMARK := "skrugs_post"         ## its location differs per layout (issue #295)
 const RAMP := "skrugs_ramp"
@@ -152,6 +153,7 @@ func attach_host(h: ConversationHost) -> void:
 	spot.face_height = 1.55
 	host.add_spot(spot)
 	brain.ship_offer = func(): return _offer_card(ship_offer())
+	spot.opener = _opener
 	brain.extra_brief = brief
 	brain.sale_offered.connect(_on_offer)
 	brain.ship_buy_offered.connect(_on_ship_offer)
@@ -326,17 +328,17 @@ func _physics_process(_dt: float) -> void:
 # ------------------------------------------------------------------ buying ships (issue #295)
 
 ## The ship he would buy right now, or {}: one of yours landed within ship_buy's
-## radius of his ship_sell spot and not under you. A stolen outpost ship pays
+## radius of his stall (the "merchant" spot) and not under you; the nearest. A stolen outpost ship pays
 ## stolen_rate times its list price (t89.json); the ship T-89 sold you, his
 ## buy-back price. Never the pit pad's ship (berth 0) or the port's free-roam
 ## ships: free keys are not free money.
 ## { id, name, price, berth, kind ("stolen" or "owned") }
 func ship_offer() -> Dictionary:
 	var pilot = demo.pilot if demo != null and "pilot" in demo else null
-	if pilot == null or not points.has("ship_sell"):
+	if pilot == null or not points.has("merchant"):
 		return {}
 	var sb: Dictionary = card.get("ship_buy", {})
-	var here := world_point("ship_sell")
+	var here := world_point("merchant")
 	var best := {}
 	var best_d := float(sb.get("radius", 30.0))
 	for i in range(1, pilot.berths.size()):
@@ -382,9 +384,25 @@ func _on_ship_offer(item: Dictionary) -> void:
 	var o := ship_offer()
 	if o.is_empty() or str(o.id) != str(item.get("id", "")):
 		return
-	_offered = { "id": o.id, "name": o.name, "price": o.price, "selling": true,
-		"text": str(card.get("ship_buy", {}).get("lines", {}).get("card", "%s")) % str(o.name) }
+	_offered = _ship_card(o)
 	host.panel.show_sale(_offered, WorldState.credits)
+
+
+## The chat box's card for selling him ship offer `o`.
+func _ship_card(o: Dictionary) -> Dictionary:
+	return { "id": o.id, "name": o.name, "price": o.price, "selling": true,
+		"text": str(card.get("ship_buy", {}).get("lines", {}).get("card", "%s")) % str(o.name) }
+
+
+## His spot's opener: a stolen ship within reach, and he names his price before
+## anything else, the card already up. {} = he greets as usual.
+func _opener() -> Dictionary:
+	var o := ship_offer()
+	if o.is_empty() or str(o.kind) != "stolen":
+		return {}
+	_offered = _ship_card(o)
+	var line := str(card.get("ship_buy", {}).get("lines", {}).get("opener", "%s, %d credits."))
+	return { "say": line % [str(o.name), int(o.price)], "sale": _offered }
 
 
 ## Sell him the ship by his post. It goes for good the way a lost stolen ship does

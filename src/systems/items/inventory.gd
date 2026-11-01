@@ -178,12 +178,15 @@ func vendor_stock(vendor_cfg: Dictionary) -> Array:
 	return (vendor_cfg.get("stock", []) as Array).duplicate()
 
 
-## Credits a vendor pays for an item, or -1 if it does not buy that kind.
+## Credits a vendor pays for an item, or -1 if it does not buy that kind. "*" in
+## "buys" = any kind at all (the fences), the kinds it does not name at "any_rate".
 static func sell_price(item_cfg: Dictionary, vendor_cfg: Dictionary) -> int:
 	var kinds: Array = vendor_cfg.get("buys", [])
-	if not kinds.has(str(item_cfg.get("kind", ""))):
-		return -1
 	var rate := float(vendor_cfg.get("buy_rate", 0.5))
+	if not kinds.has(str(item_cfg.get("kind", ""))):
+		if not kinds.has("*"):
+			return -1
+		rate = float(vendor_cfg.get("any_rate", rate))
 	if bool(item_cfg.get("contraband", false)):
 		rate *= Territory.fence_mult()     # issue #187: the locals' outposts open the fence's routes
 	return int(round(float(item_cfg.get("value", 0)) * rate))
