@@ -179,6 +179,13 @@ func _physics_process(_dt: float) -> void:
 		g.process_mode = Node.PROCESS_MODE_INHERIT if awake else Node.PROCESS_MODE_DISABLED
 	crew = crew.filter(func(g): return is_instance_valid(g))
 	_fall_guard(p)
+	if demo.look != null:
+		demo.look.set_shadow_cap(float(cfg.get("aboard_shadow_distance", 0.0)) if aboard(at) else 0.0)
+
+
+func _exit_tree() -> void:
+	if demo != null and demo.look != null:
+		demo.look.set_shadow_cap(0.0)
 
 
 ## Fallen out of the cruiser (through the bay's mouth, off the hull): back aboard
