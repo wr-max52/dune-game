@@ -16,11 +16,14 @@ extends Node3D
 ##     droid one of the Remnant's droids, so they can be shot, and they fight where
 ##     they stand when the town alarm goes up. Killed there he is gone for good
 ##     (WorldState.on_general_killed): Oda's bounty goes on someone else.
-##   - The pit meeting is his to end: you cannot walk away (Esc) until he lets you
-##     go (let_go) or has you searched (search). That verdict sets the Remnant
-##     standing you start with. If his brain never gives one, the game has you
-##     searched after three of his lines (the meeting's "default"). Either way he
-##     closes with a hint at work for an outlander (the Work for the general quest).
+##   - The pit meeting opens the moment you climb out of your ship, and is his to
+##     end: you cannot walk away (Esc) until he lets you go (let_go) or has you
+##     searched (search). That verdict sets the Remnant standing you start with. If
+##     his brain never gives one (or no model answers), the game has you searched
+##     after four of his lines (the meeting's "default"). Either way he closes with
+##     a hint at work for an outlander (the Work for the general quest), then he and
+##     his escort walk out of the pit to the barracks ("leave"): no cut, so you
+##     stand where you stood at the same time of day.
 ##   - Insults cost Remnant standing; too many in one talk and his guards search you
 ##     on the spot (the gate's rules: WorldState.search_player). In the pit meeting
 ##     that search is his verdict.
@@ -61,6 +64,8 @@ var _was_talking := false
 var _was_locked := false
 var _meet_lines := 0
 var _free_at := 0                     ## ticks (ms): until then the pit is still his (T-89 waits)
+var _leaving: Array = []              ## walking out of the pit: [{ node, path, i, wait }]
+var _leave_t := 0.0
 
 
 func setup(p_demo, p_player: CharacterBody3D, p_gear: GearController) -> void:
@@ -107,6 +112,8 @@ static func general_hunted() -> bool:
 
 
 func _place() -> void:
+	if leaving():
+		return                        # walking out of the pit: the barracks once they are there
 	var want := station()
 	var armour := Story.remnant_gone()
 	if want == _where and armour == _armoured and (body != null or want == ""):
@@ -242,9 +249,9 @@ func _on_general_died() -> void:
 	_say(_line("killed") % npc_name())
 
 
-## Dead, or fighting: nobody talks to him then.
+## Dead, fighting or walking out of the pit: nobody talks to him then.
 func _can_talk() -> bool:
-	if body == null or not is_instance_valid(body):
+	if body == null or not is_instance_valid(body) or leaving():
 		return false
 	if body is NpcBody:
 		var g = demo.garrison_for(body) if demo != null else null
@@ -258,7 +265,7 @@ func _sync_spot() -> void:
 	if spot == null or host == null:
 		return
 	spot.body = body
-	if body == null or (body is NpcBody and body.dead):
+	if body == null or (body is NpcBody and body.dead) or leaving():
 		host.spots.erase(spot)
 		return
 	spot.stand = body.global_position
@@ -291,7 +298,8 @@ static func _v(a) -> Vector3:
 
 # ------------------------------------------------------------------ frame
 
-func _physics_process(_dt: float) -> void:
+func _physics_process(dt: float) -> void:
+	_walk_out(dt)
 	_place()
 	if host != null:
 		_watch_talk()
@@ -374,13 +382,13 @@ func attach_host(h: ConversationHost) -> void:
 	_sync_spot()
 
 
-## Issue #203: you step out of your ship and he is on you: the talk opens by itself.
+## Issue #203: you step out of your ship and he is on you: the talk opens by
+## itself the moment you are out, wherever you stand.
 func _meet_in_pit() -> void:
 	if _where != "pit" or Story.chapter() != "general" or host == null or spot == null or bool(player.get("piloting")):
 		return
-	if player.global_position.distance_to(body.global_position) <= float(cfg.get("meet_reach", 9.0)):
-		_begin_meeting()
-		host.start_talk(spot)
+	_begin_meeting()
+	host.start_talk(spot)
 
 
 ## The pit meeting: Esc can't leave, and his brain is told to end it with a verdict.
@@ -519,9 +527,86 @@ func talk_ended() -> void:
 		decide_default(false)                   # the talk closed without his verdict: the game gives it
 		Story.event("general_done")
 		_free_at = Time.get_ticks_msec() + int(1000.0 * float(_meet_cfg().get("after", 2.5)))
+		leave_pit()
 	meeting = false
 	_talk_insults = 0
 	maybe_tip()
+
+
+# ------------------------------------------------------------------ leaving the pit
+
+func leaving() -> bool:
+	return not _leaving.is_empty()
+
+
+## The meeting is over: he, his guard and his droid walk out of the pit to the
+## barracks on the town's navmesh, in single file. With no path (no navmesh yet,
+## or a headless test without one) they are simply at the barracks next frame.
+## Returns true when they set off.
+func leave_pit() -> bool:
+	if _where != "pit" or body == null or not is_instance_valid(body) or station() != "barracks":
+		return false
+	var nav = demo.get("nav") if demo != null else null
+	if nav == null:
+		return false
+	var path: PackedVector3Array = nav.path(body.global_position, _spot(cfg.get("barracks", {})))
+	if path.size() < 2:
+		return false
+	var lv: Dictionary = cfg.get("meeting", {}).get("leave", {})
+	var gap := float(lv.get("gap_s", 0.8))
+	var i := 0
+	for n in [body, guard, droid]:
+		if n == null or not is_instance_valid(n):
+			continue
+		# Each falls in behind him: from where they stand to his first corner, then his path.
+		var mine := PackedVector3Array([n.global_position])
+		mine.append_array(path.slice(1))
+		_leaving.append({ "node": n, "path": mine, "i": 1, "wait": gap * i })
+		i += 1
+	_leave_t = 0.0
+	return true
+
+
+## One step of the walk out. When the last of them is in (or it took too long)
+## they go, and _place() stands the barracks squad where they arrived.
+func _walk_out(dt: float) -> void:
+	if _leaving.is_empty():
+		return
+	var lv: Dictionary = cfg.get("meeting", {}).get("leave", {})
+	var speed := float(lv.get("speed", 1.6))
+	_leave_t += dt
+	var done := true
+	for w in _leaving:
+		var n: Node3D = w.node
+		if not is_instance_valid(n):
+			continue
+		w.wait = float(w.wait) - dt
+		var path: PackedVector3Array = w.path
+		if float(w.wait) > 0.0 or int(w.i) >= path.size():
+			_gait(n, 0.0)
+			done = done and int(w.i) >= path.size()
+			continue
+		done = false
+		var to := path[int(w.i)] - n.global_position
+		var step := speed * dt
+		if to.length() <= step:
+			n.global_position = path[int(w.i)]
+			w.i = int(w.i) + 1
+		else:
+			n.global_position += to.normalized() * step
+		var flat := Vector3(to.x, 0.0, to.z)
+		if flat.length() > 0.01:
+			n.rotation.y = atan2(flat.x, flat.z) if n != droid else atan2(-flat.x, -flat.z)
+		_gait(n, speed)
+	if done or _leave_t >= float(lv.get("max_s", 90.0)):
+		_leaving.clear()
+		_where = ""                   # _place() builds the barracks squad
+		_place()
+
+
+func _gait(n: Node3D, speed: float) -> void:
+	if n is MerchantNPC:
+		(n as MerchantNPC).move_speed = speed
 
 
 # ------------------------------------------------------------------ droids (issue #204)
