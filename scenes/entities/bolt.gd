@@ -39,6 +39,13 @@ var color := Color(1.0, 0.45, 0.2)
 var streak_length := 0.9
 var streak_radius := 0.035
 var matte := false             ## issue #96: a thrown rock: plain colour, no glow, no light
+## A ship's seeker in the air: it turns toward `seek` (a ShipHull, a node) by up to
+## turn_rate radians a second while that is still there, and where it bursts it goes
+## up like a vehicle (ExplosionFx.big at blast_size, with the boom) instead of the
+## bolt's pop. No seek: it flies straight, like any bolt.
+var seek: Node3D = null
+var turn_rate := 0.0
+var blast_size := 0.0
 var reflected := 0             ## times a blade has sent it back
 var _streak: MeshInstance3D
 
@@ -68,7 +75,10 @@ func apply_to(target: Object) -> void:
 	_die()
 	# Whatever it landed on (a body, the ground, a blade that blocked it) gets the
 	# bolt pop of sparks; a rock just thuds. One that runs out of range does not.
-	if not matte and is_inside_tree():
+	if blast_size > 0.0 and is_inside_tree():
+		ExplosionFx.big(get_parent(), global_position, blast_size)
+		Sound.play("ship_boom", global_position)
+	elif not matte and is_inside_tree():
 		ExplosionFx.bolt(get_parent(), global_position)
 	handle_hit(target)
 	if splash_radius > 0.0:
@@ -199,6 +209,22 @@ func _trail() -> void:
 	_streak.position = -y * (vis * 0.5 - streak_radius)
 
 
+## A seeker turns toward what it is after (not once that is gone or dead).
+func _home(dt: float) -> void:
+	if seek == null:
+		return
+	if not is_instance_valid(seek) or seek.get("dead") == true or not seek.is_inside_tree() or not is_inside_tree():
+		seek = null
+		return
+	var want := (seek.global_position - global_position).normalized()
+	var cur := direction.normalized()
+	var ang := cur.angle_to(want)
+	if ang < 0.0001 or want == Vector3.ZERO:
+		return
+	direction = cur.slerp(want, minf(1.0, turn_rate * dt / ang)).normalized()
+	_orient()
+
+
 ## A blade sent it back: new heading, new owner, a little faster.
 func reflect(new_direction: Vector3, new_shooter: Node) -> void:
 	direction = new_direction.normalized()
@@ -216,6 +242,7 @@ func _physics_process(dt: float) -> void:
 	# `!= null` first: Godot counts a freed object as equal to null.
 	if not is_instance_valid(shooter):
 		shooter = null
+	_home(dt)
 	# Advance the bolt along its direction by one frame.
 	var step := integrate(dt)
 	if sweep and _alive and is_inside_tree() and step.length() > 0.0:

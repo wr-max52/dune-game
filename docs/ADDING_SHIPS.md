@@ -117,7 +117,12 @@ Copy `content/core/weapons/ship_cannon.json` (fixed gun) or `ship_missile.json`
 - `fire_group`: `primary` (main trigger) or `secondary` (seeker trigger).
 - `bolt_speed` in m/s.
 - Seekers only: `homing: true`, `turn_rate` (radians/s), `lock_time`,
-  `lock_cone_deg`, `lock_range`.
+  `lock_cone_deg`, `lock_range`. The player's seekers launch with or without a lock
+  (in space and in the air): locked they home, unlocked they fly straight.
+  `blast_size` makes one go up like a vehicle where it bursts (`ExplosionFx.big`).
+- `splash_radius` (m) and `splash_damage`: everything within the radius of where it
+  bursts takes the splash (in a space fight, every enemy ship; the radius is scaled
+  with the fight's ranges).
 - `reload_each` (seconds): instead of reloading the whole `mag` at once, one round
   comes back every `reload_each` seconds while it is short. The seeker rack uses it:
   four seekers fired off on one lock, one back every 1.5 s.

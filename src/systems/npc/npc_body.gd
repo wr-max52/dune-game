@@ -54,6 +54,7 @@ var free_walk := false
 var dead := false
 var faction := ""              ## from the profile; bolts from the same faction do no harm
 var last_hit_by: Node          ## who shot us last (null = unknown)
+var cut_unaware := false       ## issue #307: the last hit was the player's sword, before we had noticed them
 var damage_usec := -1000000000         ## Time.get_ticks_usec() of the last accepted hit (hit markers read it)
 ## Issue #65: set by brief() from the brain: true while this NPC is fighting. With
 ## "has taken damage" it decides whether the health bar shows.
@@ -727,6 +728,7 @@ func apply_damage_from(amount: float, shooter: Node) -> void:
 	if shooter != null and is_instance_valid(shooter) and "faction" in shooter and str(shooter.faction) == faction and faction != "":
 		return                         # (issue #187: a droid on the same side too)
 	last_hit_by = shooter
+	cut_unaware = false
 	if shooter is Node3D and is_instance_valid(shooter):
 		last_hit_from = (shooter as Node3D).global_position
 	if guard_hit.is_valid():
@@ -756,6 +758,7 @@ func apply_damage(amount: float) -> void:
 func apply_blade_hit(amount: float, sweep: Vector3) -> void:
 	if dead:
 		return
+	cut_unaware = not perception.noticed
 	_blade_sweep = Vector3(sweep.x, 0.0, sweep.z).normalized()
 	last_hit_from = global_position - _blade_sweep     # the kick follows the blade too
 	if guard_hit.is_valid():

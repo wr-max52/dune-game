@@ -28,6 +28,9 @@ extends Node
 ##     in the air as in space; the hull (and shield) from its data takes bolts
 ##     wherever it is, and the garrison shoots it once it lifts off inside town.
 ##     A hull shot to nothing goes down like a crash and is towed home.
+##     Its seekers (X / right mouse) launch in the air too: locked on the Remnant
+##     interceptor they home, unlocked they fly straight off the nose, and either
+##     way they go up like a vehicle where they land. One rack for air and space.
 ##   - issue #43: every ship parked in the pit is flyable. Each is a berth (its ship
 ##     data, model, hull and home bay); E beside any parked one boards it, and that
 ##     ship's own stats, guns and Shift ability fly from then on. The one you left
@@ -62,6 +65,7 @@ const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const ChaseCamera := preload("res://src/systems/camera/chase_camera.gd")
 const ShipDefense := preload("res://src/systems/flight/ship_defense.gd")
 const ShipLoadout := preload("res://src/systems/flight/ship_loadout.gd")
+const MissileLock := preload("res://src/systems/flight/missile_lock.gd")
 const Dogfight := preload("res://src/systems/flight/dogfight.gd")
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
@@ -116,6 +120,8 @@ var defense                      ## issue #55: ShipDefense, the flown ship's shi
 var guns                         ## issue #55: ShipLoadout, its guns in the air
 var _gun_reach := 300.0          ## where the guns cross with nothing nearer under the nose
 var shots := 0                   ## bolts the guns fired in the air (traces, tests)
+var seeker_lock                  ## MissileLock: the seekers' lock on the interceptor in the air
+var seekers := 0                 ## seekers launched in the air (traces, tests)
 var vessel_name := ""            ## issue #15: the ship's own name (same key as in space)
 var planet_name := ""
 var fight: SpaceFight            ## issue #46: the space encounter in progress, or null
@@ -371,6 +377,8 @@ func _use_berth(i: int) -> void:
 	defense = ShipDefense.new(ship_cfg)
 	guns = ShipLoadout.new(ship_cfg, content)
 	_gun_reach = guns.convergence
+	seeker_lock = MissileLock.new()
+	seeker_lock.configure(guns.group_config("secondary"))
 	vessel_name = NameHooks.vessel(ship_cfg, "vessel:player/" + ship_id)
 	hud.vessel_name = vessel_name
 	var look: Dictionary = kit.looks.get(str(ship_cfg.get("look", "")), {})
@@ -1144,7 +1152,10 @@ func _seated(dt: float) -> void:
 		for e in atmo.step(dt):
 			_on_event(e)
 		_rearm_space()
-		_fire_guns(dt, _held("flight_fire") if _external.is_empty() else bool(_external.get("fire", false)))
+		if _external.is_empty():
+			_fire_guns(dt, _held("flight_fire"), _held("flight_missile"))
+		else:
+			_fire_guns(dt, bool(_external.get("fire", false)), bool(_external.get("missile", false)))
 		defense.step(dt)
 	_sync_visual()
 	var s := atmo.position()
@@ -1274,6 +1285,7 @@ func start_fight() -> bool:
 	var me: Dictionary = f.df.get_ship(f.df.player_id)
 	if not me.is_empty():
 		me.defense = defense
+		me.loadout.set_rack("secondary", guns.rack("secondary"))   # and one seeker rack
 	Sound.set_space(true)          # the space track is the orbital fight's music
 	fight_started.emit()
 	return true
@@ -1447,6 +1459,9 @@ func end_fight(outcome: String, quiet := false) -> void:
 	var pay := fight.payout() if outcome == "complete" else 0
 	var at := atmo.position()
 	var flown := not fight.sheltered and atmo.state == AtmoFlight.State.FLYING
+	var me: Dictionary = fight.df.get_ship(fight.df.player_id) if fight.df != null else {}
+	if not me.is_empty() and guns != null:
+		guns.set_rack("secondary", me.loadout.rack("secondary"))   # the seekers you came down with
 	fight.queue_free()
 	fight = null
 	if not quiet:
@@ -1582,9 +1597,12 @@ func _update_hud(agl_now: float) -> void:
 		AtmoFlight.State.LANDING:
 			tip = GameFlow.label("landing")
 	hud.set_prompt(tip)
-	# Issue #76: the Remnant interceptor, boxed and led like a space target.
-	var foe = demo.interceptor if "interceptor" in demo else null
-	hud.target = foe.hud_target() if foe != null and is_instance_valid(foe) else {}
+	# Issue #76: the Remnant interceptor, boxed and led like a space target (and the
+	# seekers' lock on it drawn round the box).
+	var foe = _air_foe()
+	hud.target = foe.hud_target() if foe != null else {}
+	if not hud.target.is_empty() and seeker_lock != null:
+		hud.target["lock"] = seeker_lock.fraction()
 
 
 # ------------------------------------------------------------------ guns and hull (issue #55)
@@ -1613,16 +1631,30 @@ func threat_velocity() -> Vector3:
 
 
 ## The guns, in the air or still on the pad: the primary group (cannons) as real
-## bolts, the same ones the troopers and the speeder fire. Seekers stay a space
-## weapon (nothing down here to lock).
-func _fire_guns(dt: float, trigger: bool) -> void:
+## bolts, the same ones the troopers and the speeder fire. The seekers fire too,
+## locked or not: a lock (the interceptor held in the cone, as in space) makes one
+## home on it; without one it flies straight off the nose. The rack refills by the
+## same rule as in space (ShipLoadout's reload_each), and it is the same rack.
+func _fire_guns(dt: float, trigger: bool, missile := false) -> void:
 	if guns == null or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	var v: Vector3 = atmo.flight.velocity() if atmo.state != AtmoFlight.State.PARKED else Vector3.ZERO
 	if trigger:
 		guns.convergence = _gun_cross()
+	var foe = _air_foe()
+	var foe_id := -1
+	if seeker_lock != null:
+		var to_foe := Vector3.ZERO
+		if foe != null and atmo.state == AtmoFlight.State.FLYING and not foe.hud_target().is_empty():
+			foe_id = foe.get_instance_id()
+			to_foe = foe.position() - atmo.position()
+		seeker_lock.update(dt, foe_id, atmo.flight.forward(), to_foe)
+	var locked: bool = seeker_lock != null and seeker_lock.is_locked()
 	var volley := false
-	for s in guns.fire(dt, atmo.transform(), v, trigger, false):
+	for s in guns.fire(dt, atmo.transform(), v, trigger, missile, foe_id if locked else -1):
+		if str(s.kind) == "missile":
+			_launch_seeker(s, foe.hull if locked else null)
+			continue
 		if str(s.kind) != "bolt":
 			continue
 		var b := ship_bolt(s, hull, content, ground, Color("#ff6a3a"))
@@ -1634,6 +1666,32 @@ func _fire_guns(dt: float, trigger: bool) -> void:
 		volley = true
 	if volley:
 		Sound.play("ship_cannon", atmo.position())
+
+
+## One seeker in the air: a ship bolt in the seeker's look (ships.json "bolts"
+## "missile") that turns after `seek` (the interceptor's hull, or null: straight)
+## and goes up like a vehicle where it lands, splash and all.
+func _launch_seeker(s: Dictionary, seek: Node3D) -> void:
+	var look: Dictionary = kit.bolts.get("missile", {}) if kit != null else {}
+	var b := ship_bolt(s, hull, content, ground, Color(str(look.get("color", "#ffd28a"))))
+	b.streak_length = float(look.get("length", 1.6))
+	b.streak_radius = float(look.get("width", 0.3)) * 0.5
+	b.seek = seek
+	b.turn_rate = float(s.get("turn_rate", 0.0))
+	b.blast_size = float(s.get("blast_size", 0.0))
+	b.connect("on_hit", hud.on_gun_hit)
+	b.connect("on_splash", hud.on_gun_hit)
+	demo.add_child(b)
+	b.global_position = s.origin
+	seekers += 1
+	Sound.play("ship_missile", s.origin)
+
+
+## The Remnant interceptor (issue #76), when this town has one: what the seekers
+## lock on in the air and the HUD boxes.
+func _air_foe():
+	var foe = demo.interceptor if "interceptor" in demo else null
+	return foe if foe != null and is_instance_valid(foe) else null
 
 
 ## Where the guns cross: on whatever is under the nose, out to their own reach.

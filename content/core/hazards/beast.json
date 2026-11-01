@@ -1,7 +1,7 @@
 {
   "id": "beast",
   "label": "the beast",
-  "note": "IP-neutral. Issue #220: a planet's beast, a giant armoured beetle-centipede (issue #266) that crawls about its desert: a beetle's head with mandibles, horn, antennae and glowing eyes, and a long body of segments, each with a pair of legs, that follows the head's path. Touching the head or any segment kills. These are the defaults every beast shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"beast\" block, which gives it a name, a home spot, what the locals say of it, and may override any number here. Touch it (on foot, or ride a speeder into it) and you die on the spot. It wanders with no pull toward or away from the town: its heading drifts at random, and only a loose leash round its home spot turns it back. Hurt it and it chases you until you are chase_give_up_m away; it has hp health and stays dead once killed (WorldState flag beast_slain_<planet id>). Now and then it farts. The town's locals know it: walk close by one, calm, and now and then they say one of the planet's lore lines (every locals_say_every_s at most, read by src/systems/npc/townsfolk.gd); every AI character is briefed on it (PlanetBeast.brief). {name} in a line is the planet's name for it. Read by src/systems/world/planet_beast.gd.",
+  "note": "IP-neutral. Issue #220: a planet's beast, a giant armoured beetle-centipede (issue #266) that crawls about its desert: a beetle's head with mandibles, horn, antennae and glowing eyes, and a long body of segments, each with a pair of legs, that follows the head's path. Touching the head or any segment kills. These are the defaults every beast shares; a planet has one only if its own file (content/core/planets/<id>.json) has a \"beast\" block, which gives it a name, a home spot, what the locals say of it, and may override any number here. Touch it (on foot, or ride a speeder into it) and you die on the spot. It wanders with no pull toward or away from the town, in long curves (turn_radius_m typical, never tighter than min_turn_radius_m, so its body never coils over itself; chase_turn_radius_m in a chase), and only a loose leash round its home spot turns it back. If it still ends up milling about one spot (over stuck_window_s it gets less than stuck_net_frac of the way it walked), it walks out, away from where it has been, for unstick_s. Its look: the parts' colours, look.stone (the weathered-rock shell, beast_shell.gdshader: strata, cracks, lumps, sand) and look.eyes (glow, white-hot core, slit pupil, light, pulse, brighter in a chase). Hurt it and it chases you until you are chase_give_up_m away; it has hp health and stays dead once killed (WorldState flag beast_slain_<planet id>). Now and then it farts. The town's locals know it: walk close by one, calm, and now and then they say one of the planet's lore lines (every locals_say_every_s at most, read by src/systems/npc/townsfolk.gd); every AI character is briefed on it (PlanetBeast.brief). {name} in a line is the planet's name for it. Read by src/systems/world/planet_beast.gd.",
   "hp": 1000,
   "leash_m": 1400.0,
   "radius": 3.6,
@@ -11,9 +11,15 @@
   "stride_m": 4.0,
   "speed": [1.2, 3.4],
   "chase_speed": 5.5,
-  "chase_turn": 2.5,
+  "chase_turn_radius_m": 6.0,
   "chase_give_up_m": 1000.0,
-  "turn_jitter_deg": 70.0,
+  "turn_radius_m": 40.0,
+  "min_turn_radius_m": 14.0,
+  "turn_change_s": [4.0, 12.0],
+  "turn_ease_s": 2.0,
+  "stuck_window_s": 20.0,
+  "stuck_net_frac": 0.3,
+  "unstick_s": [15.0, 25.0],
   "speed_change_s": [3.0, 8.0],
   "kill_margin": 0.35,
   "speeder_margin": 1.4,
@@ -23,7 +29,17 @@
   "locals_say_first_s": 6.0,
   "fart_sound": "res://assets/audio/npc/blob_fart.wav",
   "color": "#5a4632",
-  "look": { "carapace": "#5a4632", "shell": "#a07f55", "legs": "#3a2d22", "mandibles": "#d8c7a0" },
+  "look": {
+    "carapace": "#7b5c42", "shell": "#8f7353", "legs": "#3f3127", "mandibles": "#cdbb98",
+    "stone": {
+      "dust": "#d3ad78",
+      "carapace": { "strata": 2.0, "cracks": 1.0, "bump": 1.2, "dust": 1.0 },
+      "shell": { "strata": 3.0, "cracks": 0.8, "bump": 0.9, "dust": 0.8 },
+      "legs": { "strata": 6.0, "cracks": 0.5, "bump": 0.6, "dust": 0.5 },
+      "mandibles": { "strata": 5.0, "cracks": 0.35, "bump": 0.5, "dust": 0.3 }
+    },
+    "eyes": { "energy": 4.0, "core_energy": 9.0, "core_white": 0.6, "pupil": "#120a06", "pulse": 0.15, "chase": 1.7, "light": 1.6, "light_range_r": 3.5 }
+  },
   "glow": "#c07aff",
   "puff": "#9a8a4a",
   "lines": {

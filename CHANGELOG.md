@@ -20,6 +20,43 @@ Plain English, newest on top. One entry per milestone.
   crates behind each stall are plank crates with iron bands. The stall crates
   now collide (the others already did).
 
+
+## Silent sword kills (issue #307, 2026-10-31)
+
+- **Cut someone down before they notice you and nobody knows.** An energy sword
+  kill on a trooper or a local who had not noticed you raises no alarm, plays no
+  "man down" and wakes nobody else. This applies to the gate, the barracks,
+  outposts, the cruiser and the town's locals.
+- **Seen is still loud.** If the victim had noticed you, or another of them has
+  noticed you, can see you, or has the victim in their sight cone close by
+  (16 m), it is a fight as before. A cut that doesn't kill is a fight too.
+- **Bodies get found.** A trooper or local who later walks within sight of the
+  body shouts a new "found_body" line and raises the alarm.
+- Shots are still loud. Standing changes and kill rewards are unchanged.
+- Code: src/systems/npc/silent_kill.gd, used by Garrison and Townsfolk; NpcBody
+  remembers whether the last cut landed unseen (`cut_unaware`).
+
+## The beast's rock shell, glowing eyes, and no more spinning (2026-11-01)
+
+- **Its shell is desert rock now.** Old Murk's plates, body, legs and jaws are
+  weathered stone, not shiny plastic: sandstone strata across each segment,
+  cracks and pits, lumps in the surface, a darker belly, and sand settled on
+  its back and in the cracks. The stone sticks to the body as it walks.
+- **Its eyes glow.** Each eye is a glowing orb with a white-hot core and a dark
+  slit pupil. They throw a little light on the jaws and sand in front of them,
+  pulse slowly, flare brighter when it chases you, and go out when it dies.
+- **It no longer spins on the spot.** Its heading used to take a fresh random
+  kick every frame, so the head twitched and its path looped back on itself in
+  a space smaller than its 50 m body, which then coiled through itself. Now it
+  crawls in long curves, never tighter than a 14 m radius (6 m in a chase).
+  Bunched-up segments keep their facing instead of snapping round with the head.
+- **If it does end up milling about, it walks out.** It checks every second: if
+  over the last 20 s it got less than a third of the way it walked from where
+  it started, it heads away from where it has been for 15 to 25 s, then
+  wanders again.
+- Numbers are in content/core/hazards/beast.json: `turn_radius_m`,
+  `min_turn_radius_m`, `chase_turn_radius_m`, `stuck_window_s`,
+  `stuck_net_frac`, `unstick_s`, and the `look.stone` and `look.eyes` blocks.
 ## Barracks and outposts stop you like the gate (2026-10-31, issue #308)
 
 - **Walk into the barracks yard or up to a Remnant outpost below 40 standing**
