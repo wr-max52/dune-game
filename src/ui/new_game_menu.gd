@@ -2,8 +2,9 @@ class_name NewGameMenu
 extends CanvasLayer
 ## Issue #200: New Game asks Story or Free Roam. Shown once, on a first launch
 ## (no save yet), after the AI notice (DisclaimerOverlay) is accepted; never in a
-## headless run. Picking one starts that game (DevSettingsPanel.new_game) and the
-## town reloads. Later new games are in F11 > Story.
+## headless run. Picking one starts that game in its own save slot
+## (DevSettingsPanel.new_game) and the town reloads. Later new games, and playing
+## the other save, are in F11 > Game.
 
 const CHOICES := [
 	[WorldState.STORY, "Story",

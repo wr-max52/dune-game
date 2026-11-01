@@ -2,6 +2,24 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the side-by-side saves (2026-11-01)
+
+**Checked:** tests/test_save_slots.gut.gd (10/10), test_player_outfit (6/6),
+the two new-game tests, test_smoke, and a headless town boot (it copied a
+real story `save.json` into `save_story.json`). A switch in a windowed game
+wasn't tried. `test_story`'s "a new town after the fleet has no garrison"
+fails (7 guards, not 3) on `main` as well.
+
+- **Older builds still write `save.json`.** After the one-time copy, this build
+  never reads it again, so whatever an older branch plays afterwards stays in
+  `save.json`.
+- **Only F11 > Game > Saves switches.** There is no title screen; the last save
+  played opens on launch.
+- **Switching mid-flight lands you.** The other save opens where it was left, and
+  the one being left keeps its last spot on foot (as with any save, issue #113).
+- **AI chat logs (`user://logs/`) are shared.** They are written, never read
+  back, so nothing leaks into play.
+
 ## After issue #298, no air outside (2026-10-31)
 
 **Checked:** tests/test_harmful_surface.gut.gd on its own (4/4). The full suite
