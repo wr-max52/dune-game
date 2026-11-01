@@ -309,6 +309,10 @@ func _on_general_died() -> void:
 	_toast(line("general_dead") % who, 6.0)
 	if pay > 0:
 		_toast(line("taken") % pay, 6.0)
+	# The fight in its sky ends with him: landing in the bay only took you out of it.
+	if demo.pilot != null and demo.pilot.fight != null:
+		demo.pilot.end_fight("general")
+		_toast(line("escort_gone"), 6.0)
 	Sound.battle()
 
 

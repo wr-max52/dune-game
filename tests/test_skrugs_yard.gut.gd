@@ -425,6 +425,59 @@ func test_nothing_sold_without_the_click() -> void:
 	t.bar.end_talk()
 
 
+func test_he_buys_a_stolen_ship_within_100_m_of_his_stall() -> void:
+	var t = _town()
+	var post: SpeederPost = t.speeder_post
+	var stall := post.world_point("merchant")
+	var out := (post.world_point("ship_sell") - stall)
+	out.y = 0.0
+	out = out.normalized()
+	var near := _berth_at(t, stall + out * 95.0, "remnant_fighter", "test_outpost")
+	t.pilot.berths[near].stolen = true
+	assert_eq(int(post.ship_offer().get("berth", -1)), near, "95 m from his stall: his to buy")
+	t.pilot.berths[near].visual.global_position = stall + out * 105.0
+	assert_true(post.ship_offer().is_empty(), "105 m: too far")
+
+
+func test_he_offers_a_stolen_ship_the_moment_you_talk() -> void:
+	var t = _town()
+	t._build_bar([ScriptedProvider.new("scripted_test")], "")
+	var post: SpeederPost = t.speeder_post
+	post.attach_host(t.bar)
+	var i := _berth_at(t, post.world_point("ship_sell"), "remnant_fighter", "test_outpost")
+	t.pilot.berths[i].stolen = true
+	WorldState.credits = 0
+	t.bar.start_talk(post.spot)
+	var o := post.ship_offer()
+	assert_true(t.bar.panel.job_open(), "the card is up before a word is said")
+	var said := str(JSON.parse_string(str(post.spot.brain.history[-1].content)).say)
+	assert_string_contains(said, str(o.price), "he opens with his price")
+	t.bar.panel.answer_card(true)
+	assert_eq(WorldState.credits, int(o.price), "the click sells")
+	assert_true(bool(t.pilot.berths[i].destroyed), "and the ship is gone")
+	t.bar.end_talk()
+	# Nothing stolen in reach: he greets as usual, no card.
+	t.bar.start_talk(post.spot)
+	assert_false(t.bar.panel.job_open(), "no ship, no card")
+	t.bar.end_talk()
+
+
+func test_his_stall_is_by_his_garage_and_the_back_gate() -> void:
+	var g := _ground("port_round")
+	var town = TownLayout.new()
+	town.load_town("port_town", "port_round")
+	var gate := Vector2.ZERO
+	for m in town.markers():
+		if str(m.id) == "back_gap":
+			gate = Vector2(float(m.pos[0]), float(m.pos[2]))
+	var at := {}
+	for f in _footprints(g, "skrugs_post"):
+		at[str(f.id).get_slice("/", 1)] = Vector2((f.min.x + f.max.x) * 0.5, (f.min.z + f.max.z) * 0.5)
+	assert_lt(at.stall.distance_to(gate), 15.0, "a short walk in from the back gate")
+	assert_lt(at.stall.distance_to(gate), at.house.distance_to(gate), "in front of his house, not behind it")
+	assert_lt(at.stall.distance_to(at.garage_side_a), 11.0, "beside his garage")
+
+
 func test_his_card_offers_only_the_ship_the_game_says() -> void:
 	var b := NpcBrain.new(null, SpeederPost.CARD_PATH)
 	assert_string_contains(str(b.builder.rules_message().content), "offer_ship_buy")

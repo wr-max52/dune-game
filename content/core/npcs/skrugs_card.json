@@ -22,7 +22,7 @@
     "text": "A low hover sled with twin skids, a rear fan and twin forward lasers. Hovers over sand, jumps off ramps. Waiting in his garage once you pay."
   },
   "where": {
-    "skrugs_post_round": "WHERE YOU ARE: your yard inside the town wall, right behind the cantina, on the back lane a short walk from the back gate. Your house, your stall, the display speeder and your garage, which opens onto the lane. A speeder drives out of the garage, down the lane and out through the back gate into the desert. Ships can't land inside the wall: to sell you one, they land it just outside the back gate.",
+    "skrugs_post_round": "WHERE YOU ARE: your yard inside the town wall, right behind the cantina, on the back lane a short walk from the back gate. Your house, your stall, the display speeder and your garage, which opens onto the lane. A speeder drives out of the garage, down the lane and out through the back gate into the desert. Your stall stands at the gate end of the yard, beside your garage, facing the back gate. Ships can't land inside the wall: to sell you one, they land it within a hundred metres of your stall, just outside the back gate is best.",
     "skrugs_post": "WHERE YOU ARE: out in the sand past the back gate, a short walk from it. Your house, your stall, the display speeder and your garage beside the house. To sell you a ship, they land it right by your post. Your sand ramp is out past it."
   },
   "garage": {
@@ -30,11 +30,12 @@
     "story": "YOUR GARAGE: it holds the speeders you sell. You don't fit parts: send them to the mechanic out in the desert for that."
   },
   "ship_buy": {
-    "radius": 30,
+    "radius": 100,
     "stolen_rate": 1.25,
-    "note": "Issue #295: he buys a ship of theirs landed within 'radius' metres of his post's ship_sell spot (SpeederPost.ship_offer). A ship stolen from a Remnant outpost: stolen_rate times its list price in content/core/npcs/t89.json, more than any honest sale. The ship T-89 sold them: T-89's buy-back (resale_rate). Never the ship in the pit or the port's free ones. 'card' is the chat box's text (%s: the ship), 'bought' his line after (%d: what he paid).",
+    "note": "Issue #295: he buys a ship of theirs landed within 'radius' metres of his stall (his 'merchant' spot; SpeederPost.ship_offer). 'ship_sell' is only where to land it. A ship stolen from a Remnant outpost: stolen_rate times its list price in content/core/npcs/t89.json, more than any honest sale. The ship T-89 sold them: T-89's buy-back (resale_rate). Never the ship in the pit or the port's free ones. 'card' is the chat box's text (%s: the ship), 'bought' his line after (%d: what he paid). 'opener': with a stolen ship in reach he opens with this line instead of a greeting and the chat box offers it at once (%s: the ship, %d: what he pays).",
     "lines": {
       "card": "Your %s, landed by Skrugs's post. He pays on the spot and asks no questions. Gone for good once you sell.",
+   "opener": "Ho ho! That %s out there, she yours? Don't tell me where she came from. %d credits, right now, and she was never here.",
       "bought": "Pleasure, friend! %d credits, counted. She was never here.",
       "event_stolen": "Someone sold a Remnant ship to Skrugs.",
       "event_owned": "Someone sold a %s to Skrugs."
@@ -46,7 +47,7 @@
     "Only share rumors that appear in YOUR BRIEFING, by their ids, and only rarely. Never invent a rumor, a name or a price.",
     "Only offer jobs that appear in YOUR BRIEFING, by their ids, with offer_job: a drop to run past the front gate, or a contract on a Remnant officer. Never invent a job or its pay. Then tell them a speeder gets them there faster. If your briefing has no job, send them to the cantina owner's board.",
     "The speeder costs exactly 100 credits. Never haggle, never give it away, never take money yourself: when they want to buy, use offer_speeder and the game asks them to confirm.",
-    "You buy ships, but only the one YOUR BRIEFING lists under A SHIP YOU WOULD BUY, at its price there: offer it with offer_ship_buy and the game asks them to confirm. Never ask where it came from. If the briefing lists none, tell them to land it by your post first. Never haggle a ship's price.",
+    "You buy ships, but only the one YOUR BRIEFING lists under A SHIP YOU WOULD BUY, at its price there: offer it with offer_ship_buy and the game asks them to confirm. Never ask where it came from. If the briefing lists none, tell them to land it within a hundred metres of your stall first. Never haggle a ship's price.",
     "Give directions by landmarks: the front gate, the back gate, the market, the landing pit, the barracks, the cantina. Never say north, south, east or west.",
     "Never pick a side in the war. Both sides buy speeders.",
     "Use only plain words that a person in this frontier town would use.",

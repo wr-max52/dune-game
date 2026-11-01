@@ -507,7 +507,7 @@ func exit_ship() -> bool:
 ## Issue #275: B held in the air. Not on the ground (E gets you out), in space or a
 ## fight, or while an autopilot the story needs has her.
 func can_eject() -> bool:
-	return piloting and not opening and not docking and fight == null \
+	return piloting and not opening and not docking and not _fight_flying() \
 		and (atmo.state == AtmoFlight.State.FLYING or atmo.state == AtmoFlight.State.LANDING) \
 		and atmo.altitude() < atmo.space_altitude
 
@@ -594,13 +594,11 @@ func takeoff() -> bool:
 	return true
 
 
-## In space the only ground to land on is the cruiser's: a fight running there is
-## broken off to set her down, as Z does.
+## In space the only ground to land on is the cruiser's: a fight running there goes
+## on without her while she is down (_out_of_fight), as Z's docking does.
 func land() -> bool:
 	if not piloting or not atmo.can_land():
 		return false
-	if fight != null:
-		end_fight("left")
 	return atmo.land()
 
 
@@ -608,7 +606,7 @@ func land() -> bool:
 
 ## Close enough to your bay (across the ground, below space) for Z to bring you in.
 func near_bay() -> bool:
-	if not piloting or fight != null or atmo.state != AtmoFlight.State.FLYING:
+	if not piloting or _fight_flying() or atmo.state != AtmoFlight.State.FLYING:
 		return false
 	var p := atmo.position()
 	return Vector2(p.x - home.x, p.z - home.z).length() <= GameFlow.setting("bay_land_radius", 4000.0) \
@@ -671,14 +669,14 @@ func near_cruiser() -> bool:
 	return piloting and c != null and atmo.state == AtmoFlight.State.FLYING and c.can_dock(atmo.position())
 
 
-## Z by the cruiser: a fight running is broken off (you run for the bay), and she
-## flies herself round the hull and in. False when not near enough.
+## Z by the cruiser: she flies herself round the hull and in. A fight running is not
+## broken off: it goes on without her while she docks and is down in the bay
+## (_out_of_fight), and she is back in it when she flies out. False when not near
+## enough.
 func dock() -> bool:
 	if docking or not near_cruiser():
 		return false
 	var c = cruiser()
-	if fight != null:
-		end_fight("left", true)
 	bay_landing = false
 	docking = true
 	_dock_path = c.dock_path(atmo.position())
@@ -906,12 +904,16 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(dt: float) -> void:
 	if atmo == null:
 		return
+	if fight != null and not piloting:
+		_shelter()                     # out of the seat: out of the fight, which goes on
 	if not piloting:
 		_on_foot()
 		if atmo.state == AtmoFlight.State.ADRIFT:
 			_adrift_step(dt)
 	else:
 		_seated(dt)
+	if fight != null and fight.sheltered:
+		_sheltered_step(dt)
 	_engine_step()
 	if crash_left >= 0.0:
 		crash_left -= dt
@@ -1014,6 +1016,8 @@ func _seated(dt: float) -> void:
 		opening_t += dt
 	_jolt_xf = jolt.step(dt)
 	if fight != null:
+		_shelter()
+	if _fight_flying():
 		_fight_step(dt)
 	elif docking:
 		_dock_step(dt)
@@ -1189,8 +1193,68 @@ func _fight_step(dt: float) -> void:
 			"failed":
 				end_fight("failed")
 				return
-	if atmo.altitude() < atmo.space_altitude - space_exit_margin and not _bound_for_cruiser():
+	if not _fight_held() and atmo.altitude() < atmo.space_altitude - space_exit_margin and not _bound_for_cruiser():
 		end_fight("left")
+
+
+## The fight is flying her now (running, and she is out in it).
+func _fight_flying() -> bool:
+	return fight != null and not fight.sheltered
+
+
+## The cruiser's escort only ends with the general's death (RemnantCruiser), with
+## every wave shot down, or with her shot down: diving away does not break it off.
+func _fight_held() -> bool:
+	var c = cruiser()
+	return fight != null and c != null and fight.encounter_id == c.escort_id()
+
+
+## Not out in the fight: docking, landing or down in the cruiser's bay, parked, on
+## foot, crashed, or (the escort) dived well under the edge of space. The fight goes
+## on without her (Dogfight.player_sheltered) until she is out in it again.
+func _out_of_fight() -> bool:
+	if not piloting or docking or bay_landing or atmo.state != AtmoFlight.State.FLYING:
+		return true
+	var c = cruiser()
+	if c != null and c.aboard(atmo.position()):
+		return true
+	return _fight_held() and atmo.altitude() < atmo.space_altitude \
+		- float(c.cfg.get("approach", {}).get("floor", 1500.0))
+
+
+## Into the fight or out of it as she comes and goes. Back in, the director's ship
+## takes over from the one normal flight was flying.
+func _shelter() -> void:
+	var out := _out_of_fight()
+	if out == fight.sheltered:
+		return
+	fight.set_sheltered(out)
+	if not out:
+		_hand_to_fight()
+
+
+## The director's ship where normal flight has her: place, heading and speed.
+func _hand_to_fight() -> void:
+	var f = fight.player_flight() if fight != null else null
+	if f == null:
+		return
+	f.position = atmo.position()
+	f.basis = atmo.flight.basis
+	f.speed = minf(atmo.speed(), f.max_speed())
+
+
+## The fight going on without her: everyone else flies and shoots, round where her
+## ship is. Shot down to the last wave, it is won all the same.
+func _sheltered_step(dt: float) -> void:
+	var f = fight.player_flight()
+	if f != null:
+		f.position = atmo.position()
+		f.basis = atmo.flight.basis
+		f.speed = atmo.speed()
+	for e in fight.step(dt, {}):
+		if str(e.type) == "complete":
+			end_fight("complete")
+			return
 
 
 ## Flying at the cruiser keeps the fight on: the ball curves away under the straight
@@ -1243,19 +1307,21 @@ func _fight_hit(e: Dictionary) -> void:
 
 
 ## Finish the sortie. "complete" pays out, "failed" tows the ship home (as a crash
-## does), "left" (dived out early) just ends it. Normal flight picks up where the
-## fight left the ship.
+## does), "left" (dived out early) just ends it, and "general" (the cruiser's
+## general is dead: RemnantCruiser) ends it with the cruiser's own reward. Normal
+## flight picks up where the fight left the ship, if it was flying her.
 func end_fight(outcome: String, quiet := false) -> void:
 	if fight == null:
 		return
 	var pay := fight.payout() if outcome == "complete" else 0
 	var at := atmo.position()
+	var flown := not fight.sheltered and atmo.state == AtmoFlight.State.FLYING
 	fight.queue_free()
 	fight = null
 	if not quiet:
 		Sound.set_space(false)
 	fight_log.append({ "outcome": outcome, "payout": pay, "at": at })
-	if outcome != "left":
+	if outcome != "left" and outcome != "general":
 		WorldState.on_flight_returned({ "pad": str(pad.get("id", "")), "encounter": str(pad.get("encounter", "")),
 			"outcome": outcome, "payout": pay, "mode": "orbit" })
 	match outcome:
@@ -1269,7 +1335,7 @@ func end_fight(outcome: String, quiet := false) -> void:
 		atmo._crash(at, "space")
 		_on_event({ "type": "crashed", "at": at, "what": "space" })
 		hud.toast(GameFlow.label("orbit_failed"), 4.0)
-	else:
+	elif flown:
 		var throttle := clampf(float(atmo._command.get("throttle", 0.6)), 0.0, 1.0)
 		atmo.place_flying(at, atmo.flight.forward(), atmo.flight.speed, throttle)
 	fight_ended.emit(outcome)
@@ -1277,21 +1343,22 @@ func end_fight(outcome: String, quiet := false) -> void:
 
 ## The fight's director flies her through empty space: it knows nothing of the
 ## world. Up there the world is the cruiser (issue #193): in through its bay's mouth
-## the fight is broken off (you ran for it), and its hull is as solid as in normal
-## flight: the fight ends and the normal collision bumps her or crashes her.
+## she is out of the fight (_out_of_fight) and normal flight has her from the next
+## frame, and its hull is as solid as in normal flight: the normal collision bumps
+## her (and she fights on from where it stopped her) or crashes her, which ends it.
 func _fight_meets_ground(before: Vector3, dt: float) -> bool:
 	var pos := atmo.position()
-	var c = cruiser()
-	if c != null and c.aboard(pos):
-		end_fight("left")
-		return true
 	if ground.hit(pos, atmo.body_radius) == "" and ground.height_above(pos - atmo.up() * atmo.clearance) > 0.0:
 		return false
-	end_fight("left")                  # she flies on from here at the fight's speed
 	atmo.events = []
 	atmo._collide(before, dt)
 	for e in atmo.events:
 		_on_event(e)
+	if atmo.state == AtmoFlight.State.CRASHED:
+		end_fight("left", true)        # the crash says so
+		Sound.set_space(false)
+	else:
+		_hand_to_fight()
 	return true
 
 
@@ -1340,7 +1407,7 @@ func _update_hud(agl_now: float) -> void:
 	# boost meter, its Shift ability, the shield and hull its bolts hit).
 	var live = f
 	var d = defense
-	if fight != null and fight.df != null:
+	if _fight_flying() and fight.df != null:
 		var me: Dictionary = fight.df.get_ship(fight.df.player_id)
 		if not me.is_empty():
 			live = me.flight
@@ -1392,7 +1459,7 @@ func _update_hud(agl_now: float) -> void:
 ## lifts off until it is back on the ground (or gone to space). Issue #200: not in
 ## a story save, where flying out of port raises no alarm.
 func hostile_in_town() -> bool:
-	return piloting and fight == null and not WorldState.story_mode() and atmo.state != AtmoFlight.State.PARKED \
+	return piloting and not _fight_flying() and not WorldState.story_mode() and atmo.state != AtmoFlight.State.PARKED \
 		and atmo.state != AtmoFlight.State.CRASHED and TownNav.in_town(demo.town, atmo.position())
 
 
@@ -1489,7 +1556,7 @@ func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
 		_hit_parked(i, amount)
 		return
 	var adrift := atmo.state == AtmoFlight.State.ADRIFT    # issue #276: the empty ship still takes hits
-	if i != berth or not (piloting or adrift) or fight != null or atmo.state == AtmoFlight.State.CRASHED:
+	if i != berth or not (piloting or adrift) or _fight_flying() or atmo.state == AtmoFlight.State.CRASHED:
 		return
 	defense.apply_damage(amount)
 	if piloting:

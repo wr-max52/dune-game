@@ -2,6 +2,44 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the fence, droid post and Skrugs's stall pass (2026-10-31)
+
+**Checked:** `test_plot_buildout` (17/17: the armour bought, sold back and bought again), `test_skrugs_yard` (22/22, three new: the 100 m reach, the offer
+the moment you talk, the stall by the gate and garage), `test_inventory` (the new
+fence test passes; two old count checks fail on main too), `test_droid_merchant_outposts`,
+`test_smoke`, a headless boot, and rendered stills of the stall from the back
+gate and the droid post through the front gate. Nothing was played by hand.
+
+- **Selling the gun in your hand to the fence** (story game) leaves it drawn
+  until you switch weapons; after that it stays holstered.
+- **Skrugs opens with a stolen ship only.** The ship T-89 sold you is still
+  bought, but only when you ask him.
+- **The 100 m reaches the port's two nearest landing pads** (surface pads 4
+  and 5); a stolen ship parked there is his to buy too.
+- **The droid post is small through the gate** at 310 m: a hut and a thin mast
+  in the gap, easy to miss from the far side of the plaza.
+## After the party barge perf fix (2026-10-31)
+
+**Checked:** rendered on the Mac with the look on, a throwaway probe
+(test_results/probe, not in the repo) that pauses each part of the town in turn:
+the barge was 12 to 14 ms of physics a frame from anywhere; with the fix, physics
+with the barge is within 1 to 3 ms of physics without it. The barge trace (every
+line true), test_barge_trace, test_smoke and test_ip_neutral pass. The full suite
+was not run.
+
+- **Building its people costs a little on the way in:** one person a physics
+  tick for 33 ticks the first time you come within 220 m. Not watched on screen
+  for a hitch.
+- **Standing on the deck is still the heaviest spot** (33 dancers animated at
+  full rate within 50 m, every one skinned). Lower `anim_near_m` or the crowd if
+  it is too much.
+- **The rest of the frame:** with the barge out of the way, the town's people
+  (Npcs), the speeder and Skrugs's post, and the droids are the next biggest
+  per-frame costs (a few ms each, measured roughly). Not looked at here.
+- **Frame time swings with where the camera points** (200 to 17,000 draw calls
+  between spots around town), so compare physics and script time, not whole
+  frames.
+
 ## After the cruiser pass: scope shake, computers, holo map, more droids (2026-10-31)
 
 **Checked:** a rendered probe measuring the reticle scoped in on the cruiser's deck

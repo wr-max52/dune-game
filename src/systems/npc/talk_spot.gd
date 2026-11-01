@@ -17,6 +17,7 @@ var height_tolerance := 1.5
 var face_height := 1.5             ## the two-shot frames this height on the body
 var manual := false                ## true: the character's own [E] starts the talk (T-89's menu), not the host's
 var hold_line := ""                ## not "": Esc can't leave (the general's pit meeting); the chat box says this instead
+var opener := Callable()           ## valid: asked as the talk opens for { say, sale } (Skrugs's ship offer): "say" replaces the greeting, "sale" goes up on the chat box at once; {} = greet as usual
 
 
 func _init(npc_brain: NpcBrain = null, npc_body: Node3D = null, stand_at: Vector3 = Vector3.ZERO) -> void:

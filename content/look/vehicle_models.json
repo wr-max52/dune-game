@@ -28,11 +28,19 @@
     }
   },
   "gunship": {
-    "source": "res://assets/vehicles/source/gunship.glb",
+    "source": "res://assets/vehicles/source/courier3.glb",
     "out": "res://assets/vehicles/gunship.glb",
     "yaw_deg": 180,
     "length": 9.0,
-    "max_span": 7.8
+    "max_span": 8.0,
+    "paint": {
+      "body": "#2e3138",
+      "trim": "#1c1e22",
+      "glow": "#2ee6c8",
+      "glow_energy": 2.5,
+      "metallic": 0.55,
+      "roughness": 0.4
+    }
   },
   "speeder": {
     "source": "res://assets/vehicles/source/speeder_agentic.glb",
@@ -132,6 +140,7 @@
     "freighter.glb": "long oval barge freighter, bone and rust, very greebled",
     "courier.glb": "yellow and blue cartoon racer with wing pods",
     "courier2.glb": "the Lanner until the rocket-muscle redo: white and orange twin-boom racer (4fa39cfb)",
+    "gunship.glb": "the Albatross until it became a Lanner variant: pale blue chunky gunship, textured, not in the game's style (b82e5ccf)",
     "speeder_text.glb": "teal and sand hover car (has wheels; would need trimming)",
     "speeder_ref.glb": "reference-led copy of the primitive speeder",
     "speeder_text2.glb": "text-only hover sled, second try (2130a072); not reviewed",
@@ -141,7 +150,7 @@
     "interceptor": "b173bc6a-9d84-4c6b-8007-5c06d23a24a2 (agentic, refs: stand-in crops)",
     "freighter": "cfed8b67-470b-4e63-b573-aadc9dd2402c (Gen-2.5 Medium, delit, 30k; refs: front 3/4, rear and top crops of the user's frigate concept sheet: thick boxy disc, forked front, three rear engines, no wings). Comes out nose toward -Z, so yaw_deg 0. freighter_shields/_hull/_boost are paint jobs on it, one per T-89 upgrade (ShipUpgrades.look). The first freighter was 5f3e0858 (source/freighter2.glb)",
     "courier": "0885f5b8-4443-493c-8d52-31b926f596e1 (Gen-2.5 Medium, delit, 40k; refs: 3/4 front, top and rear crops of the user's rocket-muscle concept sheet). Was 4fa39cfb (courier2.glb, the white and orange racer, kept in source/)",
-    "gunship": "b82e5ccf-faa8-4714-bb76-1564ffd446f3",
+    "gunship": "the Lanner's model (courier3.glb, 0885f5b8) at 9 m, painted black with teal glow; its guns are parts in content/look/ships.json. Was b82e5ccf (source/gunship.glb, kept)",
     "speeder": "895b349d-a78a-4094-bccc-f7acfb611e8c (agentic, refs: stand-in crops)",
     "runner_ups": "8042aad5 (interceptor_ref), afd8adcf (interceptor_text), 9f5deb82 (interceptor_text2), b3bf40dd (freighter), ce66b6d3 (courier), 79440b71 (speeder_ref), 3ecc12e5 (speeder_text), 2130a072 (speeder_text2), 12657846 (sandboxer.glb: first Sand-boxer, engine deck off centre)",
     "not_downloaded": "agentic clean-style rebuilds of the chosen layouts, still building when this was committed; fetch from Hyper3D Mine if wanted: fb9ecabb (freighter), e9a97efd (courier), 07fcc97c (gunship)",

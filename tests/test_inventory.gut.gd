@@ -116,6 +116,19 @@ func test_prices_come_from_value_and_rates() -> void:
 	assert_eq(Inventory.sell_price({ "kind": "food", "value": 10 }, trader), -1, "the trader only buys gear")
 
 
+func test_the_fences_buy_anything_you_have() -> void:
+	for vid in ["fence", "station_fence"]:
+		var fence: Dictionary = content.get_vendor(vid)
+		for id in content.items:
+			var it: Dictionary = content.get_item(str(id))
+			assert_gte(Inventory.sell_price(it, fence), 0, "%s buys %s" % [vid, id])
+		assert_eq(Inventory.sell_price(jet, fence), int(round(float(jet.value) * float(fence.any_rate))), "gear at any_rate")
+		assert_lte(Inventory.sell_price(jet, fence), Inventory.sell_price(jet, trader), "no better than the gear trader")
+		var cells: Dictionary = content.get_item("unmarked_cells")
+		assert_gt(Inventory.sell_price(cells, fence), int(cells.value), "contraband still at its own, better rate")
+	assert_eq(Inventory.sell_price({ "kind": "food", "value": 10 }, trader), -1, "other stalls still buy only their kinds")
+
+
 func test_sell_pays_and_stocks_the_vendor() -> void:
 	var inv := Inventory.new()
 	inv.add("jetpack")

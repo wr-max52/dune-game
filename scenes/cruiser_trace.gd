@@ -24,7 +24,7 @@ func _initialize() -> void:
 	GameFlow.reset()
 	GameFlow.dogfight_override = false
 	GameFlow.change_scene = func(_path: String) -> void: pass
-	Story.skip_to("cruiser")
+	Story.skip_to("fleet")
 	_run()
 
 
@@ -103,8 +103,10 @@ func _walkways(c) -> void:
 
 
 ## The escort's fight is running when you reach the cruiser (it is above the edge of
-## space): its hull is still solid, flying in through the bay's mouth breaks the
-## fight off, and C over the deck sets her down with a fight running.
+## space): its hull is still solid, flying in through the bay's mouth takes you out
+## of the fight without ending it, and C over the deck sets her down with a fight
+## running. It is still running when Z docks her and when you walk the decks; the
+## general's death ends it (_aboard).
 func _fight_by_the_hull(c) -> void:
 	pilot._seat_arriving()
 	pilot.atmo.reached_space = true
@@ -120,15 +122,16 @@ func _fight_by_the_hull(c) -> void:
 	out("FIGHT_HULL_HIT", pilot.atmo.last_hit)
 	out("FIGHT_HULL_X", int((c.inv * pilot.atmo.position()).x))
 	pilot.crash_left = -1.0
-	# In through the bay's mouth: the fight is broken off.
+	# In through the bay's mouth: out of the fight, which goes on.
 	pilot.atmo.place_flying(c.frame * Vector3(200, 0, -62), c.frame.basis * Vector3.LEFT, 40.0, 0.3)
 	pilot.start_fight()
 	for f in 60 * 8:
 		pilot.set_external_command({ "throttle": 0.3 })
 		await physics_frame
-		if pilot.fight == null:
+		if c.aboard(pilot.atmo.position()):
 			break
-	out("FIGHT_BAY_BROKE_OFF", pilot.fight == null and c.aboard(pilot.atmo.position()))
+	await frames(2)
+	out("FIGHT_BAY_HELD", pilot.fight != null and pilot.fight.sheltered and c.aboard(pilot.atmo.position()))
 	# Over the deck with a fight running: C lands her.
 	pilot.atmo.place_flying(c.frame * Vector3(30, -2, -62), c.frame.basis * Vector3.LEFT, 5.0, 0.0)
 	pilot.start_fight()
@@ -160,6 +163,7 @@ func _dock(c) -> void:
 	var pad: Vector3 = c.frame * (CruiserHull.dock_pad().at as Vector3)
 	out("DOCK_PAD_ERR_M", snappedf(Vector2(pilot.atmo.position().x - pad.x, pilot.atmo.position().z - pad.z).length(), 0.1))
 	out("DOCKINGS", pilot.dockings)
+	out("FIGHT_DOCKED_HELD", pilot.fight != null and pilot.fight.sheltered)
 	out("EXITED", pilot.exit_ship())
 	await frames(20)
 	out("PLAYER_ABOARD", c.aboard(player.global_position))
@@ -190,15 +194,20 @@ func _aboard(c) -> void:
 		if is_instance_valid(g) and not c.aboard(g.global_position):
 			fallen += 1
 	out("CREW_FALLEN", fallen)
+	out("FIGHT_ABOARD_HELD", pilot.fight != null and pilot.fight.sheltered)
+	pilot.end_fight("left", true)      # the ship's own guns next, flown outside the mouth: no fight to take her
 	await _ship_guns(c)
 	await _shot_asleep(c)
 	await _downed_aboard(c)
 	var credits: int = WorldState.credits
 	var locals: int = WorldState.standing.get("locals", 0)
+	pilot.start_fight()                # a fight in the sky again, you on foot: his death ends it
 	if c.general != null:
 		c.general.apply_damage_from(10000.0, player)
 	await frames(5)
 	out("TAKEN", Story.cruiser_taken())
+	out("FIGHT_ENDED_BY_GENERAL", pilot.fight == null and not pilot.fight_log.is_empty() \
+		and str(pilot.fight_log.back().outcome) == "general")
 	out("PAID", WorldState.credits - credits)
 	out("LOCALS_GAIN", int(WorldState.standing.get("locals", 0)) - locals)
 	out("CHAPTER", Story.chapter())

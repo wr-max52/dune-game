@@ -2,6 +2,62 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The fence buys anything, a droid post by the gate, Skrugs's stall (2026-10-31)
+
+- **The fence buys anything you carry**, not just contraband: guns, blades,
+  gear, armour, quartz, food. Contraband still pays twice its value; everything
+  else half, the gear trader's rate, so nothing bought in town sells there at a
+  profit. Same for the station's fence. (`"*"` in a vendor's `buys`, paid at its
+  `any_rate`.)
+- **The fence never runs out of quantonium armour.** Once your first bounty
+  unlocks it, it stays on his stall: buy it, sell it back to him (250), buy it
+  again (500), as often as you like. (An offer can be `"endless"` in fence.json;
+  the gun and jetpack upgrades are still once each.)
+- **A droid merchant you can see from town.** The Drywash Droid Relay moved a
+  kilometre closer, to about 310 m straight out from the front gate. Its hut and
+  tall mast show through the gate from the street, and its counter faces the town.
+- **Skrugs's stall is at the gate end of his yard**, right in front of the
+  display speeder and beside his garage, facing the back gate: the first thing
+  you see walking in from the desert. It used to be tucked behind his house.
+- **Skrugs buys a stolen ship within 100 m of his stall** (it was 30 m from a
+  spot outside the gate). Land it outside the back gate, or on the port's two
+  nearest pads, and talk to him: he opens with his price and the chat box offers
+  the sale at once, no asking needed. Click Sell and the ship is gone.
+## The party barge stops eating the frame rate (2026-10-31)
+
+- **Its cost was everywhere, not just near it.** Measured rendered with the look
+  on, the barge was about half of every frame's work: 12 to 14 ms of physics and
+  3 to 5 ms of scripts, even standing in town 660 m away. Now its physics cost is
+  about 1 to 3 ms when you are near it or on deck, and close to nothing from town.
+- **Parked until it is yours.** Nobody's barge no longer drifts about its home;
+  it sits still, so its 40-odd colliders and 33 hit boxes never move. It only
+  moves on autopilot once you own it (the drift numbers are gone from
+  party_barge.json).
+- **Its people are built late.** The crowd, band, DJ, guards and boss are built
+  the first time you come within `party_m` (220 m), one a physics tick (about half
+  a second), instead of at load.
+- **The club only animates near.** Its pulsing lights and props stop past
+  `anim_m` (160 m), and the barge's whole look is only moved between physics ticks
+  while the barge is actually moving.
+- **Fixed:** each dancer's skin was synced once per skin layer, times every layer.
+
+## The Albatross is a black Lanner gunship (2026-10-31)
+
+- **New look for the pit's gunship.** The Ashford Albatross Mk VI in bay 4 was
+  the last ship still on the first, pale blue textured model, which didn't
+  match the game's style. It is now built on the Lanner's body: a little
+  bigger (9 m), painted black with glowing teal bands and canopy. Same name,
+  same numbers, still not yours until T-89 sells it to you.
+- **It looks like a gunship.** Long cannons out front of the wingtip pods, a
+  twin chin cannon under the nose and a small twin-gun turret on its back, all
+  with teal muzzles. They are always on: a ship look can now carry `parts`
+  (content/look/ships.json), the same kind of part T-89's upgrades bolt on.
+- **T-89's upgrades show on it too:** shield rings, hull armour and the flared
+  boost nozzle, sized up from the Lanner's.
+- Bay 4's box is resized to the new model (port_square.json, regenerated
+  port_round.json, town_kit `ship_boxes`). The old model is kept in
+  assets/vehicles/source/gunship.glb. Stills: docs/lookdev/vehicles/06_albatross.jpg.
+
 ## Divergent endings: the dark master (issue #303, 2026-10-31)
 
 - **The general's death is locked in.** Killing him on the cruiser still pays

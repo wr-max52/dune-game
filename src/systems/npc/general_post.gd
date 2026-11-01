@@ -8,7 +8,9 @@ extends Node3D
 ##   - An AI character on the town's ConversationHost, from his own card
 ##     (content/core/npcs/general_card.json). [E] beside him opens a menu, like
 ##     T-89's: talk, ask for work, hand over a droid.
-##   - He, his guard and his droid face the front gate ("face": a town marker).
+##   - He, his guard and his droid face the front gate ("face": a town marker), in
+##     a row abreast: their offsets are in the squad's own frame. In the pit the
+##     row stands off your ship's tail, so you climb out boxed in against it.
 ##   - In the barracks yard (while the Remnant hold the moon) they are real: he and
 ##     his guard are garrison troopers (NpcBody, "squad" soldier profiles) and the
 ##     droid one of the Remnant's droids, so they can be shot, and they fight where
@@ -16,8 +18,9 @@ extends Node3D
 ##     (WorldState.on_general_killed): Oda's bounty goes on someone else.
 ##   - The pit meeting is his to end: you cannot walk away (Esc) until he lets you
 ##     go (let_go) or has you searched (search). That verdict sets the Remnant
-##     standing you start with. If his brain never gives one, the game does after
-##     a few of his lines (search if you insulted him, else let go).
+##     standing you start with. If his brain never gives one, the game has you
+##     searched after three of his lines (the meeting's "default"). Either way he
+##     closes with a hint at work for an outlander (the Work for the general quest).
 ##   - Insults cost Remnant standing; too many in one talk and his guards search you
 ##     on the spot (the gate's rules: WorldState.search_player). In the pit meeting
 ##     that search is his verdict.
@@ -27,7 +30,7 @@ extends Node3D
 ##     cruiser (issue #205: the quest's event, heard_of_wreck).
 ##   - His second job (j_general_repossess, issue #251): contraband smugglers
 ##     stashed inside the town, offered in talk. [E] hands him what you found,
-##     for what the fence would have paid, and raises Remnant standing.
+##     for more than the fence would have paid, and raises Remnant standing.
 ##   - Once the Remnant has left the moon (issue #214) he stays, in the desert armour.
 ##
 ## Config: content/core/npcs/general.json. The headless test calls talk_ended(),
@@ -127,11 +130,11 @@ func _place() -> void:
 	body = _person(kit, cfg.get("armour_outfit" if armour else "outfit", {}), at, "General")
 	if not armour:
 		# The Remnant has left (issue #214): he stays on alone.
-		guard = _person(kit, cfg.get("guard_outfit", {}), at + _v(cfg.get("guard_offset", [1.6, 0, -1.2])), "GeneralGuard")
+		guard = _person(kit, cfg.get("guard_outfit", {}), at + _row(at, "guard_offset"), "GeneralGuard")
 		if demo != null and demo.get("use_look"):
 			var look := DroidKit.build("assassin", {}, demo._flat_mats(), ShipSalesman.model_look({ "kind": "assassin" }))
 			add_child(look)
-			look.global_position = at + _v(cfg.get("droid_offset", [-1.8, 0, -1.0]))
+			look.global_position = at + _row(at, "droid_offset")
 			DroidKit.set_awake(look, true)
 			droid = look
 	_face_gate()
@@ -164,6 +167,12 @@ func _yaw_to_gate(from: Vector3) -> float:
 	return atan2(to.x, to.z) if to != Vector3.ZERO else 0.0
 
 
+## Where one of his escort stands from him: its offset (x across the row, z
+## toward the gate) turned to the way the squad faces, so the row is abreast.
+func _row(at: Vector3, key: String) -> Vector3:
+	return Basis(Vector3.UP, _yaw_to_gate(at)) * _v(cfg.get(key, [0, 0, 0]))
+
+
 ## The barracks squad can be real soldiers: the town has a garrison to put them in.
 func _can_fight() -> bool:
 	return demo != null and demo.has_method("make_soldier") and demo.get("garrison") != null
@@ -178,10 +187,10 @@ func _place_squad(at: Vector3) -> void:
 		return
 	body.display_name = npc_name()
 	body.died.connect(_on_general_died)
-	guard = _soldier(str(sq.get("guard", "general_guard")), at + _v(cfg.get("guard_offset", [1.6, 0, -1.2])), "npc:general/guard")
+	guard = _soldier(str(sq.get("guard", "general_guard")), at + _row(at, "guard_offset"), "npc:general/guard")
 	var droids = demo.get("droids")
 	if droids != null and sq.has("droid"):
-		var here := at + _v(cfg.get("droid_offset", [-1.8, 0, -1.0]))
+		var here := at + _row(at, "droid_offset")
 		var spec: Dictionary = (sq.droid as Dictionary).duplicate()
 		spec["patrol"] = [here]
 		spec["respawn"] = false
@@ -399,7 +408,7 @@ func _on_verdict(kind: String) -> void:
 
 ## His brain's line in the meeting. A verdict came with it (decide() ran already),
 ## or he said end_conversation (that is letting them go), or after enough lines
-## with neither the game gives his verdict for him.
+## with neither the game gives his verdict for him (a search).
 func _on_line(turn: Dictionary) -> void:
 	if not meeting:
 		return
@@ -409,21 +418,25 @@ func _on_line(turn: Dictionary) -> void:
 		return
 	_meet_lines += 1
 	# Issue #328: with AI characters off his lines are written ones: fewer of them.
-	var turns := int(_meet_cfg().get("turns" if host.llm.ai_on() else "turns_offline", _meet_cfg().get("turns", 4)))
-	if _meet_lines >= turns and decide(_fallback_verdict()) and verdict == "let_go":
-		_say(_line("let_go"))
-		host.panel.post_notice(said)
+	var offline := host != null and host.llm != null and not host.llm.ai_on()
+	var turns := int(_meet_cfg().get("turns_offline" if offline else "turns", _meet_cfg().get("turns", 3)))
+	if _meet_lines >= turns:
+		decide_default()
 
 
-## What he would decide if he never said: insolence gets you searched.
-func _fallback_verdict() -> String:
-	return "search" if _talk_insults > 0 or (spot != null and spot.brain.insults > 0) else "let_go"
+## The game's verdict when his brain gave none: newcomers get searched (the
+## meeting's "default"). A routine search costs the standing of "default"; if
+## they mouthed off, it is the insolent one's.
+func decide_default(close: bool = true) -> bool:
+	var insolent := _talk_insults > 0 or (spot != null and spot.brain.insults > 0)
+	return decide(str(_meet_cfg().get("default", "search")), close, "search" if insolent else "default")
 
 
 ## His verdict in the pit meeting: let them go, or have them searched. Sets the
-## Remnant standing they start with, and the talk closes a moment later (with
-## `close` false, it is closing by itself). Returns false once he has given one.
-func decide(kind: String, close: bool = true) -> bool:
+## Remnant standing they start with (the meeting's standing for `why`, else for
+## `kind`), and the talk closes a moment later (with `close` false, it is closing
+## by itself). Returns false once he has given one.
+func decide(kind: String, close: bool = true, why: String = "") -> bool:
 	if verdict != "" or not kind in ["let_go", "search"]:
 		return false
 	meeting = false
@@ -432,7 +445,7 @@ func decide(kind: String, close: bool = true) -> bool:
 		spot.hold_line = ""
 		spot.brain.builder.extra_actions = []
 	var st: Dictionary = _meet_cfg().get("standing", {})
-	WorldState.change_standing("imperial_remnant", int(st.get(kind, 0)),
+	WorldState.change_standing("imperial_remnant", int(st.get(why if why != "" else kind, 0)),
 		"The Remnant general let a newcomer go." if kind == "let_go" else "The Remnant general had a newcomer searched.")
 	WorldState.set_flag("general_" + kind)
 	if kind == "search":
@@ -441,6 +454,7 @@ func decide(kind: String, close: bool = true) -> bool:
 		_say(_line("meeting_search") % (_line("meeting_took") % ", ".join(PackedStringArray(took)) if not took.is_empty() else _line("meeting_clean")))
 		if _in_talk():
 			host.panel.post_notice(said)
+	hint_droid_job()
 	if close and _in_talk():
 		var t := get_tree().create_timer(float(_meet_cfg().get("end_delay", 3.0))) if is_inside_tree() else null
 		if t != null:
@@ -448,6 +462,15 @@ func decide(kind: String, close: bool = true) -> bool:
 		else:
 			host.end_talk()
 	return true
+
+
+## The end of the pit meeting: outlanders take any work, and he has something in
+## mind (the droid job). Opens the Work for the general quest.
+func hint_droid_job() -> void:
+	Story.event("heard_of_droid_job")
+	_say(_line("droid_hint"))
+	if _in_talk():
+		host.panel.post_notice(said)
 
 
 func _in_talk() -> bool:
@@ -493,7 +516,7 @@ func on_insult() -> bool:
 ## goes to him), and his tip comes if he likes you enough.
 func talk_ended() -> void:
 	if Story.chapter() == "general":
-		decide(_fallback_verdict(), false)      # the talk closed without his verdict: the game gives it
+		decide_default(false)                   # the talk closed without his verdict: the game gives it
 		Story.event("general_done")
 		_free_at = Time.get_ticks_msec() + int(1000.0 * float(_meet_cfg().get("after", 2.5)))
 	meeting = false
@@ -551,6 +574,7 @@ func hand_over(uid: int) -> int:
 	WorldState.change_standing("imperial_remnant", int(cfg.get("droid_standing", 5)), "Someone sold the Remnant general an assassin droid.")
 	WorldState.jobs_taken.erase(job_id())       # open again
 	WorldState.bump("general_droids")
+	Story.event("general_droid_sold")
 	_say(_line("paid") % pay)
 	maybe_tip()
 	return pay

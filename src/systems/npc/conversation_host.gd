@@ -365,6 +365,10 @@ func start_talk(s: TalkSpot = null) -> void:
 	if not beat.is_empty():
 		greeting = str(beat.say)
 		s.brain.replace_greeting(greeting)
+	var opening: Dictionary = s.opener.call() if beat.is_empty() and s.opener.is_valid() else {}
+	if str(opening.get("say", "")) != "":
+		greeting = str(opening.say)
+		s.brain.replace_greeting(greeting)
 	panel.open(s.display_name(), greeting)
 	_refresh_menu(s)    # issue #29: the AI notice (only with AI on); issue #328: the topic menu
 	panel.set_mood(s.brain.rel.mood)
@@ -373,6 +377,8 @@ func start_talk(s: TalkSpot = null) -> void:
 		var j := WorldState.job(str(beat.job))
 		if not j.is_empty():
 			panel.show_job(j)
+	elif opening.has("sale"):
+		panel.show_sale(opening.sale, WorldState.credits)
 	var story_line := _story_mood(s)
 	_speak(s, story_line if story_line != "" else greeting)
 	s.speak_pulse()

@@ -101,20 +101,53 @@ static func fresh() -> Dictionary:
 	return { "chapter": _first(), "told": false }
 
 
-## Jump straight to a chapter (settings, tests). Earlier chapters' unlocks apply.
+## Jump straight to a chapter (settings, tests). Earlier chapters' unlocks apply:
+## what finishing each one leaves behind (_skipped), as if it had been played.
 static func skip_to(id: String) -> void:
 	if index(id) < 0:
 		return
-	WorldState.story = { "chapter": id, "told": false }
+	var from := index(chapter())
+	var told := bool(WorldState.story.get("told", false))
+	for c in chapters().slice(0, index(id)):
+		if applies(c):
+			var at := index(str(c.id))
+			_skipped(c, at >= from, at > from or not told)
+	WorldState.story = { "chapter": id, "told": id == "free" }
 	if reached("fleet"):
 		WorldState.set_flag("ships_unlocked")
-	if reached("debrief"):
-		WorldState.set_flag("cruiser_taken")
-		WorldState.set_flag("remnant_fleet_beaten")    # issue #214: the Remnant have left
-	if id == "free":
-		WorldState.story.told = true
-		WorldState.set_flag("remnant_fleet_beaten")
-		WorldState.set_flag("cruiser_taken")
+
+
+## Chapter `c` skipped past: its "skipped" flags and counters (at least), its
+## one-off job card done, and in a story save the quests its telling unlocks (the
+## blade on the tower). Not finished yet (`unplayed`): also its credits and
+## standing, once (not when its done_flag is set or its counters are met already:
+## skipping back and on again in free roam), and its "pays" when it was not told
+## yet (`untold`: the teller pays with the intro).
+static func _skipped(c: Dictionary, unplayed: bool, untold: bool) -> void:
+	var s: Dictionary = c.get("skipped", {})
+	var cs: Dictionary = s.get("counters", {})
+	var done_flag := str(c.get("done_flag", ""))
+	var done := (done_flag != "" and WorldState.has_flag(done_flag)) \
+		or (not cs.is_empty() and cs.keys().all(func(n): return WorldState.count(str(n)) >= int(cs[n])))
+	if unplayed and not done:
+		var pay := (int(c.get("pays", 0)) if untold else 0) + int(s.get("credits", 0))
+		if pay > 0:
+			WorldState.credits += pay
+			WorldState.log_event("Skipped %s: %d cr." % [str(c.id).replace("_", " "), pay])
+		var st: Dictionary = s.get("standing", {})
+		for f in st:
+			WorldState.change_standing(str(f), int(st[f]))
+	for f in s.get("flags", []):
+		WorldState.set_flag(str(f))
+	for n in cs:
+		WorldState.counters[str(n)] = maxi(WorldState.count(str(n)), int(cs[n]))
+	var job := str(c.get("job", ""))
+	for j in WorldState.board():
+		if str(j.id) == job and str(j.get("completes_on", "")) != "" and WorldState.jobs_taken.get(job, "") != "done":
+			WorldState.jobs_taken[job] = "done"
+			WorldState.set_flag("job_done_" + job)
+	if WorldState.story_mode():
+		Quests.event("told:" + str(c.id))
 
 
 # ------------------------------------------------------------------ events

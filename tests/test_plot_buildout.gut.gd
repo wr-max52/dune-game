@@ -85,6 +85,36 @@ func test_the_general_meets_you_in_the_pit_and_moves_to_the_barracks() -> void:
 	assert_eq(GeneralPost.station(), "", "story saves only")
 
 
+func test_the_pit_meeting_ends_in_a_search_and_a_hint_at_work() -> void:
+	Story.event("landed")
+	var g := _general()
+	g._begin_meeting()
+	g._on_line({ "applied": [] })
+	g._on_line({ "applied": [] })
+	assert_eq(g.verdict, "", "two lines: still talking")
+	g._on_line({ "applied": [] })
+	assert_eq(g.verdict, "search", "three lines: newcomers are searched")
+	assert_eq(int(WorldState.standing.imperial_remnant), 0, "a routine search costs nothing")
+	assert_eq(g.said, g._line("droid_hint"), "he closes with the hint")
+	assert_eq(Quests.state("general_droids"), "open")
+	g.talk_ended()
+	assert_eq(Story.chapter(), "t89")
+	assert_true(g.take_job())
+	g.hand_over(int(WorldState.droids.add("assassin", "").uid))
+	assert_eq(Quests.state("general_droids"), "done", "the first droid finishes it")
+
+
+func test_an_insolent_newcomer_is_searched_at_a_cost() -> void:
+	Story.event("landed")
+	var g := _general()
+	g._begin_meeting()
+	g.on_insult()
+	for i in 3:
+		g._on_line({ "applied": [] })
+	assert_eq(g.verdict, "search")
+	assert_eq(int(WorldState.standing.imperial_remnant), -15, "the insult and the search")
+
+
 func test_polite_is_neutral_and_insults_get_you_searched() -> void:
 	var g := _general()
 	var brain := NpcBrain.new(null, GeneralPost.CARD_PATH)
@@ -241,7 +271,21 @@ func test_armour_after_the_bounty_triples_health() -> void:
 	gear.free()
 	WorldState.from_save(WorldState.to_save())
 	assert_true(WorldState.inventory.has("quantonium_armour"))
-	assert_eq(GearUpgrades.buy("quantonium_armour"), "", "sold once")
+	# He never runs out: sell it back to him and buy it again, as often as you like.
+	var fence: Dictionary = content.get_vendor("fence")
+	var it: Dictionary = content.get_item("quantonium_armour")
+	for i in 2:
+		assert_true(GearUpgrades.open_offers().has(GearUpgrades.offer("quantonium_armour")), "still on his stall")
+		var paid := WorldState.inventory.sell("quantonium_armour", it, fence)
+		assert_eq(paid, int(round(float(it.value) * float(fence.any_rate))), "he buys it back")
+		assert_false(WorldState.inventory.has("quantonium_armour"))
+		WorldState.credits = 1000
+		assert_eq(GearUpgrades.buy("quantonium_armour"), "bought", "and sells it again")
+		assert_true(WorldState.inventory.has("quantonium_armour"))
+	assert_lt(Inventory.sell_price(it, fence), int(GearUpgrades.offer("quantonium_armour").price), "no profit in the loop")
+	# An old save that marked it bought still sees it on sale.
+	WorldState.gear_fits.append("quantonium_armour")
+	assert_false(GearUpgrades.bought("quantonium_armour"))
 
 
 # ---- #213: who the first bounty is on ---------------------------------------------------------

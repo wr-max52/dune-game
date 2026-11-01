@@ -350,6 +350,7 @@ func _finish_turn(result: Dictionary) -> void:
 	var v := ActionValidator.validate(proposed, _ids, {
 		"trust": rel.trust, "trust_this_visit": rel.trust_this_visit, "hostile": _hostile, "insults": insults,
 	})
+	_match_job_offer(v, str(cleaned.say))
 	if mood in ["wary", "warm", "amused", "irritated", "scared", "sad"]:
 		rel.mood = mood
 	var applied := _apply(v.kept)
@@ -373,6 +374,37 @@ func _finish_turn(result: Dictionary) -> void:
 	line_done.emit(turn)
 	if applied.has("end_conversation") or applied.has("call_guards"):
 		ended.emit("call_guards" if applied.has("call_guards") else "end_conversation")
+
+
+## The job card matches the line. A job with "words" (bar_board.json) whose words
+## the line never says, while it says another of this character's jobs' words,
+## is the wrong card (the general talking droids while offering the contraband
+## run): it becomes that job if it is in the briefing, else it is dropped.
+func _match_job_offer(v: Dictionary, say: String) -> void:
+	var low := say.to_lower()
+	for a in (v.kept as Array).duplicate():
+		if str(a.type) != "offer_job" or _says_job(low, WorldState.job(str(a.id))) != 0:
+			continue
+		var to := ""
+		for id in _ids.get("jobs", []):
+			if str(id) != str(a.id) and _says_job(low, WorldState.job(str(id))) == 1:
+				to = str(id)
+				break
+		if to != "":
+			v.dropped.append({ "action": a.duplicate(), "why": "line is about " + to })
+			a["id"] = to
+		elif WorldState.board().filter(gives).any(func(j): return str(j.id) != str(a.id) and _says_job(low, j) == 1):
+			v.kept.erase(a)
+			v.dropped.append({ "action": a, "why": "line is about another job" })
+
+
+## 1 when the line says one of the job's "words", 0 when it says none, -1 when
+## the job has none to say.
+static func _says_job(low: String, j: Dictionary) -> int:
+	var words: Array = j.get("words", [])
+	if words.is_empty():
+		return -1
+	return 1 if words.any(func(w): return low.contains(str(w))) else 0
 
 
 ## Apply validated actions. Returns the list of action types applied.
@@ -501,7 +533,9 @@ func canned_reply(text: String, topic: String = "") -> Dictionary:
 			var js := my_jobs(rel.tier())
 			if js.is_empty():
 				return { "say": _pick(c.get("no_job", ["Nothing."])), "actions": [] }
-			return { "say": _pick(c.get("job", ["%s"])) % str(js[0].text), "actions": [{ "type": "offer_job", "id": js[0].id }] }
+			var asked := js.filter(func(j): return _says_job(text.to_lower(), j) == 1)      # "any droid work?"
+			var jb: Dictionary = asked[0] if not asked.is_empty() else js[0]
+			return { "say": _pick(c.get("job", ["%s"])) % str(jb.text), "actions": [{ "type": "offer_job", "id": jb.id }] }
 		"war":
 			return { "say": _pick(c.get("war", ["Both sides drink here."])), "actions": [] }
 		"drink":

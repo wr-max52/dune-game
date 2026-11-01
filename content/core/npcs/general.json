@@ -1,12 +1,12 @@
 {
   "id": "general",
-  "note": "Issue #203: the Remnant general in a story save (src/systems/npc/general_post.gd). Where he stands: in the pit while the story is at the 'general' chapter ('pit'), else in the barracks yard ('barracks'): a town marker plus an offset; his guard and assassin droid stand at offsets from him. 'insult_standing': Remnant standing each insult costs; 'search_after': insults in one talk before his guards search you (the gate's rules). Issue #204: 'droid_kind' he buys for 'pay_mult' times the droid merchant's resale, each one raising Remnant standing by 'droid_standing'; 'tip_standing': at or above it he tells you about the crashed cruiser (issue #205). 'armour_outfit': his look once the Remnant has left (issue #214). Issue #251: his second job (j_general_repossess) is contraband stashed inside the town; handing it over on his [E] menu pays what the fence would and raises Remnant standing by 'contraband_standing'. Story fixes: 'face': the marker he, his guard and his droid face (the front gate). 'meeting': the pit meeting ends only on his verdict, let_go or search (the player cannot leave on Esc); each sets the Remnant standing you start with ('standing'); after 'turns' of his replies ('turns_offline' with AI characters off, issue #328) with no verdict the game gives one (search if you insulted him, else let go); 'end_delay' seconds after the verdict the talk closes; 'after' seconds later T-89 may greet you. Barracks fight: in the barracks yard (before the Remnant leave) he and his guard are garrison troopers ('squad': soldier profiles 'general' and 'guard') and his assassin droid a Remnant droid ('squad.droid', DroidController), so they can be killed and they fight on the town alarm. Killed there he is gone for good (flag general_dead): a bounty not yet taken on him goes to an officer instead, and the end card says he is dead.",
+  "note": "Issue #203: the Remnant general in a story save (src/systems/npc/general_post.gd). Where he stands: in the pit while the story is at the 'general' chapter ('pit'), else in the barracks yard ('barracks'): a town marker plus an offset; his guard and assassin droid stand at offsets from him, in the squad's own frame ('guard_offset', 'droid_offset': x across the row, z toward what they face), so the three stand in a row abreast whichever way they face. In the pit the row is between your ship's tail and the pit, facing the gate past you: you are boxed in against your ship. 'insult_standing': Remnant standing each insult costs; 'search_after': insults in one talk before his guards search you (the gate's rules). Issue #204: 'droid_kind' he buys for 'pay_mult' times the droid merchant's resale, each one raising Remnant standing by 'droid_standing'; 'tip_standing': at or above it he tells you about the crashed cruiser (issue #205). 'armour_outfit': his look once the Remnant has left (issue #214). Issue #251: his second job (j_general_repossess) is contraband stashed inside the town; handing it over on his [E] menu pays the job's 'pay_mult' times what the fence would (bar_board.json) and raises Remnant standing by 'contraband_standing'. Story fixes: 'face': the marker he, his guard and his droid face (the front gate). 'meeting': the pit meeting ends only on his verdict, let_go or search (the player cannot leave on Esc); each sets the Remnant standing you start with ('standing'); after 'turns' of his replies ('turns_offline' with AI characters off, issue #328) with no verdict the game gives 'default' (search: newcomers are searched), at the standing of 'default' (a routine search costs nothing) unless they insulted him (then 'search'); 'end_delay' seconds after the verdict the talk closes; 'after' seconds later T-89 may greet you. Whatever his verdict, he closes with 'droid_hint' (the Work for the general quest, event heard_of_droid_job). Barracks fight: in the barracks yard (before the Remnant leave) he and his guard are garrison troopers ('squad': soldier profiles 'general' and 'guard') and his assassin droid a Remnant droid ('squad.droid', DroidController), so they can be killed and they fight on the town alarm. Killed there he is gone for good (flag general_dead): a bounty not yet taken on him goes to an officer instead, and the end card says he is dead.",
   "pit": {
     "marker": "player_spawn",
     "offset": [
-      -7.0,
+      -4.0,
       0.0,
-      5.0
+      0.0
     ]
   },
   "barracks": {
@@ -19,14 +19,14 @@
   },
   "face": "gate",
   "guard_offset": [
-    1.6,
+    2.0,
     0.0,
-    -1.2
+    -0.4
   ],
   "droid_offset": [
-    -1.8,
+    -2.0,
     0.0,
-    -1.0
+    -0.4
   ],
   "squad": {
     "general": "barracks_general",
@@ -39,13 +39,15 @@
   },
   "reach": 3.2,
   "meeting": {
-    "turns": 4,
+    "turns": 3,
     "turns_offline": 2,
+    "default": "search",
     "end_delay": 3.0,
     "after": 2.5,
     "standing": {
       "let_go": 10,
-      "search": -10
+      "search": -10,
+      "default": 0
     }
   },
   "insult_standing": -5,
@@ -88,12 +90,12 @@
     "paid": "A fine machine. %d credits. The Hegemony thanks you.",
   "repossessed": "Confiscated, as the law requires. %d credits. The garrison will put it to better use.",
     "tip": "Spacer... you have earned this. Go and see the cruiser that crashed out on the horizon. Even in the sand she is magnificent. I walk her halls sometimes, to remember being a private. There is something red still aboard.",
-    "let_go": "Go on, then. T-89 is in the pit. Don't make me regret it.",
     "meeting_search": "Search this one! ... %s",
-    "meeting_clean": "Clean. Get out of my sight.",
+    "meeting_clean": "Clean. This time.",
     "meeting_took": "Took: %s.",
     "hold": "%s has not dismissed you. Answer him.",
-    "brief": "THIS IS THE PIT MEETING: they have just climbed out of their ship and they cannot walk away until you decide. Bully them for a minute, then end it with ONE of: let_go (let them go on to T-89) or search (your guards search them; do this if they were insolent or you don't trust them). Decide by your third reply at the latest. Never use end_conversation now.",
+    "droid_hint": "Outlanders like you will take any work. I have something in mind.",
+    "brief": "THIS IS THE PIT MEETING: they have just climbed out of their wreck of a ship and they cannot walk away until you decide. Your standing order is that newcomers are searched. Question them and bully them; after your third reply your guards search them anyway. End it early with search if they are insolent, or with let_go only if they show real respect for the Hegemony. Never use end_conversation now.",
     "killed": "%s is dead. The Remnant will not forget it."
   }
 }
