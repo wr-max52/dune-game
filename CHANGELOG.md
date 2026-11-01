@@ -18,6 +18,7 @@ Plain English, newest on top. One entry per milestone.
   change. Settings are under `meeting.leave` in content/core/npcs/general.json.
 - Test: tests/test_plot_buildout.gut.gd (opens from 16 m, four lines then
   the search, the walk out with you and the time of day unchanged).
+
 ## More ambient music (2026-11-01)
 
 - **The ambient score has eight tracks now, not three.** Five calm, spacey

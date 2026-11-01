@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bopb0h0p60rea"
 path.s3tc="res://.godot/imported/freighter_shields_model_orm.png-85098b200b9e647ca8bb288524b26aae.s3tc.ctex"
+path.etc2="res://.godot/imported/freighter_shields_model_orm.png-85098b200b9e647ca8bb288524b26aae.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/vehicles/freighter_shields_model_orm.png"
-dest_files=["res://.godot/imported/freighter_shields_model_orm.png-85098b200b9e647ca8bb288524b26aae.s3tc.ctex"]
+dest_files=["res://.godot/imported/freighter_shields_model_orm.png-85098b200b9e647ca8bb288524b26aae.s3tc.ctex", "res://.godot/imported/freighter_shields_model_orm.png-85098b200b9e647ca8bb288524b26aae.etc2.ctex"]
 
 [params]
 
