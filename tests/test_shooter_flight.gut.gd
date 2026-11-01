@@ -265,6 +265,19 @@ func test_canopy_frame_comes_over_you() -> void:
 		"the bow over the glass keeps to the top of the screen")
 
 
+func test_canopy_frame_shines_where_the_light_reflects() -> void:
+	var view := Vector3(0, 0, 1)
+	var sun := [{"dir": Vector3(-0.6, 0.3, 0.74).normalized(), "color": Color.WHITE, "power": CockpitView.SUN_GLINT, "sun": true}]
+	var toward := (Vector3(-0.6, 0.3, 0.74).normalized() + view).normalized()
+	var lit := CockpitView.metal_shade(toward, view, sun)
+	var away := CockpitView.metal_shade(Vector3(0.7, 0, 0.7).normalized(), view, sun)
+	assert_gt(lit.v, away.v + 0.4, "the metal glares where it reflects the sun at you")
+	var dark := CockpitView.metal_shade(toward, view, [])
+	assert_lt(dark.v, 0.3, "and with no light on it, it is dull")
+	var bolt := CockpitView.metal_shade(toward, view, [{"dir": sun[0].dir, "color": Color(1, 0.2, 0.1), "power": 1.0}])
+	assert_gt(bolt.r, bolt.b + 0.3, "a bolt's glare is its own colour")
+
+
 func test_glass_glints_where_the_light_reflects() -> void:
 	var behind := CockpitDash.glint(Vector3(0, 0.2, 1))
 	assert_gt(behind.z, 0.0, "the sun behind you glints on the dials")

@@ -25,9 +25,9 @@ extends Control
 const TiltShader := preload("res://src/systems/look/shaders/cockpit_tilt.gdshader")
 
 const GLASS := Color(0.55, 0.75, 0.9, 0.06)
-const STRUT_LIT := Color(0.3, 0.3, 0.31, 1.0)
-const STRUT_SHADE := Color(0.06, 0.06, 0.07, 1.0)
-const STRUT_EDGE := Color(0.62, 0.61, 0.58, 0.9)
+const METAL := Color(0.3, 0.3, 0.32, 1.0)   ## the canopy frame's metal, before light
+const METAL_SHINE := 16.0          ## how tight the frame's glare is (higher: a thinner streak)
+const FRAME_BANDS := 8             ## strips across each frame member, for its shading
 const LIGHT := CockpitDash.LIGHT
 const YOKE := Color(0.24, 0.24, 0.25, 1.0)
 const YOKE_LIT := Color(0.55, 0.55, 0.56, 0.9)
@@ -290,35 +290,63 @@ static func _focal(vp: Vector2) -> float:
 	return vp.y * 0.5 / tan(deg_to_rad(FRAME_FOV) * 0.5)
 
 
-## A rolled frame member along `path` (metres round your eye), FRAME_THICK across:
-## wider the nearer it is, its side toward the middle of the glass catching the
-## light, a bright lip along that edge and a dark one along the other.
+## A rolled metal tube along `path` (metres round your eye), FRAME_THICK across,
+## wider the nearer it is. It is lit like the dash, by the real lights: across its
+## width the surface turns from facing the middle of the glass, through facing you,
+## to facing out, and metal_shade() lights each strip, so the glare slides round
+## and along it as the sun and bolts move.
 func _draw_member(vp: Vector2, path: Array[Vector3]) -> void:
-	var mid := PackedVector2Array()
-	var half := PackedFloat32Array()
-	for p in path:
+	var cols: Array[PackedVector2Array] = []
+	var tints: Array[PackedColorArray] = []
+	for k in FRAME_BANDS + 1:
+		cols.append(PackedVector2Array())
+		tints.append(PackedColorArray())
+	for i in path.size():
+		var p := path[i]
 		if p.z > -FRAME_NEAR:
 			break
-		mid.append(frame_project(vp, p))
-		half.append(_focal(vp) * FRAME_THICK * 0.5 / -p.z)
-	if mid.size() < 2:
+		var at := frame_project(vp, p)
+		var half := _focal(vp) * FRAME_THICK * 0.5 / -p.z
+		var axis := (path[mini(i + 1, path.size() - 1)] - path[maxi(i - 1, 0)]).normalized()
+		var view := -p.normalized()
+		var facing := (view - axis * view.dot(axis)).normalized()
+		var across := axis.cross(facing).normalized()
+		var n := (frame_project(vp, p + axis * 0.01) - at).orthogonal().normalized()
+		if n.dot(vp * 0.5 - at) < 0.0:
+			n = -n                                 # n points toward the middle of the glass
+		if (frame_project(vp, p + across * 0.005) - at).dot(n) < 0.0:
+			across = -across                       # and so does `across`
+		for k in FRAME_BANDS + 1:
+			var u := lerpf(-1.0, 1.0, float(k) / FRAME_BANDS)
+			cols[k].append(at + n * half * u)
+			tints[k].append(metal_shade(across * u + facing * sqrt(1.0 - u * u), view, lights))
+	if cols[0].size() < 2:
 		return
-	var inner := PackedVector2Array()      # the edge toward the middle of the screen
-	var outer := PackedVector2Array()
-	for i in mid.size():
-		var along := mid[mini(i + 1, mid.size() - 1)] - mid[maxi(i - 1, 0)]
-		var n := along.orthogonal().normalized()
-		if n.dot(vp * 0.5 - mid[i]) < 0.0:
-			n = -n
-		inner.append(mid[i] + n * half[i])
-		outer.append(mid[i] - n * half[i])
-	for i in mid.size() - 1:
-		draw_polygon(PackedVector2Array([inner[i], inner[i + 1], mid[i + 1], mid[i]]),
-			PackedColorArray([STRUT_LIT, STRUT_LIT, STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE.lerp(STRUT_LIT, 0.35)]))
-		draw_polygon(PackedVector2Array([mid[i], mid[i + 1], outer[i + 1], outer[i]]),
-			PackedColorArray([STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE, STRUT_SHADE]))
-	draw_polyline(inner, STRUT_EDGE, 1.5, true)
-	draw_polyline(outer, Color(0, 0, 0, 0.8), 2.0, true)
+	for k in FRAME_BANDS:
+		var poly := cols[k].duplicate()
+		var tint := tints[k].duplicate()
+		for i in range(cols[k + 1].size() - 1, -1, -1):
+			poly.append(cols[k + 1][i])
+			tint.append(tints[k + 1][i])
+		draw_polygon(poly, tint)
+	draw_polyline(cols[0], Color(0, 0, 0, 0.8), 2.0, true)
+	draw_polyline(cols[FRAME_BANDS], Color(0, 0, 0, 0.5), 1.0, true)
+
+
+## The frame's metal where its surface faces `normal`, seen along `view` (toward
+## your eye; both in the camera's frame), under `lit` (gather_lights()): a little
+## sky from above, and from each light a soft wash where it faces it and a tight
+## glare where it reflects it toward you.
+static func metal_shade(normal: Vector3, view: Vector3, lit: Array) -> Color:
+	var c := METAL * (0.28 + 0.3 * (normal.y * 0.5 + 0.5))
+	for l in lit:
+		var to: Vector3 = l.dir
+		var strength := float(l.power) / SUN_GLINT if l.get("sun", false) else float(l.power) * 0.7
+		var wash := maxf(normal.dot(to), 0.0) * 0.3
+		var glare := pow(maxf(normal.dot((to + view).normalized()), 0.0), METAL_SHINE) * 1.3
+		c += Color(l.color) * strength * (METAL * wash + Color(1, 1, 1) * glare)
+	c.a = 1.0
+	return c
 
 
 ## How the yoke sits for a stick of (pitch, yaw, roll), each -1..1: turned by

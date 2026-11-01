@@ -1294,3 +1294,8 @@ Every significant technical choice, the alternative, and why. Newest on top.
   a part is the wider it draws. The struts stand on the dash, then swell and sweep
   out to the top corners as they pass over and behind your head; straight struts
   narrowing upward read as leaning away from you, not over you.
+  The frame is lit like the dash, not shaded once: each member is drawn as a
+  metal tube in strips across its width, and `metal_shade()` lights each strip
+  from the same lights as the glints (a little sky, a wash, and a tight glare
+  where it reflects a light at you), so the glare slides round it as the sun and
+  bolts move.
