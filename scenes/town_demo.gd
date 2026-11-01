@@ -725,14 +725,14 @@ func _npc_brains() -> void:
 		# outpost's does.
 		var town_troops: Array = npcs if outposts == null else npcs.filter(func(n): return not n.has_meta("outpost"))
 		if not town_troops.is_empty():
-			garrison = _make_garrison("Garrison", town_troops, true)
+			garrison = _make_garrison("Garrison", town_troops, true, Vector3.INF, false, _town_zones())
 		if outposts != null:
 			for o in outposts.outposts:
 				var mine: Array = outposts.guards.filter(func(g): return str(g.get_meta("outpost", "")) == str(o.id))
 				if mine.is_empty():
 					continue
 				var first := garrison == null and outposts.garrisons.is_empty()
-				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin, true)
+				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin, true, [outpost_zone(o)])
 		# Issue #187: someone always counts the player out when they are downed, even
 		# with no Remnant left in town or at the outposts (a garrison of nobody).
 		if garrison == null and (outposts == null or outposts.garrisons.is_empty()):
@@ -761,7 +761,46 @@ func make_townsfolk(node_name: String, members: Array) -> Townsfolk:
 
 ## Issue #187: a garrison for an outpost the Remnant have just taken back.
 func make_outpost_garrison(o: Dictionary, members: Array) -> Garrison:
-	return _make_garrison("Garrison_" + str(o.id), members, false, o.origin, true)
+	return _make_garrison("Garrison_" + str(o.id), members, false, o.origin, true, [outpost_zone(o)])
+
+
+## Issue #308: the town's checkpoint zones (its "garrison" "checkpoints", e.g. the
+## barracks yard). Each is the ground under the boxes it lists ("around": the
+## yard walls and the hall, so it follows the barracks in either layout), else
+## all of the town "zone" it names.
+func _town_zones() -> Array:
+	var out: Array = []
+	for c in town.data.get("garrison", {}).get("checkpoints", []):
+		var spec: Dictionary = (c as Dictionary).duplicate(true)
+		for id in spec.get("around", []):
+			var bx: Dictionary = town.get_box(str(id))
+			if bx.is_empty():
+				continue
+			var lo: Array = spec.get("min", [INF, INF])
+			var hi: Array = spec.get("max", [-INF, -INF])
+			spec["min"] = [minf(float(lo[0]), float(bx.min[0])), minf(float(lo[1]), float(bx.min[2]))]
+			spec["max"] = [maxf(float(hi[0]), float(bx.max[0])), maxf(float(hi[1]), float(bx.max[2]))]
+		if not spec.has("min"):
+			for z in town.zones():
+				if str(z.get("id", "")) == str(spec.get("zone", "")):
+					spec["min"] = z.min
+					spec["max"] = z.max
+		if spec.has("min"):
+			out.append(spec)
+	return out
+
+
+## Issue #308: the ring round outpost `o` (its location file's "zone").
+func outpost_zone(o: Dictionary) -> Dictionary:
+	var spec: Dictionary = (o.cfg.get("zone", {}) as Dictionary).duplicate(true)
+	spec["id"] = str(o.id)
+	spec["place"] = str(o.label)
+	spec["center"] = o.origin
+	if not spec.has("radius"):
+		spec["radius"] = 18.0
+	if not spec.has("roles"):
+		spec["roles"] = ["sentry"]
+	return spec
 
 
 ## The Townsfolk running the locals at outpost `id` ("" = the town's own).
@@ -772,13 +811,15 @@ func townsfolk_for(id: String) -> Townsfolk:
 
 
 ## `outpost`: a desert outpost's, which fights the player in a speeder or ship too.
+## `zones`: issue #308's checkpoint zones (Garrison.zone_specs).
 func _make_garrison(node_name: String, members: Array, handles_player: bool, klaxon_at := Vector3.INF,
-		outpost := false) -> Garrison:
+		outpost := false, zones: Array = []) -> Garrison:
 	var g := Garrison.new()
 	g.name = node_name
 	g.handles_player = handles_player
 	g.klaxon_at = klaxon_at
 	g.vehicles_anywhere = outpost
+	g.zone_specs = zones
 	add_child(g)
 	g.setup(self, members)
 	g.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
