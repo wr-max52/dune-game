@@ -21,7 +21,10 @@ extends Node3D
 ##   - issue #206: in a story save the ship you landed in is a wreck on the pit pad.
 ##     He quotes the rebuild whenever you talk (the "Rebuild your ship" quest) and
 ##     rebuild() makes it yours to fly. Tell him you can't stand the Remnant (his
-##     menu, or his comrade action in the chat) and it costs 1 credit.
+##     menu, or his comrade action in the chat) and it costs 1 credit. His menu's
+##     way works with AI characters off: he tells his story and asks what you
+##     think; "Down with the Tyrants!" makes you a comrade, siding with the
+##     Remnant does not, and you can ask him again.
 ## Words, prices and his spot: content/core/npcs/t89.json. Looks: DroidKit.
 ##
 ## The headless test calls greet(), talk(), buy(), sell() and the menu's choose()
@@ -47,6 +50,7 @@ var body: StaticBody3D               ## T-89 himself
 var pos := Vector3.INF
 var in_reach := false
 var page := -1                       ## the tutorial page showing, -1 = none
+var story_page := -1                 ## his Remnant story's page showing, -1 = none
 var bought_ship: Node3D              ## your ship on the spare pad (model, or a stand-in in the greybox)
 var said := ""                       ## his last line, for tests
 var host: ConversationHost           ## the town's AI characters' host (null: shop only)
@@ -439,8 +443,7 @@ func _on_top(id: String) -> void:
 		rebuild()
 		_menu(top_options(), _on_top, true)
 	elif id == "comrade":
-		comrade()
-		_menu(top_options(), _on_top, true)
+		start_remnant_talk()
 	elif id == "tutorial":
 		start_tutorial()
 	elif id == "chat":
@@ -554,16 +557,62 @@ func rebuild() -> String:
 
 
 ## The player can't stand the Remnant: neither can he. The comrade discount, once.
-## Returns true the first time.
-func comrade() -> bool:
+## Returns true the first time. `say`: his line for it (the chat's, or the menu's).
+func comrade(say: String = "comrade") -> bool:
 	if WorldState.has_flag(WorldState.COMRADE):
 		_say(_line("comrade_again") % rebuild_price())
 		return false
 	WorldState.set_flag(WorldState.COMRADE)
 	WorldState.log_event("T-89 and the player found they agree about the Remnant.")
 	if needs_rebuild():
-		_say(_line("comrade") % rebuild_price())
+		_say(_line(say) % rebuild_price())
 	return true
+
+
+## His menu's "Tell him what you think of the Remnant": his story a page at a time,
+## then the question. Walk away (Esc) or side with the Remnant and the row is still
+## on his menu: ask again until you are his comrade.
+func remnant_pages() -> Array:
+	return cfg.get("remnant_story", [])
+
+
+func start_remnant_talk() -> void:
+	story_page = 0
+	_show_story_page()
+
+
+func _show_story_page() -> void:
+	var pages := remnant_pages()
+	if story_page >= pages.size():
+		story_page = -1
+		_open(_line("remnant_question"), [{ "id": "down", "text": _l("down_with_them") },
+			{ "id": "side", "text": _l("side_with_them") }], _on_remnant_answer)
+		return
+	_open("(%d/%d)  %s" % [story_page + 1, pages.size(), str(pages[story_page])],
+		[{ "id": "next", "text": _l("go_on") }, { "id": "skip", "text": _l("to_the_point") }], _on_story_page)
+
+
+func _on_story_page(id: String) -> void:
+	if id == "next":
+		story_page += 1
+	elif id == "skip":
+		story_page = remnant_pages().size()
+	else:
+		story_page = -1
+		return
+	_show_story_page()
+
+
+## "Down with the Tyrants!": a comrade. The Remnant's side: no discount, and he
+## sends you back to his menu to buy a ship or leave him be.
+func _on_remnant_answer(id: String) -> void:
+	if id == "down":
+		comrade("comrade_won")
+	elif id == "side":
+		_say(_line("sided_remnant"))
+	else:
+		return
+	_menu(top_options(), _on_top)
 
 
 # ------------------------------------------------------------------ upgrades (issue #207)

@@ -11,7 +11,15 @@ Plain English, newest on top. One entry per milestone.
   prices; Back returns to his menu, Esc walks away. Upgrades show up once you
   own a ship, with what each one already carries. While your wreck waits, the
   rebuild and the Remnant talk stay on his top menu.
-- Tests: tests/test_ship_salesman.gut.gd (the menu and both submenus).
+- **"Tell him what you think of the Remnant" is a real conversation**, with
+  AI characters off too. T-89 tells his story (the green planet he remembers,
+  the bombing, a hundred years of the Hegemony) a page at a time ("Get to the
+  point" skips it), says he has always hated the Remnant, and asks what you
+  think. "Down with the Tyrants!" makes you his comrade: the 1-credit rebuild.
+  Side with the Remnant and there's no discount; he tells you to buy a ship
+  or leave him be. The row stays on his menu, so you can try again.
+- Tests: tests/test_ship_salesman.gut.gd (the menu and both submenus),
+  tests/test_ship_rebuild.gut.gd (both answers, and asking again).
 
 ## The Ledger, a live map, and text you can read (2026-11-01)
 

@@ -40,6 +40,34 @@ func test_a_comrade_pays_1_credit() -> void:
 	assert_eq(WorldState.credits, 59)
 
 
+func test_his_story_then_down_with_the_tyrants_makes_a_comrade() -> void:
+	s.talk()
+	s.menu.choose("comrade")
+	for i in s.remnant_pages().size():
+		assert_string_contains(s.said, "(%d/%d)" % [i + 1, s.remnant_pages().size()], "his story, a page at a time")
+		s.menu.choose("next")
+	assert_eq(s.said, s._line("remnant_question"), "then he asks")
+	s.menu.choose("down")
+	assert_true(WorldState.has_flag(WorldState.COMRADE))
+	assert_eq(s.rebuild_price(), 1)
+	assert_false(s.menu.options.any(func(o): return o.id == "comrade"), "back on his menu, said once")
+
+
+func test_siding_with_the_remnant_gets_nothing_but_you_can_ask_again() -> void:
+	s.talk()
+	s.menu.choose("comrade")
+	s.menu.choose("skip")
+	s.menu.choose("side")
+	assert_false(WorldState.has_flag(WorldState.COMRADE), "no discount")
+	assert_eq(s.rebuild_price(), 500)
+	assert_eq(s.said, s._line("sided_remnant"), "buy a ship or leave him be")
+	assert_true(s.menu.options.any(func(o): return o.id == "group:ships"), "back on his menu")
+	s.menu.choose("comrade")
+	s.menu.choose("skip")
+	s.menu.choose("down")
+	assert_true(WorldState.has_flag(WorldState.COMRADE), "the second try counts")
+
+
 func test_only_your_own_ship_flies_and_it_stays_yours() -> void:
 	assert_false(ShipPilot.berth_open({}, 0), "a wreck")
 	assert_false(ShipPilot.berth_open({}, 1), "no free keys")
