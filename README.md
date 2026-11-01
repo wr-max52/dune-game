@@ -6,6 +6,15 @@ contract into the desert, fight, return, get paid. Multiple LLM-driven NPCs, lik
 
 This is a **vertical slice**, not the full game.
 
+## Promo
+
+[![OpenSpace promo: click to watch](docs/promo/openspace_promo.jpg)](docs/promo/openspace_promo.mp4)
+
+**[▶ Watch the OpenSpace promo (44 s, 1080p60)](docs/promo/openspace_promo.mp4)**: real
+gameplay and in-engine renders. Landing, rifle and blaster fights, the energy sword,
+the beast, the moon rave, flying from the port to the star cruiser in orbit, and the
+dark master.
+
 ## Engine
 
 - **Godot 4.7.2** (pinned in `scripts/pin.txt`; CI checks it).

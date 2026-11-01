@@ -9,6 +9,7 @@ test_results/
 builds/
 rec/
 *.mp4
+!docs/promo/openspace_promo.mp4
 
 # Local LLM model downloads (downloaded, not committed)
 /models/
