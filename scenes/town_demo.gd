@@ -732,7 +732,7 @@ func _npc_brains() -> void:
 				if mine.is_empty():
 					continue
 				var first := garrison == null and outposts.garrisons.is_empty()
-				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin)
+				outposts.garrisons[str(o.id)] = _make_garrison("Garrison_" + str(o.id), mine, first, o.origin, true)
 		# Issue #187: someone always counts the player out when they are downed, even
 		# with no Remnant left in town or at the outposts (a garrison of nobody).
 		if garrison == null and (outposts == null or outposts.garrisons.is_empty()):
@@ -761,7 +761,7 @@ func make_townsfolk(node_name: String, members: Array) -> Townsfolk:
 
 ## Issue #187: a garrison for an outpost the Remnant have just taken back.
 func make_outpost_garrison(o: Dictionary, members: Array) -> Garrison:
-	return _make_garrison("Garrison_" + str(o.id), members, false, o.origin)
+	return _make_garrison("Garrison_" + str(o.id), members, false, o.origin, true)
 
 
 ## The Townsfolk running the locals at outpost `id` ("" = the town's own).
@@ -771,11 +771,14 @@ func townsfolk_for(id: String) -> Townsfolk:
 	return townsfolk
 
 
-func _make_garrison(node_name: String, members: Array, handles_player: bool, klaxon_at := Vector3.INF) -> Garrison:
+## `outpost`: a desert outpost's, which fights the player in a speeder or ship too.
+func _make_garrison(node_name: String, members: Array, handles_player: bool, klaxon_at := Vector3.INF,
+		outpost := false) -> Garrison:
 	var g := Garrison.new()
 	g.name = node_name
 	g.handles_player = handles_player
 	g.klaxon_at = klaxon_at
+	g.vehicles_anywhere = outpost
 	add_child(g)
 	g.setup(self, members)
 	g.player_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""

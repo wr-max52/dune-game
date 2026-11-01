@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Outposts shoot back at speeders and ships (2026-10-31)
+
+- **A speeder or ship no longer hides you at an outpost.** Its troopers and
+  droids fight you in one as they would on foot: shoot at them from the saddle
+  or the cockpit and they shoot back at the hull, and once the Remnant shoot on
+  sight they do it to your speeder too.
+- **Riding past is still fine.** Out in the desert a vehicle is no offence by
+  itself: no alarm unless you start something (or they already want you).
+
 ## The party barge fights back (2026-11-01)
 
 - **Everyone on the barge falls like everyone else.** Kill a dancer, a band

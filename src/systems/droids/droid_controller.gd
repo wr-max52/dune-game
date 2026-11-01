@@ -1382,12 +1382,16 @@ func _remnant_step(dt: float) -> void:
 			if u.has_meta("flee_to") or u.provoked or _alarm_up(u):
 				_flee(u, dt)
 				continue
-		elif remnant_hostile(u) and not player.piloting:
-			var d: float = u.global_position.distance_to(player.global_position)
-			sees = d <= float(rc.get("sight", 22.0)) and _clear_shot(u, player)
+		elif remnant_hostile(u):
+			# In a speeder or ship: only where its garrison fights it (an outpost's, or in town).
+			var hull := _vehicle_hull(u)
+			if not player.piloting or hull != null:
+				var d: float = u.global_position.distance_to(player.global_position)
+				sees = d <= float(rc.get("sight", 22.0)) \
+					and (_clear_shot(u, hull, player.global_position) if hull != null else _clear_shot(u, player))
 		if sees:
 			u.provoked = true              # in a fight with you now: your droids answer it
-			var aim := _chest(player)
+			var aim := player.global_position if player.piloting else _chest(player)   # the hull, not a seat above it
 			_face(u, aim - u.global_position)
 			u.walk(dt, false, 0.0, true)
 			var g = _garrison(u)
@@ -1425,6 +1429,14 @@ func _idle_far(u: DroidUnit) -> bool:
 func forgive_player() -> void:
 	for u in remnant:
 		u.provoked = false
+
+
+## The hull of the speeder or ship the player is in, while u's garrison fights it
+## (Garrison.target_vehicle); null on foot or when nobody minds it.
+func _vehicle_hull(u: DroidUnit) -> Node3D:
+	var g = _garrison(u) if player.piloting else null
+	var v = g.target_vehicle() if g != null else null
+	return v.hull_body() if v != null else null
 
 
 func _alarm_up(u: DroidUnit) -> bool:
@@ -1557,12 +1569,12 @@ func fire(u: DroidUnit, aim: Vector3, gun: Dictionary) -> Node:
 	return b
 
 
-## Nothing solid between the droid's muzzle and the target's chest (the player
+## Nothing solid between the droid's muzzle and the target's chest, or `at` (the player
 ## and other droids in the way count as solid, so it never shoots through you).
-func _clear_shot(u: DroidUnit, target: Node3D) -> bool:
+func _clear_shot(u: DroidUnit, target: Node3D, at := Vector3.INF) -> bool:
 	if not is_inside_tree():
 		return true
-	var q := PhysicsRayQueryParameters3D.create(u.muzzle(), _chest(target))
+	var q := PhysicsRayQueryParameters3D.create(u.muzzle(), at if at != Vector3.INF else _chest(target))
 	q.exclude = [u.get_rid()]
 	q.collide_with_areas = false
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
