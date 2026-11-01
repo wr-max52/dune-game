@@ -185,6 +185,18 @@ static func aboard(local: Vector3) -> bool:
 	return absf(local.x) <= TOWER_X and local.z >= BRIDGE_Z.x - 2.0 and local.z <= BRIDGE_Z.y and local.y >= BRIDGE_Y - 4.0
 
 
+## The foot of the ramp stack: where the first flight leaves the shaft's floor
+## (the fleet chapter's "infiltrate" waypoint).
+static func stairs_foot() -> Vector3:
+	return Vector3(FLIGHT_X, DECK_Y, FLIGHT_Z.x)
+
+
+## In the ramp shaft (cruiser frame), at any height: the stairs are reached.
+static func at_stairs(local: Vector3) -> bool:
+	return absf(local.x) <= SHAFT_X and local.z >= SHAFT_Z.x and local.z <= SHAFT_Z.y \
+		and local.y >= DECK_Y - 3.0 and local.y <= TOWER_TOP
+
+
 ## The docking path from `local` (the ship, cruiser frame) to above the dock pad:
 ## round the hull (over it from the port side, under it from below), out to a point
 ## off the bay's mouth, in through it, and over the pad. The last point is where
