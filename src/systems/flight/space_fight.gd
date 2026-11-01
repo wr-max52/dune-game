@@ -23,6 +23,7 @@ var view: DogfightView
 var encounter_id := ""
 var hud: Control
 var hud_label: Label
+var sheltered := false   ## the fight goes on without the player (Dogfight.player_sheltered)
 
 
 ## Start `enc_id` around a ship flying with transform `at` at `speed` m/s.
@@ -100,6 +101,16 @@ func payout() -> int:
 func player_flight():
 	var me: Dictionary = df.get_ship(df.player_id) if df != null else {}
 	return me.flight if not me.is_empty() else null
+
+
+## Out of the fight for now (or back in): nobody targets her, and the combat
+## read-out is put away until she is.
+func set_sheltered(on: bool) -> void:
+	sheltered = on
+	if df != null:
+		df.player_sheltered = on
+	if hud != null:
+		hud.get_parent().visible = not on
 
 
 func next_target() -> void:

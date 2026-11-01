@@ -141,9 +141,9 @@ func velocity() -> Vector3:
 
 # ------------------------------------------------------------------ who it hunts
 
-## Your ship, while it is in the air down here (not in a space fight).
+## Your ship, while it is in the air down here (not out in a space fight).
 func target_up() -> bool:
-	return pilot != null and pilot.piloting and pilot.fight == null \
+	return pilot != null and pilot.piloting and (pilot.fight == null or pilot.fight.sheltered) \
 		and pilot.atmo.state in [AtmoFlight.State.LIFTOFF, AtmoFlight.State.FLYING, AtmoFlight.State.LANDING]
 
 

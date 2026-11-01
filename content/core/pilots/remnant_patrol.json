@@ -1,0 +1,17 @@
+{
+  "id": "remnant_patrol",
+  "label": "Remnant patrol pilot",
+  "steer_gain": 2.5,
+  "aim_cone_deg": 7.0,
+  "aim_error": 0.06,
+  "engage_range": 560.0,
+  "break_distance": 120.0,
+  "break_time": 1.6,
+  "break_on_hit": 0.45,
+  "extend_distance": 520.0,
+  "evade_missile": 0.35,
+  "attack_throttle": 0.65,
+  "retarget_interval": 2.0,
+  "missile_use": false,
+  "note": "The Remnant interceptors' pilots in a space fight (remnant_interceptor's dogfight_foe): the hunter's wide loops, with a rookie's aim and slower reactions."
+}
