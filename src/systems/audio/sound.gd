@@ -13,7 +13,7 @@ extends Node
 ##   Sound.club_vibe("hard")            Oda changes the song to one with that mood
 ##   Sound.radio_next()                 issue #291: J in a ship, the next station
 ##
-## The music is three ambient tracks that play in a shuffled order (a new one
+## The music is eight ambient tracks that play in a shuffled order (a new one
 ## each game) with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
 ## after, and a space track during a fight in orbit (not for being up there:

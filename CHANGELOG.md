@@ -2,6 +2,15 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## More ambient music (2026-11-01)
+
+- **The ambient score has eight tracks now, not three.** Five calm, spacey
+  pieces join the shuffle: Galactic Temple, Starfield Romance, The Budding of
+  Consciousness, Calm Ambient 1 (Synthwave 4k) and Contemplation. All are CC0
+  from OpenGameArt.org, so there is nothing to license or credit. Each
+  file's source page is listed in `content/look/sound.json`
+  (`music.ambient_sources`).
+
 ## Every ship has a seeker rack (2026-11-01)
 
 - **Every spaceship now carries a secondary weapon**, and for now that is
