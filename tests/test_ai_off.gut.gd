@@ -349,6 +349,12 @@ func test_failures_in_plain_words() -> void:
 	assert_true(LLMService.plain_reason("http 529 overloaded").contains("provider had an error"))
 	assert_true(LLMService.plain_reason("timeout").contains("in time"))
 	assert_true(LLMService.plain_reason("connect").contains("could not connect"))
+	# The provider's own words, not its JSON (the F10 line used to end mid-JSON).
+	var anth := "http 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"`temperature` is deprecated for this model.\"},\"request_id\":\"req_1\"}"
+	assert_eq(LLMService.plain_reason(anth), "the provider rejected the request (400: `temperature` is deprecated for this model.)")
+	var oll := "http 404 {\"error\":{\"message\":\"model 'qwen3:30b-a3b' not found\",\"type\":\"not_found_error\"}}\n"
+	assert_true(LLMService.plain_reason(oll).contains("model 'qwen3:30b-a3b' not found"))
+	assert_true(LLMService.plain_reason("http 400 {\"error\":{\"message\":\"cut sho").contains("cut sho"), "a cut-off body still reads")
 	var svc := _svc()
 	var why := svc.explain({ "fell_back_from": [{ "provider": "local", "reason": "connect" }, { "provider": "cloud", "reason": "http 401 x" }] })
 	assert_true(why.contains("local: could not connect"))

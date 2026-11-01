@@ -19,10 +19,12 @@ func build_request(messages: Array, opts: Dictionary) -> Dictionary:
 	# The API wants the first turn to be the user's.
 	if convo.is_empty() or str(convo[0].role) != "user":
 		convo.push_front({ "role": "user", "content": "(the player walks up to the bar)" })
+	# No temperature: current Claude models answer a non-default one with a 400
+	# ("`temperature` is deprecated for this model"), and from API version
+	# 2026-10-21 every model does. The persona prompt sets the voice instead.
 	var body := {
 		"model": model(),
 		"max_tokens": int(opts.get("max_tokens", 220)),
-		"temperature": float(opts.get("temperature", 0.8)),
 		"system": "\n\n".join(system_parts),
 		"messages": convo,
 		"stream": true,

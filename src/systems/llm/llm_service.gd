@@ -51,6 +51,9 @@ var warming: Dictionary = {}         ## issue #328: provider id -> warm-up turn 
 
 func _ready() -> void:
 	name = "LLM" if name == "" or name.begins_with("@") else name
+	# The settings panel (F10/F11) pauses the game; its Test request, health checks
+	# and the sidecar still have to run (paused, Test said "Testing ..." forever).
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(true)
 
 
@@ -296,15 +299,16 @@ func explain(r: Dictionary) -> String:
 static func plain_reason(reason: String) -> String:
 	if reason.begins_with("http "):
 		var code := int(reason.substr(5, 3))
+		var said := error_message(reason.substr(9))
 		match code:
 			401, 403:
 				return "the key was refused (wrong or expired key)"
 			404:
-				return "unknown model or wrong URL (404)"
+				return "unknown model or wrong URL (404%s)" % (": " + said if said != "" else "")
 			429:
 				return "rate limited, try again in a minute"
 			400:
-				return "the provider rejected the request (400 %s)" % reason.substr(9, 80).strip_edges()
+				return "the provider rejected the request (400: %s)" % said
 		if code >= 500:
 			return "the provider had an error (%d)" % code
 		return "http %d" % code
@@ -321,6 +325,24 @@ static func plain_reason(reason: String) -> String:
 	if reason.begins_with("stream error"):
 		return "the provider sent an error: " + reason.substr(13, 80)
 	return reason
+
+
+## The human part of an error body: Anthropic's {"error": {"message"}} and the
+## OpenAI-style {"error": {"message"}} / {"error": "..."}; else the raw start of it.
+static func error_message(body: String) -> String:
+	var parser := JSON.new()             # parse() stays quiet on a body that is not JSON
+	var j = parser.data if parser.parse(body.strip_edges()) == OK else null
+	if j is Dictionary:
+		var e = j.get("error", j)
+		if e is Dictionary and e.has("message"):
+			return str(e.message).substr(0, 120)
+		if e is String:
+			return e.substr(0, 120)
+	# A body cut short is not JSON any more; its message usually still is there.
+	var m := RegEx.create_from_string("\"message\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").search(body)
+	if m != null:
+		return m.get_string(1).replace("\\\"", "\"").substr(0, 120)
+	return body.strip_edges().substr(0, 80)
 
 
 func status() -> Dictionary:
@@ -476,7 +498,7 @@ func _step(t: Dictionary) -> void:
 			if c.get_status() == HTTPClient.STATUS_BODY:
 				a.body.append_array(c.read_response_body_chunk())
 				return
-			var msg := (a.body as PackedByteArray).get_string_from_utf8().substr(0, 200)
+			var msg := (a.body as PackedByteArray).get_string_from_utf8().substr(0, 400)
 			_next_attempt(t, "http %d %s" % [int(a.code), msg])
 		"body":
 			var c: HTTPClient = a.client
