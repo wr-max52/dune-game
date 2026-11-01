@@ -48,6 +48,9 @@ extends Node
 ##     throttle, her momentum and gravity bring her down. Damaged by the fall she
 ##     crashes and is towed home like any crash; slow enough, she rests where she
 ##     came down and you can walk back to her.
+##   - issue #291: J while seated steps the radio (Sound.radio_next) through the
+##     club mixes and off; it plays on across a handoff, in space and in a fight,
+##     and goes off when you leave the seat.
 ##
 ## The headless trace drives it with board(), takeoff(), land(), exit_ship(), eject() and
 ## set_external_command(): the same code paths the keys use.
@@ -205,6 +208,8 @@ func _ready() -> void:
 		arrive_from_space(demo._arrival)
 	elif str(demo._arrival.get("mode", "")) == "handoff":
 		arrive_handoff(demo._arrival)
+	if not piloting:
+		Sound.lib().set_radio("")            # issue #291: on foot (a lost fight, a new game), no radio
 
 
 ## Every parked ship the decor built becomes a berth: the pit pad's own ship first
@@ -552,6 +557,7 @@ func eject() -> bool:
 func _leave_seat(spot: Vector3) -> void:
 	var p := player()
 	piloting = false
+	Sound.lib().set_radio("")        # issue #291: the radio is the ship's
 	_motion_basis_valid = false
 	if demo.detail != null:
 		demo.detail.update_motion(0.0, atmo.altitude(), 0.0, 0.0, false)
@@ -899,6 +905,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		chase.toggle_mode()
 	if fight != null and InputMap.has_action("flight_next_target") and event.is_action_pressed("flight_next_target"):
 		fight.next_target()
+	if InputMap.has_action("flight_radio") and event.is_action_pressed("flight_radio"):
+		hud.toast(radio_line(Sound.radio_next()), 3.0)
+
+
+## Issue #291: what the HUD says when the radio changes station.
+static func radio_line(playlist: String) -> String:
+	return GameFlow.label("radio_" + playlist if playlist != "" else "radio_off")
 
 
 func _physics_process(dt: float) -> void:
