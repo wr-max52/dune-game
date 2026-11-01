@@ -165,7 +165,7 @@ func _build_pickups() -> void:
 	var layout := ""
 	if town != null and "data" in town:
 		layout = str(town.data.get("layout", ""))
-	for entry in content.get_pickups(location_id, layout):
+	for entry in content.get_pickups(location_id, layout, WorldState.mode):
 		if inv().is_taken(str(entry.get("id", ""))):
 			continue
 		if bool(entry.get("story_only", false)) and not WorldState.story_mode():

@@ -204,9 +204,10 @@ There is no jump button: the sand ramp past the house (or a dune crest at speed)
 
 ## The jetpack (M13)
 
-The jetpack is at the top of the pit's north-east ramp, on your way out of the pit
-(look for the glowing ring). The gear trader is at the market stall south-east of the
-pit.
+In a story save the jetpack lies on top of the cantina's stair tower, beside the
+energy blade (look for the glowing ring). In free play it is inside the old cargo
+droid that roams the pit: walk up to it and press E. The gear trader is at the
+market stall south-east of the pit.
 
 | Action | Key |
 |---|---|

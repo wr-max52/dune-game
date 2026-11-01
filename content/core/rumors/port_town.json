@@ -33,6 +33,18 @@
    "id": "r_pit_hauler",
    "text": "That old cargo droid rattling round the landing pit has a jetpack strapped to its back. Nobody's claimed it in a month. Walk up and take it; it won't mind.",
    "requires": {
+    "mode": "freeplay",
+    "not_flags": [
+     "pit_jetpack_taken"
+    ]
+   },
+   "weight": 3
+  },
+  {
+   "id": "r_tower_jetpack",
+   "text": "Somebody stashed a jetpack up on top of the cantina's tower and never came back for it. Take the stairs; it's still up there.",
+   "requires": {
+    "mode": "story",
     "not_flags": [
      "pit_jetpack_taken"
     ]

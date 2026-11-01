@@ -2,6 +2,17 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Story mode: the jetpack is on top of the cantina tower (2026-11-01)
+
+- **In a story save the jetpack lies on the cantina tower's lookout floor**,
+  beside the energy blade, with the usual glowing ring. Take the stairs up.
+  Oda's tip in the first smuggling run, her reminder and her briefing now send
+  you there, and a new rumor does too.
+- **The pit's old cargo droid roams empty in story mode.** In free play the
+  jetpack is still inside it, and its rumor only plays there.
+- A story save that already took the jetpack from the droid keeps it: it is
+  the same pickup, moved (`modes` in `content/core/pickups/port_town.json`).
+
 ## The general's pit meeting opens as you climb out (2026-11-01)
 
 - **Story mode: General Vask's talk opens the moment you step out of your

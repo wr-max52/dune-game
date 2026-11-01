@@ -256,7 +256,28 @@ func test_hints_open_quests_and_the_hidden_gear_unlocks_weapons() -> void:
 	Story.event(str(rifle.event))
 	assert_true(WorldState.weapon_allowed("rifle_blaster"))
 	assert_eq(Quests.state("barracks_rifle"), "done")
-	assert_eq(str(_pickup("pit_jetpack").get("inside", "")), "pit_hauler", "the jetpack is inside the cargo droid")
+	assert_eq(str(_pickup("pit_jetpack").get("inside", "")), "pit_hauler", "free play: the jetpack is inside the cargo droid")
+
+
+## A story save finds the jetpack on the cantina's lookout floor, by the blade,
+## under the same id (so a save that took it from the droid keeps it taken).
+func test_story_jetpack_lies_on_the_cantina_tower() -> void:
+	for layout in ["", "port_round"]:
+		var by_id := {}
+		for e in content.get_pickups("port_town", layout, WorldState.STORY):
+			by_id[str(e.id)] = e
+		var jet: Dictionary = by_id.pit_jetpack
+		var blade: Dictionary = by_id.tower_blade
+		assert_eq(str(jet.get("inside", "")), "", "not inside the droid (%s)" % layout)
+		assert_eq(str(jet.marker), str(blade.marker), "on the blade's marker (%s)" % layout)
+		var d := Vector3(float(jet.offset[0]), float(jet.offset[1]), float(jet.offset[2])) \
+			- Vector3(float(blade.offset[0]), float(blade.offset[1]), float(blade.offset[2]))
+		assert_almost_eq(d.y, 0.0, 0.01, "on the lookout floor with it (%s)" % layout)
+		assert_between(Vector2(d.x, d.z).length(), 2.9, 4.0, "on the floor ring beside it (%s)" % layout)
+	var free: Array = content.get_pickups("port_town", "port_round", WorldState.FREEPLAY).filter(func(e): return str(e.id) == "pit_jetpack")
+	assert_eq(str(free[0].get("inside", "")), "pit_hauler", "free play keeps it in the droid")
+	assert_true(WorldState.rumors("stranger", [], 99).any(func(r): return str(r.id) == "r_tower_jetpack"), "the story's rumor names the tower")
+	assert_false(WorldState.rumors("stranger", [], 99).any(func(r): return str(r.id) == "r_pit_hauler"), "not the droid")
 
 
 # ---- #212: the droid merchant ----------------------------------------------------------
