@@ -174,6 +174,22 @@ func save_user(defaults_path: String = "") -> bool:
 	return true
 
 
+## Settings: a URL typed for profile `id` takes its health check (and the local
+## server's port) along, so a server on another port is not reported down and the
+## game does not start a second one beside it.
+func follow_base_url(id: String) -> void:
+	var u := LLMService.parse_url(str(profile(id).get("base_url", "")))
+	if u.is_empty():
+		return
+	var h := LLMService.parse_url(str(profile(id).get("health_url", "")))
+	var health := "%s:%d%s" % [u.host, int(u.port), h.get("path", "")]
+	if not h.is_empty() and health != str(profile(id).get("health_url", "")):
+		set_value("profiles/%s/health_url" % id, health)
+	# Only a real change: JSON reads the default port as 8088.0, and save_user writes any difference.
+	if profile(id).has("sidecar") and int(profile(id).sidecar.get("port", 8088)) != int(u.port):
+		set_value("profiles/%s/sidecar/port" % id, int(u.port))
+
+
 func set_value(path: String, value) -> void:
 	var parts := path.split("/")
 	var d: Dictionary = data

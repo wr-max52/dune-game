@@ -67,7 +67,10 @@ func _ready() -> void:
 		var e := LineEdit.new()
 		e.custom_minimum_size = Vector2(380, 0)
 		_fields[f[0]] = e
-		v.add_child(_row(f[1], e))
+		var row := _row(f[1], e)
+		if (f[0] as String).ends_with("/model"):
+			_add_help_buttons(row, (f[0] as String).get_slice("/", 0))
+		v.add_child(row)
 	_cloud_type = OptionButton.new()
 	_cloud_type.add_item("openai_compat")
 	_cloud_type.add_item("anthropic")
@@ -117,6 +120,33 @@ func _row(label: String, c: Control) -> HBoxContainer:
 	h.add_child(l)
 	h.add_child(c)
 	return h
+
+
+## Beside a provider's model: Link (its download page) and Prompt (set-up text for a
+## coding agent, copied to the clipboard).
+func _add_help_buttons(h: HBoxContainer, id: String) -> void:
+	var link := Button.new()
+	link.text = "Link"
+	link.tooltip_text = "Open " + LLMSetupHelp.link(id)
+	link.pressed.connect(func(): OS.shell_open(LLMSetupHelp.link(id)))
+	h.add_child(link)
+	var prompt := Button.new()
+	prompt.text = "Prompt"
+	prompt.tooltip_text = "Copy a set-up prompt for a coding agent"
+	prompt.pressed.connect(func(): copy_prompt(id, prompt))
+	h.add_child(prompt)
+
+
+## Put the set-up prompt for `id` on the clipboard and confirm it: the button says
+## "Copied" for two seconds and the result line says what to do with it.
+func copy_prompt(id: String, button: Button = null) -> void:
+	DisplayServer.clipboard_set(LLMSetupHelp.prompt(id))
+	_result.text = "Prompt copied; give it to your agent.\n" + LLMSetupHelp.intro()
+	if button != null:
+		button.text = "Copied"
+		get_tree().create_timer(2.0).timeout.connect(func():
+			if is_instance_valid(button):
+				button.text = "Prompt")
 
 
 func toggle() -> void:
@@ -181,6 +211,8 @@ func _apply() -> void:
 	_voice_settings_saved = true
 	for path in _fields:
 		cfg.set_value("profiles/" + path, (_fields[path] as LineEdit).text.strip_edges())
+	for id in ["local", "ollama"]:
+		cfg.follow_base_url(id)
 	cfg.set_value("profiles/cloud/type", _cloud_type.get_item_text(_cloud_type.selected))
 	cfg.set_value("profiles/cloud/enabled", _cloud_on.button_pressed)
 	if _key.text.strip_edges() != "":
