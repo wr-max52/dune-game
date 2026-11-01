@@ -71,6 +71,17 @@ func test_he_waits_on_the_cruiser_to_make_his_offer() -> void:
 	assert_false(DarkPact.hostile_at("cruiser"), "he talks first")
 
 
+func test_he_waits_just_out_of_the_corridor_door() -> void:
+	var cr: Dictionary = DarkPact.cfg().get("cruiser", {})
+	var at := DarkMasterPost._v(cr.get("at"))
+	var door := Vector3(0, CruiserHull.DECK_Y, CruiserHull.BAY_Z.y)
+	assert_eq(at.y, CruiserHull.DECK_Y, "on the bay deck")
+	assert_lt(at.z, CruiserHull.BAY_Z.y, "in the bay, not the corridor")
+	assert_lt(absf(at.x), CruiserHull.HALL_HALF, "in line with the door")
+	assert_lt(at.distance_to(door), float(DarkPact.cfg().get("meet_reach", 9.0)), "walking out of the door opens his offer")
+	assert_gt(DarkMasterPost._v(cr.get("face")).z, 0.0, "facing the door")
+
+
 func test_join_makes_the_remnant_friends_and_opens_the_oath() -> void:
 	_story_at_kill()
 	assert_true(Story.remnant_hostile(), "before: the Remnant shoot on sight")

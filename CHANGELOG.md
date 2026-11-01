@@ -107,7 +107,8 @@ Plain English, newest on top. One entry per milestone.
   end card no longer pops up on the bridge: the story says "go back to Oda", and
   her telling brings the end card.
 - **A dark master waits in the cruiser's bay.** After the general dies, a figure
-  in all-black armour with a red energy sword stands by your ship. Walk up and
+  in all-black armour with a red energy sword stands where the corridor opens
+  into the bay. Walk past him on the way back to your ship and
   he talks to you (an AI character): "There is a dark energy emerging. Join me,
   and realize more power than you could know." You can't walk away; answer him,
   and if the talk drags on the game asks you outright: Join or Refuse.
