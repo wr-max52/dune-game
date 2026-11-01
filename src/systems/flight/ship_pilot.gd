@@ -1077,6 +1077,7 @@ func _read_keys(dt: float) -> void:
 			exit_ship()
 		return
 	if st == AtmoFlight.State.PARKED:
+		_throttle = 0.0          # parked is zero throttle (AtmoFlight.park), not what she landed with
 		if _just("interact"):
 			exit_ship()
 			return
@@ -1104,7 +1105,10 @@ func _read_keys(dt: float) -> void:
 			bay_land()
 	if bay_landing or docking:
 		return
-	_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
+	if st == AtmoFlight.State.LIFTOFF:
+		_throttle = 0.0          # she comes up hovering: the throttle key that lifted her does not wind it up
+	else:
+		_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
 	var pitch := clampf(_axis("flight_pitch_down", "flight_pitch_up") + _stick.y, -1.0, 1.0)
 	var yaw := clampf(_axis("flight_yaw_left", "flight_yaw_right") + _stick.x, -1.0, 1.0)
 	var roll := _axis("flight_roll_left", "flight_roll_right")
@@ -1223,14 +1227,24 @@ func _fight_held() -> bool:
 	return fight != null and c != null and fight.encounter_id == c.escort_id()
 
 
-## Not out in the fight: docking, landing or down in the cruiser's bay, parked, on
-## foot, crashed, or (the escort) dived well under the edge of space. The fight goes
+## Close by the cruiser: inside its approach's fight_off_radius the fight lets go of
+## her and normal flight lines her up with the bay. Once out, she stays out until
+## past fight_back_radius, so the edge does not flick her back and forth.
+func _by_cruiser(c) -> bool:
+	var ap: Dictionary = c.cfg.get("approach", {})
+	var r := float(ap.get("fight_back_radius", 1300.0)) if fight != null and fight.sheltered \
+		else float(ap.get("fight_off_radius", 1000.0))
+	return c.distance(atmo.position()) <= r
+
+
+## Not out in the fight: docking, landing or down in the cruiser's bay, close by the
+## cruiser, parked, on foot, crashed, or (the escort) dived well under the edge of space. The fight goes
 ## on without her (Dogfight.player_sheltered) until she is out in it again.
 func _out_of_fight() -> bool:
 	if not piloting or docking or bay_landing or atmo.state != AtmoFlight.State.FLYING:
 		return true
 	var c = cruiser()
-	if c != null and c.aboard(atmo.position()):
+	if c != null and (c.aboard(atmo.position()) or _by_cruiser(c)):
 		return true
 	return _fight_held() and atmo.altitude() < atmo.space_altitude \
 		- float(c.cfg.get("approach", {}).get("floor", 1500.0))
