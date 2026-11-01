@@ -615,9 +615,11 @@ static func _tower(out: Array) -> void:
 	var z1 := TOWER_Z.y
 	var hull_top: float = (HULL[2] as Vector2).y
 	# The plinth from the dorsal deck up under the bridge floor, closing the hull's top
-	# there (aft of the bridge the shaft runs on up through it).
-	_box(out, "tower_plinth", Vector3(TOWER_X * 2.0 + 4.0, PIT_Y - hull_top + 2.0, BRIDGE_Z.y - z0),
-		Vector3(0, (hull_top - 2.0 + PIT_Y) * 0.5, (z0 + BRIDGE_Z.y) * 0.5), "hull")
+	# there (aft of the bridge the shaft runs on up through it). Its top is the pits'
+	# underside, not their floor, so the two never share a face and flicker.
+	var plinth_top := PIT_Y - 1.0
+	_box(out, "tower_plinth", Vector3(TOWER_X * 2.0 + 4.0, plinth_top - hull_top + 2.0, BRIDGE_Z.y - z0),
+		Vector3(0, (hull_top - 2.0 + plinth_top) * 0.5, (z0 + BRIDGE_Z.y) * 0.5), "hull")
 	# Over the shaft, between its walls and the tower's: a deck closing the hull's top.
 	for side: float in [-1.0, 1.0]:
 		_box(out, "tower_shaft_cap_%s" % ("s" if side > 0 else "p"), Vector3(TOWER_X - SHAFT_X + 2.0, 2.0, z1 - BRIDGE_Z.y),
