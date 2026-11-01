@@ -7,19 +7,15 @@ extends Control
 ## the screen before the perspective pulls it in) and the texture starting at
 ## panel row `top`, drawn `scale_by` times finer.
 ##
-## The dash is brushed metal (a light chamfer on its top edge, recessed plates for
-## the instruments); each instrument sits in a bevelled bezel under glass that
-## catches the light. The instruments:
+## The dash itself is modelled (CockpitView.dash_mesh); this paints what sits on
+## it: recessed plates for the instruments, each in a bevelled bezel under glass
+## that catches the light. The instruments:
 ##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
 ##   hull, shield and boost meters, and one lamp for the Shift ability.
 ##
 ## `lights` are the sun and any bolts going by (CockpitView.gather_lights): each
-## glints on the dials' glass and puts a streak along the dash's chamfer, where its
-## reflection would fall.
+## glints on the dials' glass, where its reflection would fall.
 
-const METAL_TOP := Color(0.42, 0.42, 0.43, 1.0)
-const METAL_LOW := Color(0.17, 0.17, 0.18, 1.0)
-const CHAMFER := Color(0.78, 0.77, 0.74, 1.0)
 const PLATE := Color(0.08, 0.08, 0.085, 0.85)
 const DASH_RIM := Color(0.36, 0.34, 0.31, 1.0)
 const BEZEL := Color(0.16, 0.16, 0.17, 1.0)
@@ -98,97 +94,13 @@ static func halo(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 		ci.draw_polygon(PackedVector2Array([c, a, b]), PackedColorArray([col, clear, clear]))
 
 
-## The dash: brushed metal, lighter at the top where the canopy's light falls, with
-## a bright chamfer along its edge and a row of rivets under it.
+## The dash's body is modelled (CockpitView.dash_mesh, in a dark shade of the
+## hull's skin, lit by the real lights); painted over it is only a row of rivets
+## under its edge.
 func _draw_dash(vp: Vector2) -> void:
-	var pts := PackedVector2Array()
-	var cols := PackedColorArray()
-	var n := 40
-	var crest := vp.y * DASH_MID
-	for i in n + 1:
-		var x := lerpf(-margin, vp.x + margin, float(i) / float(n))
-		pts.append(Vector2(x, dash_top(vp, x)))
-	var rim := pts.duplicate()
-	pts.append(Vector2(vp.x + margin, vp.y))
-	pts.append(Vector2(-margin, vp.y))
-	for p in pts:
-		cols.append(METAL_TOP.lerp(METAL_LOW, clampf((p.y - crest) / maxf(vp.y - crest, 1.0), 0.0, 1.0)))
-	draw_polygon(pts, cols)
-	# Brushing: faint horizontal streaks, the same every frame.
-	for i in 190:
-		var y := lerpf(crest, vp.y, _hash(i, 1))
-		var span := dash_span(vp, y, margin)
-		if span.y - span.x < 4.0:
-			continue
-		var a := lerpf(span.x, span.y, _hash(i, 2) * 0.6)
-		var b := lerpf(a, span.y, 0.3 + _hash(i, 3) * 0.7)
-		var lit := _hash(i, 4) > 0.45
-		draw_line(Vector2(a, y), Vector2(b, y), Color(1, 1, 1, 0.035) if lit else Color(0, 0, 0, 0.08), 1.0)
-	# A sheen under the edge, then the chamfer catching the light, then its shadow.
-	_arch_band(vp, n, 6.0, vp.y * 0.045, Color(1, 1, 1, 0.08), Color(1, 1, 1, 0.0))
-	_arch_band(vp, n, 0.0, 3.0, CHAMFER, CHAMFER.darkened(0.3))
-	_arch_band(vp, n, 3.0, 6.0, Color(0, 0, 0, 0.55), Color(0, 0, 0, 0.0))
-	_dash_shine(vp)
-	draw_polyline(rim, Color(0.05, 0.05, 0.05, 0.9), 1.0, true)
 	for i in 15:
 		var x := vp.x * (float(i) + 1.0) / 16.0
 		_rivet(Vector2(x, dash_top(vp, x) + 11.0), 2.5)
-
-
-## A band that follows the dash's top edge, from d0 to d1 px under it, shaded from
-## c0 at its top to c1 at its bottom.
-func _arch_band(vp: Vector2, n: int, d0: float, d1: float, c0: Color, c1: Color) -> void:
-	for i in n:
-		var xa := lerpf(-margin, vp.x + margin, float(i) / float(n))
-		var xb := lerpf(-margin, vp.x + margin, float(i + 1) / float(n))
-		var ya := dash_top(vp, xa)
-		var yb := dash_top(vp, xb)
-		draw_polygon(PackedVector2Array([Vector2(xa, ya + d0), Vector2(xb, yb + d0), Vector2(xb, yb + d1), Vector2(xa, ya + d1)]),
-			PackedColorArray([c0, c0, c1, c1]))
-
-
-## The lights on the dash: each one's reflection runs along the chamfer as a
-## bright streak with a soft sheen on the metal under it, across from where the
-## light is (left for a light to your left), fading out to either side. The
-## chamfer is rounded, so anything above the dash's edge catches some of it.
-func _dash_shine(vp: Vector2) -> void:
-	for l in lights:
-		var g := glint(l.dir)
-		var a: float = float(l.power) * smoothstep(-0.15, 0.25, (l.dir as Vector3).normalized().y)
-		if a <= 0.01:
-			continue
-		var col: Color = (l.color as Color).lerp(Color.WHITE, 0.35)
-		var mid := vp.x * 0.5 + g.x * vp.x * 0.75
-		var w := vp.x * 0.11
-		var k := 12
-		for i in k:
-			var xa := mid - w + 2.0 * w * float(i) / float(k)
-			var xb := mid - w + 2.0 * w * float(i + 1) / float(k)
-			var fa := pow(1.0 - absf(xa - mid) / w, 2.0)
-			var fb := pow(1.0 - absf(xb - mid) / w, 2.0)
-			var ya := dash_top(vp, xa)
-			var yb := dash_top(vp, xb)
-			draw_polygon(PackedVector2Array([Vector2(xa, ya), Vector2(xb, yb), Vector2(xb, yb + 3.0), Vector2(xa, ya + 3.0)]),
-				PackedColorArray([Color(col, a * fa * 0.8), Color(col, a * fb * 0.8), Color(col, a * fb * 0.5), Color(col, a * fa * 0.5)]))
-			draw_polygon(PackedVector2Array([Vector2(xa, ya + 6.0), Vector2(xb, yb + 6.0), Vector2(xb, yb + vp.y * 0.06), Vector2(xa, ya + vp.y * 0.06)]),
-				PackedColorArray([Color(col, a * fa * 0.18), Color(col, a * fb * 0.18), Color(col, 0.0), Color(col, 0.0)]))
-
-
-## Where the dash covers row y: x from .x to .y (empty above the arch's crown; the
-## whole panel, `margin` px past either side, under its ends).
-static func dash_span(vp: Vector2, y: float, margin := 0.0) -> Vector2:
-	var t := (y / maxf(vp.y, 1.0) - DASH_MID) / (DASH_EDGE - DASH_MID)
-	if t >= 1.0:
-		return Vector2(-margin, vp.x + margin)
-	if t <= 0.0:
-		return Vector2(vp.x * 0.5, vp.x * 0.5)
-	var u := sqrt(t)
-	return Vector2(vp.x * (1.0 - u) * 0.5, vp.x * (1.0 + u) * 0.5)
-
-
-## A steady pseudo-random 0..1 for (i, k), so the brushing does not crawl.
-static func _hash(i: int, k: int) -> float:
-	return fposmod(sin(float(i) * 12.9898 + float(k) * 78.233) * 43758.5453, 1.0)
 
 
 func _rivet(c: Vector2, r: float) -> void:

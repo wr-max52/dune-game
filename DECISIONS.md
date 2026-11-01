@@ -1333,3 +1333,21 @@ Every significant technical choice, the alternative, and why. Newest on top.
   separate `music.ambient_sources` map that Sound never reads, so the shuffle
   code did not change.
 
+
+## 2026-11-01 — The canopy frame and the dash are the ship's own metal
+
+- **The frame and the dash's body are meshes on the camera now, not paint.**
+  Painted metal (`metal_shade()`, the brushed dash) could only imitate the hull:
+  it never reflected the sky or the sand, and the struts stopped dead at a grey
+  dash. Now `CockpitView.frame_mesh` (round tubes along the same strut and bow
+  curves) and `dash_mesh` (a face leaning back `CockpitDash.LEAN`, its top edge
+  the painted rim, rolling over to a lip) hang on the cockpit camera, so the real
+  sun, sky and reflections light them. The struts stand on the dash's face
+  (`dash_point`) and run down into it, so they grow out of it. Instruments,
+  plates, rivets and the yoke stay painted over the top. This replaces "the
+  cockpit is painted, not modelled" (issue #181) for these two parts only; the
+  meshes are built from the screen and lens, so one cockpit still fits every ship.
+- **They wear the ship's skin.** `ShipKit.skin()` picks the material on most of
+  the model, which ShipPilot hands the cockpit on boarding: the frame wears it as
+  is, the dash a copy at `DASH_SHADE` of its colour with the same finish, so the
+  instruments' panel reads darker than the struts.

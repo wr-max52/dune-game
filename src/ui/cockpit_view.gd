@@ -21,13 +21,18 @@ extends Control
 ## The glass catches the light: the sun and any bolt going by (gather_lights) glint
 ## on the dials and along the dash's edge, and glow faintly on the canopy round
 ## where they are.
+##
+## The canopy's frame and the dash's body are modelled: meshes on the camera
+## (frame_mesh, dash_mesh) in the ship's own hull material (`hull_material`), the
+## dash a darker shade of it (DASH_SHADE), so the sun, the sky and their
+## reflections light them exactly as they light the outside of the ship. The
+## struts stand on the dash and run down into it, so they grow out of it. The
+## instruments, their plates and the yoke stay painted, over the top.
 
 const TiltShader := preload("res://src/systems/look/shaders/cockpit_tilt.gdshader")
 
 const GLASS := Color(0.55, 0.75, 0.9, 0.06)
-const METAL := Color(0.3, 0.3, 0.32, 1.0)   ## the canopy frame's metal, before light
-const METAL_SHINE := 16.0          ## how tight the frame's glare is (higher: a thinner streak)
-const FRAME_BANDS := 8             ## strips across each frame member, for its shading
+const FRAME_METAL := Color(0.69, 0.74, 0.79, 1.0)  ## the frame's skin when the ship gives none
 const LIGHT := CockpitDash.LIGHT
 const YOKE := Color(0.24, 0.24, 0.25, 1.0)
 const YOKE_LIT := Color(0.55, 0.55, 0.56, 0.9)
@@ -41,10 +46,13 @@ const SUN_GLINT := 0.5             ## the sun's glints at full daylight, 0..1
 const BOLT_RANGE := 90.0           ## m: bolts further off than this put no light on the glass
 const BOLT_FALLOFF := 14.0         ## m: a bolt this far off glints at half strength
 const MAX_GLINTS := 6
-const FRAME_FOV := 70.0            ## degrees: the lens the canopy frame is seen through
+const FRAME_FOV := 70.0            ## degrees: the lens the canopy frame is laid out for, when no camera says
 const FRAME_FOOT := 1.0            ## m ahead of your eye, where the struts stand on the dash
 const FRAME_THICK := 0.09          ## m across the frame's struts and bow
-const FRAME_NEAR := 0.12           ## m: the frame is drawn up to this close in front of your eye
+const FRAME_SIDES := 18            ## faces round each frame tube
+const FRAME_SINK := 0.2            ## m each strut runs on down past its foot, out of sight inside the dash
+const DASH_SHADE := 0.38           ## the dash's skin is the hull's colour times this
+const DASH_LIP := 0.025            ## share of the screen height the dash's top edge rolls over in
 const BOW_AHEAD := 0.58            ## m ahead of your eye, the bow over the top of the glass
 const BOW_TOP := 0.44              ## m above your eye, the bow at its middle
 const BOW_SIDE := Vector2(0.62, 0.27)  ## m: where the bow meets each strut (out, up)
@@ -59,6 +67,13 @@ var _dash_vp: SubViewport
 var _dash_quad: ColorRect
 var _sun: DirectionalLight3D
 var _sun_look := 0.0                ## seconds until the next look for a sun, when there is none
+var hull_material: Material         ## the ship's skin, for the canopy frame (ShipPilot sets it on boarding)
+var _frame: MeshInstance3D
+var _frame_fit := ""                ## the screen and lens the frame's mesh was built for
+var _frame_metal: StandardMaterial3D
+var _dash_body: MeshInstance3D
+var _dash_skin: Material            ## the dash's darker shade of the skin
+var _dash_skin_of: Material         ## the skin _dash_skin was made from
 
 
 func _ready() -> void:
@@ -89,6 +104,7 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	var on := is_visible_in_tree()
 	_dash_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	_place_frame(on)
 	if not on:
 		return
 	_fit(get_viewport_rect().size)
@@ -103,8 +119,74 @@ func _process(dt: float) -> void:
 	queue_redraw()
 
 
+func _exit_tree() -> void:
+	for n in [_frame, _dash_body]:
+		if is_instance_valid(n):
+			n.queue_free()
+
+
 func _v(key: String, fallback: float = 0.0) -> float:
 	return float(values.get(key, fallback))
+
+
+## The canopy frame and the dash's body ride on whichever camera is drawing the
+## cockpit, wearing the ship's skin; their meshes are rebuilt only when the screen
+## or the lens changes.
+func _place_frame(on: bool) -> void:
+	var cam := get_viewport().get_camera_3d() if on else null
+	if cam == null:
+		for n in [_frame, _dash_body]:
+			if is_instance_valid(n):
+				n.visible = false
+		return
+	if not is_instance_valid(_frame):
+		_frame = _on_camera("CanopyFrame")
+		_dash_body = _on_camera("DashBody")
+		_frame_fit = ""
+	var vp := get_viewport_rect().size
+	var fit := "%s %s" % [vp, cam.fov]
+	for n in [_frame, _dash_body]:
+		var mi := n as MeshInstance3D
+		if mi.get_parent() != cam:
+			if mi.get_parent() != null:
+				mi.get_parent().remove_child(mi)
+			cam.add_child(mi)
+		mi.transform = Transform3D.IDENTITY
+		mi.visible = true
+	if fit != _frame_fit:
+		_frame.mesh = frame_mesh(vp, cam.fov)
+		_dash_body.mesh = dash_mesh(vp, cam.fov)
+		_frame_fit = fit
+	if hull_material == null and _frame_metal == null:
+		_frame_metal = StandardMaterial3D.new()
+		_frame_metal.albedo_color = FRAME_METAL
+		_frame_metal.metallic = 0.85
+		_frame_metal.roughness = 0.32
+	var skin: Material = hull_material if hull_material != null else _frame_metal
+	_frame.material_override = skin
+	if _dash_skin_of != skin:
+		_dash_skin = dash_skin(skin)
+		_dash_skin_of = skin
+	_dash_body.material_override = _dash_skin
+
+
+func _on_camera(n: String) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = n
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## The dash's skin: the hull's, its colour darkened (DASH_SHADE), its finish kept,
+## so it shines the same way but sits darker than the struts.
+static func dash_skin(skin: Material) -> Material:
+	var base := skin as BaseMaterial3D
+	if base == null:
+		return skin
+	var m := base.duplicate() as BaseMaterial3D
+	var c := base.albedo_color
+	m.albedo_color = Color(c.r * DASH_SHADE, c.g * DASH_SHADE, c.b * DASH_SHADE, c.a)
+	return m
 
 
 ## Size the dash's texture and the shader to the screen: the panel runs far enough
@@ -225,7 +307,6 @@ func _draw() -> void:
 	draw_line(Vector2(vp.x * 0.62, vp.y * 0.08), Vector2(vp.x * 0.7, vp.y * 0.3), Color(1, 1, 1, 0.05 + 0.04 * sun_ahead), 6.0)
 	draw_line(Vector2(vp.x * 0.66, vp.y * 0.06), Vector2(vp.x * 0.72, vp.y * 0.22), Color(1, 1, 1, 0.035 + 0.03 * sun_ahead), 3.0)
 	_draw_canopy_shine(vp, line)
-	_draw_struts(vp, line)
 	_draw_yoke(vp)
 
 
@@ -245,26 +326,83 @@ func _draw_canopy_shine(vp: Vector2, line: PackedVector2Array) -> void:
 			CockpitDash.halo(self, at, vp.y * (0.04 + 0.16 * float(l.power)), Color(col, 0.16 * float(l.power)))
 
 
-## The canopy's frame, as seen from the seat (modelled in metres round your eye,
-## then projected): two struts from the dash's shoulders up and back over your
-## head, and a bow across the top of the glass between them. The nearer a part is
-## the wider it draws, so the struts swell and sweep out to the top corners as they
+## The canopy's frame (modelled in metres round your eye, seen through a `fov`
+## lens on a `vp` screen): two struts from the dash's shoulders up and back over
+## your head, and a bow across the top of the glass between them, each a round
+## tube FRAME_THICK across. Perspective does the rest: the nearer a part is the
+## wider it draws, so the struts swell and sweep out to the top corners as they
 ## pass overhead, which is what makes them feel like they go over you.
-func _draw_struts(vp: Vector2, line: PackedVector2Array) -> void:
-	var bow: Array[Vector3] = []
+static func frame_mesh(vp: Vector2, fov := FRAME_FOV) -> ArrayMesh:
+	var line := rim(vp)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_tube(st, bow_path())
+	for side in [-1.0, 1.0]:
+		var path := strut_path(vp, line, side, fov)
+		var down := (path[0] - path[1]).normalized()
+		path.insert(0, path[0] + down * FRAME_SINK)
+		_tube(st, path)
+	return st.commit()
+
+
+## The dash's body (seen through a `fov` lens on a `vp` screen): a face leaning
+## back from upright (CockpitDash.LEAN) whose top edge is the dash's edge on screen
+## (rim), filling everything under it. Over its top DASH_LIP the face rolls over
+## to a top facing up and away, so the edge catches the sky and the sun.
+static func dash_mesh(vp: Vector2, fov := FRAME_FOV) -> ArrayMesh:
+	var line := rim(vp)
+	var lean := deg_to_rad(CockpitDash.LEAN)
+	var face := Vector3(0.0, sin(lean), cos(lean))
+	var top := Vector3(0.0, 0.96, -0.28)
+	var rows := [0.0, 0.08, 0.2, 0.36, 0.56, 0.8, 1.0, 3.0, 8.0, 20.0]   # in DASH_LIP, down from the edge
+	var cols := 48
+	var grid: Array = []
+	var normals: Array = []
+	for j in rows.size():
+		var row: Array = []
+		var nrow: Array = []
+		for i in cols + 1:
+			var x := lerpf(-vp.x * 0.1, vp.x * 1.1, float(i) / cols)
+			var y := rim_y(line, x) + float(rows[j]) * DASH_LIP * vp.y
+			row.append(dash_point(vp, Vector2(x, y), fov))
+			nrow.append(top.slerp(face, smoothstep(0.0, 1.0, minf(float(rows[j]), 1.0))))
+		grid.append(row)
+		normals.append(nrow)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for j in rows.size() - 1:
+		for i in cols:
+			for q in [[j, i], [j, i + 1], [j + 1, i + 1], [j, i], [j + 1, i + 1], [j + 1, i]]:
+				st.set_normal(normals[q[0]][q[1]])
+				st.add_vertex(grid[q[0]][q[1]])
+	return st.commit()
+
+
+## Where the line of sight through screen point s meets the dash's face: a plane
+## leaning back CockpitDash.LEAN from upright, through the middle of the dash's
+## edge FRAME_FOOT ahead of your eye.
+static func dash_point(vp: Vector2, s: Vector2, fov := FRAME_FOV) -> Vector3:
+	var lean := deg_to_rad(CockpitDash.LEAN)
+	var n := Vector3(0.0, sin(lean), cos(lean))
+	var mid := frame_unproject(vp, project(vp, Vector2(vp.x * 0.5, CockpitDash.dash_top(vp, vp.x * 0.5))), FRAME_FOOT, fov)
+	var d := frame_unproject(vp, s, 1.0, fov)
+	return d * (n.dot(mid) / n.dot(d))
+
+
+## The bow's centre line, over the top of the glass from one strut to the other.
+static func bow_path() -> Array[Vector3]:
+	var out: Array[Vector3] = []
 	for i in 25:
 		var u := lerpf(-1.0, 1.0, float(i) / 24.0)
-		bow.append(Vector3(u * BOW_SIDE.x, lerpf(BOW_TOP, BOW_SIDE.y, u * u), -BOW_AHEAD))
-	_draw_member(vp, bow)
-	for side in [-1.0, 1.0]:
-		_draw_member(vp, strut_path(vp, line, side))
+		out.append(Vector3(u * BOW_SIDE.x, lerpf(BOW_TOP, BOW_SIDE.y, u * u), -BOW_AHEAD))
+	return out
 
 
 ## One strut's centre line in metres round your eye (x right, y up, -z ahead), from
-## its foot on the dash's edge, through the bow's end, to over and behind your head.
-static func strut_path(vp: Vector2, line: PackedVector2Array, side: float) -> Array[Vector3]:
+## its foot on the dash's edge (on its face, dash_point), through the bow's end, to over and behind your head.
+static func strut_path(vp: Vector2, line: PackedVector2Array, side: float, fov := FRAME_FOV) -> Array[Vector3]:
 	var bx := vp.x * 0.5 + side * vp.x * 0.33
-	var foot := frame_unproject(vp, Vector2(bx, rim_y(line, bx) + 2.0), FRAME_FOOT)
+	var foot := dash_point(vp, Vector2(bx, rim_y(line, bx) + 2.0), fov)
 	var mid := Vector3(side * BOW_SIDE.x, BOW_SIDE.y, -BOW_AHEAD)
 	var top := Vector3(side * OVERHEAD.x, OVERHEAD.y, OVERHEAD.z)
 	var pull := mid * 2.0 - (foot + top) * 0.5      # so the curve passes through mid
@@ -275,78 +413,50 @@ static func strut_path(vp: Vector2, line: PackedVector2Array, side: float) -> Ar
 	return out
 
 
-## Where a point round your eye (m: x right, y up, -z ahead) lands on screen.
-static func frame_project(vp: Vector2, p: Vector3) -> Vector2:
-	return vp * 0.5 + Vector2(p.x, -p.y) * _focal(vp) / -p.z
+## Where a point round your eye (m: x right, y up, -z ahead) lands on screen
+## (`fov` is the lens's vertical angle, as Camera3D's).
+static func frame_project(vp: Vector2, p: Vector3, fov := FRAME_FOV) -> Vector2:
+	return vp * 0.5 + Vector2(p.x, -p.y) * _focal(vp, fov) / -p.z
 
 
 ## The point `depth` m ahead of your eye that lands on screen at s.
-static func frame_unproject(vp: Vector2, s: Vector2, depth: float) -> Vector3:
-	var d := (s - vp * 0.5) * depth / _focal(vp)
+static func frame_unproject(vp: Vector2, s: Vector2, depth: float, fov := FRAME_FOV) -> Vector3:
+	var d := (s - vp * 0.5) * depth / _focal(vp, fov)
 	return Vector3(d.x, -d.y, -depth)
 
 
-static func _focal(vp: Vector2) -> float:
-	return vp.y * 0.5 / tan(deg_to_rad(FRAME_FOV) * 0.5)
+static func _focal(vp: Vector2, fov := FRAME_FOV) -> float:
+	return vp.y * 0.5 / tan(deg_to_rad(fov) * 0.5)
 
 
-## A rolled metal tube along `path` (metres round your eye), FRAME_THICK across,
-## wider the nearer it is. It is lit like the dash, by the real lights: across its
-## width the surface turns from facing the middle of the glass, through facing you,
-## to facing out, and metal_shade() lights each strip, so the glare slides round
-## and along it as the sun and bolts move.
-func _draw_member(vp: Vector2, path: Array[Vector3]) -> void:
-	var cols: Array[PackedVector2Array] = []
-	var tints: Array[PackedColorArray] = []
-	for k in FRAME_BANDS + 1:
-		cols.append(PackedVector2Array())
-		tints.append(PackedColorArray())
+## A round tube FRAME_THICK across along `path`, its rings turned along it without
+## twisting (each ring's "up" carried over from the last), normals pointing out.
+static func _tube(st: SurfaceTool, path: Array[Vector3]) -> void:
+	var r := FRAME_THICK * 0.5
+	var up := Vector3.UP
+	var rings: Array = []
 	for i in path.size():
-		var p := path[i]
-		if p.z > -FRAME_NEAR:
-			break
-		var at := frame_project(vp, p)
-		var half := _focal(vp) * FRAME_THICK * 0.5 / -p.z
 		var axis := (path[mini(i + 1, path.size() - 1)] - path[maxi(i - 1, 0)]).normalized()
-		var view := -p.normalized()
-		var facing := (view - axis * view.dot(axis)).normalized()
-		var across := axis.cross(facing).normalized()
-		var n := (frame_project(vp, p + axis * 0.01) - at).orthogonal().normalized()
-		if n.dot(vp * 0.5 - at) < 0.0:
-			n = -n                                 # n points toward the middle of the glass
-		if (frame_project(vp, p + across * 0.005) - at).dot(n) < 0.0:
-			across = -across                       # and so does `across`
-		for k in FRAME_BANDS + 1:
-			var u := lerpf(-1.0, 1.0, float(k) / FRAME_BANDS)
-			cols[k].append(at + n * half * u)
-			tints[k].append(metal_shade(across * u + facing * sqrt(1.0 - u * u), view, lights))
-	if cols[0].size() < 2:
-		return
-	for k in FRAME_BANDS:
-		var poly := cols[k].duplicate()
-		var tint := tints[k].duplicate()
-		for i in range(cols[k + 1].size() - 1, -1, -1):
-			poly.append(cols[k + 1][i])
-			tint.append(tints[k + 1][i])
-		draw_polygon(poly, tint)
-	draw_polyline(cols[0], Color(0, 0, 0, 0.8), 2.0, true)
-	draw_polyline(cols[FRAME_BANDS], Color(0, 0, 0, 0.5), 1.0, true)
-
-
-## The frame's metal where its surface faces `normal`, seen along `view` (toward
-## your eye; both in the camera's frame), under `lit` (gather_lights()): a little
-## sky from above, and from each light a soft wash where it faces it and a tight
-## glare where it reflects it toward you.
-static func metal_shade(normal: Vector3, view: Vector3, lit: Array) -> Color:
-	var c := METAL * (0.28 + 0.3 * (normal.y * 0.5 + 0.5))
-	for l in lit:
-		var to: Vector3 = l.dir
-		var strength := float(l.power) / SUN_GLINT if l.get("sun", false) else float(l.power) * 0.7
-		var wash := maxf(normal.dot(to), 0.0) * 0.3
-		var glare := pow(maxf(normal.dot((to + view).normalized()), 0.0), METAL_SHINE) * 1.3
-		c += Color(l.color) * strength * (METAL * wash + Color(1, 1, 1) * glare)
-	c.a = 1.0
-	return c
+		up = (up - axis * up.dot(axis))
+		if up.length() < 0.001:
+			up = axis.cross(Vector3.RIGHT)
+		up = up.normalized()
+		var side := axis.cross(up)
+		var ring: Array = []
+		for k in FRAME_SIDES + 1:
+			var a := TAU * float(k) / FRAME_SIDES
+			ring.append(up * cos(a) + side * sin(a))
+		rings.append(ring)
+	for i in path.size() - 1:
+		for k in FRAME_SIDES:
+			var a: Vector3 = rings[i][k]
+			var b: Vector3 = rings[i][k + 1]
+			var c: Vector3 = rings[i + 1][k + 1]
+			var d: Vector3 = rings[i + 1][k]
+			for q in [[a, i], [c, i + 1], [b, i], [a, i], [d, i + 1], [c, i + 1]]:
+				var n: Vector3 = q[0]
+				st.set_normal(n)
+				st.add_vertex(path[q[1]] + n * r)
 
 
 ## How the yoke sits for a stick of (pitch, yaw, roll), each -1..1: turned by

@@ -265,17 +265,30 @@ func test_canopy_frame_comes_over_you() -> void:
 		"the bow over the glass keeps to the top of the screen")
 
 
-func test_canopy_frame_shines_where_the_light_reflects() -> void:
-	var view := Vector3(0, 0, 1)
-	var sun := [{"dir": Vector3(-0.6, 0.3, 0.74).normalized(), "color": Color.WHITE, "power": CockpitView.SUN_GLINT, "sun": true}]
-	var toward := (Vector3(-0.6, 0.3, 0.74).normalized() + view).normalized()
-	var lit := CockpitView.metal_shade(toward, view, sun)
-	var away := CockpitView.metal_shade(Vector3(0.7, 0, 0.7).normalized(), view, sun)
-	assert_gt(lit.v, away.v + 0.4, "the metal glares where it reflects the sun at you")
-	var dark := CockpitView.metal_shade(toward, view, [])
-	assert_lt(dark.v, 0.3, "and with no light on it, it is dull")
-	var bolt := CockpitView.metal_shade(toward, view, [{"dir": sun[0].dir, "color": Color(1, 0.2, 0.1), "power": 1.0}])
-	assert_gt(bolt.r, bolt.b + 0.3, "a bolt's glare is its own colour")
+func test_canopy_frame_and_dash_wear_the_ships_skin() -> void:
+	var model := Node3D.new()
+	var skin := StandardMaterial3D.new()
+	skin.albedo_color = Color(0.69, 0.74, 0.79)
+	skin.metallic = 0.85
+	var trim := StandardMaterial3D.new()
+	for spec in [[Vector3(4, 1, 9), skin], [Vector3(0.2, 0.2, 1), trim]]:
+		var mi := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = spec[0]
+		mi.mesh = box
+		mi.material_override = spec[1]
+		model.add_child(mi)
+	assert_eq(ShipKit.skin(model), skin, "the frame wears the material on most of the ship")
+	var dash := CockpitView.dash_skin(skin) as BaseMaterial3D
+	assert_lt(dash.albedo_color.v, skin.albedo_color.v * 0.6, "the dash is a darker shade of it")
+	assert_almost_eq(dash.metallic, skin.metallic, 0.001, "with the same finish")
+	model.free()
+	var vp := Vector2(1920, 1080)
+	assert_gt(CockpitView.frame_mesh(vp).get_surface_count(), 0, "the frame is a mesh")
+	var line := CockpitView.rim(vp)
+	var foot := CockpitView.strut_path(vp, line, -1.0)[0]
+	var under := CockpitView.dash_point(vp, CockpitView.frame_project(vp, foot))
+	assert_almost_eq(foot.distance_to(under), 0.0, 0.001, "each strut stands on the dash's face")
 
 
 func test_glass_glints_where_the_light_reflects() -> void:
