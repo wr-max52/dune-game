@@ -11,8 +11,10 @@ extends Node
 ##   Sound.set_club(id, near, inside)   issue #104: where you are from a cantina
 ##   Sound.set_club_live(false)         the band is dead: the club goes quiet
 ##   Sound.club_vibe("hard")            Oda changes the song to one with that mood
+##   Sound.radio_next()                 issue #291: J in a ship, the next station
 ##
-## The music is three ambient tracks that cycle with cross-fades, a battle track
+## The music is three ambient tracks that play in a shuffled order (a new one
+## each game) with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
 ## after, and a space track during a fight in orbit (not for being up there:
 ## nothing marks where space starts). Space beats battle beats
@@ -24,6 +26,11 @@ extends Node
 ## ducks under it; inside the door it is the only music, so gunfire in the club
 ## does not cut it. Each planet's club has its own playlist, shuffled, and songs
 ## blend into each other over `club.fade` seconds.
+##
+## Issue #291: the ship's radio plays a club playlist on that same layer, at full
+## volume and unmuffled, wherever the ship is: in space and in a fight too (the
+## score stays ducked under it). J steps through `club.radio` and back to off;
+## getting out of the seat turns it off.
 ##
 ## Static and lazy, like GameFlow and WorldState (no autoload): the first call
 ## puts one node under the tree root, where it outlives scene changes, so the
@@ -44,7 +51,8 @@ var cfg: Dictionary
 var mode := ""                 ## what the music plays: "", "ambient", "battle", "space"
 var in_space := false
 var battle_left := 0.0
-var ambient_index := -1
+var ambient_track := ""       ## the ambient path playing now
+var _ambient_bag: Array = []   ## issue #291: ambient paths still to play, shuffled
 var music_on := false
 var one_shots := 0
 var _streams: Dictionary = {}  ## path -> AudioStream
@@ -66,6 +74,7 @@ var _club_spare: AudioStreamPlayer
 var _club_tw: Tween
 var _club_bag: Array = []      ## paths still to play before the playlist reshuffles
 var _club_playing := ""        ## the playlist the club deck is playing from
+var radio := ""                ## issue #291: the playlist the ship's radio plays ("" = off)
 
 
 # ------------------------------------------------------------------ the calls
@@ -170,6 +179,26 @@ func vibe(mood: String) -> bool:
 	return _club_next()
 
 
+## Issue #291: J in a ship. The radio's next station (`club.radio`: the desert
+## cantina mix, the moon rave mix), then off. Returns the playlist now on, "" for off.
+static func radio_next() -> String:
+	var s := lib()
+	var list: Array = s._club_cfg().get("radio", [])
+	var i := list.find(s.radio) + 1
+	s.set_radio(str(list[i]) if i < list.size() else "")
+	return s.radio
+
+
+## The radio on playlist `id`, or off (""). A new station cuts over in
+## `club.radio_fade` seconds, not a song's slow blend.
+func set_radio(id: String) -> void:
+	if id == radio:
+		return
+	radio = id
+	if id != "" and _club_deck != null and _club_deck.playing:
+		_club_next(float(_club_cfg().get("radio_fade", 1.0)))
+
+
 ## Start the music if it is not already going (each playable scene calls this).
 static func start_music() -> void:
 	lib().music_on = true
@@ -262,8 +291,14 @@ func _switch(to: String) -> void:
 			if list.is_empty():
 				mode = to
 				return
-			ambient_index = (ambient_index + 1) % list.size()
-			path = str(list[ambient_index])
+			# Issue #291: a shuffled bag, never the same track twice in a row.
+			if _ambient_bag.is_empty():
+				_ambient_bag = list.duplicate()
+				_ambient_bag.shuffle()
+				if _ambient_bag.size() > 1 and str(_ambient_bag.back()) == ambient_track:
+					_ambient_bag.push_front(_ambient_bag.pop_back())
+			path = str(_ambient_bag.pop_back())
+			ambient_track = path
 		"battle", "space":
 			var c: Dictionary = m.get(to, {})
 			path = str(c.get("stream", ""))
@@ -313,9 +348,22 @@ func club_tracks(id: String, mood := "") -> Array:
 	return tagged if not tagged.is_empty() else all
 
 
+## The playlist the club layer plays: the radio's when it is on, else the club's
+## you are near.
+func club_playlist() -> String:
+	return radio if radio != "" else club
+
+
+## Whether the club layer has music to play: the radio has no band to kill.
+func _club_on() -> bool:
+	return radio != "" or club_live
+
+
 ## How loud the club layer should be, 0..1: nothing in space or away from a
-## club, up to `outside` at the wall, all of it inside.
+## club, up to `outside` at the wall, all of it inside or with the radio on.
 func club_target() -> float:
+	if radio != "":
+		return 1.0
 	if club == "" or in_space:
 		return 0.0
 	if club_inside:
@@ -328,7 +376,7 @@ func _club_process(dt: float) -> void:
 	var target := club_target()
 	var k := clampf(dt * float(c.get("ease", 2.0)), 0.0, 1.0)
 	club_level = lerpf(club_level, target, k)
-	club_open = lerpf(club_open, 1.0 if club_inside else 0.0, k)
+	club_open = lerpf(club_open, 1.0 if club_inside or radio != "" else 0.0, k)
 	if target == 0.0 and club_level < 0.002:
 		club_level = 0.0
 	_club_mix()
@@ -336,11 +384,11 @@ func _club_process(dt: float) -> void:
 		# Out of earshot: stop, so the next walk past starts a new song.
 		if _club_deck.playing:
 			_club_stop(0.0)
-	elif not club_live:
+	elif not _club_on():
 		# The band is dead: the music stops (the score stays ducked inside).
 		if _club_playing != "":
 			_club_stop(float(c.get("stop_fade", 1.5)))
-	elif _club_playing != club or not _club_deck.playing:
+	elif _club_playing != club_playlist() or not _club_deck.playing:
 		_club_next()
 	elif _club_deck.stream != null and _club_deck.get_playback_position() >= _club_deck.stream.get_length() - _club_fade():
 		_club_next()
@@ -364,12 +412,14 @@ func _club_mix() -> void:
 
 
 ## The next song: from a shuffled bag of the playlist, never the same twice in a
-## row. False when there is nothing to play.
-func _club_next() -> bool:
-	if club == "" or not club_live:
+## row, blended in over `fade` seconds (by default the song blend once one is
+## going). False when there is nothing to play.
+func _club_next(fade := -1.0) -> bool:
+	var id := club_playlist()
+	if id == "" or not _club_on():
 		return false
-	if _club_bag.is_empty() or _club_playing != club:
-		_club_bag = club_tracks(club, club_mood)
+	if _club_bag.is_empty() or _club_playing != id:
+		_club_bag = club_tracks(id, club_mood if radio == "" else "")
 		_club_bag.shuffle()
 		if _club_bag.size() > 1 and _club_bag.back() == club_track:
 			_club_bag.push_front(_club_bag.pop_back())
@@ -381,8 +431,9 @@ func _club_next() -> bool:
 		return false
 	# A blend when a song is already going; a quick start when walking up
 	# (the layer's own level fades it in then).
-	var fade := _club_fade() if _club_deck.playing else 0.5
-	_club_playing = club
+	if fade < 0.0:
+		fade = _club_fade() if _club_deck.playing else 0.5
+	_club_playing = id
 	club_track = path
 	var old := _club_deck
 	_club_deck = _club_spare

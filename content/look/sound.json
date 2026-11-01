@@ -46,7 +46,7 @@
   },
   "max_one_shots": 24,
   "club": {
-    "note": "Issue #104: the cantina club mix. One playlist per planet (the planet's \"club\"; \"default\" when it names none). Each track: a stream and a few mood tags Oda can pick from. 'hear' metres from the walls you start to hear it, up to 'outside' of full volume at the wall, muffled to 'muffle_hz'; inside it opens up to 'open_hz'. Songs blend over 'fade' seconds. Tracks are free (CC0 / CC-BY / Pixabay) in the taste of the artists in the issue, not their releases.",
+    "note": "Issue #104: the cantina club mix. One playlist per planet (the planet's \"club\"; \"default\" when it names none). Each track: a stream and a few mood tags Oda can pick from. 'hear' metres from the walls you start to hear it, up to 'outside' of full volume at the wall, muffled to 'muffle_hz'; inside it opens up to 'open_hz'. Songs blend over 'fade' seconds. Tracks are free (CC0 / CC-BY / Pixabay) in the taste of the artists in the issue, not their releases. Issue #291: 'radio' is the ship radio's stations in the order J steps through them (then off); a new station cuts over in 'radio_fade' seconds.",
     "default": "dust_lounge",
     "volume_db": -10.0,
     "fade": 10.0,
@@ -56,6 +56,8 @@
     "open_hz": 20000.0,
     "ease": 2.0,
     "stop_fade": 1.5,
+    "radio": ["dust_lounge", "salvage_rave"],
+    "radio_fade": 1.0,
     "moods": ["chill", "warm", "dreamy", "hypnotic", "uplifting", "energetic", "bright", "hard", "dark", "gritty"],
     "playlists": {
       "dust_lounge": [
