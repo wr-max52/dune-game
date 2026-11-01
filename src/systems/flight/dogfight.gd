@@ -20,6 +20,7 @@ const MissileLock := preload("res://src/systems/flight/missile_lock.gd")
 const ProjectileField := preload("res://src/systems/flight/projectile_field.gd")
 const FighterBrain := preload("res://src/systems/ai/fighter_brain.gd")
 const LeadSolver := preload("res://src/systems/flight/lead_solver.gd")
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 
 enum State { IDLE, RUNNING, COMPLETE, FAILED }
 
@@ -115,6 +116,8 @@ func spawn_ship(ship_id: String, team: String, pos: Vector3, facing: Vector3,
 		return -1
 	if is_player:
 		cfg = ShipUpgrades.apply(cfg, ship_id)      # issue #207: what T-89 fitted
+	elif team == TEAM_HOSTILE and cfg.get("dogfight_foe") is Dictionary:
+		cfg = CoreContent._merge(cfg, cfg.dogfight_foe)   # as the enemy in a space fight: its own numbers
 	var id := _next_id
 	_next_id += 1
 	var flight = FlightModel.new(cfg.get("flight", {}))

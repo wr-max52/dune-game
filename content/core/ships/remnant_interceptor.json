@@ -83,6 +83,21 @@
     "vessel": "vessel"
   },
   "blaster_power": 1.0,
+  "dogfight_foe": {
+    "pilot": "remnant_patrol",
+    "shield": { "max": 50, "regen": 8.0, "delay": 3.0 },
+    "flight": {
+      "min_speed": 12.0,
+      "max_speed": 40.0,
+      "boost_speed": 60.0,
+      "accel": 24.0,
+      "pitch_rate": 1.5,
+      "yaw_rate": 0.9,
+      "roll_rate": 2.6,
+      "boost_time": 2.0
+    },
+    "note": "Only as an enemy in a space fight (Dogfight.spawn_ship merges this over the ship, block by block): slower, slower to turn, a thinner shield and a worse pilot than the same airframe you fly, so the escort and the skirmish can be won. Stolen and flown by you, or hunting you over the port, it is the ship above."
+  },
   "scramble": {
     "launch_distance": 300.0,
     "floor_agl": 45.0,
