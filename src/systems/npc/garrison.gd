@@ -836,6 +836,9 @@ func _wake_in_pit() -> void:
 	if dr != null and is_instance_valid(dr):
 		dr.forgive_player()
 	hud.toast("You wake up in the pit. They took %d cr." % taken, 4.0)
+	var pl = demo.get("pilot")
+	if pl != null and is_instance_valid(pl):
+		pl.woke_in_pit()                 # issue #368: your primary ship is on the pad
 
 
 ## The player died and woke in the pit: this garrison lets it go. The alarm and

@@ -167,6 +167,9 @@ func _respawn(p: Node3D) -> void:
 	WorldState.bump("falls")
 	if fall_text != "":
 		WorldState.log_event(fall_text)
+	var pl = demo.get("pilot") if demo != null else null
+	if pl != null and is_instance_valid(pl):
+		pl.woke_in_pit()                 # issue #368: your primary ship is on the pad
 	var tw := create_tween()
 	tw.tween_method(_set_fade, 1.0, 0.0, 0.8)
 	if demo.pads.size() > 0 and demo.pads[0].has_method("toast"):

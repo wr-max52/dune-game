@@ -770,6 +770,9 @@ func _tick_wake(dt: float) -> void:
 		player.revive()
 		player.locked = false
 		_toast(line("woke"))
+		var pl = demo.get("pilot")
+		if pl != null and is_instance_valid(pl):
+			pl.woke_in_pit()             # issue #368: your primary ship is on the pad
 
 
 func _toast(text: String) -> void:

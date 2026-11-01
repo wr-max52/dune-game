@@ -281,6 +281,13 @@ func _inventory_tab() -> Control:
 	var gear = demo.get("gear") if demo != null else null
 	inventory = gear.inventory_page() if gear != null else InventoryPanel.new()
 	inventory.on_waypoint = _hud_refresh
+	var pilot = demo.get("pilot") if demo != null else null
+	if pilot != null:
+		# Issue #368: your ships: pick the primary, call her (the panel closes to watch).
+		inventory.set_primary = pilot.set_primary
+		inventory.call_ship = pilot.call_ship
+		inventory.call_state = pilot.call_state
+		inventory.on_called = close
 	_refreshers.append(inventory.refresh)
 	tabs.tab_changed.connect(func(i):
 		if tabs.get_tab_control(i) == inventory:

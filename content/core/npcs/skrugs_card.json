@@ -32,13 +32,19 @@
   "ship_buy": {
     "radius": 100,
     "stolen_rate": 1.25,
-    "note": "Issue #295: he buys a ship of theirs landed within 'radius' metres of his stall (his 'merchant' spot; SpeederPost.ship_offer). 'ship_sell' is only where to land it. A ship stolen from a Remnant outpost: stolen_rate times its list price in content/core/npcs/t89.json, more than any honest sale. The ship T-89 sold them: T-89's buy-back (resale_rate). Never the ship in the pit or the port's free ones. 'card' is the chat box's text (%s: the ship), 'bought' his line after (%d: what he paid). 'opener': with a stolen ship in reach he opens with this line instead of a greeting and the chat box offers it at once (%s: the ship, %d: what he pays).",
+  "keep_rate": 0.5,
+    "note": "Issue #295: he buys a ship of theirs landed within 'radius' metres of his stall (his 'merchant' spot; SpeederPost.ship_offer). 'ship_sell' is only where to land it. A ship stolen from a Remnant outpost: stolen_rate times its list price in content/core/npcs/t89.json, more than any honest sale. The ship T-89 sold them: T-89's buy-back (resale_rate). Never the ship in the pit or the port's free ones. 'card' is the chat box's text (%s: the ship), 'bought' his line after (%d: what he paid). 'opener': with a stolen ship in reach he opens with this line instead of a greeting and the chat box offers it at once (%s: the ship, %d: what he pays). Issue #368: turn his price down for a stolen ship and he offers to clean it up instead, for keep_rate times its list price ('keep_offer': %s the ship, %d the price; 'keep_card' is the chat box's text). It is yours from then on (Fleet): nobody hunts it and T-89 upgrades it. 'keep_short' is his line when you cannot pay (%d), 'kept' his line after (%d). He buys a kept ship back at T-89's buy-back price.",
     "lines": {
       "card": "Your %s, landed by Skrugs's post. He pays on the spot and asks no questions. Gone for good once you sell.",
    "opener": "Ho ho! That %s out there, she yours? Don't tell me where she came from. %d credits, right now, and she was never here.",
       "bought": "Pleasure, friend! %d credits, counted. She was never here.",
       "event_stolen": "Someone sold a Remnant ship to Skrugs.",
-      "event_owned": "Someone sold a %s to Skrugs."
+      "event_owned": "Someone sold a %s to Skrugs.",
+  "keep_card": "Skrugs cleans up the %s: new papers, new codes, nobody comes looking. Yours to keep.",
+  "keep_offer": "Not selling? Smart. For %s I do new papers, new codes, and nobody comes looking. %d credits.",
+  "keep_short": "%d credits for the papers, friend. Come back when you have it.",
+  "kept": "Done! New codes, clean papers. She's yours, %d credits well spent.",
+  "event_kept": "Skrugs cleaned up a %s for someone."
     }
   },
   "rules": [

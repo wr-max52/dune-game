@@ -711,9 +711,8 @@ func _park_ships(town) -> void:
 	for p in GameFlow.pads_for_scene(scene_path):
 		var box: Dictionary = town.get_box(str(p.get("town_box", "")))
 		var enc: Dictionary = content.encounters.get(str(p.get("encounter", "")), {})
-		var ship_id := str(enc.get("player", {}).get("ship", ""))
-		if GameFlow.flown_ship != "" and content.ships.has(GameFlow.flown_ship):
-			ship_id = GameFlow.flown_ship          # issue #45: you flew in on this one
+		# Issue #45: the one you flew in on; issue #368: else your primary ship (Fleet).
+		var ship_id := Fleet.pit_ship(str(enc.get("player", {}).get("ship", "")), content.ships)
 		var look_id := str(content.ships.get(ship_id, {}).get("look", ""))
 		if box.is_empty() or look_id == "":
 			push_warning("TownDecor: pad %s has no ship to park" % str(p.get("id", "")))

@@ -170,6 +170,9 @@
     "ledger_worn": "WORN",
     "ledger_droids": "DROIDS",
     "ledger_stock": "stock",
+    "ledger_primary": "PRIMARY",
+    "ledger_set_primary": "Set primary",
+    "ledger_wrecked": "shot to pieces: back on the pit pad when you wake, for T-89's fee",
     "ledger_map": "WAYPOINT ON THE MAP",
     "quest_toast": "Press \"I\" to see new quest"
   },
