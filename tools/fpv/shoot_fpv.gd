@@ -96,6 +96,10 @@ func _initialize() -> void:
 		_shots.append(["strip_pdraw_%02d" % f, _fpv_swap.bind("", "pistol_blaster", f / 10.0)])
 	for f in range(0, 24, 2):
 		_shots.append(["strip_unarmed_sprint_%02d" % f, _fpv_move.bind("", true, 30 + f)])
+		# The pistol swings in the right hand like the left arm (both views).
+		_shots.append(["strip_psprint_%02d" % f, _fpv_move.bind("pistol_blaster", true, 40 + f)])
+		_shots.append(["strip_tpv_psprint_%02d" % f, _tpv.bind("pistol_blaster", true, Vector3(2.2, 0.2, 0.5), 45 + f)])
+		_shots.append(["strip_tpv_psprint_right_%02d" % f, _tpv.bind("pistol_blaster", true, Vector3(-2.2, 0.2, 0.6), 45 + f)])
 	for f in range(2, 27, 2):
 		_shots.append(["strip_left_%02d" % f, _fpv_swing.bind(f)])
 	for f in range(2, 27, 2):
