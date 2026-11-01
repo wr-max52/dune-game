@@ -49,6 +49,8 @@ var kills := 0
 
 var _rng := RandomNumberGenerator.new()
 var _attacked := false
+var unfound: Array = []         ## issue #307: bodies of silent sword kills nobody has found yet
+var silent_kills := 0           ## (traces)
 var _clock := 0.0
 var _last_key := ""
 var _last_key_t := -100.0
@@ -119,6 +121,8 @@ func _physics_process(dt: float) -> void:
 	# A face they remember starts it again.
 	if not alarm.active() and alarm.remembers() and noticed and ppos != Vector3.INF:
 		_raise("remembered")
+	if not alarm.active():
+		_find_bodies(alive)
 	if _attacked:
 		_raise("attacked")
 	_attacked = false
@@ -250,14 +254,47 @@ func provoke() -> void:
 
 
 func _on_local_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
+	if DroidController.by_player(shooter, player) and SilentKill.unaware_cut(g):
+		_check_cut.call_deferred(g)            # issue #307: silent if the cut killed them unseen
+		return
 	brains[g].notify_hit()
 	if DroidController.by_player(shooter, player):
 		_attacked = true
 
 
+## Issue #307: an unaware local was cut. Dead and unseen: nobody knows.
+func _check_cut(g: NpcBody) -> void:
+	if is_instance_valid(g) and g.dead and not SilentKill.witnessed(g, _alive()):
+		return
+	_attacked = true
+	if is_instance_valid(g) and brains.has(g):
+		brains[g].notify_hit()
+
+
+## Issue #307: a local who walks within sight of a silent kill finds the body.
+func _find_bodies(alive: Array) -> void:
+	if unfound.is_empty():
+		return
+	unfound = unfound.filter(func(b): return is_instance_valid(b))
+	var f := SilentKill.finder(alive, unfound)
+	if f.is_empty():
+		return
+	unfound.erase(f[1])
+	_say(f[0], "found_body" if lines.has("found_body") else "man_down")
+	_attacked = true
+
+
 func _on_local_died(g: NpcBody) -> void:
 	kills += 1
 	claimed.erase(g)
+	var left0 := _alive()
+	if SilentKill.unaware_cut(g) and not SilentKill.witnessed(g, left0):
+		if standing:                         # issue #307: the standing hit still lands, quietly
+			WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),
+				"A local was killed in the street.")
+		silent_kills += 1
+		unfound.append(g)
+		return
 	if DroidController.by_player(g.last_hit_by, player):
 		if standing:
 			WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),

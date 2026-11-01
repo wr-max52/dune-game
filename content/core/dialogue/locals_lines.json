@@ -20,6 +20,10 @@
       "Cell's dry!",
       "Hold on, hold on..."
     ],
+    "found_body": [
+      "Oh no. Somebody's dead over here!",
+      "Help! Someone killed them!"
+    ],
     "man_down": [
       "They killed them!",
       "No! Not like this!",

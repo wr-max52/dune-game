@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Silent sword kills (issue #307, 2026-10-31)
+
+- **Cut someone down before they notice you and nobody knows.** An energy sword
+  kill on a trooper or a local who had not noticed you raises no alarm, plays no
+  "man down" and wakes nobody else. This applies to the gate, the barracks,
+  outposts, the cruiser and the town's locals.
+- **Seen is still loud.** If the victim had noticed you, or another of them has
+  noticed you, can see you, or has the victim in their sight cone close by
+  (16 m), it is a fight as before. A cut that doesn't kill is a fight too.
+- **Bodies get found.** A trooper or local who later walks within sight of the
+  body shouts a new "found_body" line and raises the alarm.
+- Shots are still loud. Standing changes and kill rewards are unchanged.
+- Code: src/systems/npc/silent_kill.gd, used by Garrison and Townsfolk; NpcBody
+  remembers whether the last cut landed unseen (`cut_unaware`).
+
 ## The beast's rock shell, glowing eyes, and no more spinning (2026-11-01)
 
 - **Its shell is desert rock now.** Old Murk's plates, body, legs and jaws are
