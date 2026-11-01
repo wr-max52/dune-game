@@ -1064,6 +1064,7 @@ func _read_keys(dt: float) -> void:
 			exit_ship()
 		return
 	if st == AtmoFlight.State.PARKED:
+		_throttle = 0.0          # parked is zero throttle (AtmoFlight.park), not what she landed with
 		if _just("interact"):
 			exit_ship()
 			return
@@ -1090,7 +1091,10 @@ func _read_keys(dt: float) -> void:
 			bay_land()
 	if bay_landing or docking:
 		return
-	_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
+	if st == AtmoFlight.State.LIFTOFF:
+		_throttle = 0.0          # she comes up hovering: the throttle key that lifted her does not wind it up
+	else:
+		_throttle = clampf(_throttle + _axis("flight_throttle_down", "flight_throttle_up") * dt * 0.6, 0.0, 1.0)
 	var pitch := clampf(_axis("flight_pitch_down", "flight_pitch_up") + _stick.y, -1.0, 1.0)
 	var yaw := clampf(_axis("flight_yaw_left", "flight_yaw_right") + _stick.x, -1.0, 1.0)
 	var roll := _axis("flight_roll_left", "flight_roll_right")

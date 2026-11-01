@@ -50,6 +50,12 @@ func begin(content, enc_id: String, at: Transform3D, speed: float, rng_seed: int
 	df.start()
 	var me: Dictionary = df.get_ship(df.player_id)
 	if not me.is_empty():
+		# Zero throttle stops her here too, as it does in normal flight (a VTOL
+		# fighter hovers): the throttle means the same speed on both sides of the
+		# switch, so leaving the cruiser's bay at zero is not a jump to the fight's
+		# floor. The fight's own ships keep theirs and never stall.
+		me.flight.cfg = me.flight.cfg.duplicate()
+		me.flight.cfg["min_speed"] = 0.0
 		me.flight.basis = at.basis.orthonormalized()
 		me.flight.position = at.origin
 		me.flight.speed = minf(speed, me.flight.max_speed())
