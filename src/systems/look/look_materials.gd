@@ -6,6 +6,7 @@ extends RefCounted
 const ROCK := preload("res://src/systems/look/shaders/rock.gdshader")
 const PLASTER := preload("res://src/systems/look/shaders/plaster.gdshader")
 const HULL := preload("res://src/systems/look/shaders/hull.gdshader")
+const PAD_METAL := preload("res://src/systems/look/shaders/pad_metal.gdshader")
 const ENERGY_SHIELD := preload("res://src/systems/look/shaders/energy_shield.gdshader")
 
 const CLOTH_TEAL := Color("#1f7a78")
@@ -77,6 +78,20 @@ func hull(sand_y: float = 2.0, panel: float = 4.0, marking_y: float = -1000.0) -
 		if style.roughness >= 0.0:
 			p["rough_add"] = style.roughness - 0.5
 	return _shader(HULL, "hull_%s_%s_%s" % [sand_y, panel, marking_y], p)
+
+
+## A landing pad's welded steel plate, `radius` metres round (pad_metal.gdshaderinc).
+## `dust`: how much sand has blown onto it (0 in a sealed station).
+func pad_metal(radius: float, dust: float = 0.45) -> ShaderMaterial:
+	var p := { "radius": radius, "dust_amount": dust }
+	if _styled():
+		p["steel"] = style.hull_metal_light(Color(0.46, 0.47, 0.49)).lightened(0.15)
+		p["dust"] = style.drift_color(Color(0.79, 0.58, 0.35))
+		if style.metallic >= 0.0:
+			p["metal_scale"] = clampf(style.metallic / 0.55, 0.6, 1.3)
+		if style.roughness >= 0.0:
+			p["rough_add"] = (style.roughness - 0.5) * 0.5
+	return _shader(PAD_METAL, "pad_metal_%s_%s" % [radius, dust], p)
 
 
 ## Issue #45: a style with metal walls draws plaster walls as panelled metal.

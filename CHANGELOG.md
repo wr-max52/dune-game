@@ -16,6 +16,20 @@ Plain English, newest on top. One entry per milestone.
   passes it through and the town adds the hazard (HarmfulSurface). Shelter is
   AsteroidWorld.sheltered(): the dome's ring, the hallway or the pit.
 - Test: tests/test_harmful_surface.gut.gd.
+## Saves remember where you were (issue #113, 2026-10-31)
+
+- **Quit on the station, load on the station.** The save now remembers which
+  planet you were on and where you stood on it (that planet's own coordinates).
+  Opening the game from that save builds that planet first and puts you back
+  on that spot.
+- The spot is only taken when you're standing on your own feet (not flying,
+  riding, falling or down). Otherwise the last good spot on that planet is
+  kept, or you get the planet's spawn.
+- Older saves, saves on a planet that no longer exists, a flight back from a
+  pad, and headless runs all start as before (the home planet's spawn).
+- Save: a `where` block ({ planet, pos }) via SaveSystem.set_where/get_where;
+  resume: GameFlow.resume_from_save / take_resume_pos (once per run).
+- Test: tests/test_save_where.gut.gd.
 
 ## Silent sword kills (issue #307, 2026-10-31)
 
