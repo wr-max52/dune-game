@@ -695,7 +695,12 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		if in_fist:
 			pole_r = SwordCombo.fpv_pole((joints.r_shoulder as Node3D).position, w.transform * (grips.r as Vector3),
 				w.transform.basis.y.normalized(), POLE_R, CharacterKit.UPPER_ARM, CharacterKit.FOREARM + CharacterKit.HAND_REACH)
+		var swing := _pistol_swing(up)
+		var sh_anim := (joints.r_shoulder as Node3D).transform.basis
+		var el_anim := (joints.r_elbow as Node3D).rotation
 		kit.reach(body, "r", w.transform * (grips.r as Vector3), pole_r)
+		if swing > 0.0:
+			_swing_pistol(w, swing, sh_anim, el_anim)
 		if in_fist:
 			var fist := SwordCombo.fpv_fist(w.transform, grips.r, kit.chest_space(body, joints.r_elbow),
 				CharacterKit.FOREARM + CharacterKit.HAND_REACH,
@@ -719,6 +724,34 @@ func _place_weapon(upper: String, pitch: float) -> void:
 		kit.reach(body, "l", w.transform * at, POLE_L)
 	elif grips.has("l") and drawn > 0.6 and not one_hand:
 		kit.reach(body, "l", w.transform * (grips.l as Vector3), POLE_L)
+
+
+## Sprinting with a pistol at rest, the right arm pumps like the left (the
+## animator's run swing) instead of holding the gun still by the thigh. 0..1,
+## eased in and out with the sprint carry.
+func _pistol_swing(up: float) -> float:
+	if carry_kind(current) != "pistol" or _sprint_carry <= 0.0 or reload >= 0.0:
+		return 0.0
+	var s := _sprint_carry * _sprint_carry * (3.0 - 2.0 * _sprint_carry)
+	return s * clampf(1.0 - up * 2.0, 0.0, 1.0)
+
+
+## The right arm (just reached to the pistol's rest grip) back toward its run
+## swing (sh_anim, el_anim) by `swing`, and the pistol carried in the hand: held
+## the way the rest pose holds it, so it swings with the arm.
+func _swing_pistol(w: Node3D, swing: float, sh_anim: Basis, el_anim: Vector3) -> void:
+	var sh: Node3D = joints.r_shoulder
+	var el: Node3D = joints.r_elbow
+	var held := kit.chest_space(body, joints.r_wrist).affine_inverse() * w.transform
+	sh.transform.basis = sh.transform.basis.slerp(sh_anim, swing)
+	el.rotation = el.rotation.lerp(el_anim, swing)
+	var hand := kit.chest_space(body, joints.r_wrist)
+	# A rigged skin's arm is shorter than the kit's: in third person carry the gun
+	# in the hand you see. (First person shows the kit's own forearms.)
+	if skin != null and not first_person and skin.bone_of.has("r_wrist"):
+		skin.sync(body)
+		hand = hand.interpolate_with(kit.chest_space(body, body) * skin.joint_xf("r_wrist"), swing)
+	w.transform = hand * held
 
 
 ## Issue #229: the energy cell in the left hand during a reload (from when it

@@ -232,6 +232,17 @@ func skin_meshes() -> Array:
 	return _meshes(model)
 
 
+## Where joint `jn`'s bone is now, as the joint's own frame (its bind offset taken
+## back out), in body space. The skin's limbs are not the kit's lengths, so a skin
+## hand is not quite where the kit's IK put the kit's. Call after sync().
+func joint_xf(jn: String) -> Transform3D:
+	var bi: int = bone_of[jn]
+	var g := skeleton.get_bone_global_pose(bi)
+	var t := _skel_in_body * Transform3D(g.basis.orthonormalized() * (_offset[bi] as Basis).inverse(), g.origin)
+	t.basis = t.basis.orthonormalized()
+	return t
+
+
 ## Copy the kit joints onto the bones. Call after the animator and IK have run.
 func sync(body: Node3D) -> void:
 	var skins = body.get_meta("skins", [])
