@@ -8,8 +8,10 @@ extends Node3D
 ##     controls and how things work, a page at a time. The player already spawns
 ##     armed; he only explains the weapons. Every game after that (the save says he
 ##     has met you) he only calls out one of his "returning" lines,
-##   - [E] beside him opens his shop: every ship in content/core/ships that flies
-##     in the atmosphere. A bought ship lands on the spare pad and is yours to fly
+##   - [E] beside him opens his menu: Talk, "Buy or sell a ship", "Upgrade your
+##     ships" and the tutorial again (and the rebuild while your wreck waits). The
+##     two shops are submenus (Back returns). He sells every ship in
+##     content/core/ships that flies in the atmosphere. A bought ship lands on the spare pad and is yours to fly
 ##     like any other parked ship (ShipPilot.add_berth); one at a time, and he buys
 ##     it back at resale_rate. WorldState.hangar keeps it across saves.
 ##   - when the town has a conversation host, he is an AI character too (his card,
@@ -19,7 +21,10 @@ extends Node3D
 ##   - issue #206: in a story save the ship you landed in is a wreck on the pit pad.
 ##     He quotes the rebuild whenever you talk (the "Rebuild your ship" quest) and
 ##     rebuild() makes it yours to fly. Tell him you can't stand the Remnant (his
-##     menu, or his comrade action in the chat) and it costs 1 credit.
+##     menu, or his comrade action in the chat) and it costs 1 credit. His menu's
+##     way works with AI characters off: he tells his story and asks what you
+##     think; "Down with the Tyrants!" makes you a comrade, siding with the
+##     Remnant does not, and you can ask him again.
 ## Words, prices and his spot: content/core/npcs/t89.json. Looks: DroidKit.
 ##
 ## The headless test calls greet(), talk(), buy(), sell() and the menu's choose()
@@ -45,6 +50,7 @@ var body: StaticBody3D               ## T-89 himself
 var pos := Vector3.INF
 var in_reach := false
 var page := -1                       ## the tutorial page showing, -1 = none
+var story_page := -1                 ## his Remnant story's page showing, -1 = none
 var bought_ship: Node3D              ## your ship on the spare pad (model, or a stand-in in the greybox)
 var said := ""                       ## his last line, for tests
 var host: ConversationHost           ## the town's AI characters' host (null: shop only)
@@ -237,18 +243,10 @@ func _on_offer(id: String) -> void:
 		_say(_line("skipped"))
 
 
-## [E] beside him: a chat (when he has a brain), the shop, and the tutorial again.
+## [E] beside him: his top menu.
 func talk() -> void:
 	_beep()
-	_open(_line("hello_again") + _repair_line() + _story_line(), _talk_options(), _on_shop)
-
-
-func _talk_options() -> Array:
-	var opts := shop_options()
-	if spot != null:
-		opts.push_front({ "id": "chat", "text": _l("chat") })
-	opts.append({ "id": "tutorial", "text": _l("tutorial") })
-	return opts
+	_open(_line("hello_again") + _repair_line() + _story_line(), top_options(), _on_top)
 
 
 ## Issue #64: while the story starts with him, he sends you to Oda.
@@ -383,51 +381,97 @@ func ship_label(ship_id: String) -> String:
 	return str(content.get_ship(ship_id).get("label", ship_id))
 
 
-func shop_options() -> Array:
+## His top menu: a chat (when he has a brain), the rebuild while your wreck waits,
+## the two shops (submenus) and the tutorial again. Upgrades only once you own a ship.
+func top_options() -> Array:
 	var out := []
+	if spot != null:
+		out.append({ "id": "chat", "text": _l("chat") })
 	if needs_rebuild():
 		out.append({ "id": "rebuild", "text": _l("rebuild") % [ship_label(wreck_id()), rebuild_price()] })
 		if not WorldState.has_flag(WorldState.COMRADE):
 			out.append({ "id": "comrade", "text": _l("comrade") })
+	out.append({ "id": "group:ships", "text": _l("menu_ships") })
+	if not ShipUpgrades.owned().is_empty():
+		out.append({ "id": "group:upgrades", "text": _l("menu_upgrades") })
+	out.append({ "id": "tutorial", "text": _l("tutorial") })
+	return out
+
+
+## "Buy or sell a ship": every ship in stock, then yours on the pad to sell back.
+func ship_options() -> Array:
+	var out := []
 	var taken := WorldState.hangar != ""
 	for id in stock():
 		out.append({ "id": "buy:" + id, "text": _l("buy_taken" if taken else "buy") % [ship_label(id), price(id)] })
 	if taken:
 		out.append({ "id": "sell", "text": _l("sell") % [ship_label(WorldState.hangar), resale(WorldState.hangar)] })
+	out.append({ "id": "back", "text": _l("back") })
+	return out
+
+
+## "Upgrade your ships": each upgrade not yet on each ship you own.
+func upgrade_options() -> Array:
+	var out := []
 	for sid in ShipUpgrades.owned():
 		for up in ShipUpgrades.ids():
 			if not ShipUpgrades.has(sid, up):
 				out.append({ "id": "fit:%s:%s" % [sid, up],
 					"text": _l("fit") % [ShipUpgrades.label(up).to_lower(), ship_label(sid), ShipUpgrades.price(up)] })
+	out.append({ "id": "back", "text": _l("back") })
 	return out
 
 
-func _on_shop(id: String) -> void:
-	if id.begins_with("buy:"):
-		buy(id.substr(4))
-		_reopen_shop()
-	elif id == "sell":
-		sell()
-		_reopen_shop()
+## Opening a submenu: his line for it (what each ship you own carries, for upgrades).
+func _group_line(group: String) -> String:
+	if group == "ships":
+		return _line("ships_pitch")
+	var text := _line("upgrades_pitch" if upgrade_options().size() > 1 else "all_fitted")
+	return text + "\n\n" + "\n".join(PackedStringArray(ShipUpgrades.owned_lines()))
+
+
+func _group_options(group: String) -> Array:
+	return ship_options() if group == "ships" else upgrade_options()
+
+
+func _on_top(id: String) -> void:
+	if id.begins_with("group:"):
+		var g := id.substr(6)
+		said = _group_line(g)
+		_menu(_group_options(g), _on_group.bind(g))
 	elif id == "rebuild":
 		rebuild()
-		_reopen_shop()
-	elif id.begins_with("fit:"):
-		fit(id.get_slice(":", 1), id.get_slice(":", 2))
-		_reopen_shop()
+		_menu(top_options(), _on_top, true)
 	elif id == "comrade":
-		comrade()
-		_reopen_shop()
+		start_remnant_talk()
 	elif id == "tutorial":
 		start_tutorial()
 	elif id == "chat":
 		chat()
 
 
-## A buy or a sale does not end the talk: the shop again, with what he just said
-## and the new prices, the cursor where it was. Esc walks away.
-func _reopen_shop() -> void:
-	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], _talk_options(), _on_shop, said, true)
+## A buy, a sale or a fit does not end the talk: the same submenu again, with what
+## he just said and the new prices, the cursor where it was. Back is his top menu;
+## Esc walks away.
+func _on_group(id: String, group: String) -> void:
+	if id == "back":
+		said = _line("anything_else")
+		_menu(top_options(), _on_top)
+		return
+	if id.begins_with("buy:"):
+		buy(id.substr(4))
+	elif id == "sell":
+		sell()
+	elif id.begins_with("fit:"):
+		fit(id.get_slice(":", 1), id.get_slice(":", 2))
+	else:
+		return
+	_menu(_group_options(group), _on_group.bind(group), true)
+
+
+## The menu again, quietly (no beep, no voice), with his last line on top.
+func _menu(opts: Array, pick: Callable, keep_cursor: bool = false) -> void:
+	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, said, keep_cursor)
 
 
 ## Buy a ship: it lands on the spare pad. Returns "bought", "taken",
@@ -513,16 +557,62 @@ func rebuild() -> String:
 
 
 ## The player can't stand the Remnant: neither can he. The comrade discount, once.
-## Returns true the first time.
-func comrade() -> bool:
+## Returns true the first time. `say`: his line for it (the chat's, or the menu's).
+func comrade(say: String = "comrade") -> bool:
 	if WorldState.has_flag(WorldState.COMRADE):
 		_say(_line("comrade_again") % rebuild_price())
 		return false
 	WorldState.set_flag(WorldState.COMRADE)
 	WorldState.log_event("T-89 and the player found they agree about the Remnant.")
 	if needs_rebuild():
-		_say(_line("comrade") % rebuild_price())
+		_say(_line(say) % rebuild_price())
 	return true
+
+
+## His menu's "Tell him what you think of the Remnant": his story a page at a time,
+## then the question. Walk away (Esc) or side with the Remnant and the row is still
+## on his menu: ask again until you are his comrade.
+func remnant_pages() -> Array:
+	return cfg.get("remnant_story", [])
+
+
+func start_remnant_talk() -> void:
+	story_page = 0
+	_show_story_page()
+
+
+func _show_story_page() -> void:
+	var pages := remnant_pages()
+	if story_page >= pages.size():
+		story_page = -1
+		_open(_line("remnant_question"), [{ "id": "down", "text": _l("down_with_them") },
+			{ "id": "side", "text": _l("side_with_them") }], _on_remnant_answer)
+		return
+	_open("(%d/%d)  %s" % [story_page + 1, pages.size(), str(pages[story_page])],
+		[{ "id": "next", "text": _l("go_on") }, { "id": "skip", "text": _l("to_the_point") }], _on_story_page)
+
+
+func _on_story_page(id: String) -> void:
+	if id == "next":
+		story_page += 1
+	elif id == "skip":
+		story_page = remnant_pages().size()
+	else:
+		story_page = -1
+		return
+	_show_story_page()
+
+
+## "Down with the Tyrants!": a comrade. The Remnant's side: no discount, and he
+## sends you back to his menu to buy a ship or leave him be.
+func _on_remnant_answer(id: String) -> void:
+	if id == "down":
+		comrade("comrade_won")
+	elif id == "side":
+		_say(_line("sided_remnant"))
+	else:
+		return
+	_menu(top_options(), _on_top)
 
 
 # ------------------------------------------------------------------ upgrades (issue #207)

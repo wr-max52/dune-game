@@ -1,6 +1,6 @@
 {
   "id": "t89",
-  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Issue #207: 'upgrades' he fits to any ship you own, each one-time per ship: its price and 'mult', factors on paths in the ship's data (src/systems/flight/ship_upgrades.gd). Read by src/systems/npc/ship_salesman.gd.",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E for his menu: Talk, 'Buy or sell a ship' and 'Upgrade your ships' (submenus; Back returns) and the tutorial again. It sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). With AI characters off that is his menu's 'Tell him what you think of the Remnant': the remnant_story pages, then remnant_question; 'Down with the Tyrants!' makes you a comrade, siding with the Remnant does not (sided_remnant), and the row stays on his menu to try again. Issue #207: 'upgrades' he fits to any ship you own, each one-time per ship: its price and 'mult', factors on paths in the ship's data (src/systems/flight/ship_upgrades.gd). Read by src/systems/npc/ship_salesman.gd.",
   "name": "T-89",
   "marker": "t89",
   "pad": "spare_pad",
@@ -45,6 +45,12 @@
     "F1 shows where you are, your credits and who likes you. F11 holds the settings. The droid merchant in the market sells companions, if you want one.",
     "And when one ship is not enough, come and see me. That empty pad across the pit is yours: any ship I sell you lands right there. That is all. Good luck out there, pilot!"
   ],
+  "remnant_story": [
+    "Between us, pilot? I am older than I look. A hundred years ago I worked the Co-op mines of Quartzspring. This planet was green then: mountains, rivers, forests. Quartzspring was the smallest town on it.",
+    "The Hegemony wanted what was in the ground. They bombed the planet nearly to ash, and the land died after it. The rivers went, the forests went, and the towns and cities with them. The ones who lived were driven into the desert, to hunt what was left and pick through scrap.",
+    "They fought the locals for fifty years and have ruled for fifty more. I unloaded their crates in this pit until their customs office closed. Now their empire is coming apart at the centre, and what is left of their army holds our front gate.",
+    "I am the only one left who remembers this planet green, pilot. I have hated the Remnant since long before the war, and I do not say so to just anyone."
+  ],
   "lines": {
     "hello_again": "Back again, pilot? Looking for a new ship?",
     "pad_taken": "Your pad already holds your %s. Sell it back to me first.",
@@ -56,11 +62,18 @@
     "repair_quote": "That wreck you came down in is yours, pilot, and I can rebuild it: %d credits.",
     "repair_quote_comrade": "Your wreck is still waiting, comrade. %d credit, as promised.",
     "comrade": "Between us, pilot? I cannot stand them either. For a comrade, I will rebuild your ship for %d credit.",
+    "comrade_won": "Down with them, comrade! For a comrade, I will rebuild your ship for %d credit.",
+    "remnant_question": "So tell me, pilot. What do you make of the Remnant?",
+    "sided_remnant": "I see. Then we have nothing more to talk about, pilot. Buy a ship or leave me be.",
     "comrade_again": "We understand each other, comrade. The rebuild is still %d credit.",
     "rebuilt": "Good as new! Your %s is on the pit pad, and she is all yours.",
     "cant_afford_rebuild": "The rebuild is %d credits. You have %d. Oda at the cantina has work.",
     "fitted": "%s, fitted to your %s. Fly her gently for the first hour. Or do not!",
-    "cant_afford_fit": "%s is %d credits. You have %d."
+    "cant_afford_fit": "%s is %d credits. You have %d.",
+    "ships_pitch": "Every ship on my lot is fuelled and ready. Which one takes your fancy, pilot?",
+    "upgrades_pitch": "What shall I fit, pilot? Each one goes on for good.",
+    "all_fitted": "Your ships carry everything I fit already. Nothing left to sell you here!",
+    "anything_else": "Anything else, pilot?"
   },
   "labels": {
     "talk": "[E] Talk to %s",
@@ -74,10 +87,17 @@
     "buy": "Buy a %s  (%d cr)",
     "buy_taken": "Buy a %s  (%d cr)  - pad taken",
     "sell": "Sell back your %s  (+%d cr)",
+    "menu_ships": "Buy or sell a ship",
+    "menu_upgrades": "Upgrade your ships",
+    "back": "Back",
     "tutorial": "Run me through the basics again",
     "event_bought": "Someone bought a %s from the droid in the pit.",
     "rebuild": "Rebuild your %s  (%d cr)",
     "comrade": "Tell him what you think of the Remnant",
+    "go_on": "Go on",
+    "to_the_point": "Get to the point",
+    "down_with_them": "Down with the Tyrants!",
+    "side_with_them": "The Remnant keep the peace out here",
     "event_rebuilt": "The droid in the pit rebuilt a wrecked %s.",
     "fit": "Fit %s to your %s  (%d cr)",
     "event_fitted": "The droid in the pit fitted %s to a %s."
