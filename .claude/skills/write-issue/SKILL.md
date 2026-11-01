@@ -38,8 +38,8 @@ else.
    drafting, even when the request looks complete.
 6. **Draft the issue** in the format below and show it.
 7. **Create it** with `gh issue create` once the user okays it, with labels.
-   Size XL gets a parent issue and one child per PR, each child saying
-   `Part of #N`.
+   If it is big, make it a milestone with a few sub-issues, each valuable on
+   its own.
 
 You only write the issue. Do not start building it.
 
@@ -221,7 +221,7 @@ Station, the Remnant), never franchise names.
 
 **Labels:** one type (`enhancement`, `bug`); one size (`size: S` one focused
 PR, `size: M` one solid PR, `size: L` two or three PRs, `size: XL` split
-before building); areas that fit (`area: world`, `area: cantina`,
+into a milestone with sub-issues); areas that fit (`area: world`, `area: cantina`,
 `area: visuals`, `area: llm-npcs`, `area: saves`, `area: performance`);
 `blocked` if it waits on another issue.
 
