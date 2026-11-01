@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The dark master's red blade (2026-11-01)
+
+- **He waits where the corridor opens into the cruiser's bay.** Walking back
+  from the bridge to your ship you pass him, and his offer opens.
+- **His blade falls where he does.** Kill him and his red energy sword lies on
+  the floor, glowing like the one on the wreck's cargo droid. Walk up and press
+  E to pick it up.
+- **A red saber no longer takes over your blue sword.** Picking one up (his, or
+  the wreck's) just puts it in your backpack. Open the inventory (I) and press
+  Activate to fight with the red blade; Put away and your sword is blue again.
+  An activated red saber can be drawn in a story save even without the blue
+  one. A save that already had the wreck's saber starts with it put away.
+
 ## The barracks change hands back and forth (2026-11-01)
 
 - **Kill every Remnant trooper at the barracks and the locals take the town

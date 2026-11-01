@@ -273,6 +273,31 @@ func test_decide_join_and_refuse() -> void:
 	post.free()
 
 
+func test_his_blade_falls_where_he_does_and_you_activate_it() -> void:
+	_story_at_kill()
+	var content = load("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var gear := GearController.new()
+	gear.content = content
+	gear.items = ItemKit.new()
+	gear.labels = ItemKit._read_json(GearController.LABELS_PATH).get("labels", {})
+	var item := str(DarkPact.cfg().get("drops", ""))
+	var at := Vector3(3, -14, 20)
+	var node = gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item, "reach": 2.6 }, at)
+	assert_not_null(node, "it lies where he fell")
+	assert_eq((node as Node3D).position.x, at.x)
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "once")
+	assert_eq(gear._take(node), "picked_up")
+	assert_true(WorldState.inventory.has(item))
+	assert_false(WorldState.inventory.is_attached(item), "picked up, not switched on")
+	assert_eq(gear.blade_color().a, 0.0, "your blue blade is still yours")
+	assert_eq(gear.toggle_item(item), "attached", "activated in the inventory")
+	assert_gt(gear.blade_color().r, 0.9, "now it is red")
+	assert_true(WorldState.weapon_allowed("energy_blade"), "and it can be drawn")
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "taken stays taken")
+	gear.free()
+
+
 # ------------------------------------------------------------------ the sword fight
 
 func _fighter() -> BladeFighter:

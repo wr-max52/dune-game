@@ -310,10 +310,11 @@ func _on_died(where: String) -> void:
 		host.end_talk()
 	meeting = false
 	DarkPact.on_killed(where)
+	# His blade falls where he does: a pickup, yours to activate in the inventory.
 	var item := str(cfg.get("drops", ""))
-	if item != "" and not WorldState.inventory.has(item):
-		WorldState.inventory.add(item)
-		_toast(_line("blade_taken"))
+	var b := body(where)
+	if item != "" and b != null and gear != null and gear.drop_item({ "id": "dark_master_blade_" + where, "item": item, "reach": 2.6 }, b.global_position) != null:
+		_toast(_line("blade_dropped"))
 
 
 # ------------------------------------------------------------------ the offer (story mode)
