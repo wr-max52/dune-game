@@ -138,6 +138,30 @@ func flat(color: Color, roughness: float = 0.9, metallic: float = 0.0) -> Standa
 	return m
 
 
+## Issue #355: the stalls' textured planks, canvas and painted metal
+## (StallTextures), coloured through the town's style like flat() and cloth().
+func wood(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
+	if _styled():
+		color = style.prop(color)
+		if style.roughness >= 0.0:
+			roughness = lerpf(roughness, style.roughness, 0.5)
+	return StallTextures.planks(color, roughness)
+
+
+func canvas(color: Color) -> StandardMaterial3D:
+	return StallTextures.canvas(style.band(color) if _styled() else color)
+
+
+func painted(color: Color, roughness: float = 0.6, metallic: float = 0.4) -> StandardMaterial3D:
+	if _styled():
+		color = style.prop(color)
+		if style.metallic >= 0.0:
+			metallic = maxf(metallic, style.metallic * 0.6)
+		if style.roughness >= 0.0:
+			roughness = lerpf(roughness, style.roughness, 0.5)
+	return StallTextures.painted(color, roughness, metallic)
+
+
 ## An energy shield on a mesh `size` across (a box, or a disc `size.x` wide): the
 ## cruiser bay's look, scan lines rolling along `lines` and a rim glowing `rim`
 ## metres in from each face (0 on an axis = no rim there). Not cached: each is sized.

@@ -379,6 +379,7 @@ func _build_look() -> void:
 func _build_decor() -> void:
 	decor = TownDecor.new()
 	decor.style = style
+	decor.location_id = str(planet.get("town_id", "port_town"))
 	add_child(decor)
 	decor.dress(town, look)
 

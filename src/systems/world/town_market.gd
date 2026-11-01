@@ -10,6 +10,12 @@ extends RefCounted
 ## its colour, and the wares (pottery, produce, cloth, tech, water, spice) all
 ## step along the row. `face` is the customer side (the aisle); the vendor stands
 ## between the counter and the back panel.
+##
+## Issue #355: planks, canopies and drapes are textured (StallTextures, through
+## LookMaterials.wood / canvas / painted). A stall a trader works from (`trades`,
+## from TownDecor: the stall nearest the vendor's marker) shows that trade instead:
+## "food", "gear", "contraband" or "droids", with the trader's real items (ItemKit
+## looks, content/look/items.json "stalls") along the customer's edge.
 
 const TownBuildings := preload("res://src/systems/world/town_buildings.gd")
 const CANOPIES := ["slant", "peak", "parasol"]
@@ -19,6 +25,7 @@ const CLOTHS := [LookMaterials.CLOTH_MADDER, LookMaterials.CLOTH_TEAL, LookMater
 const TERRACOTTA := [Color("#a8603a"), Color("#c27b4a"), Color("#8e4b2e"), Color("#d9b48a"), Color("#2f7f7a")]
 const FRUIT := [Color("#e08a2a"), Color("#7aa63a"), Color("#5a2a4a"), Color("#b8322a"), Color("#e2c04a")]
 const SPICE := [Color("#b8322a"), Color("#d99a2b"), Color("#7a4a2a"), Color("#e2c04a"), Color("#5f7a3a")]
+const CRYSTAL := Color("#7fe0ff")
 
 var kit: TownBuildings        ## shared parts, batching and glows
 var mats: LookMaterials
@@ -26,9 +33,12 @@ var awnings: Array[MeshInstance3D] = []
 var wares := {}               ## stall id -> wares kind (tests, review)
 var canopies := {}            ## stall id -> canopy kind
 var anchors := {}             ## stall id -> { "front": Vector3, "back": Vector3 } canopy edges (world)
+var items := {}               ## issue #355: stall id -> [Node3D] the trader's items on its counter
 var _rng := RandomNumberGenerator.new()
 var _wood: Material
 var _wood_top: Material
+var _iron: Material
+var _item_kit: ItemKit
 var _back_x := 0.0            ## local x of the back panel's near face (negative), this stall
 var _panel_top := 0.0         ## its top; 0 when the stall has no back panel
 var _face := "+z"             ## this stall's customer side
@@ -38,20 +48,22 @@ var _lift := 0.0              ## issue #237: how much higher this stall's canopy
 func _init(building_kit: TownBuildings) -> void:
 	kit = building_kit
 	mats = kit.mats
-	_wood = mats.flat(Color("#6b4a32"), 0.85)
-	_wood_top = mats.flat(Color("#8a6444"), 0.8)
+	_wood = mats.wood(Color("#6b4a32"), 0.85)
+	_wood_top = mats.wood(Color("#8a6444"), 0.8)
+	_iron = mats.painted(Color("#4a4440"), 0.55, 0.5)
 
 
-## `backs`: back panel boxes by id ("<stall id>_back").
-func dress(parent: Node3D, stalls: Array, backs: Dictionary = {}) -> void:
+## `backs`: back panel boxes by id ("<stall id>_back"). `trades`: stall id ->
+## { "wares": kind, "items": [look id] } for the stalls traders work from.
+func dress(parent: Node3D, stalls: Array, backs: Dictionary = {}, trades: Dictionary = {}) -> void:
 	var list := stalls.duplicate()
 	list.sort_custom(func(a, b): return str(a.id) < str(b.id))
 	for i in list.size():
-		_stall(parent, list[i], i, backs.get(str(list[i].id) + "_back", {}))
+		_stall(parent, list[i], i, backs.get(str(list[i].id) + "_back", {}), trades.get(str(list[i].id), {}))
 	_string_lights(parent, list)
 
 
-func _stall(parent: Node3D, b: Dictionary, i: int, back: Dictionary) -> void:
+func _stall(parent: Node3D, b: Dictionary, i: int, back: Dictionary, trade: Dictionary = {}) -> void:
 	var mn := Vector3(float(b.min[0]), float(b.min[1]), float(b.min[2]))
 	var mx := Vector3(float(b.max[0]), float(b.max[1]), float(b.max[2]))
 	var face := str(b.get("face", "+z"))
@@ -81,7 +93,7 @@ func _stall(parent: Node3D, b: Dictionary, i: int, back: Dictionary) -> void:
 	var drape: Color = CLOTHS[(i * 2 + 1) % CLOTHS.size()]
 	kit.part(kit.box(lx - 0.12, h - 0.1, lz - 0.12), _wood, Vector3(0, (h - 0.1) * 0.5, 0))
 	kit.part(kit.box(lx + 0.3, 0.1, lz + 0.25), _wood_top, Vector3(0, h - 0.05, 0))
-	kit.part(kit.box(0.03, 0.8, lz - 0.2), mats.cloth(drape), Vector3(lx * 0.5 - 0.03, h - 0.5, 0))
+	kit.part(kit.box(0.03, 0.8, lz - 0.2), mats.canvas(drape), Vector3(lx * 0.5 - 0.03, h - 0.5, 0))
 
 	var kind: String = CANOPIES[(i + i / 3) % CANOPIES.size()]
 	var color: Color = CLOTHS[(i * 5 + 2) % CLOTHS.size()]
@@ -94,23 +106,36 @@ func _stall(parent: Node3D, b: Dictionary, i: int, back: Dictionary) -> void:
 		"parasol":
 			_parasols(parent, id, lx, lz, h, color, CLOTHS[(i * 5 + 4) % CLOTHS.size()])
 
-	var ware: String = WARES[(i * 5) % WARES.size()]
+	var ware: String = str(trade.get("wares", WARES[(i * 5) % WARES.size()]))
+	if not has_method("_wares_" + ware):
+		push_warning("TownMarket: no wares '%s' for %s" % [ware, id])
+		ware = WARES[(i * 5) % WARES.size()]
 	wares[id] = ware
 	call("_wares_" + ware, lx, lz, h)
+	if trade.has("items"):
+		_items(parent, id, trade.get("items", []), lx, lz, h)
 	if _panel_top > 0.0:
 		_back_panel(lz, ware, drape)
-	# Stock waiting behind the counter, at one end, out of the vendor's way.
+	# Stock waiting behind the counter, at one end, out of the vendor's way. Issue
+	# #355: plank crates with an iron band, and they collide.
 	if _rng.randf() < 0.7:
 		var z := (lz * 0.5 - 0.35) * (1.0 if _rng.randf() < 0.5 else -1.0)
-		kit.part(kit.box(0.6, 0.5, 0.6), kit.trim, Vector3(-lx * 0.5 - 0.45, 0.25, z), Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)))
+		var was := kit.solid
+		kit.solid = true
+		var turn := Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3))
+		kit.part(kit.box(0.6, 0.5, 0.6), kit.crate_woods[_rng.randi() % 3], Vector3(-lx * 0.5 - 0.45, 0.25, z), turn)
+		kit.solid = was
+		kit.part(kit.box(0.64, 0.06, 0.64), kit.crate_band, Vector3(-lx * 0.5 - 0.45, 0.33, z), turn)
 		if _rng.randf() < 0.5:
-			kit.part(kit.box(0.5, 0.4, 0.5), kit.trim, Vector3(-lx * 0.5 - 0.45, 0.7, z), Basis(Vector3.UP, _rng.randf_range(-0.4, 0.4)))
+			kit.solid = true
+			kit.part(kit.box(0.5, 0.4, 0.5), kit.crate_woods[_rng.randi() % 3], Vector3(-lx * 0.5 - 0.45, 0.7, z), Basis(Vector3.UP, _rng.randf_range(-0.4, 0.4)))
+			kit.solid = was
 
 
 # ---------------------------------------------------------------- canopies
 
 func _post(x: float, z: float, y0: float, y1: float) -> void:
-	kit.part(kit.cyl(0.045, 0.055, y1 - y0, 6), kit.metal, Vector3(x, (y0 + y1) * 0.5, z))
+	kit.part(kit.cyl(0.045, 0.055, y1 - y0, 6), _iron, Vector3(x, (y0 + y1) * 0.5, z))
 
 
 ## A cloth panel from edge `a` down to edge `b` (both local, mid-width), `w` wide across Z.
@@ -121,7 +146,7 @@ func _panel(parent: Node3D, a: Vector3, b: Vector3, w: float, color: Color, bow:
 	var n := u.cross(v)
 	var mi := MeshInstance3D.new()
 	mi.mesh = LookMeshKit.cloth(w, d.length(), bow, 6, 4)
-	mi.material_override = mats.cloth(color)
+	mi.material_override = mats.canvas(color)
 	mi.transform = kit._xf * Transform3D(Basis(u, v, n), a)
 	mi.set_meta("decor", "awning")
 	parent.add_child(mi)
@@ -133,7 +158,7 @@ func _panel(parent: Node3D, a: Vector3, b: Vector3, w: float, color: Color, bow:
 func _valance(parent: Node3D, top: Vector3, w: float, color: Color) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = LookMeshKit.cloth(w, 0.28, 0.02, 6, 1)
-	mi.material_override = mats.cloth(color.darkened(0.15))
+	mi.material_override = mats.canvas(color.darkened(0.15))
 	mi.transform = kit._xf * Transform3D(Basis(Vector3.UP, -PI * 0.5), top)
 	mi.set_meta("decor", "awning")
 	parent.add_child(mi)
@@ -173,7 +198,7 @@ func _peak(parent: Node3D, id: String, lx: float, lz: float, h: float, color: Co
 	for s in [-1.0, 1.0]:
 		var z: float = s * (lz * 0.5 - 0.06)
 		_post(ridge.x, z, h if ridge.x > -lx * 0.5 else 0.0, 3.22 + _lift)
-	kit.part(kit.cyl(0.04, 0.04, lz + 0.6, 6), kit.metal, ridge + Vector3(0, -0.04, 0), kit.AXIS_Z)
+	kit.part(kit.cyl(0.04, 0.04, lz + 0.6, 6), _iron, ridge + Vector3(0, -0.04, 0), kit.AXIS_Z)
 	_anchor(id, front, back)
 
 
@@ -192,12 +217,12 @@ func _parasols(parent: Node3D, id: String, lx: float, lz: float, h: float, a: Co
 		cone.cap_bottom = false
 		var mi := MeshInstance3D.new()
 		mi.mesh = cone
-		mi.material_override = mats.cloth(a if k == 0 else b)
+		mi.material_override = mats.canvas(a if k == 0 else b)
 		mi.transform = kit._xf * Transform3D(Basis.IDENTITY, c)
 		mi.set_meta("decor", "awning")
 		parent.add_child(mi)
 		awnings.append(mi)
-		kit.part(kit.ball(0.07, 0.14, false, 8), kit.metal, c + Vector3(0, 0.34, 0))
+		kit.part(kit.ball(0.07, 0.14, false, 8), _iron, c + Vector3(0, 0.34, 0))
 	_anchor(id, Vector3(lx * 0.5 + 1.0, 2.45 + _lift, 0), Vector3(-lx * 0.5 - 1.2, 2.45 + _lift, 0))
 
 
@@ -282,6 +307,118 @@ func _wares_spice(_lx: float, lz: float, h: float) -> void:
 		kit.part(kit.cyl(0.09, 0.07, 0.03, 10), brass, Vector3(0, h + 0.22, z + s))
 
 
+# ---------------------------------------------------------------- traders' wares (issue #355)
+
+## The food stall: baskets of fruit at the back, stacks of flatbread and a row of
+## clay jars toward the customer (its quartz case, what it buys, is an item).
+func _wares_food(_lx: float, lz: float, h: float) -> void:
+	var basket := mats.flat(Color("#9a7a4a"), 0.95)
+	for p in _row(3, lz, -0.25, h):
+		kit.part(kit.cyl(0.26, 0.2, 0.14, 14), basket, p + Vector3(0, 0.07, 0))
+		var m := mats.flat(FRUIT[_rng.randi() % FRUIT.size()], 0.6)
+		for k in 6:
+			var a := TAU * k / 6.0
+			var off := Vector3(cos(a), 0, sin(a)) * (0.0 if k == 0 else 0.13)
+			kit.part(kit.ball(0.07, 0.14, false, 8), m, p + off + Vector3(0, 0.15 + (0.04 if k == 0 else 0.0), 0))
+	var bread := mats.flat(Color("#c99a5a"), 0.95)
+	for k in 2:
+		var p := Vector3(0.2, h, -lz * 0.3 + k * 0.36)
+		for n in 4:
+			kit.part(kit.cyl(0.16, 0.16, 0.03, 12), bread, p + Vector3(_rng.randf_range(-0.02, 0.02), 0.015 + n * 0.032, 0))
+	for p in _row(3, lz * 0.35, 0.25, h):
+		var c := mats.flat(TERRACOTTA[_rng.randi() % 3], 0.75)
+		kit.part(kit.ball(0.1, 0.22, false, 10), c, p + Vector3(0, 0.11, lz * 0.3))
+
+
+## The gear trader: a coil of rope, a dark helmet and a rack of charged cells at
+## the back; the jetpack and the cases it trades in are items.
+func _wares_gear(_lx: float, lz: float, h: float) -> void:
+	var rope := mats.flat(Color("#9a8460"), 0.95)
+	for k in 3:
+		kit.part(kit.ring(0.1, 0.17, 0.0, 0.05, 14), rope, Vector3(-0.3, h + k * 0.05, -lz * 0.5 + 0.45))
+	kit.part(kit.ball(0.17, 0.26, true, 12), mats.painted(Color("#3a3c40"), 0.45, 0.5), Vector3(-0.3, h, lz * 0.5 - 0.4))
+	kit.part(kit.box(0.2, 0.06, 0.7), _iron, Vector3(-0.32, h + 0.03, 0))
+	for k in 5:
+		kit.part(kit.cyl(0.04, 0.04, 0.2, 8), kit.door_glow, Vector3(-0.32, h + 0.16, -0.28 + k * 0.14))
+
+
+## The fence: a tarp thrown half over a crate, a few loose crystals and a locked
+## strongbox; the contraband he pays for is items.
+func _wares_contraband(_lx: float, lz: float, h: float) -> void:
+	var z := -lz * 0.5 + 0.5
+	kit.part(kit.box(0.6, 0.35, 0.6), kit.trim, Vector3(-0.25, h + 0.175, z))
+	kit.part(kit.box(0.66, 0.03, 0.4), mats.canvas(Color("#5f5a48")), Vector3(-0.25, h + 0.365, z + 0.12), Basis(Vector3.RIGHT, 0.1))
+	var crystal := mats.glow(CRYSTAL)
+	crystal.emission_energy_multiplier = 0.6
+	for k in 4:
+		var p := Vector3(-0.3 + _rng.randf_range(-0.05, 0.05), h, lz * 0.5 - 0.35 - k * 0.12)
+		kit.part(kit.cyl(0.0, 0.035, 0.12 + k * 0.02, 5), crystal, p + Vector3(0, 0.06 + k * 0.01, 0), Basis(Vector3.BACK, _rng.randf_range(-0.4, 0.4)))
+	kit.part(kit.box(0.35, 0.22, 0.25), mats.painted(Color("#2f3a34"), 0.5, 0.55), Vector3(-0.32, h + 0.11, 0.0))
+
+
+## The droid merchant: droid heads with one lit eye each, arm segments and a servo
+## ring at the back; a power cell case is an item.
+func _wares_droids(_lx: float, lz: float, h: float) -> void:
+	var shell := mats.painted(Color("#8a8278"), 0.5, 0.55)
+	var dark := mats.painted(Color("#2e3034"), 0.5, 0.5)
+	var eye := mats.glow(Color("#ff5a3a"))
+	eye.emission_energy_multiplier = 1.2
+	for p in _row(3, lz * 0.55, -0.3, h):
+		var q: Vector3 = p + Vector3(0, 0, -lz * 0.2)
+		kit.part(kit.ball(0.15, 0.26, false, 12), shell, q + Vector3(0, 0.13, 0))
+		kit.part(kit.ball(0.04, 0.04, false, 8), eye, q + Vector3(0.13, 0.17, 0))
+		kit.part(kit.cyl(0.08, 0.1, 0.05, 10), dark, q + Vector3(0, 0.02, 0))
+	for k in 2:
+		var z := lz * 0.5 - 0.45 - k * 0.3
+		kit.part(kit.cyl(0.035, 0.035, 0.45, 8), shell, Vector3(-0.3, h + 0.04, z), kit.AXIS_X)
+		kit.part(kit.ball(0.05, 0.1, false, 8), dark, Vector3(-0.08, h + 0.05, z))
+	kit.part(kit.ring(0.06, 0.12, 0.0, 0.05, 14), dark, Vector3(0.0, h, lz * 0.5 - 0.3))
+
+
+## The trader's own items (ItemKit looks) along the customer's edge of the counter,
+## a case's latch (or the jetpack's front) to the aisle, each sitting on the top.
+## Real nodes, not batched: an item can be a model.
+func _items(parent: Node3D, id: String, looks: Array, lx: float, lz: float, h: float) -> void:
+	if _item_kit == null:
+		_item_kit = ItemKit.new(mats)
+	var built: Array = []
+	var widths: Array = []
+	var total := 0.0
+	for l in looks:
+		var look_id := str(l)
+		if not _item_kit.has_look(look_id):
+			push_warning("TownMarket: no item look '%s' for %s" % [look_id, id])
+			continue
+		var node := _item_kit.build(look_id)
+		# Cases lie with their latch (-Z) to the aisle, so their width runs along the
+		# counter; the jetpack stands with its front (+Z) to the aisle.
+		var turn := Basis(Vector3.UP, -PI * 0.5 if str(_item_kit.look(look_id).get("frame", "")) == "case" else PI * 0.5)
+		var box := ItemKit.bounds(node, Transform3D(turn, Vector3.ZERO))
+		if total + box.size.z > lz - 0.3:
+			node.free()
+			continue
+		node.transform = Transform3D(turn, Vector3(0, -box.position.y, 0))
+		node.set_meta("decor", "stall_item")
+		built.append([node, box])
+		widths.append(box.size.z)
+		total += box.size.z
+	if built.is_empty():
+		return
+	var gap := (lz - 0.3 - total) / built.size()
+	var z := -(lz - 0.3) * 0.5 + gap * 0.5
+	var out: Array = []
+	for k in built.size():
+		var node: Node3D = built[k][0]
+		var box: AABB = built[k][1]
+		var x := lx * 0.5 - 0.12 - (box.position.x + box.size.x)    # its front edge just in from the counter's
+		var local := Transform3D(node.transform.basis, Vector3(x, h, z - box.position.z) + node.transform.origin)
+		node.transform = kit._xf * local
+		parent.add_child(node)
+		out.append(node)
+		z += widths[k] + gap
+	items[id] = out
+
+
 # ---------------------------------------------------------------- lights
 
 ## Strings of bulbs across the aisle, from each stall to the one facing it.
@@ -346,6 +483,13 @@ func _back_panel(lz: float, ware: String, drape: Color) -> void:
 				kit.part(kit.cyl(0.05, 0.05, 0.2, 8), kit.door_glow, p + Vector3(0, 0.1, 0))
 			"water":
 				kit.part(kit.cyl(0.08, 0.09, 0.3, 10), mats.flat(Color("#5b6f78"), 0.4, 0.6), p + Vector3(0, 0.15, 0))
+			"food":
+				kit.part(kit.cyl(0.13, 0.13, 0.03, 12), mats.flat(Color("#c99a5a"), 0.95), p + Vector3(0, 0.015, 0))
+				kit.part(kit.ball(0.07, 0.14, false, 8), mats.flat(FRUIT[k % FRUIT.size()], 0.6), p + Vector3(0, 0.1, 0))
+			"gear", "contraband":
+				kit.part(kit.box(0.26, 0.16, 0.3), kit.trim, p + Vector3(0, 0.08, 0))
+			"droids":
+				kit.part(kit.ball(0.09, 0.16, false, 10), mats.painted(Color("#8a8278"), 0.5, 0.55), p + Vector3(0, 0.08, 0))
 			_:
 				kit.part(kit.cyl(0.07, 0.08, 0.16, 10), mats.flat(SPICE[k % SPICE.size()], 0.9), p + Vector3(0, 0.08, 0))
 

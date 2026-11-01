@@ -18,6 +18,7 @@ extends Node3D
 
 const TownBuildings := preload("res://src/systems/world/town_buildings.gd")
 const TownMarket := preload("res://src/systems/world/town_market.gd")
+const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
 const RingWall := preload("res://src/systems/world/ring_wall.gd")
 const StairTower := preload("res://src/systems/world/stair_tower.gd")
@@ -33,6 +34,7 @@ var kit: TownBuildings        ## building variants, shared parts, batching
 var market: TownMarket        ## the stalls
 var cables: Array[MeshInstance3D] = []
 var style: TownStyle          ## issue #45: the planet's town style (null = the port's own look)
+var location_id := "port_town"   ## issue #355: whose vendors work the stalls (content/core/vendors "location")
 var _rng := RandomNumberGenerator.new()
 
 
@@ -185,7 +187,40 @@ func _dress_market(town) -> void:
 	root.name = "Market"
 	add_child(root)
 	market = TownMarket.new(kit)
-	market.dress(root, stalls, backs)
+	market.dress(root, stalls, backs, _stall_trades(town, stalls))
+
+
+## Issue #355: the stall each trader works from (the one nearest its marker) ->
+## what it shows: its vendor's block in content/look/items.json "stalls". The
+## vendors are this location's (content/core/vendors) and the droid merchant
+## (droids.json "vendor"), wherever its marker is.
+func _stall_trades(town, stalls: Array) -> Dictionary:
+	var looks: Dictionary = ItemKit._read_json(ItemKit.LOOKS_PATH).get("stalls", {}).get("vendors", {})
+	var vendors: Array = []
+	var cc := CoreContent.new()
+	if cc.load_from():
+		vendors = cc.vendors_in(location_id)
+	var droid_vendor: Dictionary = DroidRoster.config().get("vendor", {})
+	if not droid_vendor.is_empty():
+		vendors.append(droid_vendor)
+	var out := {}
+	for v in vendors:
+		var marker: Dictionary = town.get_marker(str(v.get("marker", "")))
+		var look: Dictionary = looks.get(str(v.get("id", "")), {})
+		if marker.is_empty() or look.is_empty():
+			continue
+		var at := _v3(marker.pos)
+		var best := ""
+		var best_d := 6.0               # metres: a vendor further than this from every counter has no stall
+		for b in stalls:
+			var mid := (_v3(b.min) + _v3(b.max)) * 0.5
+			var d := Vector2(mid.x - at.x, mid.z - at.z).length()
+			if d < best_d and not out.has(str(b.id)):
+				best_d = d
+				best = str(b.id)
+		if best != "":
+			out[best] = look
+	return out
 
 
 ## The cantina hall (art pass 2): a tall room with a stage, so the shell gets

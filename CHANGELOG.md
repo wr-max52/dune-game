@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Textured stalls, and traders show what they sell (2026-10-31, issue #355)
+
+- **Market stalls are made of something now:** sawn planks with grain, seams
+  and nails; canopies and drapes of striped canvas; painted, chipped metal
+  posts. Drawn in code (`StallTextures`), three textures for the whole market.
+- **Each trader's stall shows its trade.** Food stall: fruit, flatbread, jars
+  and a quartz case. Gear trader: the jetpack, an armour case and a cell case.
+  Fence: the contraband he pays for. Droid merchant: droid heads, arms and a
+  cell case. The items are the game's own item looks, listed in
+  `content/look/items.json` under `stalls`.
+- **The droid relays** get painted metal, and their merchant tables get a droid
+  head, an arm, lit cells and a cell case.
+- **Skrugs's stall** gets planks, a canvas canopy, and speeder parts on the
+  counter: a thruster nozzle, fuel cans, a toolbox and a coil.
+- **Crates:** the pit's crate stacks, the crates by hut doors and the stock
+  crates behind each stall are plank crates with iron bands. The stall crates
+  now collide (the others already did).
+
 ## Barracks and outposts stop you like the gate (2026-10-31, issue #308)
 
 - **Walk into the barracks yard or up to a Remnant outpost below 40 standing**
