@@ -1,7 +1,8 @@
 class_name PlayerOutfit
 extends RefCounted
 ## Issue #48: the outfit the player picked in the character builder (F11,
-## Character), kept in user://player_outfit.json and worn by PlayerAvatar.
+## Character), kept per save (SaveSlots.outfit_path: a story and a free roam
+## save each have their own) and worn by PlayerAvatar.
 ##
 ## An outfit is CharacterKit's: { part: "<piece>" or "<piece>:<colour>" }, e.g.
 ## { "head": "player", "torso": "guard:gunmetal", "legs": "player:rust" }.
@@ -17,9 +18,7 @@ extends RefCounted
 
 const ARCHETYPE := "player_smuggler"
 const PARTS := ["head", "torso", "legs"]
-const PATH := "user://player_outfit.json"
-
-static var save_path := PATH       ## tests point this elsewhere
+static var save_path := ""         ## "" = the save being played's (SaveSlots); tests point this elsewhere
 static var _catalog: Dictionary = {}
 
 
@@ -115,16 +114,20 @@ static func sanitize(outfit: Dictionary) -> Dictionary:
 	return out
 
 
+static func path() -> String:
+	return save_path if save_path != "" else SaveSlots.outfit_path()
+
+
 ## The saved outfit, or {} (the archetype's default) when there is none.
 static func load_outfit() -> Dictionary:
-	if not FileAccess.file_exists(save_path):
+	if not FileAccess.file_exists(path()):
 		return {}
-	var d = JSON.parse_string(FileAccess.get_file_as_string(save_path))
+	var d = JSON.parse_string(FileAccess.get_file_as_string(path()))
 	return sanitize(d) if d is Dictionary else {}
 
 
 static func save_outfit(outfit: Dictionary) -> bool:
-	var f := FileAccess.open(save_path, FileAccess.WRITE)
+	var f := FileAccess.open(path(), FileAccess.WRITE)
 	if f == null:
 		return false
 	f.store_string(JSON.stringify(sanitize(outfit), "  "))

@@ -2,6 +2,20 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## A story save and a free roam save, side by side (2026-11-01)
+
+- **Both games are kept.** F11 > Game > Saves lists the story save and the
+  free roam save; Play on the other one saves this game and opens that one where
+  you left it (or starts it, if you have none yet). The last one played opens
+  next launch.
+- **Nothing leaks between them.** Each has its own world, gear, ships, standing,
+  names and outfit. Starting a new game resets only its own save. Switching
+  clears the free roam tweaks, the planet you were on and T-89's hello, as a
+  fresh launch would.
+- **Your old save moves over by itself.** The first launch copies `save.json`
+  into the slot its mode says, and leaves the original where it was.
+- Test: tests/test_save_slots.gut.gd.
+
 ## More ambient music (2026-11-01)
 
 - **The ambient score has eight tracks now, not three.** Five calm, spacey

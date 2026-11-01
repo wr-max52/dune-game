@@ -2,6 +2,25 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-11-01 — A story save and a free roam save, side by side
+
+- **One file per mode** (`SaveSlots`: `save_story.json`, `save_freeplay.json`),
+  not one file with two worlds in it. Each file stays the same SaveSystem v3
+  shape, so nothing that reads a save had to change. Alternative: numbered
+  slots. Rejected: the player asked for exactly story and free roam, and the
+  mode is already in the save.
+- **A switch is a launch.** `SaveSlots.fresh_launch()` puts back everything a run
+  keeps across town reloads (GameFlow's planet, flown ship and resume, the free
+  roam tweaks, the F11 town layout, T-89's hello), then the other save's world is
+  loaded *before* the town reloads, so every part of the build sees the right
+  mode. The town being left saves first, then stops saving (`autosave` off), so
+  its exit cannot write the next game into its file.
+- **The outfit and the names go with the save.** The outfit file is per slot. A
+  new game keeps the names of its own slot, not the game you were playing.
+- **The old `save.json` is copied, not moved,** into the slot its mode says, once
+  (the pick file marks it done). Builds from before the slots, in other
+  worktrees, keep finding it.
+
 ## 2026-11-01 — The barracks change hands back and forth
 
 - **Dead troopers at the barracks stay dead once the fleet is beaten.** The
