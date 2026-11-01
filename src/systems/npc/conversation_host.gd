@@ -241,6 +241,16 @@ func _warm_models() -> void:
 			_warmed[pid] = owner_spot.brain.warm_up(pid)
 
 
+## Load this character's prompt into the local server while the player reads the
+## greeting. Cold, a full persona takes the local model longer than its first-word
+## limit; the abandoned request is dropped by the server, so every turn came back
+## "no answer in time". Player turns skip local until this finishes.
+func _warm_for_talk(s: TalkSpot) -> void:
+	if _scripted != null or not llm.ai_on() or llm.config == null or not llm.active_chain().has("local"):
+		return
+	s.brain.warm_up("local")
+
+
 ## Issue #328: "AI model loading" while a model loads with nothing else to answer,
 ## or a reply has no first word yet. Nothing with AI characters off.
 func _update_ai_status() -> void:
@@ -359,6 +369,7 @@ func start_talk(s: TalkSpot = null) -> void:
 		rig.rig.yaw = atan2(s.body.global_position.x - p.global_position.x, s.body.global_position.z - p.global_position.z)
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_warm_for_talk(s)
 	var greeting := s.brain.begin_visit()
 	# Issue #64: the story speaks first when it has something to say.
 	var beat := Story.beat(s.id())

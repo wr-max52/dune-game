@@ -65,6 +65,9 @@ func test_anthropic_request_forces_the_reply_tool() -> void:
 	assert_eq(b.messages[0].role, "user", "first turn must be the user's")
 	assert_eq(b.tool_choice.name, "reply")
 	assert_true(" ".join(r.headers).contains("x-api-key: key"))
+	# Current Claude models 400 on a temperature ("deprecated for this model").
+	var r2 := p.build_request([{ "role": "user", "content": "yo" }], { "temperature": 0.8 })
+	assert_false((JSON.parse_string(r2.body) as Dictionary).has("temperature"))
 
 
 func test_anthropic_streams_tool_input_json() -> void:
