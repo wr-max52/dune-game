@@ -1288,3 +1288,9 @@ Every significant technical choice, the alternative, and why. Newest on top.
   in the leaning panel to place its highlight on every dial, and the chamfer and the
   canopy pick them up too. The strength stays low (`SUN_GLINT`, `BOLT_FALLOFF`): it
   should read as glass, not as a light show.
+- **The canopy frame is modelled, then projected.** The struts and the bow over the
+  glass are centre lines in metres round your eye (`CockpitView.strut_path`),
+  drawn through a 70° lens (`frame_project`) at a fixed thickness, so the nearer
+  a part is the wider it draws. The struts stand on the dash, then swell and sweep
+  out to the top corners as they pass over and behind your head; straight struts
+  narrowing upward read as leaning away from you, not over you.

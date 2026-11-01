@@ -250,6 +250,21 @@ func test_dash_leans_away() -> void:
 	assert_gt(line[line.size() - 1].x, vp.x)
 
 
+func test_canopy_frame_comes_over_you() -> void:
+	var vp := Vector2(1920, 1080)
+	var line := CockpitView.rim(vp)
+	var path := CockpitView.strut_path(vp, line, 1.0)
+	var foot := CockpitView.frame_project(vp, path[0])
+	assert_almost_eq(foot.y, CockpitView.rim_y(line, foot.x) + 2.0, 0.5, "the strut stands on the dash's edge")
+	var up := CockpitView.frame_project(vp, path[16])
+	assert_lt(up.y, foot.y, "it rises")
+	assert_gt(up.x, foot.x, "and sweeps out toward the corner, not in")
+	assert_gt(-path[0].z, -path[16].z, "because it is coming nearer")
+	assert_gt(path[path.size() - 1].z, 0.0, "it ends up behind your head")
+	assert_lt(CockpitView.frame_project(vp, Vector3(0, CockpitView.BOW_TOP - CockpitView.FRAME_THICK * 0.5, -CockpitView.BOW_AHEAD)).y, vp.y * 0.1,
+		"the bow over the glass keeps to the top of the screen")
+
+
 func test_glass_glints_where_the_light_reflects() -> void:
 	var behind := CockpitDash.glint(Vector3(0, 0.2, 1))
 	assert_gt(behind.z, 0.0, "the sun behind you glints on the dials")

@@ -1,7 +1,8 @@
 class_name CockpitView
 extends Control
 ## The cockpit view (issue #181): V in a ship, the same cockpit for every ship.
-## Most of the view is the canopy, glass with a faint tint; two struts frame it, and
+## Most of the view is the canopy, glass with a faint tint; its frame (two struts
+## and a bow across the top) comes back over your head, and
 ## a dashboard runs across the bottom, its instruments working from the same values
 ## the chase view's HUD gets (CockpitDash paints it).
 ##
@@ -40,6 +41,14 @@ const SUN_GLINT := 0.5             ## the sun's glints at full daylight, 0..1
 const BOLT_RANGE := 90.0           ## m: bolts further off than this put no light on the glass
 const BOLT_FALLOFF := 14.0         ## m: a bolt this far off glints at half strength
 const MAX_GLINTS := 6
+const FRAME_FOV := 70.0            ## degrees: the lens the canopy frame is seen through
+const FRAME_FOOT := 1.0            ## m ahead of your eye, where the struts stand on the dash
+const FRAME_THICK := 0.09          ## m across the frame's struts and bow
+const FRAME_NEAR := 0.12           ## m: the frame is drawn up to this close in front of your eye
+const BOW_AHEAD := 0.58            ## m ahead of your eye, the bow over the top of the glass
+const BOW_TOP := 0.44              ## m above your eye, the bow at its middle
+const BOW_SIDE := Vector2(0.62, 0.27)  ## m: where the bow meets each strut (out, up)
+const OVERHEAD := Vector3(0.3, 0.5, 0.05)  ## m: where a strut has got to once it is over and behind you
 
 var values: Dictionary = {}
 var vessel_name := ""
@@ -236,24 +245,80 @@ func _draw_canopy_shine(vp: Vector2, line: PackedVector2Array) -> void:
 			CockpitDash.halo(self, at, vp.y * (0.04 + 0.16 * float(l.power)), Color(col, 0.16 * float(l.power)))
 
 
-## Two struts, from the dash's shoulders up and in to the top of the canopy, shaded
-## across their width like a rolled metal frame.
+## The canopy's frame, as seen from the seat (modelled in metres round your eye,
+## then projected): two struts from the dash's shoulders up and back over your
+## head, and a bow across the top of the glass between them. The nearer a part is
+## the wider it draws, so the struts swell and sweep out to the top corners as they
+## pass overhead, which is what makes them feel like they go over you.
 func _draw_struts(vp: Vector2, line: PackedVector2Array) -> void:
+	var bow: Array[Vector3] = []
+	for i in 25:
+		var u := lerpf(-1.0, 1.0, float(i) / 24.0)
+		bow.append(Vector3(u * BOW_SIDE.x, lerpf(BOW_TOP, BOW_SIDE.y, u * u), -BOW_AHEAD))
+	_draw_member(vp, bow)
 	for side in [-1.0, 1.0]:
-		var s: float = side
-		var bx := vp.x * 0.5 + s * vp.x * 0.33
-		var tx := vp.x * 0.5 + s * vp.x * 0.2
-		var bw := vp.x * 0.022
-		var tw := vp.x * 0.012
-		# Its foot follows the dash's edge (drawn over the dash, which sits behind).
-		var poly := PackedVector2Array([Vector2(bx - bw, rim_y(line, bx - bw)), Vector2(bx + bw, rim_y(line, bx + bw)),
-			Vector2(tx + tw, 0), Vector2(tx - tw, 0)])
-		# The side that faces the middle catches the light.
-		var minus := STRUT_LIT if s > 0.0 else STRUT_SHADE
-		var plus := STRUT_SHADE if s > 0.0 else STRUT_LIT
-		draw_polygon(poly, PackedColorArray([minus, plus, plus, minus]))
-		var inner := -s
-		draw_line(poly[0 if inner < 0.0 else 1], Vector2(tx + inner * tw, 0), STRUT_EDGE, 1.5)
+		_draw_member(vp, strut_path(vp, line, side))
+
+
+## One strut's centre line in metres round your eye (x right, y up, -z ahead), from
+## its foot on the dash's edge, through the bow's end, to over and behind your head.
+static func strut_path(vp: Vector2, line: PackedVector2Array, side: float) -> Array[Vector3]:
+	var bx := vp.x * 0.5 + side * vp.x * 0.33
+	var foot := frame_unproject(vp, Vector2(bx, rim_y(line, bx) + 2.0), FRAME_FOOT)
+	var mid := Vector3(side * BOW_SIDE.x, BOW_SIDE.y, -BOW_AHEAD)
+	var top := Vector3(side * OVERHEAD.x, OVERHEAD.y, OVERHEAD.z)
+	var pull := mid * 2.0 - (foot + top) * 0.5      # so the curve passes through mid
+	var out: Array[Vector3] = []
+	for i in 41:
+		var t := float(i) / 40.0
+		out.append(foot.lerp(pull, t).lerp(pull.lerp(top, t), t))
+	return out
+
+
+## Where a point round your eye (m: x right, y up, -z ahead) lands on screen.
+static func frame_project(vp: Vector2, p: Vector3) -> Vector2:
+	return vp * 0.5 + Vector2(p.x, -p.y) * _focal(vp) / -p.z
+
+
+## The point `depth` m ahead of your eye that lands on screen at s.
+static func frame_unproject(vp: Vector2, s: Vector2, depth: float) -> Vector3:
+	var d := (s - vp * 0.5) * depth / _focal(vp)
+	return Vector3(d.x, -d.y, -depth)
+
+
+static func _focal(vp: Vector2) -> float:
+	return vp.y * 0.5 / tan(deg_to_rad(FRAME_FOV) * 0.5)
+
+
+## A rolled frame member along `path` (metres round your eye), FRAME_THICK across:
+## wider the nearer it is, its side toward the middle of the glass catching the
+## light, a bright lip along that edge and a dark one along the other.
+func _draw_member(vp: Vector2, path: Array[Vector3]) -> void:
+	var mid := PackedVector2Array()
+	var half := PackedFloat32Array()
+	for p in path:
+		if p.z > -FRAME_NEAR:
+			break
+		mid.append(frame_project(vp, p))
+		half.append(_focal(vp) * FRAME_THICK * 0.5 / -p.z)
+	if mid.size() < 2:
+		return
+	var inner := PackedVector2Array()      # the edge toward the middle of the screen
+	var outer := PackedVector2Array()
+	for i in mid.size():
+		var along := mid[mini(i + 1, mid.size() - 1)] - mid[maxi(i - 1, 0)]
+		var n := along.orthogonal().normalized()
+		if n.dot(vp * 0.5 - mid[i]) < 0.0:
+			n = -n
+		inner.append(mid[i] + n * half[i])
+		outer.append(mid[i] - n * half[i])
+	for i in mid.size() - 1:
+		draw_polygon(PackedVector2Array([inner[i], inner[i + 1], mid[i + 1], mid[i]]),
+			PackedColorArray([STRUT_LIT, STRUT_LIT, STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE.lerp(STRUT_LIT, 0.35)]))
+		draw_polygon(PackedVector2Array([mid[i], mid[i + 1], outer[i + 1], outer[i]]),
+			PackedColorArray([STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE.lerp(STRUT_LIT, 0.35), STRUT_SHADE, STRUT_SHADE]))
+	draw_polyline(inner, STRUT_EDGE, 1.5, true)
+	draw_polyline(outer, Color(0, 0, 0, 0.8), 2.0, true)
 
 
 ## How the yoke sits for a stick of (pitch, yaw, roll), each -1..1: turned by
