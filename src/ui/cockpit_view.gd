@@ -2,58 +2,54 @@ class_name CockpitView
 extends Control
 ## The cockpit view (issue #181): V in a ship, the same cockpit for every ship.
 ## Most of the view is the canopy, glass with a faint tint; two struts frame it, and
-## a dashboard runs across the bottom. Its instruments work, from the same values
-## the chase view's HUD gets:
-##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
-##   hull, shield and boost meters, and one lamp for the Shift ability (lit while
-##   it runs, dark when not).
+## a dashboard runs across the bottom, its instruments working from the same values
+## the chase view's HUD gets (CockpitDash paints it).
 ##
 ## Drawn flat over the camera, not modelled: the cockpit camera is locked to the
 ## ship (ChaseCamera.COCKPIT), so a painted frame stays put exactly as a modelled
 ## one would, costs no geometry, and fits any ship. FlightHud hands it `values`
 ## (show_values) and redraws it.
 ##
-## The dash is brushed metal (a light chamfer on its top edge, recessed plates for
-## the instruments); each instrument sits in a bevelled bezel under glass that
-## catches the light. A yoke stands in front, below the dash's top so the view
-## stays open, and follows the stick: it turns with roll (and yaw, which the mouse
-## drives), and comes back toward you as you pull up.
+## The dash leans away from you: CockpitDash paints it flat into a SubViewport and
+## a perspective shader (cockpit_tilt.gdshader) draws that back behind this, so its
+## far edge shrinks toward the middle, the dials go oval and the plates' sides lean
+## in. A yoke stands in front, below the dash's top so the view stays open, and
+## follows the stick: it turns with roll (and yaw, which the mouse drives), and
+## comes back toward you as you pull up.
+##
+## The glass catches the light: the sun and any bolt going by (gather_lights) glint
+## on the dials and along the dash's edge, and glow faintly on the canopy round
+## where they are.
+
+const TiltShader := preload("res://src/systems/look/shaders/cockpit_tilt.gdshader")
 
 const GLASS := Color(0.55, 0.75, 0.9, 0.06)
 const STRUT_LIT := Color(0.3, 0.3, 0.31, 1.0)
 const STRUT_SHADE := Color(0.06, 0.06, 0.07, 1.0)
 const STRUT_EDGE := Color(0.62, 0.61, 0.58, 0.9)
-const METAL_TOP := Color(0.42, 0.42, 0.43, 1.0)
-const METAL_LOW := Color(0.17, 0.17, 0.18, 1.0)
-const CHAMFER := Color(0.78, 0.77, 0.74, 1.0)
-const PLATE := Color(0.08, 0.08, 0.085, 0.85)
-const DASH_RIM := Color(0.36, 0.34, 0.31, 1.0)
-const BEZEL := Color(0.16, 0.16, 0.17, 1.0)
-const BEZEL_LIT := Color(0.62, 0.61, 0.58, 0.9)
-const BEZEL_SHADE := Color(0.02, 0.02, 0.02, 0.9)
-const GLARE_SOFT := Color(1, 1, 1, 0.07)
-const GLARE_BAND := Color(1, 1, 1, 0.045)
-const GLARE_GLINT := Color(1, 1, 1, 0.4)
-const LIGHT := Vector2(-0.7071, -0.7071)   ## where the light comes from on screen (upper left)
+const LIGHT := CockpitDash.LIGHT
 const YOKE := Color(0.24, 0.24, 0.25, 1.0)
 const YOKE_LIT := Color(0.55, 0.55, 0.56, 0.9)
 const YOKE_EDGE := Color(0.02, 0.02, 0.02, 1.0)
 const GRIP := Color(0.07, 0.065, 0.06, 1.0)
 const YOKE_TURN := 28.0            ## degrees the yoke turns at full roll
-const FACE := Color(0.03, 0.03, 0.035, 1.0)
-const NEEDLE := Color(1.0, 0.55, 0.2, 1.0)
-const SKY := Color(0.22, 0.48, 0.82, 1.0)
-const EARTH := Color(0.46, 0.3, 0.15, 1.0)
-const LAMP_ON := Color(1.0, 0.62, 0.15, 1.0)
-const LAMP_OFF := Color(0.22, 0.16, 0.1, 1.0)
-const DASH_EDGE := 0.76            ## dash top at the sides, share of the screen height
-const DASH_MID := 0.71             ## and in the middle (it rises toward the gunsight)
-const CLIMB_RANGE := 50.0          ## m/s at the climb dial's stops
-const ATT_DEG := 45.0              ## pitch that moves the attitude ball's horizon one radius
+const TILT := 0.55                 ## how fast the dash recedes going up it (cockpit_tilt.gdshader)
+const PANEL_TOP := 0.66            ## the dash's texture starts this far down the screen (before the lean)
+const PANEL_SCALE := 1.5           ## the dash's texture is drawn this much finer than the screen, so it stays crisp warped
+const SUN_GLINT := 0.5             ## the sun's glints at full daylight, 0..1
+const BOLT_RANGE := 90.0           ## m: bolts further off than this put no light on the glass
+const BOLT_FALLOFF := 14.0         ## m: a bolt this far off glints at half strength
+const MAX_GLINTS := 6
 
 var values: Dictionary = {}
 var vessel_name := ""
 var yoke := Vector3.ZERO            ## the yoke as drawn (pitch, yaw, roll), eased toward the stick
+var lights: Array = []              ## gather_lights(), this frame
+var dash: CockpitDash
+var _dash_vp: SubViewport
+var _dash_quad: ColorRect
+var _sun: DirectionalLight3D
+var _sun_look := 0.0                ## seconds until the next look for a sun, when there is none
 
 
 func _ready() -> void:
@@ -61,376 +57,203 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
+	_dash_vp = SubViewport.new()
+	_dash_vp.name = "DashView"
+	_dash_vp.transparent_bg = true
+	_dash_vp.disable_3d = true
+	_dash_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(_dash_vp)
+	dash = CockpitDash.new()
+	_dash_vp.add_child(dash)
+	_dash_quad = ColorRect.new()
+	_dash_quad.name = "DashTilt"
+	_dash_quad.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_dash_quad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dash_quad.show_behind_parent = true
+	var mat := ShaderMaterial.new()
+	mat.shader = TiltShader
+	mat.set_shader_parameter("panel", _dash_vp.get_texture())
+	_dash_quad.material = mat
+	add_child(_dash_quad)
 
 
 func _process(dt: float) -> void:
-	if not visible:
+	var on := is_visible_in_tree()
+	_dash_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if not on:
 		return
+	_fit(get_viewport_rect().size)
+	lights = gather_lights(dt)
+	dash.values = values
+	dash.vessel_name = vessel_name
+	dash.lights = lights
+	dash.queue_redraw()
 	var want := Vector3(_v("stick_pitch"), _v("stick_yaw"), _v("stick_roll"))
 	if not yoke.is_equal_approx(want):
 		yoke = yoke.lerp(want, minf(1.0, dt * 10.0))
-		queue_redraw()
+	queue_redraw()
 
 
 func _v(key: String, fallback: float = 0.0) -> float:
 	return float(values.get(key, fallback))
 
 
-## The dash's top edge at x (a gentle arch, higher in the middle).
-static func dash_top(vp: Vector2, x: float) -> float:
-	var u := (x / maxf(vp.x, 1.0)) * 2.0 - 1.0
-	return vp.y * lerpf(DASH_MID, DASH_EDGE, u * u)
+## Size the dash's texture and the shader to the screen: the panel runs far enough
+## past each side that its top still reaches the screen's edges once it leans.
+func _fit(vp: Vector2) -> void:
+	var top := vp.y * PANEL_TOP
+	var margin := ceilf(vp.x * 0.5 * TILT * (1.0 - PANEL_TOP))
+	var size := Vector2i(ceili((vp.x + margin * 2.0) * PANEL_SCALE), ceili((vp.y - top) * PANEL_SCALE))
+	if _dash_vp.size == size and dash.screen == vp:
+		return
+	_dash_vp.size = size
+	dash.screen = vp
+	dash.margin = margin
+	dash.top = top
+	dash.scale_by = PANEL_SCALE
+	dash.size = Vector2(size)
+	var mat := _dash_quad.material as ShaderMaterial
+	mat.set_shader_parameter("tilt", TILT)
+	mat.set_shader_parameter("screen", vp)
+	mat.set_shader_parameter("margin", margin)
+	mat.set_shader_parameter("top", top)
+
+
+## Where panel point p (CockpitDash's flat drawing) lands on screen once the dash
+## leans away: the bottom edge stays put, and the higher up the panel the further
+## off it is, so it shrinks toward the middle and rises less.
+static func project(vp: Vector2, p: Vector2) -> Vector2:
+	var v := (vp.y - p.y) / maxf(vp.y, 1.0)
+	var z := 1.0 + TILT * v
+	return Vector2(vp.x * 0.5 + (p.x - vp.x * 0.5) / z, vp.y * (1.0 - v / z))
+
+
+## The dash's top edge on screen, left to right, past both sides of the screen.
+static func rim(vp: Vector2) -> PackedVector2Array:
+	var margin := vp.x * 0.5 * TILT * (1.0 - PANEL_TOP)
+	var out := PackedVector2Array()
+	for i in 49:
+		var x := lerpf(-margin, vp.x + margin, float(i) / 48.0)
+		out.append(project(vp, Vector2(x, CockpitDash.dash_top(vp, x))))
+	return out
+
+
+## The dash's top edge on screen at x.
+static func rim_y(line: PackedVector2Array, x: float) -> float:
+	for i in line.size() - 1:
+		if x <= line[i + 1].x:
+			return lerpf(line[i].y, line[i + 1].y, clampf(inverse_lerp(line[i].x, line[i + 1].x, x), 0.0, 1.0))
+	return line[line.size() - 1].y
+
+
+## What lights the glass this frame: the sun, and the nearest bolts in flight. Each
+## { dir: unit vector toward it in the camera's frame (x right, y up, -z ahead),
+## color, power 0..1, and screen: where it is on screen, when it is ahead }.
+func gather_lights(dt: float = 0.0) -> Array:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return []
+	var to_cam := cam.global_basis.orthonormalized().inverse()
+	var out: Array = []
+	var sun := _find_sun(cam, dt)
+	if sun != null:
+		var toward := sun.global_basis.z.normalized()
+		var l := {"dir": to_cam * toward, "color": sun.light_color, "sun": true,
+			"power": SUN_GLINT * clampf(sun.light_energy / 3.0, 0.0, 1.0)}
+		var far := cam.global_position + toward * 1000.0
+		if not cam.is_position_behind(far):
+			l.screen = cam.unproject_position(far)
+		out.append(l)
+	var bolts: Array = []
+	for b in get_tree().get_nodes_in_group("glints"):
+		var n := b as Node3D
+		if n == null or not n.is_visible_in_tree():
+			continue
+		var rel := n.global_position - cam.global_position
+		var d := rel.length()
+		if d > BOLT_RANGE or d < 0.01:
+			continue
+		var p := 1.0 / (1.0 + pow(d / BOLT_FALLOFF, 2.0)) * (1.0 - d / BOLT_RANGE)
+		var l := {"dir": to_cam * (rel / d), "color": n.get_meta("glint_color", Color.WHITE), "power": p}
+		if not cam.is_position_behind(n.global_position):
+			l.screen = cam.unproject_position(n.global_position)
+		bolts.append(l)
+	bolts.sort_custom(func(a, b): return a.power > b.power)
+	out.append_array(bolts.slice(0, MAX_GLINTS))
+	return out
+
+
+## The scene's sun: the brightest directional light in the camera's world. Looked
+## for again only once a second while there is none.
+func _find_sun(cam: Camera3D, dt: float) -> DirectionalLight3D:
+	if is_instance_valid(_sun) and _sun.is_visible_in_tree():
+		return _sun
+	_sun = null
+	_sun_look -= dt
+	if _sun_look > 0.0:
+		return null
+	_sun_look = 1.0
+	for n in get_tree().root.find_children("*", "DirectionalLight3D", true, false):
+		var l := n as DirectionalLight3D
+		if l.is_visible_in_tree() and l.get_world_3d() == cam.get_world_3d() \
+				and (_sun == null or l.light_energy > _sun.light_energy):
+			_sun = l
+	return _sun
 
 
 func _draw() -> void:
 	var vp := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, vp), GLASS)
-	# A couple of faint streaks of glare on the glass.
-	draw_line(Vector2(vp.x * 0.62, vp.y * 0.08), Vector2(vp.x * 0.7, vp.y * 0.3), Color(1, 1, 1, 0.05), 6.0)
-	draw_line(Vector2(vp.x * 0.66, vp.y * 0.06), Vector2(vp.x * 0.72, vp.y * 0.22), Color(1, 1, 1, 0.035), 3.0)
-	_draw_struts(vp)
-	_draw_dash(vp)
-	_draw_instruments(vp)
+	var line := rim(vp)
+	# The glass, down to the dash's edge.
+	var glass := PackedVector2Array([Vector2(vp.x, 0), Vector2(0, 0)])
+	glass.append_array(line)
+	draw_colored_polygon(glass, GLASS)
+	# A couple of faint streaks of glare on it, brighter with the sun ahead.
+	var sun_ahead := 0.0
+	for l in lights:
+		if l.get("sun", false):
+			sun_ahead = float(l.power) * clampf(-(l.dir as Vector3).z, 0.0, 1.0) / SUN_GLINT
+	draw_line(Vector2(vp.x * 0.62, vp.y * 0.08), Vector2(vp.x * 0.7, vp.y * 0.3), Color(1, 1, 1, 0.05 + 0.04 * sun_ahead), 6.0)
+	draw_line(Vector2(vp.x * 0.66, vp.y * 0.06), Vector2(vp.x * 0.72, vp.y * 0.22), Color(1, 1, 1, 0.035 + 0.03 * sun_ahead), 3.0)
+	_draw_canopy_shine(vp, line)
+	_draw_struts(vp, line)
 	_draw_yoke(vp)
+
+
+## The sun and bolts ahead light the canopy faintly round where they are: a wide
+## haze round the sun, a small coloured bloom round a bolt, more the closer it is.
+func _draw_canopy_shine(vp: Vector2, line: PackedVector2Array) -> void:
+	for l in lights:
+		if not l.has("screen"):
+			continue
+		var at: Vector2 = l.screen
+		if at.y > rim_y(line, at.x):
+			continue
+		var col := Color(l.color)
+		if l.get("sun", false):
+			CockpitDash.halo(self, at, vp.y * 0.5, Color(col, 0.07 * float(l.power) / SUN_GLINT))
+		else:
+			CockpitDash.halo(self, at, vp.y * (0.04 + 0.16 * float(l.power)), Color(col, 0.16 * float(l.power)))
 
 
 ## Two struts, from the dash's shoulders up and in to the top of the canopy, shaded
 ## across their width like a rolled metal frame.
-func _draw_struts(vp: Vector2) -> void:
+func _draw_struts(vp: Vector2, line: PackedVector2Array) -> void:
 	for side in [-1.0, 1.0]:
 		var s: float = side
 		var bx := vp.x * 0.5 + s * vp.x * 0.33
 		var tx := vp.x * 0.5 + s * vp.x * 0.2
 		var bw := vp.x * 0.022
 		var tw := vp.x * 0.012
-		var by := dash_top(vp, bx) + 4.0
-		var poly := PackedVector2Array([Vector2(bx - bw, by), Vector2(bx + bw, by), Vector2(tx + tw, 0), Vector2(tx - tw, 0)])
+		# Its foot follows the dash's edge (drawn over the dash, which sits behind).
+		var poly := PackedVector2Array([Vector2(bx - bw, rim_y(line, bx - bw)), Vector2(bx + bw, rim_y(line, bx + bw)),
+			Vector2(tx + tw, 0), Vector2(tx - tw, 0)])
 		# The side that faces the middle catches the light.
 		var minus := STRUT_LIT if s > 0.0 else STRUT_SHADE
 		var plus := STRUT_SHADE if s > 0.0 else STRUT_LIT
 		draw_polygon(poly, PackedColorArray([minus, plus, plus, minus]))
 		var inner := -s
-		draw_line(Vector2(bx + inner * bw, by), Vector2(tx + inner * tw, 0), STRUT_EDGE, 1.5)
-
-
-## The dash: brushed metal, lighter at the top where the canopy's light falls, with
-## a bright chamfer along its edge and a row of rivets under it.
-func _draw_dash(vp: Vector2) -> void:
-	var pts := PackedVector2Array()
-	var cols := PackedColorArray()
-	var n := 32
-	var top := vp.y * DASH_MID
-	for i in n + 1:
-		var x := vp.x * float(i) / float(n)
-		pts.append(Vector2(x, dash_top(vp, x)))
-	var rim := pts.duplicate()
-	pts.append(Vector2(vp.x, vp.y))
-	pts.append(Vector2(0, vp.y))
-	for p in pts:
-		cols.append(METAL_TOP.lerp(METAL_LOW, clampf((p.y - top) / maxf(vp.y - top, 1.0), 0.0, 1.0)))
-	draw_polygon(pts, cols)
-	# Brushing: faint horizontal streaks, the same every frame.
-	for i in 150:
-		var y := lerpf(top, vp.y, _hash(i, 1))
-		var span := dash_span(vp, y)
-		if span.y - span.x < 4.0:
-			continue
-		var a := lerpf(span.x, span.y, _hash(i, 2) * 0.6)
-		var b := lerpf(a, span.y, 0.3 + _hash(i, 3) * 0.7)
-		var lit := _hash(i, 4) > 0.45
-		draw_line(Vector2(a, y), Vector2(b, y), Color(1, 1, 1, 0.035) if lit else Color(0, 0, 0, 0.08), 1.0)
-	# A sheen under the edge, then the chamfer catching the light, then its shadow.
-	_arch_band(vp, n, 6.0, vp.y * 0.045, Color(1, 1, 1, 0.08), Color(1, 1, 1, 0.0))
-	_arch_band(vp, n, 0.0, 3.0, CHAMFER, CHAMFER.darkened(0.3))
-	_arch_band(vp, n, 3.0, 6.0, Color(0, 0, 0, 0.55), Color(0, 0, 0, 0.0))
-	draw_polyline(rim, Color(0.05, 0.05, 0.05, 0.9), 1.0, true)
-	for i in 15:
-		var x := vp.x * (float(i) + 1.0) / 16.0
-		_rivet(Vector2(x, dash_top(vp, x) + 11.0), 2.5)
-
-
-## A band that follows the dash's top edge, from d0 to d1 px under it, shaded from
-## c0 at its top to c1 at its bottom.
-func _arch_band(vp: Vector2, n: int, d0: float, d1: float, c0: Color, c1: Color) -> void:
-	for i in n:
-		var xa := vp.x * float(i) / float(n)
-		var xb := vp.x * float(i + 1) / float(n)
-		var ya := dash_top(vp, xa)
-		var yb := dash_top(vp, xb)
-		draw_polygon(PackedVector2Array([Vector2(xa, ya + d0), Vector2(xb, yb + d0), Vector2(xb, yb + d1), Vector2(xa, ya + d1)]),
-			PackedColorArray([c0, c0, c1, c1]))
-
-
-## Where the dash covers row y: x from .x to .y (empty above the arch's crown).
-static func dash_span(vp: Vector2, y: float) -> Vector2:
-	var t := (y / maxf(vp.y, 1.0) - DASH_MID) / (DASH_EDGE - DASH_MID)
-	if t >= 1.0:
-		return Vector2(0.0, vp.x)
-	if t <= 0.0:
-		return Vector2(vp.x * 0.5, vp.x * 0.5)
-	var u := sqrt(t)
-	return Vector2(vp.x * (1.0 - u) * 0.5, vp.x * (1.0 + u) * 0.5)
-
-
-## A steady pseudo-random 0..1 for (i, k), so the brushing does not crawl.
-static func _hash(i: int, k: int) -> float:
-	return fposmod(sin(float(i) * 12.9898 + float(k) * 78.233) * 43758.5453, 1.0)
-
-
-func _rivet(c: Vector2, r: float) -> void:
-	draw_circle(c, r + 1.0, Color(0, 0, 0, 0.5))
-	draw_circle(c, r, Color(0.42, 0.42, 0.43))
-	draw_circle(c + LIGHT * r * 0.35, r * 0.4, Color(0.85, 0.85, 0.82, 0.8))
-
-
-## A recessed plate the instruments sit in: darker than the dash, its top lip in
-## shadow and its bottom lip catching the light, a screw in each corner.
-func _plate(r: Rect2) -> void:
-	draw_rect(r, PLATE)
-	draw_line(r.position, Vector2(r.end.x, r.position.y), Color(0, 0, 0, 0.8), 2.0)
-	draw_line(r.position, Vector2(r.position.x, r.end.y), Color(0, 0, 0, 0.6), 1.5)
-	draw_line(Vector2(r.position.x, r.end.y), r.end, Color(0.7, 0.69, 0.66, 0.5), 1.5)
-	draw_line(Vector2(r.end.x, r.position.y), r.end, Color(0.7, 0.69, 0.66, 0.35), 1.0)
-	for corner in [r.position, Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end]:
-		var p: Vector2 = corner
-		_rivet(p + (r.get_center() - p).sign() * 7.0, 2.0)
-
-
-func _draw_instruments(vp: Vector2) -> void:
-	var font := RetroUI.font()
-	var fs := RetroUI.size("flight_gauge", 17)
-	var row := lerpf(vp.y * DASH_EDGE, vp.y, 0.5) + 4.0
-	var r := minf(vp.y * 0.072, vp.x * 0.048)
-	var max_spd := maxf(1.0, _v("max_speed", 300.0))
-	var plate_top := row - r * 1.5
-	var plate_bottom := minf(vp.y - 4.0, row + r + fs + 10.0)
-	_plate(Rect2(vp.x * 0.09, plate_top, vp.x * 0.06, plate_bottom - plate_top))
-	_plate(Rect2(vp.x * 0.165, plate_top, vp.x * 0.67, plate_bottom - plate_top))
-	_plate(Rect2(vp.x * 0.848, plate_top, vp.x * 0.124, plate_bottom - plate_top))
-	# Throttle: a lever slot.
-	_bar_v(Vector2(vp.x * 0.12, row), r * 1.6, _v("throttle"), "THR", font, fs)
-	_dial(Vector2(vp.x * 0.22, row), r, _v("speed") / max_spd, 10,
-		"SPD", "%d" % int(_v("speed")), font, fs)
-	_altimeter(Vector2(vp.x * 0.335, row), r, _v("altitude"), font, fs)
-	_attitude(Vector2(vp.x * 0.5, row - r * 0.1), r * 1.25, _v("pitch"), _v("roll"))
-	_dial(Vector2(vp.x * 0.665, row), r, (_v("climb") + CLIMB_RANGE) / (CLIMB_RANGE * 2.0), 10,
-		"CLIMB", "%+d" % int(_v("climb")), font, fs)
-	_compass(Vector2(vp.x * 0.78, row), r, _v("heading"), font, fs)
-	# Right panel: hull, shield, boost meter, the ability lamp.
-	var px := vp.x * 0.86
-	var pw := vp.x * 0.1
-	var py := row - r
-	_bar_h(Vector2(px, py), pw, _v("hull") / maxf(1.0, _v("hull_max", 1.0)), "HULL", font, fs)
-	if _v("shield_max") > 0.0:
-		_bar_h(Vector2(px, py + fs + 14), pw, _v("shield") / _v("shield_max"), "SHLD", font, fs)
-	_bar_h(Vector2(px, py + (fs + 14) * 2.0), pw, _v("boost"), "BOOST", font, fs)
-	var on := bool(values.get("ability_on", false))
-	var lamp := Vector2(px + 12.0, py + (fs + 14) * 3.0 + 14.0)
-	_lamp(lamp, 9.0, on)
-	draw_string(font, lamp + Vector2(18, fs * 0.35), str(values.get("ability", "boost")).to_upper(),
-		HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 4, LAMP_ON if on else Color(0.6, 0.55, 0.5, 0.9))
-	# The ship's name on a little plate over the instruments (the yoke's hub hides
-	# the bottom of the dash).
-	if vessel_name != "":
-		var tw := font.get_string_size(vessel_name.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 5).x + 24.0
-		var tag := Rect2(vp.x * 0.5 - tw * 0.5, plate_top - fs - 8.0, tw, fs + 2.0)
-		_plate(tag)
-		draw_string(font, Vector2(tag.position.x, tag.end.y - 5.0), vessel_name.to_upper(), HORIZONTAL_ALIGNMENT_CENTER,
-			tw, fs - 5, Color(0.72, 0.68, 0.6, 0.9))
-
-
-## A round dial: 270 degrees of scale from bottom left through the top to bottom
-## right, `ticks` divisions, the needle at `frac` (0..1) of the way round.
-func _dial(c: Vector2, r: float, frac: float, ticks: int, label: String, readout: String, font: Font, fs: int) -> void:
-	_face(c, r)
-	var start := deg_to_rad(135.0)
-	var sweep := deg_to_rad(270.0)
-	for i in ticks + 1:
-		var a := start + sweep * float(i) / float(ticks)
-		var d := Vector2.from_angle(a)
-		draw_line(c + d * r * 0.78, c + d * r * 0.92, Color(0.85, 0.82, 0.75), 1.5)
-	_needle(c, r * 0.8, start + sweep * clampf(frac, 0.0, 1.0))
-	_dial_text(c, r, label, readout, font, fs)
-	_glass(c, r)
-
-
-## An altimeter: one turn of the needle per 1000 m, the full height in figures.
-func _altimeter(c: Vector2, r: float, alt: float, font: Font, fs: int) -> void:
-	_face(c, r)
-	for i in 10:
-		var d := Vector2.from_angle(-PI * 0.5 + TAU * float(i) / 10.0)
-		draw_line(c + d * r * 0.78, c + d * r * 0.92, Color(0.85, 0.82, 0.75), 1.5)
-	_needle(c, r * 0.8, -PI * 0.5 + TAU * fposmod(alt, 1000.0) / 1000.0)
-	_dial_text(c, r, "ALT", "%d" % int(alt), font, fs)
-	_glass(c, r)
-
-
-## The attitude ball: sky over ground, the horizon dropping as the nose comes up and
-## turning against the roll, a fixed wings mark in the middle.
-func _attitude(c: Vector2, r: float, pitch: float, roll: float) -> void:
-	_bezel(c, r)
-	draw_circle(c, r, SKY)
-	var h := horizon(r, pitch, roll)
-	var ground := clip_half_plane(circle_points(r, 48), h.normal, h.offset)
-	if ground.size() >= 3:
-		for i in ground.size():
-			ground.set(i, ground[i] + c)
-		draw_colored_polygon(ground, EARTH)
-	if absf(h.offset) < r:
-		var half := sqrt(r * r - h.offset * h.offset)
-		var mid: Vector2 = c + h.normal * h.offset
-		var along: Vector2 = h.normal.orthogonal()
-		draw_line(mid - along * half, mid + along * half, Color(1, 1, 1, 0.9), 2.0)
-	# Pitch marks every 10 degrees either side of the horizon.
-	for k in [-20.0, -10.0, 10.0, 20.0]:
-		var o: float = h.offset - k * r / ATT_DEG
-		if absf(o) < r * 0.85:
-			var mid2: Vector2 = c + h.normal * o
-			var w := r * (0.18 if absf(k) < 15.0 else 0.3)
-			draw_line(mid2 - h.normal.orthogonal() * w, mid2 + h.normal.orthogonal() * w, Color(1, 1, 1, 0.7), 1.0)
-	draw_arc(c, r, 0.0, TAU, 48, Color(0.05, 0.05, 0.05), 3.0)
-	var wing := Color(1.0, 0.7, 0.2)
-	draw_line(c + Vector2(-r * 0.5, 0), c + Vector2(-r * 0.15, 0), wing, 3.0)
-	draw_line(c + Vector2(r * 0.15, 0), c + Vector2(r * 0.5, 0), wing, 3.0)
-	draw_circle(c, 3.0, wing)
-	_glass(c, r)
-
-
-## Where the attitude ball's horizon is: ground is every point p (from the ball's
-## centre) with p.dot(normal) >= offset. Nose up pushes it down (offset grows);
-## rolling right turns it the other way on screen.
-static func horizon(r: float, pitch: float, roll: float) -> Dictionary:
-	return {
-		"normal": Vector2(0, 1).rotated(-deg_to_rad(roll)),
-		"offset": clampf(pitch / ATT_DEG, -1.5, 1.5) * r,
-	}
-
-
-static func circle_points(r: float, n: int) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for i in n:
-		out.append(Vector2.from_angle(TAU * float(i) / float(n)) * r)
-	return out
-
-
-## The part of a convex polygon where p.dot(n) >= d (one Sutherland-Hodgman pass).
-static func clip_half_plane(poly: PackedVector2Array, n: Vector2, d: float) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	var count := poly.size()
-	for i in count:
-		var a := poly[i]
-		var b := poly[(i + 1) % count]
-		var da := a.dot(n) - d
-		var db := b.dot(n) - d
-		if da >= 0.0:
-			out.append(a)
-		if (da >= 0.0) != (db >= 0.0):
-			out.append(a.lerp(b, da / (da - db)))
-	return out
-
-
-## A compass card that turns under a fixed mark at the top.
-func _compass(c: Vector2, r: float, heading: float, font: Font, fs: int) -> void:
-	_face(c, r)
-	for i in 12:
-		var deg := i * 30
-		var a := deg_to_rad(float(deg) - heading) - PI * 0.5
-		var d := Vector2.from_angle(a)
-		draw_line(c + d * r * 0.82, c + d * r * 0.94, Color(0.85, 0.82, 0.75), 1.5)
-		if deg % 90 == 0:
-			var p := c + d * r * 0.6
-			draw_string(font, p + Vector2(-12, fs * 0.3), FlightSimHud.compass_label(deg), HORIZONTAL_ALIGNMENT_CENTER,
-				24, fs - 4, NEEDLE if deg == 0 else Color(0.9, 0.87, 0.8))
-	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.98), c + Vector2(-6, -r * 0.8), c + Vector2(6, -r * 0.8)]), NEEDLE)
-	draw_string(font, c + Vector2(-r, r + fs + 2.0), "HDG %03d" % posmod(int(round(heading)), 360),
-		HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs - 4, Color(0.75, 0.72, 0.66))
-	_glass(c, r)
-
-
-func _face(c: Vector2, r: float) -> void:
-	_bezel(c, r)
-	draw_circle(c, r, FACE)
-
-
-## A turned metal ring round a face: lit on the side toward the light, in shadow
-## on the other.
-func _bezel(c: Vector2, r: float) -> void:
-	var w := maxf(4.0, r * 0.08)
-	draw_circle(c, r + w + 1.0, Color(0, 0, 0, 0.6))
-	draw_circle(c, r + w, BEZEL)
-	var lit := LIGHT.angle()
-	draw_arc(c, r + w * 0.55, lit - 1.1, lit + 1.1, 24, BEZEL_LIT, w * 0.5, true)
-	draw_arc(c, r + w * 0.55, lit + PI - 1.1, lit + PI + 1.1, 24, BEZEL_SHADE, w * 0.5, true)
-
-
-## Glass over a round face: a dark lip where it meets the bezel, a soft sheen over
-## the side toward the light, a fainter streak across the middle, and a hard glint
-## where the light catches the curve.
-func _glass(c: Vector2, r: float) -> void:
-	draw_arc(c, r - 1.5, 0.0, TAU, 48, Color(0, 0, 0, 0.5), 3.0, true)
-	var disc := circle_points(r * 0.97, 40)
-	_fill_at(clip_half_plane(disc, LIGHT, r * 0.3), c, GLARE_SOFT)
-	_fill_at(clip_half_plane(clip_half_plane(disc, LIGHT, -r * 0.18), -LIGHT, r * 0.04), c, GLARE_BAND)
-	var lit := LIGHT.angle()
-	draw_arc(c, r * 0.86, lit - 0.45, lit + 0.3, 16, GLARE_GLINT, maxf(1.5, r * 0.03), true)
-	draw_circle(c + LIGHT.rotated(0.45) * r * 0.66, maxf(1.5, r * 0.035), Color(1, 1, 1, 0.5))
-
-
-## Glass over a flat window (the bars): a sheen on its top half and a bright top lip.
-func _glass_rect(r: Rect2) -> void:
-	draw_rect(Rect2(r.position, Vector2(r.size.x, r.size.y * 0.45)), Color(1, 1, 1, 0.08))
-	draw_line(r.position + Vector2(1, 1), Vector2(r.end.x - 1, r.position.y + 1), Color(1, 1, 1, 0.3), 1.0)
-
-
-func _fill_at(poly: PackedVector2Array, at: Vector2, col: Color) -> void:
-	if poly.size() < 3:
-		return
-	for i in poly.size():
-		poly.set(i, poly[i] + at)
-	draw_colored_polygon(poly, col)
-
-
-func _needle(c: Vector2, length: float, angle: float) -> void:
-	var d := Vector2.from_angle(angle)
-	draw_line(c - d * length * 0.15, c + d * length, NEEDLE, 3.0)
-	draw_circle(c, 4.0, Color(0.6, 0.58, 0.55))
-
-
-func _dial_text(c: Vector2, r: float, label: String, readout: String, font: Font, fs: int) -> void:
-	draw_string(font, c + Vector2(-r, r * 0.45), readout, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs - 3, Color(0.95, 0.92, 0.85))
-	draw_string(font, c + Vector2(-r, r + fs + 2.0), label, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs - 4, Color(0.75, 0.72, 0.66))
-
-
-## An upright bar centred on `c`, filled from the bottom.
-func _bar_v(c: Vector2, h: float, frac: float, label: String, font: Font, fs: int) -> void:
-	var r := Rect2(c + Vector2(-8, -h * 0.5), Vector2(16, h))
-	draw_rect(r, FACE)
-	var f := h * clampf(frac, 0.0, 1.0)
-	draw_rect(Rect2(Vector2(r.position.x, r.end.y - f), Vector2(16, f)), NEEDLE)
-	_glass_rect(r)
-	draw_rect(r, DASH_RIM, false, 1.5)
-	draw_string(font, c + Vector2(-40, h * 0.5 + fs + 2.0), label, HORIZONTAL_ALIGNMENT_CENTER, 80, fs - 4, Color(0.75, 0.72, 0.66))
-
-
-func _bar_h(top_left: Vector2, w: float, frac: float, label: String, font: Font, fs: int) -> void:
-	draw_string(font, top_left + Vector2(0, fs - 5), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 5, Color(0.75, 0.72, 0.66))
-	var r := Rect2(top_left + Vector2(0, fs - 2), Vector2(w, 7))
-	draw_rect(r, FACE)
-	var f := clampf(frac, 0.0, 1.0)
-	draw_rect(Rect2(r.position, Vector2(w * f, 7)), NEEDLE if f > 0.3 else Color(1.0, 0.25, 0.18))
-	_glass_rect(r)
-	draw_rect(r, DASH_RIM, false, 1.0)
-
-
-## The Shift ability's lamp: lit (with a glow) while it runs, dark when not.
-func _lamp(c: Vector2, r: float, on: bool) -> void:
-	_bezel(c, r)
-	if on:
-		draw_circle(c, r * 2.2, Color(LAMP_ON.r, LAMP_ON.g, LAMP_ON.b, 0.18))
-		draw_circle(c, r, LAMP_ON)
-		draw_circle(c - Vector2(r, r) * 0.3, r * 0.35, Color(1, 0.95, 0.8, 0.9))
-	else:
-		draw_circle(c, r, LAMP_OFF)
+		draw_line(poly[0 if inner < 0.0 else 1], Vector2(tx + inner * tw, 0), STRUT_EDGE, 1.5)
 
 
 ## How the yoke sits for a stick of (pitch, yaw, roll), each -1..1: turned by
