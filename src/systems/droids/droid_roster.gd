@@ -177,8 +177,9 @@ static func upgrades_for(kind: String) -> Array:
 	return out
 
 
+## Capped at the levels on sale: a save from when there were more has them all.
 static func level(d: Dictionary, key: String) -> int:
-	return int((d.get("up", {}) as Dictionary).get(key, 0))
+	return mini(int((d.get("up", {}) as Dictionary).get(key, 0)), upgrade_max(key))
 
 
 ## What the next level of `key` costs this droid, or -1 (maxed, or not for its kind).

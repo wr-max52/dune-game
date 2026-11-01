@@ -360,9 +360,8 @@ func upgrade_options() -> Array:
 			var price := DroidRoster.upgrade_price(d, str(key))
 			if price < 0:
 				continue
-			var lv := DroidRoster.level(d, str(key))
 			out.append({ "id": "up:%d:%s" % [int(d.uid), key], "text": _l("upgrade") % [droid_name(d),
-				DroidRoster.upgrade_label(str(key)), lv, lv + 1, DroidRoster.upgrade_max(str(key)), price] })
+				DroidRoster.upgrade_label(str(key)), price] })
 	return out
 
 
@@ -405,7 +404,7 @@ func upgrade(uid: int, key: String) -> String:
 		var was := u.max_hp
 		u.max_hp = DroidRoster.health(d)
 		u.hp += u.max_hp - was
-	_toast(_l("upgraded") % [droid_name(d), DroidRoster.upgrade_label(key), int(r.level), DroidRoster.upgrade_max(key)])
+	_toast(_l("upgraded") % [droid_name(d), DroidRoster.upgrade_label(key)])
 	_beep(u)
 	return "upgraded"
 
