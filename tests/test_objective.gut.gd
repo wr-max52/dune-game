@@ -130,7 +130,7 @@ func test_the_inventory_panel_shows_the_job_log() -> void:
 	var panel := InventoryPanel.new()
 	panel.content = content
 	add_child_autofree(panel)
-	panel.open()
+	panel.refresh()
 	assert_eq(panel.job_rows[0], Objective.line("log_story"))
 	assert_true(panel.job_rows.size() >= 3, "story title, its line and the tally")
 	assert_eq(panel.job_rows[-1], Objective.tally())

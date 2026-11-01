@@ -71,6 +71,17 @@ func test_he_waits_on_the_cruiser_to_make_his_offer() -> void:
 	assert_false(DarkPact.hostile_at("cruiser"), "he talks first")
 
 
+func test_he_waits_just_out_of_the_corridor_door() -> void:
+	var cr: Dictionary = DarkPact.cfg().get("cruiser", {})
+	var at := DarkMasterPost._v(cr.get("at"))
+	var door := Vector3(0, CruiserHull.DECK_Y, CruiserHull.BAY_Z.y)
+	assert_eq(at.y, CruiserHull.DECK_Y, "on the bay deck")
+	assert_lt(at.z, CruiserHull.BAY_Z.y, "in the bay, not the corridor")
+	assert_lt(absf(at.x), CruiserHull.HALL_HALF, "in line with the door")
+	assert_lt(at.distance_to(door), float(DarkPact.cfg().get("meet_reach", 9.0)), "walking out of the door opens his offer")
+	assert_gt(DarkMasterPost._v(cr.get("face")).z, 0.0, "facing the door")
+
+
 func test_join_makes_the_remnant_friends_and_opens_the_oath() -> void:
 	_story_at_kill()
 	assert_true(Story.remnant_hostile(), "before: the Remnant shoot on sight")
@@ -262,6 +273,36 @@ func test_decide_join_and_refuse() -> void:
 	post.free()
 
 
+func test_his_blade_falls_where_he_does_and_you_activate_it() -> void:
+	_story_at_kill()
+	var content = load("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var gear := GearController.new()
+	gear.content = content
+	gear.items = ItemKit.new()
+	gear.labels = ItemKit._read_json(GearController.LABELS_PATH).get("labels", {})
+	var item := str(DarkPact.cfg().get("drops", ""))
+	var at := Vector3(3, -14, 20)
+	var node = gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item, "reach": 2.6 }, at)
+	assert_not_null(node, "it lies where he fell")
+	assert_eq((node as Node3D).position.x, at.x)
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "once")
+	assert_eq(gear._take(node), "picked_up")
+	assert_true(WorldState.inventory.has(item))
+	assert_false(WorldState.inventory.is_attached(item), "picked up, not switched on")
+	assert_eq(gear.blade_color().a, 0.0, "your blue blade is still yours")
+	assert_eq(gear.toggle_item(item), "attached", "activated in the inventory")
+	assert_gt(gear.blade_color().r, 0.9, "now it is red")
+	assert_true(WorldState.weapon_allowed("energy_blade"), "and it can be drawn")
+	var saved := WorldState.inventory.to_save()
+	WorldState.inventory = Inventory.new()
+	assert_eq(gear.blade_color().a, 0.0)
+	WorldState.inventory.from_save(saved)
+	assert_gt(gear.blade_color().r, 0.9, "still red after a reload")
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "taken stays taken")
+	gear.free()
+
+
 # ------------------------------------------------------------------ the sword fight
 
 func _fighter() -> BladeFighter:
@@ -290,6 +331,62 @@ func test_a_blocked_blow_staggers_him() -> void:
 	assert_eq(f.mode, "stagger")
 	assert_eq(str(f.update(0.1, 1.5, 0.0).act), "hold")
 	assert_eq(f.guard(10.0, true, false), 10.0, "open while he reels")
+
+
+func test_after_a_rush_he_backs_off_circles_and_comes_again() -> void:
+	var c: Dictionary = DarkPact.cfg().get("blade", {}).duplicate()
+	c.flurry = [2, 2]
+	var f := BladeFighter.new(c)
+	var landed := 0
+	for i in 300:
+		if bool(f.update(0.016, 1.5, 0.0).strike):
+			landed += 1
+		if f.mode == "back_off":
+			break
+	assert_eq(landed, 2, "a rush of two blows")
+	assert_eq(f.mode, "back_off", "then he gives ground")
+	f._cd = 0.0
+	assert_eq(str(f.update(0.016, 3.0, 0.0).act), "back_off", "out of reach, short of his spacing")
+	assert_eq(str(f.update(0.016, f.spacing() + 0.5, 0.0).act), "circle", "at his spacing he circles")
+	var acts := {}
+	for i in 200:
+		acts[str(f.update(0.016, f.spacing() + 0.5, 0.0).act)] = true
+	assert_true(acts.has("chase"), "and comes again")
+
+
+func test_stepping_into_his_reach_while_he_circles_draws_a_cut() -> void:
+	var f := _fighter()
+	f._back_off()
+	f.update(0.016, f.spacing(), 0.0)
+	assert_eq(f.mode, "circle")
+	assert_ne(str(f.update(0.016, 1.5, 0.0).start), "", "he cuts at you")
+	for i in 120:
+		if bool(f.update(0.016, 1.5, 0.0).strike):
+			break
+	assert_eq(f.mode, "back_off", "one cut, then off again")
+
+
+func test_a_blocked_blow_sends_him_back_after_he_reels() -> void:
+	var f := _fighter()
+	f.on_parried()
+	for i in 60:
+		f.update(0.016, 3.0, 0.0)          # (the clash shoved you out of his reach)
+	assert_eq(f.mode, "back_off")
+
+
+func test_a_clash_shoves_you_back_along_the_ground() -> void:
+	var c := preload("res://src/systems/player/character_controller.gd").new()
+	c.on_ground = true
+	c.push = Vector3(7.0, 0.0, 0.0)
+	c.velocity = c.push
+	c.push_fade = 16.0
+	c.push_holds = true
+	for i in 60:
+		c.on_ground = true
+		c.step(0.016, 0.0, -INF)
+	assert_gt(c.body_pos.x, 1.0, "slid back over a metre, feet on the ground")
+	assert_eq(c.push, Vector3.ZERO, "and the shove fades out")
+	assert_false(c.push_holds)
 
 
 func test_he_bounds_off_a_roof_and_across_the_deck() -> void:

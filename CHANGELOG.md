@@ -14,6 +14,37 @@ Plain English, newest on top. One entry per milestone.
   (or are downed) they walk back to their spots and start dancing again.
 - **None of it touches your standing.** Not the fight, the kills, getting
   away, or shots fired on board or on the sand round it.
+## The dark master's red blade (2026-11-01)
+
+- **He waits where the corridor opens into the cruiser's bay.** Walking back
+  from the bridge to your ship you pass him, and his offer opens.
+- **His blade falls where he does.** Kill him and his red energy sword lies on
+  the floor, glowing like the one on the wreck's cargo droid. Walk up and press
+  E to pick it up.
+- **A red saber no longer takes over your blue sword.** Picking one up (his, or
+  the wreck's) just puts it in your backpack. Open the inventory (I) and press
+  Activate to fight with the red blade; Put away and your sword is blue again.
+  An activated red saber can be drawn in a story save even without the blue
+  one. A save that already had the wreck's saber starts with it put away.
+
+## Sword fighting the dark master (2026-10-31)
+
+- **Parries throw sparks.** When your blade blocks one of his blows, or his
+  guard turns one of your cuts, a small burst of sparks goes off where the
+  blades cross and you both get shoved back about a metre and a half. The
+  camera jolts and the game pauses for a split second.
+- **He no longer charges you the whole time.** He comes at you, strikes one to
+  three times, then steps back out of reach and circles you for a second or so
+  before he comes again. He runs in from far away and walks in from close up.
+  Step into his reach while he circles and he cuts at you once, then backs off
+  again. After you parry him he staggers, then backs off.
+## Map zoom buttons and off-planet icons (2026-11-01)
+
+- **Zoom buttons.** The F11 map's globe has + and - buttons in its top-left
+  corner. Each press zooms twice as far in or out, alongside the mouse wheel.
+- **Off-planet icons.** Each place in the sky has an icon beside it: a ringed
+  planet for a planet you can fly to, a red wedge for the Remnant cruiser.
+  Looks: content/look/map.json.
 
 ## The barracks change hands back and forth (2026-11-01)
 
@@ -120,7 +151,8 @@ Plain English, newest on top. One entry per milestone.
   end card no longer pops up on the bridge: the story says "go back to Oda", and
   her telling brings the end card.
 - **A dark master waits in the cruiser's bay.** After the general dies, a figure
-  in all-black armour with a red energy sword stands by your ship. Walk up and
+  in all-black armour with a red energy sword stands where the corridor opens
+  into the bay. Walk past him on the way back to your ship and
   he talks to you (an AI character): "There is a dark energy emerging. Join me,
   and realize more power than you could know." You can't walk away; answer him,
   and if the talk drags on the game asks you outright: Join or Refuse.

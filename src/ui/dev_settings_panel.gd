@@ -1,9 +1,10 @@
 class_name DevSettingsPanel
 extends CanvasLayer
 ## F11 in the town: the game's settings. Opening it pauses the game and frees
-## the mouse; closing it resumes and saves (when the bar saves). Five pages:
+## the mouse; closing it resumes and saves (when the bar saves). Six pages:
 ##   Map       a globe of the planet with every place that stays put, click one
 ##             for a waypoint; the places off planet beside it (GlobeMap; M opens it)
+##   Inventory what you carry and the job log (InventoryPanel; I opens it)
 ##   Game      the main story's chapter (issue #64), time of day, game speed,
 ##             credits, the space fight switch, the home town's layout, new game
 ##   Player    the outfit from the kit pieces (CharacterBuilder, issue #48), then
@@ -49,6 +50,7 @@ var _off_planet: Array = []            ## GlobeMap.off_planet, last refresh
 var _off_box: VBoxContainer
 var _map_note: Label
 var _no_globe: Label
+var inventory: InventoryPanel          ## the Inventory page
 
 const STUCK_WARNING := "If you are stuck, ask the interactive NPCs for advice, they may have a hint.\n\nAre you sure?"
 
@@ -97,6 +99,7 @@ func _build_tabs() -> void:
 		return
 	tabs_built = true
 	tabs.add_child(_map_tab())
+	tabs.add_child(_inventory_tab())
 	var game := _tab("Game")
 	_story_page(game)
 	_world_page(game)
@@ -129,14 +132,24 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-## M opens (or shuts) the Map page. Unhandled: typing an M in a text box is not this.
+## M opens the Map page, I (the inventory action) the Inventory page; the same key
+## again shuts the panel, the other one swaps pages. Unhandled: typing an M or an I
+## in a text box is not this.
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_M:
-		if visible and tabs.current_tab == 0:
-			close()
-		else:
-			open_tab("Map")
-		get_viewport().set_input_as_handled()
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var page := ""
+	if event.keycode == KEY_M:
+		page = "Map"
+	elif event.is_action_pressed("inventory"):
+		page = "Inventory"
+	if page == "":
+		return
+	if visible and tabs.get_tab_title(tabs.current_tab) == page:
+		close()
+	else:
+		open_tab(page)
+	get_viewport().set_input_as_handled()
 
 
 ## Issue #80: the cursor shows on every page while the settings are open, whatever
@@ -257,6 +270,21 @@ func _story_note(v: VBoxContainer, text: String) -> void:
 	_story_notes.append(l)
 
 
+# ------------------------------------------------------------------ inventory
+
+## What you carry and the job log, wired to the town's gear (its item names and
+## wear toggle). Rebuilt on open and whenever the page is picked (a cheat on the
+## Player page may have just handed you the jetpack).
+func _inventory_tab() -> Control:
+	var gear = demo.get("gear") if demo != null else null
+	inventory = gear.inventory_page() if gear != null else InventoryPanel.new()
+	_refreshers.append(inventory.refresh)
+	tabs.tab_changed.connect(func(i):
+		if tabs.get_tab_control(i) == inventory:
+			inventory.refresh())
+	return inventory
+
+
 # ------------------------------------------------------------------ map
 
 ## The globe (GlobeView) with the places that stay put, and beside it the places
@@ -331,15 +359,22 @@ func _map_tab() -> Control:
 ## One legend line: the pin's shape, drawn the way the globe draws it, and its name.
 func _legend_row(look: Dictionary, text: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
-	var icon := Control.new()
-	icon.custom_minimum_size = Vector2(18, 18)
-	icon.draw.connect(func(): GlobeView.draw_shape(icon, icon.size * 0.5, str(look.get("shape", "circle")),
-		Color(str(look.get("color", "#f2e2b0"))), 5.0))
-	row.add_child(icon)
+	row.add_child(_pin_icon(look))
 	var l := Label.new()
 	l.text = text
 	row.add_child(l)
 	return row
+
+
+## A pin's shape (content/look/map.json) as a small control, for the legend and
+## the off-planet list.
+func _pin_icon(look: Dictionary, r := 5.0) -> Control:
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * ceilf(r * 3.6)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.draw.connect(func(): GlobeView.draw_shape(icon, icon.size * 0.5, str(look.get("shape", "circle")),
+		Color(str(look.get("color", "#f2e2b0"))), r))
+	return icon
 
 
 ## Rebuild the map's pins and off-planet list from the scene (the town's stops
@@ -364,14 +399,19 @@ func _refresh_map() -> void:
 	_off_planet = GlobeMap.off_planet(travel.bodies if travel != null else [], world)
 	for c in _off_box.get_children():
 		c.queue_free()
+	var pins_look: Dictionary = GlobeMap.look().get("pins", {})
 	for o in _off_planet:
+		var row := HBoxContainer.new()
+		row.add_child(_pin_icon(pins_look.get(str(o.kind), {}), 7.0))
 		var b := Button.new()
 		b.text = str(o.label)
 		b.toggle_mode = true
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.set_pressed_no_signal(GlobeMap.waypoint_id() == str(o.id))
 		b.pressed.connect(func(): map_pick(o))
-		_off_box.add_child(b)
+		row.add_child(b)
+		_off_box.add_child(row)
 	if _off_planet.is_empty():
 		var l := Label.new()
 		l.text = "-"
@@ -846,6 +886,7 @@ const KEYS := [
 	["F10", "AI model settings: the AI brain under Options here (Shift+F10: next model)"],
 	["F11", "These settings"],
 	["M", "The map: click a place for a waypoint"],
+	["I", "What you carry and the job log"],
 	["E", "Interact: talk, board, ride, pick up"],
 	["L", "Cycle the lighting"],
 	["V", "First / third person"],

@@ -3,7 +3,7 @@
   "lines": {
     "waypoint": "Waypoint: %s",
     "marked": "Marked spot",
-    "none": "Click a place to set a waypoint. Drag to turn, wheel to zoom.",
+    "none": "Click a place to set a waypoint. Drag to turn, wheel or + / - to zoom.",
     "off_planet": "OFF PLANET",
     "legend": "LEGEND",
     "clear": "Clear waypoint",

@@ -40,6 +40,9 @@ var max_fall := 0.0
 # It fades by push_fade m/s every second and ends when you touch the ground.
 var push := Vector3.ZERO
 var push_fade := 5.0
+# A knockback (two blades meeting): the push holds on the ground too, sliding you
+# back until it has faded out.
+var push_holds := false
 var pose := Pose.STAND
 
 ## Sprint slide (issue #65). Off by default: guards share this controller and
@@ -201,7 +204,9 @@ func step(delta: float, yaw: float, ground_y: float = 0.0) -> void:
 	body_pos.x += velocity.x * delta
 	body_pos.z += velocity.z * delta
 
-	if on_ground:
+	if push_holds and push == Vector3.ZERO:
+		push_holds = false
+	if on_ground and not push_holds:
 		push = Vector3.ZERO     # the ground's grip takes over what is left
 	# Pose bookkeeping when grounded and not jumping.
 	if on_ground and pose != Pose.JUMP:

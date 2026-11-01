@@ -10,8 +10,10 @@ extends Node
 ##   - attaches and detaches gear on `gear_toggle` (G),
 ##   - gives the player node a Jetpack while one is on its back, puts the pack's
 ##     look on the body's chest joint, and lights its flames while thrusting,
-##   - issue #148: owning an item with a "blade_color" (the red saber from the
-##     wreck) turns the player's energy sword that colour, and
+##   - issue #148: an item with a "blade_color" (the red saber from the wreck, or
+##     the dark master's) turns the player's energy sword that colour while it is
+##     activated (slot "blade", toggled in the inventory on I); off, the sword is
+##     the energy blade's own again, and
 ##   - catches a player who flew out over the walls (the town has no ground there)
 ##     and puts them back where they last stood.
 ##
@@ -36,6 +38,7 @@ const PickupNode := preload("res://src/systems/items/pickup_node.gd")
 const LABELS_PATH := "res://content/core/flow/gear.json"
 const SLOT_BACK := "back"
 const SLOT_ARMOUR := "armour"
+const SLOT_BLADE := "blade"
 const FALL_MARGIN := 20.0       ## metres below the lowest floor before a rescue
 
 var content
@@ -45,7 +48,6 @@ var rig_node: Node              ## camera rig node (first-person check), optiona
 var location_id := "port_town"
 var items: ItemKit
 var hud: GearHud
-var inventory_panel: InventoryPanel
 var labels: Dictionary = {}
 var pickups: Array = []         ## PickupNode
 var drop                        ## PickupNode: Oda's smuggling drop, while one is lying out there
@@ -105,12 +107,6 @@ func _ready() -> void:
 	items = ItemKit.new()
 	hud = GearHud.new()
 	add_child(hud)
-	# M15: what you are carrying, on I.
-	inventory_panel = InventoryPanel.new()
-	inventory_panel.content = content
-	inventory_panel.name_of = _shown
-	inventory_panel.toggle_item = toggle_item
-	add_child(inventory_panel)
 	menu = DroidMenu.new()
 	add_child(menu)
 	lowest_floor = _lowest_floor()
@@ -281,6 +277,20 @@ func _place(entry: Dictionary) -> Vector3:
 	return at
 
 
+## Something dropped where it fell (the dark master's blade, issue #303): a pickup
+## entry ({ id, item, reach }) lying at `at` (world). Taken once, like the rest;
+## not saved while it lies there. Returns the node, or null (taken, unknown item).
+func drop_item(entry: Dictionary, at: Vector3) -> Node3D:
+	var item: Dictionary = content.get_item(str(entry.get("item", ""))) if content != null else {}
+	if item.is_empty() or inv().is_taken(str(entry.get("id", ""))) or pickup_node(str(entry.get("id", ""))) != null:
+		return null
+	var node = PickupNode.new()
+	node.setup(items, entry, item, at)
+	add_child(node)
+	pickups.append(node)
+	return node
+
+
 func pickup_node(pickup_id: String) -> Node3D:
 	for n in pickups:
 		if is_instance_valid(n) and str(n.pickup.get("id", "")) == pickup_id:
@@ -332,6 +342,16 @@ func _find_focus() -> Dictionary:
 
 ## An item as a prompt shows it: its label and its make and model, "Jetpack
 ## (Redfern BX-14 Wingbeat)" (issue #15; just the label when it has no naming).
+## M15: what you are carrying, the settings panel's Inventory page (on I), wired
+## to this gear's item data and wear toggle.
+func inventory_page() -> InventoryPanel:
+	var page := InventoryPanel.new()
+	page.content = content
+	page.name_of = _shown
+	page.toggle_item = toggle_item
+	return page
+
+
 func _shown(item: Dictionary, id: String) -> String:
 	var label := str(item.get("label", id))
 	var model := NameHooks.equipment(item, id)
@@ -442,8 +462,8 @@ func _take(node) -> String:
 	node.queue_free()
 	focus = {}
 	var msg := _l("picked_up") % str(item.get("label", id))
-	# Wear it straight away if its slot is free.
-	if inv().in_slot(str(item.get("slot", ""))) == "" and inv().attach(id, item):
+	# Wear it straight away if its slot is free (not one you activate yourself: "auto_on" false).
+	if bool(item.get("auto_on", true)) and inv().in_slot(str(item.get("slot", ""))) == "" and inv().attach(id, item):
 		msg = _l("attached") % str(item.get("label", id))
 	sync_gear()
 	if hud != null:
@@ -538,7 +558,7 @@ func buy_item(id: String, v: Dictionary) -> String:
 		return "cant_afford"
 	WorldState.credits -= cost
 	WorldState.log_event(_l("event_bought") % str(it.get("label", id)).to_lower())
-	if inv().in_slot(str(it.get("slot", ""))) == "":
+	if bool(it.get("auto_on", true)) and inv().in_slot(str(it.get("slot", ""))) == "":
 		inv().attach(id, it)
 	sync_gear()
 	_trade_said = _l("bought") % [str(it.get("label", id)), cost]
@@ -690,8 +710,9 @@ func sync_gear() -> void:
 	_sync_armour()
 	var avatar := player.get_node_or_null("Avatar")
 	var color := blade_color()
-	if avatar != null and avatar.has_method("set_blade_color") and color.a > 0.0:
-		avatar.set_blade_color(color, blade_hilt())
+	var hilt := blade_hilt()
+	if avatar != null and avatar.has_method("set_blade_color") and (avatar.blade_color != color or avatar.blade_hilt != hilt):
+		avatar.set_blade_color(color, hilt)
 
 
 ## Issue #209: worn armour multiplies the player's health (the hurt share kept);
@@ -718,23 +739,17 @@ func _sync_armour() -> void:
 	avatar.set_outfit(item.outfit if look else PlayerOutfit.load_outfit())
 
 
-## Issue #148: the energy sword's colour from what the player owns (an item with
-## "blade_color"), or alpha 0 for the default.
+## Issue #148: the energy sword's colour from the activated blade (the item in the
+## "blade" slot, its "blade_color"), or alpha 0 for the default.
 func blade_color() -> Color:
-	for id in inv().owned:
-		var item: Dictionary = content.get_item(str(id))
-		if inv().has(str(id)) and item.has("blade_color"):
-			return Color(str(item.blade_color))
-	return Color(0, 0, 0, 0)
+	var item: Dictionary = content.get_item(inv().in_slot(SLOT_BLADE)) if inv().in_slot(SLOT_BLADE) != "" else {}
+	return Color(str(item.blade_color)) if item.has("blade_color") else Color(0, 0, 0, 0)
 
 
 ## The sword's hilt model from the same item ("hilt"), or "" for the default.
 func blade_hilt() -> String:
-	for id in inv().owned:
-		var item: Dictionary = content.get_item(str(id))
-		if inv().has(str(id)) and item.has("blade_color"):
-			return str(item.get("hilt", ""))
-	return ""
+	var item: Dictionary = content.get_item(inv().in_slot(SLOT_BLADE)) if inv().in_slot(SLOT_BLADE) != "" else {}
+	return str(item.get("hilt", "")) if item.has("blade_color") else ""
 
 
 func _mount_worn(id: String, item: Dictionary) -> void:

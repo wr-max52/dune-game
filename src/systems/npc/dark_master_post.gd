@@ -2,7 +2,7 @@ class_name DarkMasterPost
 extends Node3D
 ## Issue #303: the dark master, a Remnant officer in all-black guard armour with a
 ## red energy sword. Where he stands is DarkPact's to say:
-##   - the cruiser's bay, by your docked ship, once the general is dead. In a
+##   - the cruiser's bay, at the corridor's door, once the general is dead. In a
 ##     story save he makes his offer there: the talk opens by itself when you walk
 ##     up, Esc can't leave it, and it ends on "join" or "refuse" (his brain says
 ##     which; after `turns` of his lines with neither, a Join / Refuse menu asks).
@@ -11,9 +11,11 @@ extends Node3D
 ##   - the barracks roof, facing the front gate, while the Remnant hold the planet
 ##     (on the oath in a story save; always in free roam). On the oath he only
 ##     fights back, and killing him turns the Remnant on you.
-## He fights with BladeFighter: runs you down, slashes and swings, bounds down off
-## the roof or across the deck, turns most bolts from the front aside with his
-## blade, and reels when your own blade blocks a blow. He is a NpcBody (a soldier
+## He fights with BladeFighter: comes at you, strikes in short rushes, then steps
+## back and circles before coming again; bounds down off the roof or across the
+## deck, turns most bolts from the front aside with his blade, and reels when your
+## own blade blocks a blow. Blade on blade (your block, or his guard turning your
+## cut) throws sparks and shoves you both apart (clash()). He is a NpcBody (a soldier
 ## profile, content/core/soldiers/dark_master.json) outside any garrison: this
 ## node drives him.
 ##
@@ -126,11 +128,10 @@ func post_of(where: String) -> Dictionary:
 		var c = demo.cruiser if demo != null and "cruiser" in demo else null
 		if c == null:
 			return {}
-		var pd := CruiserHull.dock_pad()
-		var local: Vector3 = (pd.get("at", Vector3.ZERO) as Vector3) + _v(cfg.get("cruiser", {}).get("offset", [-9, 0, 9]))
+		var cr: Dictionary = cfg.get("cruiser", {})
+		var local := _v(cr.get("at", [0, CruiserHull.DECK_Y, 20]))
 		var at: Vector3 = c.to_world(local)
-		var pad: Vector3 = c.to_world(pd.get("at", Vector3.ZERO) as Vector3)
-		return { "at": at, "face": pad - at }
+		return { "at": at, "face": c.to_world(local + _v(cr.get("face", [0, 0, 1]))) - at }
 	var town = demo.town if demo != null and "town" in demo else null
 	if town == null:
 		return {}
@@ -219,7 +220,10 @@ func _fight(where: String, b: NpcBody, dt: float) -> void:
 	var out := f.update(dt, flat, p.y - b.global_position.y)
 	match str(out.act):
 		"chase":
-			b.go_to(p, true)
+			b.go_to(p, flat > float(cfg.get("blade", {}).get("walk_in_m", 7.0)))   # runs from far off, walks in
+			b.face_point(p)
+		"back_off", "circle":
+			b.go_to(_give_ground(b, p, f, str(out.act), float(out.get("side", 1.0))), false)
 			b.face_point(p)
 		"leap":
 			_leap(where, b, f, dt)
@@ -232,6 +236,18 @@ func _fight(where: String, b: NpcBody, dt: float) -> void:
 			b.say(_pick(cfg.get("lines", {}).get("barks", [])), 2.0, true)
 	if bool(out.strike):
 		strike(where)
+
+
+## Where he steps while giving ground, facing you: straight back (back_off), or
+## round you at his spacing (circle, `side` picks the way).
+func _give_ground(b: NpcBody, p: Vector3, f: BladeFighter, act: String, side: float) -> Vector3:
+	var away := Vector3(b.global_position.x - p.x, 0.0, b.global_position.z - p.z)
+	var d := away.length()
+	away = away / d if d > 0.01 else -b.forward()
+	if act == "back_off":
+		return b.global_position + away * 2.0
+	var round_you := Vector3(-away.z, 0.0, away.x) * side
+	return b.global_position + round_you * 2.0 + away * clampf(f.spacing() - d, -1.0, 1.0)
 
 
 ## A bound: off the roof or across the deck, to just short of you.
@@ -264,6 +280,7 @@ func strike(where: String) -> String:
 	if _player_blocking():
 		f.on_parried()
 		b.play_sfx("hurt")
+		clash(b)
 		return "parried"
 	f.on_landed()
 	if player.has_method("apply_damage_from"):
@@ -293,7 +310,34 @@ func _guard_hit(amount: float, shooter: Node, by_blade: bool, where: String) -> 
 		front = to.length() < 0.3 or to.normalized().dot(b.forward()) > cos(deg_to_rad(float(cfg.get("blade", {}).get("guard_cone_deg", 70.0))))
 	if not bool(hostile.get(where, false)):
 		front = false              # caught off guard: the first shot gets through
-	return f.guard(amount, front, by_blade)
+	var turned := f.deflected
+	var left := f.guard(amount, front, by_blade)
+	if by_blade and f.deflected > turned and player != null and is_instance_valid(player) \
+			and player.global_position.distance_to(b.global_position) <= f.reach() + 1.5:
+		clash(b)                   # his guard turned your cut
+	return left
+
+
+## Blade on blade: a burst of sparks where they crossed, and you and he shoved
+## apart. Returns where the sparks went (tests).
+func clash(b: NpcBody) -> Vector3:
+	if b == null or player == null or not is_instance_valid(player):
+		return Vector3.INF
+	var c: Dictionary = cfg.get("blade", {}).get("clash", {})
+	var apart := Vector3(b.global_position.x - player.global_position.x, 0.0, b.global_position.z - player.global_position.z)
+	apart = apart.normalized() if apart.length() > 0.01 else b.forward() * -1.0
+	var at := (b.global_position + player.global_position) * 0.5 + Vector3.UP * float(c.get("height", 1.3))
+	if b.is_inside_tree():
+		ExplosionFx.clash(b.get_parent(), at, Color(str(cfg.get("blade_color", "#ff2a2a"))).lerp(Color.WHITE, 0.5))
+	var push := float(c.get("push", 7.0))
+	var fade := float(c.get("fade", 16.0))
+	b.knock(apart * push, fade)
+	if player.has_method("knock"):
+		player.knock(-apart * push * float(c.get("player_share", 1.0)), fade)
+	var kit = demo.player_kit if demo != null and "player_kit" in demo else null
+	if kit != null and kit.weapons != null and kit.weapons.has_method("on_clash"):
+		kit.weapons.on_clash()
+	return at
 
 
 ## Hit by you while at ease: he fights back.
@@ -311,10 +355,11 @@ func _on_died(where: String) -> void:
 		host.end_talk()
 	meeting = false
 	DarkPact.on_killed(where)
+	# His blade falls where he does: a pickup, yours to activate in the inventory.
 	var item := str(cfg.get("drops", ""))
-	if item != "" and not WorldState.inventory.has(item):
-		WorldState.inventory.add(item)
-		_toast(_line("blade_taken"))
+	var b := body(where)
+	if item != "" and b != null and gear != null and gear.drop_item({ "id": "dark_master_blade_" + where, "item": item, "reach": 2.6 }, b.global_position) != null:
+		_toast(_line("blade_dropped"))
 
 
 # ------------------------------------------------------------------ the offer (story mode)

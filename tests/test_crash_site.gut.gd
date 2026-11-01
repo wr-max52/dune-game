@@ -397,7 +397,12 @@ func test_the_red_saber_is_a_carried_pickup_that_turns_the_blade_red() -> void:
 	gear.content = content
 	assert_eq(gear.blade_color().a, 0.0, "the default blade until you own it")
 	WorldState.inventory.pick_up(entry[0])
-	assert_eq(gear.blade_color(), red, "owning it turns the blade red")
+	assert_eq(gear.blade_color().a, 0.0, "owning it does not override your blue blade")
+	assert_true(WorldState.inventory.attach("red_energy_saber", item), "it is activated in the inventory")
+	assert_eq(gear.blade_color(), red, "activated, the blade is red")
+	assert_eq(gear.blade_hilt(), str(item.hilt))
+	WorldState.inventory.detach("red_energy_saber")
+	assert_eq(gear.blade_color().a, 0.0, "put away, the blue blade again")
 	gear.free()
 	var kit := CharacterKit.new(LookMaterials.new())
 	var sword := kit.make_energy_sword()

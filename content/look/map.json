@@ -1,5 +1,5 @@
 {
-  "note": "How the F11 Map page's globe looks (src/ui/globe_view.gd). Each pin kind is a small shape (star, triangle, square, diamond, cross, circle, ring) in a colour; 'ink' is the globe's own lines (null = the player's HUD colour). Names and what goes on the map: content/core/flow/map.json.",
+  "note": "How the F11 Map page's globe looks (src/ui/globe_view.gd). Each pin kind is a small shape (star, triangle, square, diamond, cross, circle, ring, planet, cruiser) in a colour; 'planet' and 'cruiser' are the icons beside the off-planet places; 'ink' is the globe's own lines (null = the player's HUD colour). Names and what goes on the map: content/core/flow/map.json.",
   "sea": "#141009",
   "ink": null,
   "grid_alpha": 0.14,
@@ -16,6 +16,8 @@
     "camp_hostile": { "shape": "circle", "color": "#e0573a" },
     "cantina": { "shape": "square", "color": "#f2e2b0" },
     "vendor": { "shape": "square", "color": "#e8c050" },
-    "spot": { "shape": "ring", "color": "#f2e2b0" }
+    "spot": { "shape": "ring", "color": "#f2e2b0" },
+    "planet": { "shape": "planet", "color": "#7fb0d8" },
+    "cruiser": { "shape": "cruiser", "color": "#e0573a" }
   }
 }

@@ -280,9 +280,21 @@ func launch(v: Vector3, push: Vector3, push_fade: float) -> void:
 	local.y = 0.0
 	controller.push = local
 	controller.push_fade = push_fade
+	controller.push_holds = false
 	controller.on_ground = false
 	_was_on_floor = false
 	_launched = true
+
+
+## Knocked back across the ground at `v` m/s (world), fading by `fade` m/s every
+## second, on the ground as well as in the air (two blades meeting).
+func knock(v: Vector3, fade: float) -> void:
+	var local := tilt.inverse() * v
+	local.y = 0.0
+	velocity += tilt * (local - controller.push)     # the shove rides on the walk, not against it
+	controller.push = local
+	controller.push_fade = fade
+	controller.push_holds = true
 
 
 ## Read "up" from the planet (if any) and stand the capsule along it.
@@ -399,6 +411,7 @@ func _step_jetpack(delta: float, grounded: bool) -> void:
 		var yaw := -rotation.y
 		controller.push = Vector3(-sin(yaw), 0.0, cos(yaw)) * jetpack.push()
 		controller.push_fade = jetpack.push_fade()
+		controller.push_holds = false
 		jet_started.emit()
 	elif was and not jetpack.thrusting:
 		jet_stopped.emit()
