@@ -2,6 +2,31 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The Ledger, a live map, and text you can read (2026-11-01)
+
+- **Inventory is now the Ledger** (F11, still on I). Left: what you own:
+  credits, the backpack slots, the gear you have on with its Take off button
+  on the same row, your droids, your ships and their upgrades, your gear
+  upgrades. Right: the story and your jobs, then the optional quests, each
+  on its own card.
+- **Pick your waypoint.** Every story, job or quest card with somewhere to
+  go has a waypoint button. The one you pick is what the HUD arrow points at
+  (saved as `objective_pin`). The card the arrow is on now is lit; unpicked,
+  it is the most urgent one, marked "Waypoint (auto)". Picking one turns off
+  a map waypoint, and a map waypoint turns off your pick: one pointer at a
+  time. Board jobs can name a place with `target` (and a short HUD line
+  with `objective`) in bar_board.json.
+- **The Map shows you and the waypoint.** You are a pulsing green triangle
+  pointing the way the camera looks; the map opens centred on you, and a
+  "Centre on you" button brings you back. The waypoint's place flashes; out
+  where no place is on the map (a drop in the desert, a marked spot) it
+  shows as its own pin marker. Both are in the legend.
+- **Text is easier to read everywhere.** Same font and phosphor look, but the
+  bold cut, a crisp dark edge round each letter and a tight glow in the
+  text's own colour, in place of a wide pale glow that fogged the letters
+  (`RetroUI.legible`).
+- Tests: tests/test_objective.gut.gd (picking and lighting the waypoint).
+
 ## Oda's recap when you come back (issue #185, 2026-10-31)
 
 - **She opens with the news.** Come back to Oda after time away and she starts

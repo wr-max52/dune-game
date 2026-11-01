@@ -160,6 +160,7 @@ static func set_waypoint(pin: Dictionary, planet_id: String) -> void:
 		"planet": planet_id, "arrive": float(pin.get("arrive", kind_cfg(str(pin.get("kind", ""))).get("arrive", 30.0))) }
 	for k in WorldState.quests:
 		WorldState.quests[k].waypoint = false
+	WorldState.objective_pin = ""
 
 
 static func clear_waypoint() -> void:

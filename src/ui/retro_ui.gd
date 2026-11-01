@@ -1,7 +1,9 @@
 class_name RetroUI
 extends RefCounted
 ## Issue #52: the 80s HUD look. One phosphor colour (the player's favourite, set
-## in F11 > HUD), a monospaced font, dark glass panels with a glowing rim.
+## in F11 > HUD), a monospaced font, dark glass panels with a glowing rim. Text is
+## the bold cut with a crisp dark edge and a tight glow in its own colour (a wide
+## pale glow over a black outline fogged the letters: legible() says how).
 ##
 ## Nothing builds its UI differently for this: RetroSkin (one node in the town)
 ## calls skin() on every Control as it appears and again when the colour changes.
@@ -141,21 +143,17 @@ static func skin(c: Control) -> void:
 	var a := accent
 	var bright := a.lightened(0.45)
 	if c is RichTextLabel:
-		for k in ["normal_font", "mono_font"]:
-			c.add_theme_font_override(k, font())
-		c.add_theme_font_override("bold_font", font("Bold"))
+		for k in ["normal_font", "mono_font", "bold_font", "bold_italics_font"]:
+			c.add_theme_font_override(k, font("Bold"))
 		c.add_theme_font_override("italics_font", font("Italic"))
-		c.add_theme_font_override("bold_italics_font", font("Bold"))
 		_tint(c, "default_color", bright)
+		legible(c, c.get_theme_color("default_color"), c.get_theme_font_size("normal_font_size"))
 	elif c is Label:
-		c.add_theme_font_override("font", font("Bold") if c.has_meta("retro_prompt") else font())
+		c.add_theme_font_override("font", font("Bold"))
 		_tint(c, "font_color", a)
-		c.add_theme_color_override("font_shadow_color", Color(a, 0.35))
-		c.add_theme_constant_override("shadow_offset_x", 0)
-		c.add_theme_constant_override("shadow_offset_y", 0)
-		c.add_theme_constant_override("shadow_outline_size", 10)
+		legible(c, c.get_theme_color("font_color"), c.get_theme_font_size("font_size"))
 	elif c is CheckBox or c is CheckButton:
-		c.add_theme_font_override("font", font())
+		c.add_theme_font_override("font", font("Bold"))
 		for k in ["font_color", "font_focus_color", "font_pressed_color"]:
 			c.add_theme_color_override(k, a)
 		c.add_theme_color_override("font_hover_color", bright)
@@ -222,6 +220,19 @@ static func skin(c: Control) -> void:
 			for side in ["left", "right", "top", "bottom"]:
 				sb.set("content_margin_" + side, old.get("content_margin_" + side))
 		c.add_theme_stylebox_override("panel", sb)
+
+
+## Text that reads on anything: a dark edge right round each letter (the text's
+## own colour, nearly black), and outside it a tight glow in that colour. Both
+## scale with the font size, so small print is not swamped.
+static func legible(c: Control, col: Color, font_size: int) -> void:
+	var fs := maxi(font_size, 8)
+	c.add_theme_color_override("font_outline_color", Color(col.darkened(0.88), 1.0))
+	c.add_theme_constant_override("outline_size", clampi(roundi(fs * 0.22), 2, 6))
+	c.add_theme_color_override("font_shadow_color", Color(col, 0.22))
+	c.add_theme_constant_override("shadow_offset_x", 0)
+	c.add_theme_constant_override("shadow_offset_y", 0)
+	c.add_theme_constant_override("shadow_outline_size", clampi(roundi(fs * 0.42), 4, 12))
 
 
 ## Swap a neutral colour for the phosphor one (and remember that we did, so a

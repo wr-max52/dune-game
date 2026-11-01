@@ -8,6 +8,9 @@
     "legend": "LEGEND",
     "clear": "Clear waypoint",
     "home": "Centre on port",
+    "centre_you": "Centre on you",
+    "you": "You",
+    "goal": "Waypoint",
     "no_globe": "No surface map here: this place is not a planet."
   },
   "kinds": {

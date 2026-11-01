@@ -34,16 +34,84 @@ static func home() -> bool:
 	return GameFlow.current_planet_id() == PlanetGen.home_id()
 
 
-## { text, target } for the pointer, or {} when there is nothing to point at.
+## Most urgent first, for when the player has not picked one in the Ledger.
+const AUTO := ["bounty", "smuggle", "supply", "story"]
+
+
+## { text, target, key } for the pointer, or {} when there is nothing to point at.
 ## Issue #201: an optional quest whose waypoint the player switched on comes first,
 ## and before it a waypoint set on the F11 map (GlobeMap; only one is ever on).
+## Then the job the player made the waypoint in the Ledger (pin), then the most
+## urgent (AUTO). `key` names the job log entry it is ("map" for the F11 map's).
 static func current() -> Dictionary:
 	var mark := GlobeMap.waypoint()
 	if not mark.is_empty():
+		mark["key"] = "map"
 		return mark
 	var quest := Quests.waypoint()
 	if not quest.is_empty():
 		return quest
+	if WorldState.objective_pin != "":
+		var mine := of(WorldState.objective_pin)
+		if not mine.is_empty():
+			return mine
+		WorldState.objective_pin = ""     # done or gone: back to the most urgent
+	for k in AUTO:
+		var o := of(k)
+		if not o.is_empty():
+			return o
+	return {}
+
+
+## One job's { text, target, key }, or {} when it is not on (here): "bounty",
+## "smuggle", "supply", "story" or "job:<board id>" (a board job with a "target").
+static func of(key: String) -> Dictionary:
+	var o := {}
+	match key:
+		"bounty":
+			o = _bounty()
+		"smuggle":
+			o = _smuggle()
+		"supply":
+			var to := Territory.supply_out()
+			if to != "" and home():
+				o = { "text": Territory.line("objective") % Story.outpost_label(to), "target": "outpost:" + to }
+		"story":
+			o = chapter_objective() if home() else {}
+		_:
+			if key.begins_with("job:"):
+				o = _job(key.substr(4))
+	if not o.is_empty():
+		o["key"] = key
+	return o
+
+
+## Whether the Ledger can make `key` the waypoint: it is on, and somewhere here.
+static func can_pin(key: String) -> bool:
+	return str(of(key).get("target", "")) != ""
+
+
+## Make job `key` the waypoint (the F11 map's and any quest's go: one pointer at a
+## time), or, when it already is, hand the pointer back to the most urgent.
+static func pin(key: String) -> bool:
+	if WorldState.objective_pin == key and GlobeMap.waypoint().is_empty() and Quests.waypoint().is_empty():
+		WorldState.objective_pin = ""
+		return false
+	if not can_pin(key):
+		return false
+	WorldState.objective_pin = key
+	GlobeMap.clear_waypoint()
+	for k in WorldState.quests:
+		WorldState.quests[k].waypoint = false
+	return true
+
+
+## The key of the entry the pointer is on now ("" = nothing).
+static func current_key() -> String:
+	return str(current().get("key", ""))
+
+
+static func _bounty() -> Dictionary:
 	var b := WorldState.bounty
 	if WorldState.bounty_collectable() and home():
 		var fence := fence_marker(true)
@@ -53,6 +121,10 @@ static func current() -> Dictionary:
 		if not home():
 			return { "text": line("hunt_away") % [str(b.name), where], "target": "" }
 		return { "text": line("hunt") % [str(b.name), where], "target": "outpost:" + str(b.outpost) }
+	return {}
+
+
+static func _smuggle() -> Dictionary:
 	if WorldState.carrying_contraband():
 		if for_general():
 			return { "text": line("general_bring"), "target": "npc:general" }
@@ -62,12 +134,18 @@ static func current() -> Dictionary:
 	if not drop.is_empty() and str(drop.location) == WorldState.current_town_id():
 		var hint := str(WorldState.smuggle.get("hint", ""))
 		return { "text": run_line("drop") % hint, "target": "drop:" + str(drop.marker) }
-	if not home():
+	return {}
+
+
+## A board job taken and not done that names a place ("target"; home planet only).
+static func _job(id: String) -> Dictionary:
+	if str(WorldState.jobs_taken.get(id, "")) != "active" or not home():
 		return {}
-	var to := Territory.supply_out()
-	if to != "":
-		return { "text": Territory.line("objective") % Story.outpost_label(to), "target": "outpost:" + to }
-	return chapter_objective()
+	var j := WorldState.job(id)
+	var target := str(j.get("target", ""))
+	if target == "":
+		return {}
+	return { "text": str(j.get("objective", j.get("title", id))), "target": target }
 
 
 ## What the story's chapter wants: its own objective once its teller has told
@@ -126,8 +204,10 @@ static func vendors() -> Array:
 
 # ------------------------------------------------------------------ the job log
 
-## The job log, one entry per thing on: [{ title, text }], the story first.
-## Always at least one entry (log_none when nothing is on).
+## The job log, one entry per thing on: [{ title, text, key }], the story first.
+## `key` is what of() and pin() take ("" = nothing to point at). Always at least
+## one entry (log_none when nothing is on). Your ships and gear upgrades are not
+## jobs: the Ledger lists them with what you carry.
 static func log_entries() -> Array:
 	var out: Array = []
 	if home():
@@ -138,31 +218,27 @@ static func log_entries() -> Array:
 		if say == "":
 			say = str(chapter_objective().get("text", ""))
 		if say != "":
-			out.append({ "title": line("log_story"), "text": say })
+			out.append({ "title": line("log_story"), "text": say, "key": "story" })
 	var drop := WorldState.smuggle_drop()
 	if WorldState.carrying_contraband():
-		out.append({ "title": run_line("log_smuggle"), "text": line("general_log_carry") if for_general() else line("log_carry") })
+		out.append({ "title": run_line("log_smuggle"), "text": line("general_log_carry") if for_general() else line("log_carry"), "key": "smuggle" })
 	elif not drop.is_empty():
-		out.append({ "title": run_line("log_smuggle"),
+		out.append({ "title": run_line("log_smuggle"), "key": "smuggle",
 			"text": run_line("log_drop") % [WorldState.smuggle_goods_text(), str(WorldState.smuggle.get("hint", ""))] })
 	var b := WorldState.bounty
 	if not WorldState.bounty_target().is_empty():
-		out.append({ "title": line("log_bounty"),
+		out.append({ "title": line("log_bounty"), "key": "bounty",
 			"text": line("log_hunt") % [str(b.name), Story.outpost_label(str(b.outpost)), int(b.pay), str(b.crime)] })
 	elif WorldState.bounty_collectable():
-		out.append({ "title": line("log_bounty"), "text": line("log_collect") % [str(b.name), int(b.pay)] })
-	var gear_line := GearUpgrades.owned_line()
-	if gear_line != "":
-		out.append({ "title": line("log_gear"), "text": gear_line })    # issue #208
-	var ships := ShipUpgrades.owned_lines()
-	if not ships.is_empty():
-		out.append({ "title": line("log_ships"), "text": "\n".join(PackedStringArray(ships)) })    # issue #207
+		out.append({ "title": line("log_bounty"), "text": line("log_collect") % [str(b.name), int(b.pay)], "key": "bounty" })
 	for id in WorldState.jobs_taken:
 		if WorldState.jobs_taken[id] == "active":
 			var j := WorldState.job(str(id))
-			out.append({ "title": str(j.get("title", id)).to_upper(), "text": str(j.get("text", "")) })
+			var kind := str(j.get("kind", ""))
+			out.append({ "title": str(j.get("title", id)).to_upper(), "text": str(j.get("text", "")),
+				"key": kind if kind in ["smuggle", "bounty", "supply"] else "job:" + str(id) })
 	if out.is_empty():
-		out.append({ "title": "", "text": line("log_none") })
+		out.append({ "title": "", "text": line("log_none"), "key": "" })
 	return out
 
 
