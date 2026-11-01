@@ -198,6 +198,33 @@ static func _v(a) -> Vector3:
 	return Vector3(float(a[0]), float(a[1]), float(a[2])) if a is Array and a.size() >= 3 else Vector3.ZERO
 
 
+## The ship's skin: the material on most of `model`'s surface (by vertex count on
+## a model, by size on a stand-in's primitives), which the cockpit's canopy frame
+## wears so it matches the outside of the ship.
+static func skin(model: Node3D) -> Material:
+	if model == null:
+		return null
+	var count := {}
+	for n in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i)
+			if m == null:
+				continue
+			var box := mi.mesh.get_aabb().size
+			var amount := box.x * box.y + box.y * box.z + box.z * box.x
+			if mi.mesh is ArrayMesh:
+				amount = float((mi.mesh as ArrayMesh).surface_get_array_len(i))
+			count[m] = float(count.get(m, 0.0)) + amount
+	var best: Material = null
+	for m in count:
+		if best == null or count[m] > count[best]:
+			best = m
+	return best
+
+
 ## Issue #76: a ship model painted dark. Textured parts go through the dark-gun
 ## shader (PlayerAvatar._darken: grey texels down, painted panels kept); flat-colour
 ## parts (the interceptor's model) go dark the same way by hand, their bright

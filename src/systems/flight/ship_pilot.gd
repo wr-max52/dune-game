@@ -507,6 +507,8 @@ func board() -> bool:
 		_use_berth(i)
 	if berths[i].has("outpost") and not bool(berths[i].stolen) and not bool(berths[i].get("borrowed", false)):
 		_steal(i)
+	if hud.cockpit != null:
+		hud.cockpit.hull_material = ShipKit.skin(visual)
 	var p := player()
 	piloting = true
 	_motion_basis = atmo.flight.basis

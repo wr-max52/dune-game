@@ -1333,3 +1333,37 @@ Every significant technical choice, the alternative, and why. Newest on top.
   separate `music.ambient_sources` map that Sound never reads, so the shuffle
   code did not change.
 
+
+## 2026-11-01 — The canopy frame and the dash are the ship's own metal
+
+- **The frame and the dash's body are meshes on the camera now, not paint.**
+  Painted metal (`metal_shade()`, the brushed dash) could only imitate the hull:
+  it never reflected the sky or the sand, and the struts stopped dead at a grey
+  dash. Now `CockpitView.frame_mesh` (round tubes along the same strut and bow
+  curves) and `dash_mesh` (a face leaning back `CockpitDash.LEAN`, its top edge
+  the painted rim, rolling over to a lip) hang on the cockpit camera, so the real
+  sun, sky and reflections light them. The struts stand on the dash's face
+  (`dash_point`) and run down into it, so they grow out of it. Instruments,
+  plates, rivets and the yoke stay painted over the top. This replaces "the
+  cockpit is painted, not modelled" (issue #181) for these two parts only; the
+  meshes are built from the screen and lens, so one cockpit still fits every ship.
+- **They wear the ship's skin.** `ShipKit.skin()` picks the material on most of
+  the model, which ShipPilot hands the cockpit on boarding: the frame wears it as
+  is, the dash a copy at `DASH_SHADE` of its colour with the same finish, so the
+  instruments' panel reads darker than the struts.
+- **The instruments are painted onto the modelled dash, not over it.** A 2D
+  overlay always draws on top of the 3D view, so a modelled yoke could never sit
+  in front of painted dials. CockpitDash's texture now goes on the dash mesh
+  (`cockpit_dash.gdshader`); `dash_mesh` gives it UVs through `unproject()` (the
+  old tilt shader's map, run per vertex), so it leans exactly as before. Where
+  the paint is, the dash is glass (not metal, smoother) and lit from behind
+  (`BACKLIGHT`), so the dials read at night and still pick up real glare by day.
+  The tilt shader is gone.
+- **The yoke is modelled** (`build_yoke`): a ram's-horn tube in the dash's shade
+  of the hull, rubber grips, buttons, a boss and a column, turned and pulled by
+  `yoke_pose` as before.
+- **Dials are lit by LEDs in the HUD colour; the attitude card is backlit
+  paper.** A soft wash and three pools of `RetroUI.accent` in from each dial's
+  rim (`LED_GLOW`), and ticks printed in pale ink tinted by it. The attitude
+  ball's sky and ground are muted paper colours, with ink lines, fibres mottling
+  a lamp behind the middle, and a shadow at the rim.
