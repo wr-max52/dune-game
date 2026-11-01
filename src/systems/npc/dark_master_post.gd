@@ -391,7 +391,9 @@ func _on_line(turn: Dictionary) -> void:
 		return
 	var applied: Array = turn.get("applied", [])
 	_meet_lines += 1
-	if applied.has("end_conversation") or _meet_lines >= int(cfg.get("turns", 4)):
+	# Issue #328: with AI characters off his lines are written ones: fewer of them.
+	var turns := int(cfg.get("turns" if host.llm.ai_on() else "turns_offline", cfg.get("turns", 4)))
+	if applied.has("end_conversation") or _meet_lines >= turns:
 		ask()
 
 

@@ -7,12 +7,15 @@ extends CanvasLayer
 ## Issue #47: sized to be read. The box takes up to 1180 x 400 px (less on a small
 ## window), the text is larger, the background nearly opaque. Issue #29: a notice
 ## line at the top says this is an AI character, and post_notice() repeats it in
-## the history when the player's words call for it.
+## the history when the player's words call for it. Issue #328: with AI
+## characters off (or every model down) a row of topic buttons sits above the text
+## field; a button says that topic's line for the player (topic_picked).
 
 signal submitted(text: String)
 signal leave_requested
 signal job_answered(job_id: String, accepted: bool)
 signal sale_answered(item_id: String, accepted: bool)   ## issue #42: the speeder card
+signal topic_picked(topic_id: String)                   ## issue #328: a topic button
 
 const WIDTH := 1180.0
 const HEIGHT := 460.0
@@ -38,6 +41,7 @@ var _job_kind := "job"               ## "job" or "sale": which signal the card a
 var _yes: Button
 var _no: Button
 var _lines: Array = []
+var _topics: HFlowContainer         ## issue #328: the topic buttons ([] hides the row)
 
 
 func _ready() -> void:
@@ -96,6 +100,11 @@ func _ready() -> void:
 	_line.add_theme_font_size_override("italics_font_size", RetroUI.size("dialogue_line", 34))
 	_line.add_theme_color_override("default_color", Color(1.0, 0.97, 0.9))
 	v.add_child(_line)
+	_topics = HFlowContainer.new()
+	_topics.add_theme_constant_override("h_separation", 10)
+	_topics.add_theme_constant_override("v_separation", 6)
+	_topics.visible = false
+	v.add_child(_topics)
 	_field = LineEdit.new()
 	_field.placeholder_text = "Say something, then Enter.  Esc leaves."
 	_field.add_theme_font_size_override("font_size", RetroUI.size("dialogue_field", 28))
@@ -106,7 +115,7 @@ func _ready() -> void:
 	_hint = Label.new()
 	_hint.add_theme_font_size_override("font_size", RetroUI.size("dialogue_hint", 20))
 	_hint.add_theme_color_override("font_color", Color(0.65, 0.62, 0.58))
-	_hint.text = "F3 debug   F10 model settings   Shift+F10 cycle local / cloud / auto"
+	_hint.text = "F3 debug   F10 AI settings   Shift+F10 cycle local / cloud / auto"
 	v.add_child(_hint)
 	_build_job_card()
 	get_viewport().size_changed.connect(fit)
@@ -246,8 +255,41 @@ func _add_history(bb: String) -> void:
 
 func set_input_enabled(on: bool) -> void:
 	_field.editable = on
+	for b in _topics.get_children():
+		(b as Button).disabled = not on
 	if on:
 		focus()
+
+
+## Issue #328: the topic buttons, [{ id, label }] ([] hides the row).
+func set_topics(list: Array) -> void:
+	for b in _topics.get_children():
+		_topics.remove_child(b)
+		b.queue_free()
+	for t in list:
+		var b := Button.new()
+		b.name = str(t.id)
+		b.text = str(t.label)
+		b.focus_mode = Control.FOCUS_NONE       # Enter stays the text field's
+		b.add_theme_font_size_override("font_size", RetroUI.size("dialogue_topic", 22))
+		b.pressed.connect(func(): topic_picked.emit(str(t.id)))
+		_topics.add_child(b)
+	_topics.visible = not list.is_empty()
+	_field.placeholder_text = "Pick a topic or type, then Enter.  Esc leaves." if not list.is_empty() \
+		else "Say something, then Enter.  Esc leaves."
+
+
+func topic_ids() -> Array:
+	return _topics.get_children().map(func(b): return str(b.name))
+
+
+## Tests and bots press a topic button through here.
+func press_topic(id: String) -> bool:
+	for b in _topics.get_children():
+		if str(b.name) == id and not (b as Button).disabled:
+			topic_picked.emit(id)
+			return true
+	return false
 
 
 func show_job(job: Dictionary) -> void:

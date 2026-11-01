@@ -17,6 +17,13 @@ extends Node
 ## it started keeps what it said. When everything fails, finished() reports
 ## ok = false and the caller uses its canned lines.
 ##
+## Issue #328: AI characters are off unless the config says on (LLMConfig.ai_enabled):
+## off, the chain is empty, no health checks run and the sidecar never starts, so
+## every turn is canned at once. Turned on, local models warm up in the background
+## (warm()); a provider that is warming is skipped by player turns, so they get
+## canned lines meanwhile and the next turn tries again. A player turn with no
+## first word after gen.give_up_ms is canned too (error "slow").
+##
 ## Streaming uses HTTPClient polled in _process, because HTTPRequest buffers the
 ## whole body and the point is to get the first words on screen fast.
 
@@ -39,6 +46,7 @@ var _next_id := 1
 var _recheck_left := 0.0
 var _health_reqs: Dictionary = {}    ## id -> HTTPRequest
 var _sidecar_start_pending := false
+var warming: Dictionary = {}         ## issue #328: provider id -> warm-up turn id, while it loads
 
 
 func _ready() -> void:
@@ -74,7 +82,7 @@ static func make_provider(id: String, prof: Dictionary, key: String) -> LLMProvi
 ## Start the bundled llama-server if the local profile wants one (reusing a
 ## healthy server that is already up).
 func start_sidecar() -> void:
-	if config == null or _sidecar_start_pending:
+	if config == null or _sidecar_start_pending or not ai_on():
 		return
 	if sidecar != null and sidecar.state in [LLMSidecar.State.STARTING, LLMSidecar.State.READY, LLMSidecar.State.REUSED]:
 		return
@@ -96,12 +104,54 @@ func start_sidecar() -> void:
 		status_changed.emit())
 
 
-## The chain for the current mode, minus anything down or tripped.
-func active_chain() -> Array:
+## Issue #328: AI characters on? Always for the CI providers (and with no config).
+func ai_on() -> bool:
+	return mode == "scripted" or config == null or config.ai_enabled()
+
+
+## Turn AI characters on or off (not saved: LLMConfig.save_user does that). On
+## starts the sidecar and checks every provider now; off drops any warm-up.
+func set_ai_enabled(on: bool) -> void:
+	if config != null:
+		config.set_ai_enabled(on)
+	if on:
+		start_sidecar()
+		_recheck_left = 0.0
+	else:
+		for pid in warming.keys():
+			cancel(int(warming[pid]))
+		warming.clear()
+	status_changed.emit()
+
+
+## Issue #328: a model is loading (the sidecar, or a warm-up still waiting for its word).
+func loading() -> bool:
+	if not ai_on():
+		return false
+	return not warming.is_empty() or (sidecar != null and sidecar.state == LLMSidecar.State.STARTING)
+
+
+## Load provider `pid`'s model with a one-token request in the background (Ollama
+## loads a model on its first request). Player turns skip it until this is done.
+func warm(pid: String, messages: Array) -> int:
+	if not ai_on() or warming.has(pid) or not providers.has(pid):
+		return -1
+	var id := chat(messages, { "max_tokens": 1, "background": true, "only": pid })
+	if _turns.has(id):
+		warming[pid] = id
+		status_changed.emit()
+	return id
+
+
+## The chain for the current mode, minus anything down, tripped or warming.
+## `force`: even with AI characters off (the settings panel's Test).
+func active_chain(force: bool = false) -> Array:
 	var base: Array
+	if not force and not ai_on():
+		return []
 	match mode:
 		"scripted":
-			return scripted_chain.filter(func(id): return Time.get_ticks_msec() >= int(_open_until.get(id, 0)))
+			return scripted_chain.filter(func(id): return Time.get_ticks_msec() >= int(_open_until.get(id, 0)) and not warming.has(id))
 		"auto":
 			base = config.chain() if config != null else []
 		_:
@@ -114,6 +164,8 @@ func active_chain() -> Array:
 		if now < int(_open_until.get(id, 0)):
 			continue
 		if health.has(id) and not bool(health[id].get("up", true)):
+			continue
+		if warming.has(id):
 			continue
 		out.append(id)
 	return out
@@ -131,17 +183,34 @@ func cycle_mode() -> String:
 	return mode
 
 
+## opts besides the generation ones: "background" (a warm-up or a summary: no
+## give-up, the long warm timeout), "only" (that provider alone), "force" (even
+## with AI characters off).
 func chat(messages: Array, opts: Dictionary = {}) -> int:
 	var id := _next_id
 	_next_id += 1
-	var chain := active_chain()
+	var chain := active_chain(bool(opts.get("force", false)))
+	if opts.has("only"):
+		var only := str(opts.only)
+		var ok := providers.has(only) and (scripted_chain.has(only) or config == null or config.usable(only))
+		chain = [only] if ai_on() and ok and not circuit_open(only) else []
 	var t := {
 		"id": id, "messages": messages, "opts": opts, "chain": chain, "idx": -1,
 		"started": Time.get_ticks_msec(), "fell_back_from": [], "a": {},
 	}
 	_turns[id] = t
+	if chain.is_empty():
+		# Nothing to try: report it next frame, once the caller holds the id
+		# (finishing inside chat() meant the caller never heard back).
+		_start_later.call_deferred(id)
+		return id
 	_next_attempt(t, "")
 	return id
+
+
+func _start_later(id: int) -> void:
+	if _turns.has(id):
+		_next_attempt(_turns[id], "")
 
 
 func cancel(turn_id: int) -> void:
@@ -150,6 +219,9 @@ func cancel(turn_id: int) -> void:
 		return
 	_close(t)
 	_turns.erase(turn_id)
+	for w in warming.keys():
+		if int(warming[w]) == turn_id:
+			warming.erase(w)
 
 
 func busy() -> bool:
@@ -160,7 +232,7 @@ func busy() -> bool:
 ## { lines: [..], summary: String, any_up: bool }
 func brain_report() -> Dictionary:
 	var lines: PackedStringArray = []
-	var chain := active_chain()
+	var chain := active_chain(true)     # each provider's own reason, AI characters on or off
 	var order: Array = scripted_chain if mode == "scripted" else (config.chain() if mode == "auto" and config != null else [mode])
 	for id in order:
 		var why := ""
@@ -178,19 +250,77 @@ func brain_report() -> Dictionary:
 			why = sidecar.reason()
 		elif health.has(id) and not bool(health[id].get("up", true)):
 			why = "not running at " + str(config.profile(id).get("base_url", "")) if id != "local" else "not answering at " + str(config.profile(id).get("base_url", ""))
+		elif warming.has(id):
+			why = "loading its model"
+		elif config != null and config.key_mismatch(id) != "":
+			why = config.key_mismatch(id) + ". F10 to fix"
 		elif chain.has(id):
 			why = "ready (%s)" % providers[id].model() if health.has(id) else "not checked yet"
 		lines.append("%s: %s" % [id, why])
+	if not ai_on():
+		return { "lines": Array(lines), "summary": "AI characters are off: authored lines. F10 to turn them on.", "any_up": false, "off": true }
 	var any_up := not chain.is_empty()
-	var loading := sidecar != null and sidecar.state == LLMSidecar.State.STARTING
+	var is_loading := loading()
 	var summary := ""
-	if loading:
-		summary = "Her brain is loading (%s). Canned lines until then." % sidecar.reason()
+	if is_loading:
+		summary = "AI model loading (%s). Canned lines until then." % (sidecar.reason() if sidecar != null and sidecar.state == LLMSidecar.State.STARTING else ", ".join(PackedStringArray(warming.keys())))
 	elif not any_up:
 		summary = "No brain: canned lines only. " + (lines[0] if not lines.is_empty() else "")
 	else:
 		summary = "Brain: " + str(chain[0])
-	return { "lines": Array(lines), "summary": summary, "any_up": any_up and not (loading and chain == ["local"]) }
+	return { "lines": Array(lines), "summary": summary, "any_up": any_up and not (is_loading and chain == ["local"]), "off": false }
+
+
+## Issue #328: why a turn got no model reply, in plain words, one provider per
+## part ("cloud: the key was refused. local: could not connect"). With nothing
+## tried, the first provider's reason from brain_report().
+func explain(r: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for f in r.get("fell_back_from", []):
+		parts.append("%s: %s" % [str(f.provider), plain_reason(str(f.reason))])
+	var err := str(r.get("error", ""))
+	if err == "slow":
+		parts.append("the model took too long, trying again next turn")
+	elif err != "" and err != "no provider" and parts.is_empty():
+		parts.append(plain_reason(err))
+	if parts.is_empty():
+		var rep := brain_report()
+		for line in rep.lines:
+			if not str(line).contains(": ready"):
+				return str(line)
+		return "no model is set up"
+	return ". ".join(parts)
+
+
+## One provider's failure reason (as LLMService records it) in plain words.
+static func plain_reason(reason: String) -> String:
+	if reason.begins_with("http "):
+		var code := int(reason.substr(5, 3))
+		match code:
+			401, 403:
+				return "the key was refused (wrong or expired key)"
+			404:
+				return "unknown model or wrong URL (404)"
+			429:
+				return "rate limited, try again in a minute"
+			400:
+				return "the provider rejected the request (400 %s)" % reason.substr(9, 80).strip_edges()
+		if code >= 500:
+			return "the provider had an error (%d)" % code
+		return "http %d" % code
+	if reason in ["timeout", "total timeout"]:
+		return "no answer in time"
+	if reason == "slow":
+		return "the model took too long"
+	if reason in ["connect", "connection lost", "request"]:
+		return "could not connect (not running, or no network)"
+	if reason == "bad url":
+		return "the URL is not valid"
+	if reason == "empty":
+		return "the model sent an empty reply"
+	if reason.begins_with("stream error"):
+		return "the provider sent an error: " + reason.substr(13, 80)
+	return reason
 
 
 func status() -> Dictionary:
@@ -227,6 +357,8 @@ func _next_attempt(t: Dictionary, reason: String) -> void:
 		"last_data": -1, "text": "", "usage": {}, "sse": SSEStream.new(), "body": PackedByteArray(),
 		"timeout": config.first_token_timeout_ms(pid) if config != null else 2500,
 	}
+	if bool(t.opts.get("background", false)):
+		a.timeout = int(config.gen().get("warm_timeout_ms", 90000)) if config != null else 90000
 	t.a = a
 	if prov is ScriptedProvider:
 		a.phase = "scripted"
@@ -253,6 +385,8 @@ func _next_attempt(t: Dictionary, reason: String) -> void:
 func _gen_opts(opts: Dictionary) -> Dictionary:
 	var g: Dictionary = config.gen() if config != null else {}
 	var o := opts.duplicate()
+	for k in ["background", "only", "force"]:
+		o.erase(k)
 	if not o.has("temperature"):
 		o.temperature = float(g.get("temperature", 0.8))
 	if not o.has("max_tokens"):
@@ -272,7 +406,7 @@ func _process(dt: float) -> void:
 					sidecar.mark_ready()
 					status_changed.emit())
 	_recheck_left -= dt
-	if _recheck_left <= 0.0 and config != null:
+	if _recheck_left <= 0.0 and config != null and ai_on():
 		_recheck_left = float(config.data.get("health_recheck_s", 30))
 		for pid in providers:
 			if not scripted_chain.has(pid) and config.usable(pid):
@@ -283,7 +417,15 @@ func _step(t: Dictionary) -> void:
 	var a: Dictionary = t.a
 	var now := Time.get_ticks_msec()
 	var g: Dictionary = config.gen() if config != null else {}
-	if now - int(t.started) > int(g.get("total_timeout_ms", 20000)):
+	var bg := bool(t.opts.get("background", false))
+	# Issue #328: the player has waited long enough; canned now, the model next turn.
+	if not bg and int(a.get("first_at", -1)) < 0 and now - int(t.started) > (config.give_up_ms() if config != null else 9000):
+		_finish(t, false, "slow")
+		return
+	var total := int(g.get("total_timeout_ms", 20000))
+	if bg:
+		total = maxi(total, int(a.timeout))
+	if now - int(t.started) > total:
 		if str(a.get("text", "")) != "":
 			_finish(t, true, "", true)
 		else:
@@ -433,7 +575,12 @@ func _finish(t: Dictionary, ok: bool, error: String, stalled: bool = false) -> v
 	}
 	_close(t)
 	_turns.erase(t.id)
-	last_result = r
+	for w in warming.keys():
+		if int(warming[w]) == int(t.id):
+			warming.erase(w)
+			status_changed.emit()
+	if not bool(t.opts.get("background", false)):
+		last_result = r
 	finished.emit(t.id, r)
 
 

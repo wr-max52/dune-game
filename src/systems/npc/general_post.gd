@@ -408,7 +408,9 @@ func _on_line(turn: Dictionary) -> void:
 		decide("let_go", false)
 		return
 	_meet_lines += 1
-	if _meet_lines >= int(_meet_cfg().get("turns", 4)) and decide(_fallback_verdict()) and verdict == "let_go":
+	# Issue #328: with AI characters off his lines are written ones: fewer of them.
+	var turns := int(_meet_cfg().get("turns" if host.llm.ai_on() else "turns_offline", _meet_cfg().get("turns", 4)))
+	if _meet_lines >= turns and decide(_fallback_verdict()) and verdict == "let_go":
 		_say(_line("let_go"))
 		host.panel.post_notice(said)
 

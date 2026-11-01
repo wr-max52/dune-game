@@ -12,6 +12,13 @@ extends Node
 ## walks you back out, unless the spot holds you (hold_line: the general's pit
 ## meeting ends only when he says so).
 ##
+## Issue #328: AI characters are off unless the player turns them on (F10, or the
+## first launch's question). Off, every character talks from a topic menu and
+## their canned lines. On, the local models load in the background and a small
+## status says "AI model loading" until a first word arrives, then "AI model
+## ready" and fades; a turn that gets no model is canned, says why once per
+## conversation, and the next turn tries again.
+##
 ## town_demo.gd keeps this as `bar`; `brain`, `npc` and `bar_front` are still the
 ## Cantina Owner's, so code written for the one-character bar keeps working.
 
@@ -34,6 +41,10 @@ var active: TalkSpot                  ## who the player is talking to (null when
 var owner_spot: TalkSpot              ## the Cantina Owner's
 var talking := false
 var warmed := false
+var _warmed: Dictionary = {}          ## issue #328: provider id -> its warm-up turn id
+var _offline_told := false            ## issue #328: said why this conversation is canned
+var _ai_state := ""                   ## "" | "loading" | "ready" (the status line)
+var _status_tween: Tween
 var reminders := 0                    ## issue #29: times the AI reminder was repeated (tests)
 
 ## The Cantina Owner's, for the code (and tests) written before #42.
@@ -70,6 +81,7 @@ func setup(town_demo, scripted = null) -> void:
 	if scripted == null:
 		llm.start_sidecar()
 	llm.status_changed.connect(_on_llm_status)
+	llm.finished.connect(_on_llm_finished)
 	if is_inside_tree():
 		get_tree().create_timer(3.0).timeout.connect(_on_llm_status)
 	_load_save()
@@ -79,6 +91,7 @@ func setup(town_demo, scripted = null) -> void:
 	panel.submitted.connect(_on_submit)
 	panel.leave_requested.connect(end_talk)
 	panel.job_answered.connect(_on_job_answer)
+	panel.topic_picked.connect(_on_topic)
 	overlay = LLMDebugOverlay.new()
 	overlay.llm = llm
 	add_child(overlay)
@@ -211,16 +224,100 @@ func _process(_dt: float) -> void:
 			_prompt.text = "[E]  Talk to " + s.display_name()
 		if s != null and s.brain.serving() and InputMap.has_action("interact") and Input.is_action_just_pressed("interact"):
 			start_talk(s)
-	if not warmed and llm.mode == "auto" and bool(llm.health.get("local", {}).get("up", false)):
-		warmed = true
-		owner_spot.brain.warm_up()
-	if talking:
-		var rep := llm.brain_report()
-		_status_dot.visible = true
-		_status_dot.text = rep.summary
-		_status_dot.add_theme_color_override("font_color", Color(1.0, 0.75, 0.35) if not rep.any_up else Color(0.7, 0.68, 0.62))
-	else:
-		_status_dot.visible = false
+	_warm_models()
+	_update_ai_status()
+
+
+## Issue #328: once AI characters are on, load each local model as soon as its
+## server answers (Ollama loads a model on its first request, which can take a while).
+func _warm_models() -> void:
+	if _scripted != null or not llm.ai_on() or llm.config == null:
+		return
+	for pid in ["local", "ollama"]:
+		if _warmed.has(pid) or not llm.config.chain().has(pid) or not llm.config.usable(pid):
+			continue
+		if bool(llm.health.get(pid, {}).get("up", false)):
+			warmed = true
+			_warmed[pid] = owner_spot.brain.warm_up(pid)
+
+
+## Issue #328: "AI model loading" while a model loads with nothing else to answer,
+## or a reply has no first word yet. Nothing with AI characters off.
+func _update_ai_status() -> void:
+	if not llm.ai_on():
+		if _ai_state != "":
+			_ai_state = ""
+			_show_status("")
+		return
+	var waiting := talking and active != null and active.brain.busy and not active.brain.has_words()
+	var loading := waiting or (llm.loading() and llm.active_chain().is_empty())
+	if loading and _ai_state != "loading":
+		_ai_state = "loading"
+		_show_status(_status_line("loading"), Color(1.0, 0.75, 0.35))
+	elif not loading and _ai_state == "loading":
+		_ai_state = ""
+		_show_status("")
+
+
+## The first word arrived with no error: "AI model ready", then it fades.
+func _ai_ready() -> void:
+	_ai_state = "ready"
+	_show_status(_status_line("ready"), Color(0.55, 0.9, 0.55))
+	if is_inside_tree():
+		_status_tween = create_tween()
+		_status_tween.tween_interval(1.2)
+		_status_tween.tween_property(_status_dot, "modulate:a", 0.0, 0.8)
+		_status_tween.tween_callback(func():
+			if _ai_state == "ready":
+				_ai_state = ""
+				_status_dot.visible = false)
+
+
+func _show_status(text: String, color: Color = Color.WHITE) -> void:
+	if _status_tween != null:
+		_status_tween.kill()
+		_status_tween = null
+	_status_dot.modulate.a = 1.0
+	_status_dot.text = text
+	_status_dot.add_theme_color_override("font_color", color)
+	_status_dot.visible = text != ""
+
+
+## The status line's text ("" if it is not showing).
+func ai_status() -> String:
+	return _status_dot.text if _status_dot.visible else ""
+
+
+static func _status_line(key: String) -> String:
+	var fallback := { "loading": "AI model loading...", "ready": "AI model ready" }
+	return str(Disclaimers.data().get("status", {}).get(key, fallback[key]))
+
+
+## Issue #328: a warm-up answered, so its model is loaded.
+func _on_llm_finished(turn_id: int, r: Dictionary) -> void:
+	if _warmed.values().has(turn_id) and bool(r.get("ok", false)) and not (talking and active != null and active.brain.busy):
+		_ai_ready()
+
+
+## Issue #328: AI characters on or off, and (save_now) written to the player's settings.
+func set_ai_enabled(on: bool, save_now: bool = true) -> void:
+	llm.set_ai_enabled(on)
+	if save_now:
+		llm.config.save_user()
+	if talking and active != null:
+		_refresh_menu(active)
+
+
+## Issue #328: the first launch's answer: on or off, and the question is never asked again.
+func answer_first_run(on: bool) -> void:
+	llm.config.set_first_run_asked()
+	set_ai_enabled(on)
+
+
+## The topic menu: with AI characters off, or once a turn in this talk was canned.
+func _refresh_menu(s: TalkSpot) -> void:
+	panel.set_topics(s.brain.topics() if not llm.ai_on() or _offline_told else [])
+	panel.set_notice(Disclaimers.talk_text(s.display_name()) if llm.ai_on() else "")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -246,6 +343,7 @@ func start_talk(s: TalkSpot = null) -> void:
 	NpcVoice.stop(s.body)
 	active = s
 	talking = true
+	_offline_told = false
 	overlay.brain = s.brain
 	_prompt.visible = false
 	var p: CharacterBody3D = demo._player
@@ -268,7 +366,7 @@ func start_talk(s: TalkSpot = null) -> void:
 		greeting = str(beat.say)
 		s.brain.replace_greeting(greeting)
 	panel.open(s.display_name(), greeting)
-	panel.set_notice(Disclaimers.talk_text(s.display_name()))   # issue #29
+	_refresh_menu(s)    # issue #29: the AI notice (only with AI on); issue #328: the topic menu
 	panel.set_mood(s.brain.rel.mood)
 	panel.set_money(WorldState.credits, s.brain.rel.tab)
 	if str(beat.get("job", "")) != "":
@@ -321,13 +419,35 @@ func player_says(text: String) -> bool:
 	return _on_submit(text)
 
 
+## Issue #328: bots and tests pick a topic through here (same path as the button).
+func player_picks(topic: String) -> bool:
+	if not talking:
+		return false
+	return _on_topic(topic)
+
+
+func _on_topic(topic: String) -> bool:
+	var s := active
+	if s == null or s.brain.busy:
+		return false
+	for t in s.brain.topics():
+		if str(t.id) == topic:
+			_before_turn(s, str(t.say))
+			return s.brain.say_topic(topic)
+	return false
+
+
 func _on_submit(text: String) -> bool:
 	var s := active
-	if s == null:
+	if s == null or s.brain.busy:
 		return false
+	_before_turn(s, text)
+	return s.brain.say(text)
+
+
+## The player's line into the history, and the box waits for the answer.
+func _before_turn(s: TalkSpot, text: String) -> void:
 	NpcVoice.stop(s.body)
-	if s.brain.busy:
-		return false
 	panel.commit_line()
 	panel.add_player_line(text)
 	if Disclaimers.triggered(text):
@@ -337,7 +457,6 @@ func _on_submit(text: String) -> bool:
 	panel.set_line("")
 	panel.set_input_enabled(false)
 	s.act("thinking")
-	return s.brain.say(text)
 
 
 func _on_thinking(s: TalkSpot, bark: String) -> void:
@@ -350,6 +469,8 @@ func _on_thinking(s: TalkSpot, bark: String) -> void:
 func _on_delta(s: TalkSpot, text: String) -> void:
 	if s != active:
 		return
+	if _ai_state == "loading":
+		_ai_ready()
 	panel.set_line(text)
 	s.speak_pulse()
 
@@ -359,11 +480,31 @@ func _on_done(s: TalkSpot, turn: Dictionary) -> void:
 		return
 	panel.set_line(str(turn.say))
 	var story_line := _story_mood(s)
-	panel.set_mood(s.brain.rel.mood + ("   (canned: no brain answered)" if str(turn.source) == "canned" else ""))
+	panel.set_mood(s.brain.rel.mood)
+	if str(turn.source) == "canned" and llm.ai_on():
+		_offline(s, turn)
 	panel.set_money(WorldState.credits, s.brain.rel.tab)
 	panel.set_input_enabled(true)
 	_speak(s, story_line if story_line != "" else str(turn.say))
 	s.speak_pulse()
+
+
+## Issue #328: the AI is on but no model answered: say why, once per conversation,
+## and put the topic menu up. The next turn tries the model again.
+func _offline(s: TalkSpot, turn: Dictionary) -> void:
+	if _ai_state == "loading":
+		_ai_state = ""
+		_show_status("")
+	if _offline_told:
+		return
+	_offline_told = true
+	if llm.loading() and (turn.get("fell_back_from", []) as Array).is_empty():
+		# Nothing failed: the model is still loading. Written lines until it is up.
+		panel.post_notice(str(Disclaimers.data().get("still_loading", "The AI model is still loading: written lines for now.")))
+	else:
+		var why := llm.explain({ "fell_back_from": turn.get("fell_back_from", []), "error": turn.get("error", "") })
+		panel.post_notice(str(Disclaimers.data().get("offline", "AI offline: %s. Canned lines for now; F10 to fix.")) % why)
+	_refresh_menu(s)
 
 
 func _on_drink(s: TalkSpot, d: Dictionary) -> void:
@@ -426,6 +567,8 @@ func _end_soon(_reason: String) -> void:
 
 
 func _on_llm_status() -> void:
+	if not llm.ai_on():
+		_warmed.clear()                 # issue #328: turned on again, they load again
 	if overlay != null:
 		overlay.refresh()
 	# Say why in the Godot output too, so a canned character is never a mystery.

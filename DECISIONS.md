@@ -2,6 +2,39 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-31 — AI characters off by default; the cloud picks its provider from the key (issue #328)
+
+- **AI characters are one switch, off on a fresh install** (`ai_enabled` in
+  `content/core/llm/defaults.json`). Off, `LLMService.active_chain()` is empty, no
+  health checks run and the sidecar never starts, so the town makes no network
+  call and every turn is canned at once. It is a flag beside `mode`, not a sixth
+  mode, so the player's choice of local / ollama / cloud survives turning it off
+  and on. Alternative: an "off" mode. Rejected: switching back on would have to
+  remember the mode it replaced.
+- **The story never needs a model.** Every AI character gets a topic menu built
+  from `content/core/npcs/topics.json` and their card's canned lines, which already
+  read real `WorldState`. Card hints carry an authored `line`, added after the
+  three-sentence cap. The general's pit meeting and the dark master's offer reach
+  their verdicts after `turns_offline` written lines. `tests/test_ai_off.gut.gd`
+  plays land → free with a spy provider that must never be asked anything.
+- **Local models warm in the background, and player turns skip them meanwhile.**
+  `LLMService.warm()` sends a one-token request (Ollama loads its model on the
+  first one) with a long timeout. Until it answers, that provider is out of the
+  chain, so the player's turn goes to the next provider or is canned now, and the
+  next turn tries again. Alternative: let the player's turn wait on the load.
+  Rejected: a 30B model can take far longer to load than anyone waits at a bar,
+  and cutting the request off on a timeout can stop the load. `gen.give_up_ms`
+  still caps any turn with no first word.
+- **A turn with nothing to try finishes next frame, not inside `chat()`.** Before,
+  an empty chain called `finished` before the caller had stored the turn id, so the
+  brain (and F10 Test) never heard back. The brain now answers canned straight
+  away when the chain is empty.
+- **The cloud key picks its provider** (`key_presets`: `sk-ant-` → Anthropic,
+  `sk-or-` → OpenRouter) unless the player set the URL or type by hand. Why: a
+  stored Anthropic key was being sent to the OpenRouter profile, which was also
+  switched off, so cloud never answered. The cloud profile is now on by default
+  (it still needs a key, and the whole AI is off until the player says).
+
 ## 2026-10-31 — Divergent endings: the Remnant can be gone and still your friends (issue #303)
 
 - **"Gone" and "hostile" are two questions now.** `Story.remnant_gone()` (the

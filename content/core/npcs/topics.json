@@ -1,0 +1,14 @@
+{
+  "note": "Issue #328: the topic menu an AI character shows when AI characters are off (and above the text field when they are on but every model failed). Each topic is answered from the character's own canned lines (NpcBrain.canned_reply), which use real WorldState: a true rumor, a real job, a real ship and price. A topic shows only for a character whose card has the action in 'needs' and at least one of the canned keys in 'canned' (none listed: no canned line needed). 'say' is the player's line in the history. Order is menu order.",
+  "topics": [
+    { "id": "job", "label": "Work", "say": "Got any work for me?", "needs": "offer_job", "canned": ["job", "no_job"] },
+    { "id": "rumor", "label": "Rumors", "say": "Heard anything worth hearing?", "needs": "share_rumor", "canned": ["rumor", "no_rumor"] },
+    { "id": "recommend", "label": "Which ship?", "say": "Which ship should I fly?", "needs": "offer_ship", "canned": ["recommend"] },
+    { "id": "buy", "label": "Buy", "say": "What are you selling?", "needs": "offer_speeder", "canned": ["sell"] },
+    { "id": "sell_ship", "label": "Sell my ship", "say": "Want to buy my ship?", "needs": "offer_ship_buy", "canned": ["ship_buy", "no_ship_buy"] },
+    { "id": "drink", "label": "A drink", "say": "Pour me a drink.", "needs": "pour_drink", "canned": [] },
+    { "id": "vibe", "label": "The music", "say": "Can the band play something else?", "needs": "club_vibe", "canned": ["vibe"] },
+    { "id": "war", "label": "The war", "say": "What do you make of the war?", "needs": "", "canned": ["war"] },
+    { "id": "bye", "label": "Goodbye", "say": "See you around.", "needs": "", "canned": ["bye"] }
+  ]
+}

@@ -30,6 +30,7 @@ func _run() -> void:
 	var cfg := LLMConfig.new()
 	cfg.user_path = "user://no_user_config_for_trace.json"
 	cfg.load_all()
+	cfg.set_ai_enabled(true)           # issue #328: off by default
 	var port := int(args.get("port", "8099"))
 	cfg.set_value("profiles/local/base_url", "http://127.0.0.1:%d/v1" % port)
 	cfg.set_value("profiles/local/health_url", "http://127.0.0.1:%d/health" % port)
@@ -43,6 +44,7 @@ func _run() -> void:
 		cfg.set_value("profiles/local/sidecar/extra_args", Array(str(args.extra).split(" ")))
 	cfg.set_value("gen/first_token_timeout_ms/local", int(args.get("first_ms", "20000")))
 	cfg.set_value("gen/total_timeout_ms", 120000)
+	cfg.set_value("gen/give_up_ms", 120000)
 	var svc := LLMService.new()
 	get_root().add_child(svc)
 	svc.configure(cfg)

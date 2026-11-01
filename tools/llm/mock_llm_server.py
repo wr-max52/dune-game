@@ -13,6 +13,11 @@ Behaviour by path prefix (so one server can play several providers):
   /err/v1/...    answers 500
   /garbage/v1/...  streams text that is not JSON (parser repair path)
   /health or /<mode>/health  200 except for /hang and /err
+Issue #328, the Anthropic Messages API (POST .../v1/messages):
+  /anth/v1/messages   streams the reply as a forced "reply" tool (input_json_delta),
+                      or 401 like Anthropic when x-api-key is not GOOD_KEY
+  /a404/v1/messages   404 not_found_error (unknown model)
+  /a429/v1/messages   429 rate_limit_error
 The reply echoes the last player line it received, which proves the player's
 words actually reached the model.
 """
@@ -22,6 +27,8 @@ import re
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+GOOD_KEY = "sk-ant-mock-good-key-0000"
 
 
 def reply_for(body):
@@ -51,7 +58,7 @@ class H(BaseHTTPRequestHandler):
 
     def _mode(self):
         p = self.path.strip("/").split("/")
-        return p[0] if p and p[0] in ("good", "hang", "err", "garbage") else "good"
+        return p[0] if p and p[0] in ("good", "hang", "err", "garbage", "anth", "a404", "a429") else "good"
 
     def do_GET(self):
         mode = self._mode()
@@ -70,6 +77,8 @@ class H(BaseHTTPRequestHandler):
         if mode == "hang":
             time.sleep(30)
             return
+        if mode in ("anth", "a404", "a429"):
+            return self._anthropic(mode, body)
         if mode == "err":
             data = b'{"error":{"message":"boom"}}'
             self.send_response(500)
@@ -106,6 +115,43 @@ class H(BaseHTTPRequestHandler):
             self.wfile.write(b"%x\r\n%s\r\n" % (len(piece), piece))
             self.wfile.flush()
             time.sleep(0.004)
+        self.wfile.write(b"0\r\n\r\n")
+        self.wfile.flush()
+
+
+    def _json(self, code, obj):
+        data = json.dumps(obj).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _anthropic(self, mode, body):
+        """Anthropic's error bodies and its tool-input stream."""
+        if mode == "a404":
+            return self._json(404, {"type": "error", "error": {"type": "not_found_error", "message": "model: " + str(body.get("model"))}})
+        if mode == "a429":
+            return self._json(429, {"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}})
+        if self.headers.get("x-api-key", "") != GOOD_KEY or not self.headers.get("anthropic-version"):
+            return self._json(401, {"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}})
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Transfer-Encoding", "chunked")
+        self.end_headers()
+        text = json.dumps(reply_for({"messages": [{"role": "system", "content": body.get("system", "")}] + body.get("messages", [])}), ensure_ascii=False)
+        evs = [("message_start", {"type": "message_start", "message": {"usage": {"input_tokens": 99}}}),
+               ("content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "t1", "name": "reply", "input": {}}})]
+        for i in range(0, len(text), 9):
+            evs.append(("content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": text[i:i + 9]}}))
+        evs += [("content_block_stop", {"type": "content_block_stop", "index": 0}),
+                ("message_delta", {"type": "message_delta", "usage": {"output_tokens": 30}}),
+                ("message_stop", {"type": "message_stop"})]
+        for name, ev in evs:
+            piece = b"event: " + name.encode() + b"\ndata: " + json.dumps(ev, ensure_ascii=False).encode("utf-8") + b"\n\n"
+            self.wfile.write(b"%x\r\n%s\r\n" % (len(piece), piece))
+            self.wfile.flush()
+            time.sleep(0.003)
         self.wfile.write(b"0\r\n\r\n")
         self.wfile.flush()
 

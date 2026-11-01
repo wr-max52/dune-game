@@ -5,20 +5,32 @@ extends CanvasLayer
 ## player accepts (the button, Enter or Space). Once per run of the game
 ## (Disclaimers.launch_shown), never in a headless run (tests and traces).
 ## Text from content/core/llm/disclaimers.json.
+##
+## Issue #328: AI characters are off by default. On the first launch this asks
+## whether to turn them on ("Play without AI" is the default and Enter's answer)
+## and emits ai_chosen; after that it shows only while they are on.
 
 signal accepted
+signal ai_chosen(on: bool)
 
+var asking := false                 ## issue #328: the first launch's question
 var _panel: PanelContainer
 var _button: Button
+var _on_button: Button
 var _was_paused := false
 
 
-## Show it if this run has not shown it yet. Returns the overlay, or null.
+## Show it if this run has not shown it yet (and there is something to say).
+## Returns the overlay, or null.
 static func show_once(parent: Node) -> DisclaimerOverlay:
 	if Disclaimers.launch_shown or DisplayServer.get_name() == "headless":
 		return null
 	Disclaimers.launch_shown = true
+	var cfg := LLMConfig.new().load_all()
+	if cfg.first_run_asked() and not cfg.ai_enabled():
+		return null
 	var o := DisclaimerOverlay.new()
+	o.asking = not cfg.first_run_asked()
 	parent.add_child(o)
 	return o
 
@@ -28,6 +40,12 @@ func _ready() -> void:
 	layer = 30
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var d := Disclaimers.launch()
+	if asking:
+		# The question, then the launch notice's advice (its last paragraph).
+		var ask: Dictionary = Disclaimers.data().get("ask", {})
+		var advice: PackedStringArray = str(d.get("text", "")).split("\n\n")
+		d = { "title": ask.get("title", "AI characters?"), "button": ask.get("off", "Play without AI"),
+			"text": str(ask.get("text", "")) + ("\n\n" + advice[advice.size() - 1] if advice.size() > 1 else "") }
 	var shade := ColorRect.new()
 	shade.color = Color(0.02, 0.015, 0.01, 0.9)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -69,7 +87,14 @@ func _ready() -> void:
 	_button.text = str(d.get("button", "I understand"))
 	_button.add_theme_font_size_override("font_size", 22)
 	_button.custom_minimum_size = Vector2(200, 48)
-	_button.pressed.connect(accept)
+	_button.pressed.connect(choose.bind(false) if asking else accept)
+	if asking:
+		_on_button = Button.new()
+		_on_button.text = str(Disclaimers.data().get("ask", {}).get("on", "Turn on AI characters"))
+		_on_button.add_theme_font_size_override("font_size", 22)
+		_on_button.custom_minimum_size = Vector2(200, 48)
+		_on_button.pressed.connect(choose.bind(true))
+		row.add_child(_on_button)
 	row.add_child(_button)
 	_was_paused = get_tree().paused
 	get_tree().paused = true
@@ -81,7 +106,18 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo \
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
 		get_viewport().set_input_as_handled()
-		accept()
+		if asking:
+			choose(_on_button != null and _on_button.has_focus())
+		else:
+			accept()
+
+
+## Issue #328: the first launch's answer. The town saves it (ConversationHost.answer_first_run).
+func choose(on: bool) -> void:
+	if not is_inside_tree():
+		return
+	ai_chosen.emit(on)
+	accept()
 
 
 func accept() -> void:

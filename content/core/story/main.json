@@ -53,7 +53,7 @@
       "job": "j_smuggle_run",
       "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it. And a tip: that old cargo droid rolling round the pit has a jetpack inside it. Open it up. Nobody's going to miss it.",
       "remind": "The drop's still out there, or still in your pockets. Get it to the fence. And open that cargo droid in the pit, if you haven't: there's a jetpack in it.",
-      "jetpack_hint": "If the player asks about getting over walls or about gear, remind them the old cargo droid in the pit has a jetpack inside it."
+      "jetpack_hint": "And if a wall is in your way, that old cargo droid down in the pit has a jetpack inside it."
     },
     {
       "id": "droid_merchant",

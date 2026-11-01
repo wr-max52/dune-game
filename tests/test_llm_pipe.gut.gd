@@ -86,7 +86,8 @@ func test_defaults_load_and_cloud_is_off_without_key() -> void:
 	c.load_all()
 	assert_eq(c.chain(), ["local", "ollama", "cloud"])
 	assert_true(c.usable("local"))
-	assert_false(c.usable("cloud"), "cloud is off and has no key by default")
+	assert_false(c.usable("cloud"), "cloud has no key by default")
+	assert_false(c.ai_enabled(), "issue #328: AI characters are off on a fresh install")
 
 
 func test_share_defaults_are_cloud_only_anthropic_and_keyless() -> void:
@@ -100,7 +101,7 @@ func test_share_defaults_are_cloud_only_anthropic_and_keyless() -> void:
 	assert_true(bool(c.profile("cloud").enabled))
 	assert_false(c.usable("cloud"), "no key until the player pastes one in F10")
 	assert_false(bool(c.data.debug.log_transcripts))
-	assert_false(FileAccess.get_file_as_string(LLMConfig.SHARE_DEFAULTS).contains("sk-"), "no key in res://")
+	assert_false(_has_key(FileAccess.get_file_as_string(LLMConfig.SHARE_DEFAULTS)), "no key in res://")
 
 
 func test_keys_are_masked_and_stored_outside_res() -> void:
@@ -111,8 +112,14 @@ func test_keys_are_masked_and_stored_outside_res() -> void:
 	assert_true(c.set_api_key("cloud", "sk-zzz-test-9999"))
 	c.data = { "profiles": { "cloud": { "api_key_env": "DUNE_TEST_UNSET_ENV" } } }
 	assert_eq(c.api_key("cloud"), "sk-zzz-test-9999")
-	assert_false(FileAccess.get_file_as_string("res://content/core/llm/defaults.json").contains("sk-"), "no key in res://")
+	assert_false(_has_key(FileAccess.get_file_as_string("res://content/core/llm/defaults.json")), "no key in res://")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_keys.cfg"))
+
+
+## A real key is long; the key presets' prefixes ("sk-ant-") are not keys.
+func _has_key(text: String) -> bool:
+	var re := RegEx.create_from_string("sk-[A-Za-z0-9_-]{16,}")
+	return re.search(text) != null
 
 
 func test_parse_url() -> void:
