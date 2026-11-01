@@ -44,6 +44,7 @@ var speed := 0.0                     ## along the nose, m/s (negative = reversin
 var vy := 0.0                        ## vertical speed, m/s
 var airborne := false
 var boost_left := 0.0
+var spent := false                   ## boost ran dry with the key held: off until it is let go
 var hp := 0
 var max_hp := 0
 var events: Array = []               ## this step's: { type, ... }
@@ -124,9 +125,10 @@ func alive() -> bool:
 	return hp > 0
 
 
-## Boost is lit this step (the throttle open, the key held, boost left).
+## Boost is lit this step (the throttle open, the key held, boost left, and not
+## run dry since the key went down).
 func boosting() -> bool:
-	return bool(_cmd.boost) and float(_cmd.throttle) > 0.1 and boost_left > 0.0
+	return bool(_cmd.boost) and float(_cmd.throttle) > 0.1 and boost_left > 0.0 and not spent
 
 
 ## Issue #95: a Grav Lifter is fitted.
@@ -210,14 +212,19 @@ func step(dt: float) -> Array:
 
 func _drive(dt: float) -> void:
 	var throttle: float = _cmd.throttle
-	var boosting := bool(_cmd.boost) and throttle > 0.1 and boost_left > 0.0
-	if boosting:
+	# An empty meter ends the boost until the key is let go: held on, one step's
+	# recharge would light it again the next, flickering at boost speed for ever.
+	if not bool(_cmd.boost):
+		spent = false
+	var lit := boosting()
+	if lit:
 		boost_left = maxf(0.0, boost_left - dt)
+		spent = boost_left <= 0.0
 	else:
 		boost_left = minf(p("boost_time", 3.5), boost_left + dt * p("boost_recharge", 0.45))
 	var target := 0.0
 	if throttle > 0.0:
-		target = throttle * (p("boost_speed", 52.0) if boosting else p("max_speed", 36.0))
+		target = throttle * (p("boost_speed", 52.0) if lit else p("max_speed", 36.0))
 	elif throttle < 0.0:
 		target = throttle * p("reverse_speed", 9.0)
 	var rate := p("accel", 16.0)

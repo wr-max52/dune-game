@@ -60,6 +60,23 @@ func test_it_speeds_up_and_boosts_faster() -> void:
 	assert_gt(m.speed, float(cfg.max_speed) + 5.0, "boost goes faster")
 
 
+func test_boost_runs_out_while_held() -> void:
+	var m := _model()
+	m.yaw = PI * 0.5                 # face -x, away from the ramp and the wall
+	_drive(m, float(cfg.get("boost_time", 3.5)) + 0.5, 1.0, 0.0, true)
+	var lit := 0
+	for i in 600:                    # still held on an empty meter
+		m.set_command(1.0, 0.0, true)
+		m.step(1.0 / 60.0)
+		lit += int(m.boosting())
+	assert_eq(lit, 0, "held on an empty meter, boost stays off (it used to flicker on every other step)")
+	assert_almost_eq(m.speed, float(cfg.max_speed), 1.0, "back to top speed, not boost speed")
+	_drive(m, 1.0, 1.0)
+	m.set_command(1.0, 0.0, true)
+	m.step(1.0 / 60.0)
+	assert_true(m.boosting(), "let go and pressed again, what recharged boosts")
+
+
 func test_it_launches_off_a_ramp_and_lands_unhurt() -> void:
 	var m := _model()
 	var ev := _drive(m, 6.0, 1.0)     # straight down -z: up the ramp and off its end
