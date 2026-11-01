@@ -1351,3 +1351,19 @@ Every significant technical choice, the alternative, and why. Newest on top.
   the model, which ShipPilot hands the cockpit on boarding: the frame wears it as
   is, the dash a copy at `DASH_SHADE` of its colour with the same finish, so the
   instruments' panel reads darker than the struts.
+- **The instruments are painted onto the modelled dash, not over it.** A 2D
+  overlay always draws on top of the 3D view, so a modelled yoke could never sit
+  in front of painted dials. CockpitDash's texture now goes on the dash mesh
+  (`cockpit_dash.gdshader`); `dash_mesh` gives it UVs through `unproject()` (the
+  old tilt shader's map, run per vertex), so it leans exactly as before. Where
+  the paint is, the dash is glass (not metal, smoother) and lit from behind
+  (`BACKLIGHT`), so the dials read at night and still pick up real glare by day.
+  The tilt shader is gone.
+- **The yoke is modelled** (`build_yoke`): a ram's-horn tube in the dash's shade
+  of the hull, rubber grips, buttons, a boss and a column, turned and pulled by
+  `yoke_pose` as before.
+- **Dials are lit by LEDs in the HUD colour; the attitude card is backlit
+  paper.** A soft wash and three pools of `RetroUI.accent` in from each dial's
+  rim (`LED_GLOW`), and ticks printed in pale ink tinted by it. The attitude
+  ball's sky and ground are muted paper colours, with ink lines, fibres mottling
+  a lamp behind the middle, and a shadow at the rim.

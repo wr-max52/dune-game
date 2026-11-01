@@ -9,7 +9,9 @@ extends Control
 ##
 ## The dash itself is modelled (CockpitView.dash_mesh); this paints what sits on
 ## it: recessed plates for the instruments, each in a bevelled bezel under glass
-## that catches the light. The instruments:
+## that catches the light. The dials are analog, lit from inside by small LEDs
+## round their rims in the player's HUD colour (RetroUI.accent); the attitude ball
+## is a paper card lit from behind. The instruments:
 ##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
 ##   hull, shield and boost meters, and one lamp for the Shift ability.
 ##
@@ -27,8 +29,11 @@ const GLARE_GLINT := Color(1, 1, 1, 0.4)
 const LIGHT := Vector2(-0.7071, -0.7071)   ## where the canopy's light comes from on screen (upper left)
 const FACE := Color(0.03, 0.03, 0.035, 1.0)
 const NEEDLE := Color(1.0, 0.55, 0.2, 1.0)
-const SKY := Color(0.22, 0.48, 0.82, 1.0)
-const EARTH := Color(0.46, 0.3, 0.15, 1.0)
+const PAPER_SKY := Color(0.42, 0.6, 0.76, 1.0)    ## the attitude card's sky, printed on thin paper
+const PAPER_EARTH := Color(0.66, 0.46, 0.28, 1.0)   ## and its ground
+const INK := Color(0.13, 0.11, 0.1, 0.85)          ## what the card's lines are printed in
+const TICK := Color(0.85, 0.82, 0.75)
+const LED_GLOW := 0.13             ## how strongly a dial's edge LEDs light its face, 0..1
 const LAMP_ON := Color(1.0, 0.62, 0.15, 1.0)
 const LAMP_OFF := Color(0.22, 0.16, 0.1, 1.0)
 const DASH_EDGE := 0.76            ## dash top at the sides, share of the screen height (before the lean)
@@ -174,7 +179,7 @@ func _dial(c: Vector2, r: float, frac: float, ticks: int, label: String, readout
 	for i in ticks + 1:
 		var a := start + sweep * float(i) / float(ticks)
 		var d := Vector2.from_angle(a)
-		draw_line(c + d * r * 0.78, c + d * r * 0.92, Color(0.85, 0.82, 0.75), 1.5)
+		draw_line(c + d * r * 0.78, c + d * r * 0.92, tick_color(), 1.5)
 	_needle(c, r * 0.8, start + sweep * clampf(frac, 0.0, 1.0))
 	_dial_text(c, r, label, readout, font, fs)
 	_glass(c, r)
@@ -185,7 +190,7 @@ func _altimeter(c: Vector2, r: float, alt: float, font: Font, fs: int) -> void:
 	_face(c, r)
 	for i in 10:
 		var d := Vector2.from_angle(-PI * 0.5 + TAU * float(i) / 10.0)
-		draw_line(c + d * r * 0.78, c + d * r * 0.92, Color(0.85, 0.82, 0.75), 1.5)
+		draw_line(c + d * r * 0.78, c + d * r * 0.92, tick_color(), 1.5)
 	_needle(c, r * 0.8, -PI * 0.5 + TAU * fposmod(alt, 1000.0) / 1000.0)
 	_dial_text(c, r, "ALT", "%d" % int(alt), font, fs)
 	_glass(c, r)
@@ -195,31 +200,47 @@ func _altimeter(c: Vector2, r: float, alt: float, font: Font, fs: int) -> void:
 ## turning against the roll, a fixed wings mark in the middle.
 func _attitude(c: Vector2, r: float, pitch: float, roll: float) -> void:
 	_bezel(c, r)
-	draw_circle(c, r, SKY)
+	draw_circle(c, r, PAPER_SKY)
 	var h := horizon(r, pitch, roll)
 	var ground := clip_half_plane(circle_points(r, 48), h.normal, h.offset)
 	if ground.size() >= 3:
 		for i in ground.size():
 			ground.set(i, ground[i] + c)
-		draw_colored_polygon(ground, EARTH)
+		draw_colored_polygon(ground, PAPER_EARTH)
+	_paper(c, r)
 	if absf(h.offset) < r:
 		var half := sqrt(r * r - h.offset * h.offset)
 		var mid: Vector2 = c + h.normal * h.offset
 		var along: Vector2 = h.normal.orthogonal()
-		draw_line(mid - along * half, mid + along * half, Color(1, 1, 1, 0.9), 2.0)
+		draw_line(mid - along * half, mid + along * half, INK, 2.0, true)
 	# Pitch marks every 10 degrees either side of the horizon.
 	for k in [-20.0, -10.0, 10.0, 20.0]:
 		var o: float = h.offset - k * r / ATT_DEG
 		if absf(o) < r * 0.85:
 			var mid2: Vector2 = c + h.normal * o
 			var w := r * (0.18 if absf(k) < 15.0 else 0.3)
-			draw_line(mid2 - h.normal.orthogonal() * w, mid2 + h.normal.orthogonal() * w, Color(1, 1, 1, 0.7), 1.0)
+			draw_line(mid2 - h.normal.orthogonal() * w, mid2 + h.normal.orthogonal() * w, Color(INK, 0.6), 1.0, true)
 	draw_arc(c, r, 0.0, TAU, 48, Color(0.05, 0.05, 0.05), 3.0)
-	var wing := Color(1.0, 0.7, 0.2)
+	var wing := RetroUI.accent
+	draw_line(c + Vector2(-r * 0.5, 0), c + Vector2(-r * 0.15, 0), Color(0, 0, 0, 0.5), 5.0)
+	draw_line(c + Vector2(r * 0.15, 0), c + Vector2(r * 0.5, 0), Color(0, 0, 0, 0.5), 5.0)
 	draw_line(c + Vector2(-r * 0.5, 0), c + Vector2(-r * 0.15, 0), wing, 3.0)
 	draw_line(c + Vector2(r * 0.15, 0), c + Vector2(r * 0.5, 0), wing, 3.0)
 	draw_circle(c, 3.0, wing)
 	_glass(c, r)
+
+
+## The card is thin paper with a lamp behind it: brightest in the middle, where
+## the lamp shows through, its fibres mottling the light, falling off to a shadow
+## at the rim.
+func _paper(c: Vector2, r: float) -> void:
+	halo(self, c, r * 0.95, Color(1.0, 0.95, 0.84, 0.22))
+	for i in 140:
+		var at := c + Vector2.from_angle(TAU * _hash(i, 1)) * r * 0.95 * sqrt(_hash(i, 2))
+		var d := Vector2.from_angle(TAU * _hash(i, 3)) * r * (0.02 + 0.05 * _hash(i, 4))
+		var light := _hash(i, 5) > 0.5
+		draw_line(at - d, at + d, Color(1, 0.97, 0.9, 0.09) if light else Color(0.25, 0.18, 0.1, 0.07), 1.0, true)
+	_ring(c, r * 0.6, r, Color(0, 0, 0, 0.0), Color(0.1, 0.06, 0.03, 0.42))
 
 
 ## Where the attitude ball's horizon is: ground is every point p (from the ball's
@@ -262,7 +283,7 @@ func _compass(c: Vector2, r: float, heading: float, font: Font, fs: int) -> void
 		var deg := i * 30
 		var a := deg_to_rad(float(deg) - heading) - PI * 0.5
 		var d := Vector2.from_angle(a)
-		draw_line(c + d * r * 0.82, c + d * r * 0.94, Color(0.85, 0.82, 0.75), 1.5)
+		draw_line(c + d * r * 0.82, c + d * r * 0.94, tick_color(), 1.5)
 		if deg % 90 == 0:
 			var p := c + d * r * 0.6
 			draw_string(font, p + Vector2(-12, fs * 0.3), FlightSimHud.compass_label(deg), HORIZONTAL_ALIGNMENT_CENTER,
@@ -276,6 +297,51 @@ func _compass(c: Vector2, r: float, heading: float, font: Font, fs: int) -> void
 func _face(c: Vector2, r: float) -> void:
 	_bezel(c, r)
 	draw_circle(c, r, FACE)
+	_leds(c, r)
+
+
+## The LEDs hidden under a dial's bezel: a soft wash of the HUD colour in from the
+## rim, brighter in pools where each one sits, fading out before the middle.
+func _leds(c: Vector2, r: float) -> void:
+	var led := RetroUI.accent
+	_ring(c, r * 0.72, r * 0.98, Color(led, 0.0), Color(led, LED_GLOW * 0.5))
+	for a in [-150.0, -30.0, 90.0]:
+		var at := c + Vector2.from_angle(deg_to_rad(a)) * r * 0.9
+		var pool := circle_points(r * 0.32, 24)
+		var inside := PackedVector2Array()
+		var tint := PackedColorArray()
+		inside.append(at)
+		tint.append(Color(led.lightened(0.3), LED_GLOW))
+		for q in pool:
+			var p := at + q
+			if p.distance_to(c) > r * 0.97:
+				p = c + (p - c).normalized() * r * 0.97
+			inside.append(p)
+			tint.append(Color(led, 0.0))
+		for i in pool.size():
+			var j := (i + 1) % pool.size() + 1
+			draw_polygon(PackedVector2Array([inside[0], inside[i + 1], inside[j]]),
+				PackedColorArray([tint[0], tint[i + 1], tint[j]]))
+
+
+## A ring from radius r0 to r1 round c, shaded c0 on the inside to c1 on the outside.
+func _ring(c: Vector2, r0: float, r1: float, c0: Color, c1: Color) -> void:
+	var n := 48
+	for i in n:
+		var a := Vector2.from_angle(TAU * float(i) / n)
+		var b := Vector2.from_angle(TAU * float(i + 1) / n)
+		draw_polygon(PackedVector2Array([c + a * r0, c + b * r0, c + b * r1, c + a * r1]),
+			PackedColorArray([c0, c0, c1, c1]))
+
+
+## A steady pseudo-random 0..1 for (i, k), so the card's fibres do not crawl.
+static func _hash(i: int, k: int) -> float:
+	return fposmod(sin(float(i) * 12.9898 + float(k) * 78.233) * 43758.5453, 1.0)
+
+
+## A dial's markings, printed in pale ink and lit by its LEDs.
+static func tick_color() -> Color:
+	return TICK.lerp(RetroUI.accent.lightened(0.45), 0.3)
 
 
 ## A turned metal ring round a face: lit on the side toward the light, in shadow

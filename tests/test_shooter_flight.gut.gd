@@ -291,6 +291,22 @@ func test_canopy_frame_and_dash_wear_the_ships_skin() -> void:
 	assert_almost_eq(foot.distance_to(under), 0.0, 0.001, "each strut stands on the dash's face")
 
 
+func test_instruments_sit_on_the_dash_where_it_leans() -> void:
+	var vp := Vector2(1920, 1080)
+	for p in [Vector2(300, 900), Vector2(960, 760), Vector2(1700, 1050)]:
+		var back := CockpitView.unproject(vp, CockpitView.project(vp, p))
+		assert_almost_eq(back.distance_to(p), 0.0, 0.01, "unproject undoes project, so the painted panel lands where it leans")
+	assert_gt(CockpitView.dash_mesh(vp).get_surface_count(), 0, "the dash is a mesh")
+
+
+func test_yoke_is_modelled() -> void:
+	var yoke := CockpitView.build_yoke(StandardMaterial3D.new())
+	var wheel := yoke.get_node("Wheel") as MeshInstance3D
+	assert_eq(wheel.mesh.get_surface_count(), 2, "a metal wheel and rubber grips")
+	assert_gt(yoke.get_child_count(), 2, "with a cap on each grip and a boss on the hub")
+	yoke.free()
+
+
 func test_glass_glints_where_the_light_reflects() -> void:
 	var behind := CockpitDash.glint(Vector3(0, 0.2, 1))
 	assert_gt(behind.z, 0.0, "the sun behind you glints on the dials")
