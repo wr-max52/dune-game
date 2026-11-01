@@ -46,6 +46,11 @@ var player_target_id := -1
 var arena_center := Vector3.ZERO
 var arena_radius := 1500.0
 var arena_follow := false   ## the arena moves with the player (ShipPilot, in the cruiser's sky: everyone comes along)
+## The player is out of the fight for now (ShipPilot: down in the cruiser's bay,
+## docking, on foot, or under the edge of space): the director neither flies her
+## nor lets anyone target or hit her, and everyone else fights on. Her flight model
+## is the caller's to move meanwhile (the arena still follows it).
+var player_sheltered := false
 ## Issue #46: the heading (radians about +Y) waves arrive from, so a fight that
 ## starts in the port's sky meets them ahead of the player. 0 = from -Z, as before.
 var wave_yaw := 0.0
@@ -284,7 +289,7 @@ func step(dt: float) -> Array:
 	_run_waves(dt)
 
 	for s in ships:
-		if not s.alive:
+		if not s.alive or (s.is_player and player_sheltered):
 			continue
 		_pick_target(s, dt)
 		var tg = get_ship(s.target_id)
@@ -390,13 +395,15 @@ func _spawn_wave(idx: int) -> void:
 func _pick_target(s: Dictionary, dt: float) -> void:
 	s.retarget_left -= dt
 	var cur = get_ship(s.target_id)
-	var cur_ok: bool = not cur.is_empty() and cur.alive
+	var cur_ok: bool = not cur.is_empty() and cur.alive and not (cur.is_player and player_sheltered)
 	if cur_ok and s.retarget_left > 0.0:
 		return
 	var enemy_team := TEAM_HOSTILE if s.team == TEAM_PLAYER else TEAM_PLAYER
 	var best := -1
 	var best_score := INF
 	for o in alive_on(enemy_team):
+		if o.is_player and player_sheltered:
+			continue
 		var to: Vector3 = o.flight.position - s.flight.position
 		# Prefer close targets that are already in front of the nose.
 		var ang := LeadSolver.angle_deg(s.flight.forward(), to)
@@ -415,7 +422,7 @@ func _targets() -> Array:
 	var out: Array = []
 	for s in ships:
 		out.append({ "id": s.id, "team": s.team, "position": s.flight.position,
-			"radius": s.radius, "alive": s.alive })
+			"radius": s.radius, "alive": s.alive and not (s.is_player and player_sheltered) })
 	return out
 
 

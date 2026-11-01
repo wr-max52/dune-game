@@ -13,16 +13,16 @@
     {
       "delay": 2.0,
       "spawn_distance": 800.0,
-      "ships": [ { "ship": "remnant_fighter", "count": 3 } ]
+      "ships": [ { "ship": "remnant_interceptor", "count": 2 } ]
     },
     {
       "delay": 4.0,
       "spawn_distance": 900.0,
       "ships": [
-        { "ship": "remnant_fighter", "count": 3 },
-        { "ship": "remnant_heavy", "count": 1 }
+        { "ship": "remnant_interceptor", "count": 2 },
+        { "ship": "remnant_freighter", "count": 1 }
       ]
     }
   ],
-  "note": "IP-neutral. Above the port: the player and a wingman hold off two raid waves."
+  "note": "IP-neutral. Above the port: the player and a wingman hold off two raid waves of Remnant interceptors and a frigate."
 }

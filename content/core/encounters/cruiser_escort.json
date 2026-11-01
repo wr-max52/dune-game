@@ -20,10 +20,10 @@
       "delay": 3.0,
       "spawn_distance": 900.0,
       "ships": [
-        { "ship": "remnant_fighter", "count": 3 },
-        { "ship": "remnant_heavy", "count": 2 }
+        { "ship": "remnant_interceptor", "count": 2 },
+        { "ship": "remnant_freighter", "count": 2 }
       ]
     }
   ],
-  "note": "IP-neutral. Issue #193: the company on the way up to the Remnant cruiser (Oda's last job). The cruiser's interceptors scramble as you clear the atmosphere; two of the port's pilots fly up with you. Win it, or run for the cruiser's bay (Z within reach of it breaks the fight off and docks)."
+  "note": "IP-neutral. Issue #193: the company on the way up to the Remnant cruiser (Oda's last job). The cruiser's interceptors scramble as you clear the atmosphere; two of the port's pilots fly up with you. The Remnant flies only its interceptors and frigates (remnant_freighter, the cruiser's own). Z within reach of the cruiser docks you in its bay: the fight goes on without you while you are aboard and picks you up again when you fly out; it ends when the general dies (RemnantCruiser), when every wave is down, or when you are."
 }
