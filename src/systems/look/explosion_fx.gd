@@ -8,6 +8,8 @@ extends RefCounted
 ##            of casing and a wisp of smoke. About a second.
 ##   bolt():  a blaster bolt or a blade landing. small() without the smoke, and its
 ##            fire burns out red rather than to soot.
+##   clash(): two energy blades meeting in a parry. A white-hot flash, a little
+##            shock ring and a spray of sparks, no fire, smoke or bits. Half a second.
 ##   big():   a ship or speeder going up. A white flash and a shock ring, a fireball
 ##            that boils from white through orange to soot, embers and hull chunks
 ##            thrown out on arcs, then a column of dark smoke. About four seconds.
@@ -41,6 +43,21 @@ static func bolt(parent: Node, at: Vector3) -> Node3D:
 	if r == null:
 		return null
 	_free_after(r, 1.0)
+	return r
+
+
+## Two blades meeting in a parry at `at` (where they crossed): a small burst of
+## sparks. `tint`: the light's colour (the blades' glow).
+static func clash(parent: Node, at: Vector3, tint := Color("#ffd2a0")) -> Node3D:
+	var r := _root(parent, at)
+	if r == null:
+		return null
+	_light(r, tint, 9.0, 6.0, 0.25)
+	_emit(r, _quad(), _mat("flash"), 1, 0.1, { "scale": Vector2(1.6, 1.6), "grow": _curve("pop"), "ramp": _ramp("flash_hot"), "radius": 0.01, "speed": Vector2.ZERO })
+	_emit(r, _quad(), _mat("ring"), 1, 0.22, { "scale": Vector2(2.2, 2.2), "grow": _curve("ring"), "ramp": _ramp("ring"), "radius": 0.01, "speed": Vector2.ZERO })
+	_emit(r, _spark_mesh(), _mat("spark"), 40, 0.5, { "radius": 0.05, "speed": Vector2(5.0, 12.0), "gravity": Vector3(0, -9.8, 0), "damping": Vector2(2.0, 4.0),
+		"scale": Vector2(0.25, 0.45), "grow": _curve("shrink"), "ramp": _ramp("spark_hot"), "streak": true, "spin": 0.0, "life_rand": 0.5 })
+	_free_after(r, 0.7)
 	return r
 
 

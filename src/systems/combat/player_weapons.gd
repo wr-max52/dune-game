@@ -467,6 +467,15 @@ func intercept(b: Node) -> String:
 	return "pierced"
 
 
+## Issue #303: your blade met the dark master's (a parry either way): the clash
+## sound, a short hitstop and a jolt of the camera.
+func on_clash() -> void:
+	_hitstop = 0.08
+	_play("blade_clash")
+	if rig_node != null:
+		rig_node.shake(0.5)
+
+
 # ------------------------------------------------------------------ audio + hud
 
 func _build_sfx() -> void:
