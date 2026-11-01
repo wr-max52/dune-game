@@ -280,9 +280,10 @@ func _switch(to: String) -> void:
 	var start := 0.0
 	var fade_in := _fade()
 	var fade_out := _fade()
-	# Issue #80: into and out of a fight the music cuts over at once (a slow
-	# cross-fade lagged behind the gunfire); ambient tracks still blend.
-	if to == "battle" or mode == "battle":
+	# Issue #80: into a fight the music cuts over at once (a slow cross-fade
+	# lagged behind the gunfire). Out of one, back to ambient, the next track
+	# fades in like any other; ambient tracks still blend.
+	if to == "battle" or (mode == "battle" and to != "ambient"):
 		fade_in = float(m.get("battle_cut", 0.25))
 		fade_out = float(m.get("battle_cut", 0.25))
 	match to:

@@ -11,6 +11,14 @@ Plain English, newest on top. One entry per milestone.
   file's source page is listed in `content/look/sound.json`
   (`music.ambient_sources`).
 
+## The music fades back in after a fight (2026-11-01)
+
+- **When a fight ends, the next ambient track fades in** over the usual 4 s,
+  blending with the battle track as it fades out. Before, it cut over in a
+  quarter of a second, the same as going into a fight. The battle music
+  still cuts in at once when the shooting starts (issue #80).
+- Test: tests/test_sound.gut.gd (battle cuts in, ambient fades back).
+
 ## Every ship has a seeker rack (2026-11-01)
 
 - **Every spaceship now carries a secondary weapon**, and for now that is
