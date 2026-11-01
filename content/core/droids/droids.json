@@ -300,10 +300,10 @@
     ]
   },
   "upgrades": {
-    "health": { "label": "Armour plating", "prices": [40, 80, 140], "per_level": 0.5 },
-    "cargo": { "label": "Cargo racks", "prices": [30, 60, 100], "per_level": 2 },
-    "damage": { "label": "Gun capacitor", "prices": [60, 110, 180], "per_level": 0.35 },
-    "note": "The droid merchant's upgrades, per droid (DroidRoster.upgrade). Each has one level per price. health: +per_level of the kind's 'hp' each level (every kind). cargo: +per_level hold slots each level on a droid that carries (a cargo droid starts with its kind's 'cargo_slots'; a slot is one kind of item, any number of it). damage: +per_level of its gun's damage each level (a droid with a gun). Your droids look their kind's 'base_variant' until their first upgrade of any kind, then its 'upgraded_variant' (a polished one: its 'shine' makes the model all-over metal with a clear coat, DroidKit). Your droids take hits from anyone you are fighting; at 0 hp one is knocked out for knocked_out_s, then reboots at full health."
+    "health": { "label": "Armour plating", "prices": [260], "per_level": 1.5 },
+    "cargo": { "label": "Cargo racks", "prices": [190], "per_level": 6 },
+    "damage": { "label": "Gun capacitor", "prices": [350], "per_level": 1.05 },
+    "note": "The droid merchant's upgrades, per droid (DroidRoster.upgrade). Each has one level per price: one level each now, the old three in one go at their old total (a save's droid with a level of an upgrade has all of it, DroidRoster.level). health: +per_level of the kind's 'hp' each level (every kind). cargo: +per_level hold slots each level on a droid that carries (a cargo droid starts with its kind's 'cargo_slots'; a slot is one kind of item, any number of it). damage: +per_level of its gun's damage each level (a droid with a gun). Your droids look their kind's 'base_variant' until their first upgrade of any kind, then its 'upgraded_variant' (a polished one: its 'shine' makes the model all-over metal with a clear coat, DroidKit). Your droids take hits from anyone you are fighting; at 0 hp one is knocked out for knocked_out_s, then reboots at full health."
   },
   "knocked_out_s": 20.0,
   "engage_note": "Assassin and floating droids of yours ('engage' on their kind): when one sees an enemy (enemies()) it walks up to 'advance' metres (about ten steps) toward it from where it stood, stopping 'standoff' metres short, and shoots from there. Once that enemy is dead (and no other is in sight) it comes back to you. Walk off far enough and it jumps to you as it always did.",
@@ -467,8 +467,8 @@
     "hold_wont_fit": "Its hold won't fit in your backpack. Unload it first.",
     "upgrades": "Upgrade your droids",
     "menu_upgrades": "Droid upgrades  -  you have %d cr",
-    "upgrade": "%s  -  %s %d -> %d of %d  (%d cr)",
-    "upgraded": "%s: %s now %d of %d.",
+    "upgrade": "%s  -  %s  (%d cr)",
+    "upgraded": "%s: %s fitted.",
     "upgrade_cant_afford": "%s costs %d cr. You have %d.",
     "nothing_to_upgrade": "Your droids have every upgrade the merchant sells.",
     "knocked_out": "Your %s is knocked out. It reboots in %d s.",

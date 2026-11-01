@@ -449,9 +449,23 @@ def market(cfg, boxes, markers, routes, zones):
 			break
 	for i, (r, face) in enumerate(shops[:n]):
 		boxes.append(box("shop_%d" % (i + 1), "market", "solid", [r[0], 0, r[1]], [r[2], sh["height"], r[3]], look="shop", face=face))
-	# Merchants behind evenly spread stalls; the first four are the square port's.
+	# Merchants; the first four are the square port's. The ones that trade
+	# (`sellers`) take the stalls closest to the bay: the inner row first, then
+	# the stalls nearest the top of a ramp out of the pit. The rest stand behind
+	# evenly spread stalls of the others.
+	tops = []
+	for b in boxes:
+		if b["zone"] == "spaceport" and b["kind"] == "ramp":
+			(x0, z0), (x1, z1) = (b["min"][0], b["min"][2]), (b["max"][0], b["max"][2])
+			ends = [(x0, (z0 + z1) / 2), (x1, (z0 + z1) / 2)] if x1 - x0 >= z1 - z0 else [((x0 + x1) / 2, z0), ((x0 + x1) / 2, z1)]
+			tops.append(max(ends, key=lambda e: math.hypot(*e)))
+	rows_in = sorted({p["row"] for p in best}, key=lambda rw: mc["aisles"][rw[0]]["r"] + rw[1])
+	near = sorted(best, key=lambda p: (rows_in.index(p["row"]), min(math.hypot(p["vendor"][0] - t[0], p["vendor"][1] - t[1]) for t in tops)))
+	sellers = near[:mc["sellers"]]
+	rest = [p for p in best if p not in sellers]
+	others = mc["merchants"] - len(sellers)
 	for k in range(mc["merchants"]):
-		p = best[int((k + 0.5) * len(best) / mc["merchants"])]
+		p = sellers[k] if k < len(sellers) else rest[int((k - len(sellers) + 0.5) * len(rest) / others)]
 		mid = "vendor_%d" % (k + 1)
 		m = copy.deepcopy(sq_marker(mid if k < 4 else "vendor_1"))
 		m["id"] = mid

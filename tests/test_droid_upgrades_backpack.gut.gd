@@ -64,8 +64,8 @@ func test_cargo_droid_starts_with_two_slots() -> void:
 	assert_eq(inv.count("quartz"), 2, "and stays in the pockets")
 	inv.add("holocrystals")
 	assert_true(r.stash(int(d.uid), inv, "holocrystals"), "more of a kind it holds does")
-	assert_eq(r.upgrade(int(d.uid), "cargo", 30).get("level"), 1)
-	assert_eq(DroidRoster.cargo_slots(d), 4)
+	assert_eq(r.upgrade(int(d.uid), "cargo", 190).get("level"), 1)
+	assert_eq(DroidRoster.cargo_slots(d), 8, "one buy: the racks at their top")
 	assert_true(r.stash(int(d.uid), inv, "quartz", 2))
 
 
@@ -79,25 +79,30 @@ func test_upgrades_by_kind_price_and_cap() -> void:
 	assert_eq(r.upgrade(int(a.uid), "damage", 10).get("error"), "cant_afford")
 	var base_hp := DroidRoster.health(a)
 	assert_eq(base_hp, 120.0)
-	var paid := 0
-	for i in DroidRoster.upgrade_max("health"):
-		paid += int(r.upgrade(int(a.uid), "health", 999).cost)
-	assert_eq(paid, 40 + 80 + 140)
+	assert_eq(DroidRoster.upgrade_max("health"), 1, "one level each")
+	assert_eq(int(r.upgrade(int(a.uid), "health", 999).cost), 260)
 	assert_eq(r.upgrade(int(a.uid), "health", 999).get("error"), "maxed")
 	assert_almost_eq(DroidRoster.health(a), base_hp * 2.5, 0.01)
 	r.upgrade(int(a.uid), "damage", 999)
-	assert_almost_eq(DroidRoster.damage_mult(a), 1.35, 0.001)
+	assert_almost_eq(DroidRoster.damage_mult(a), 2.05, 0.001)
 
 
 func test_upgrades_survive_a_save() -> void:
 	var r := WorldState.droids
 	var c := r.add("cargo", "tan")
 	r.upgrade(int(c.uid), "cargo", 999)
-	r.upgrade(int(c.uid), "cargo", 999)
 	WorldState.from_save(JSON.parse_string(JSON.stringify(WorldState.to_save())))
 	var back: Dictionary = WorldState.droids.owned[0]
-	assert_eq(DroidRoster.level(back, "cargo"), 2)
-	assert_eq(DroidRoster.cargo_slots(back), 6)
+	assert_eq(DroidRoster.level(back, "cargo"), 1)
+	assert_eq(DroidRoster.cargo_slots(back), 8)
+
+
+func test_old_saves_levels_count_as_the_top() -> void:
+	WorldState.droids.from_save({ "owned": [{ "uid": 4, "kind": "cargo", "variant": "gold", "cargo": {}, "up": { "cargo": 2, "health": 3 } }] })
+	var d: Dictionary = WorldState.droids.owned[0]
+	assert_eq(DroidRoster.level(d, "cargo"), 1)
+	assert_eq(DroidRoster.cargo_slots(d), 8, "not past the top")
+	assert_eq(DroidRoster.upgrade_price(d, "health"), -1, "nothing left to buy")
 
 
 func test_unload_stops_at_a_full_backpack() -> void:

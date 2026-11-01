@@ -246,7 +246,7 @@
       }
     ],
     "market": {
-      "note": "Issue #237 part 3: the market, three times today's. Curved aisles round the pit (r: the aisle's middle, width between the counters) with a row of stalls each side, two cross aisles cutting through them (deg: the line they run along, r: from and to), 'stalls' spread evenly over every row; the outer aisle has shops on its far side instead of stalls. A stall is today's (counter, vendor's space, back panel) but taller: the back panel and the canopy ('canopy_lift', read by town_market.gd). 'merchants' stand behind evenly spread stalls (the first four are vendor_1 to vendor_4, whose trade is in content/core/vendors); 'shoppers' each walk a stretch of an aisle. keep_out: [x0, z0, x1, z1] boxes nothing is built in (the front gate and its south tower).",
+      "note": "Issue #237 part 3: the market, three times today's. Curved aisles round the pit (r: the aisle's middle, width between the counters) with a row of stalls each side, two cross aisles cutting through them (deg: the line they run along, r: from and to), 'stalls' spread evenly over every row; the outer aisle has shops on its far side instead of stalls. A stall is today's (counter, vendor's space, back panel) but taller: the back panel and the canopy ('canopy_lift', read by town_market.gd). 'merchants' stand behind stalls (the first four are vendor_1 to vendor_4, whose trade is in content/core/vendors and content/core/droids): the first 'sellers' take the stalls closest to the bay (the inner row, nearest the top of a ramp out of the pit), the rest spread evenly over the other stalls; 'shoppers' each walk a stretch of an aisle. keep_out: [x0, z0, x1, z1] boxes nothing is built in (the front gate and its south tower).",
       "sector": [-94.0, -14.0],
       "aisles": [
         {
@@ -289,6 +289,7 @@
         "height": 4.5
       },
       "merchants": 12,
+      "sellers": 4,
       "shoppers": 6,
       "stroll_deg": 14.0,
       "keep_out": [
