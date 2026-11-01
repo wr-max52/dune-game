@@ -303,11 +303,15 @@ func trade_options() -> Array:
 	for d in roster().owned:
 		out.append({ "id": "sell:%d" % int(d.uid), "text": _l("sell") % [DroidRoster.label(str(d.kind)), DroidRoster.resale(str(d.kind))] })
 	# Issue #212: at a desert post, Oda's friend takes the droids she asked for.
+	# They close her job, so they go first, marked "job" (green, the cursor on them).
 	var want := Story.droid_wanted_kind()
 	if want != "" and _at_post():
+		var job_rows := []
 		for d in roster().owned:
 			if str(d.kind) == want:
-				out.append({ "id": "deliver:%d" % int(d.uid), "text": _l("deliver") % [DroidRoster.label(want), Story.droids_wanted()] })
+				job_rows.append({ "id": "deliver:%d" % int(d.uid), "job": true,
+					"text": _l("deliver") % [DroidRoster.label(want), Story.droids_wanted()] })
+		out = job_rows + out
 	return out
 
 

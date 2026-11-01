@@ -476,6 +476,14 @@ static func carrying_contraband() -> bool:
 	return false
 
 
+## A run for the fence in `location` waits only on a sale: its drop is picked up
+## and contraband is in your pockets. Selling it there is what closes the job, so
+## his menu puts those rows first (GearController.trade_options).
+static func fence_run_open(location: String) -> bool:
+	return bool(smuggle.get("out", false)) and smuggle_to() == "fence" and smuggle_drop().is_empty() \
+			and str(smuggle.get("location", "")) == location and carrying_contraband()
+
+
 static func _smuggle_job(j: Dictionary) -> Dictionary:
 	var s := _smuggle_for(j)
 	if s.is_empty():
