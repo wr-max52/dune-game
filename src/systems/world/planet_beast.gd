@@ -7,9 +7,13 @@ extends StaticBody3D
 ## say of it); the numbers every beast shares are content/core/hazards/beast.json,
 ## and the planet's block may override any of them.
 ##
-##   wander   it has nowhere to be: its heading drifts at random and its pace
-##            changes now and then, with no pull toward or away from the town; only
-##            a loose leash round its own home spot turns it back if it strays
+##   wander   it has nowhere to be: it crawls in long, lazy curves (never tighter
+##            than min_turn_radius_m, so its body never coils over itself) and its
+##            pace changes now and then, with no pull toward or away from the town;
+##            only a loose leash round its own home spot turns it back if it strays.
+##            If it still ends up milling about one spot (stuck_window_s spent
+##            covering less than stuck_net_frac of the ground it walked), it picks
+##            the way out, away from where it has been, and holds it for a while
 ##   touch    dead on the spot, whatever your health (on foot, or a speeder into it)
 ##   hurt     it has hp (1000) and takes bolts and blades like anything else. Hurt
 ##            by the player, it chases them, faster than a run, until they are
@@ -18,6 +22,9 @@ extends StaticBody3D
 ##            beast_slain_<planet id>, so it is not built again and the locals know
 ##
 ## Now and then it farts: a sound and a puff from its tail end.
+##
+## Its shell is weathered desert rock (beast_shell.gdshader: strata, cracks, sand
+## on its back) and its eyes glow, brighter when it chases, out when it dies.
 ##
 ## It rides the ground (WorldGround: the home planet's ball), moved here rather
 ## than by physics. Its head and every segment are solid to bolts and blades
@@ -28,8 +35,10 @@ signal farted
 signal provoked
 signal gave_up
 signal slain
+signal unstuck
 
 const DATA := "res://content/core/hazards/beast.json"
+const SHELL := preload("res://src/systems/look/shaders/beast_shell.gdshader")
 const LAYER_ENEMIES := 1 << 3
 const TRAIL_STEP := 0.5
 
@@ -51,12 +60,22 @@ var kills := 0
 var farts := 0
 var hits_taken := 0
 var travelled := 0.0                  ## metres crawled (traces)
+var unsticks := 0                     ## times it found itself milling about and walked out
 var _rng := RandomNumberGenerator.new()
 var _ball: Node3D                     ## the head
-var _mat: StandardMaterial3D          ## the carapace (armour plates)
-var _shell_mat: StandardMaterial3D
-var _leg_mat: StandardMaterial3D
+var _mat: Material                    ## the carapace (armour plates): stone, or plain chitin with the look off
+var _shell_mat: Material
+var _leg_mat: Material
 var _eye_mat: StandardMaterial3D
+var _eye_core_mat: StandardMaterial3D
+var _eye_light: OmniLight3D
+var _curve := 0.0                     ## 1/m: how hard it is turning now (+ = to its left)
+var _curve_want := 0.0
+var _curve_left := 0.0
+var _unstick_left := 0.0
+var _unstick_dir := Vector3.ZERO
+var _track: Array = []                ## [ground point, travelled] once a second, oldest first (stuck check)
+var _track_left := 0.0
 var segments: Array = []              ## { node, r, shape }: the body, head to tail
 var _legs: Array = []                 ## every leg's hip
 var _mandibles: Array = []
@@ -211,15 +230,17 @@ func _ground_at(at: Vector3) -> Vector3:
 ## with a pair of walking legs, that follows the head's own path over the dunes.
 func _build_look() -> void:
 	var lk: Dictionary = cfg.get("look", {})
-	_mat = _chitin(Color(str(lk.get("carapace", cfg.get("color", "#5a4632")))), 0.3, 0.35)
-	_shell_mat = _chitin(Color(str(lk.get("shell", "#a07f55"))), 0.0, 0.7)
-	_leg_mat = _chitin(Color(str(lk.get("legs", "#3a2d22"))), 0.2, 0.45)
-	_eye_mat = StandardMaterial3D.new()
-	_eye_mat.albedo_color = Color(str(cfg.get("glow", "#c07aff")))
-	_eye_mat.emission_enabled = true
-	_eye_mat.emission = _eye_mat.albedo_color
-	_eye_mat.emission_energy_multiplier = 2.0
-	var bone := _chitin(Color(str(lk.get("mandibles", "#d8c7a0"))), 0.0, 0.3)
+	_mat = _stone("carapace", Color(str(lk.get("carapace", cfg.get("color", "#5a4632")))), 0.3, 0.35)
+	_shell_mat = _stone("shell", Color(str(lk.get("shell", "#a07f55"))), 0.0, 0.7)
+	_leg_mat = _stone("legs", Color(str(lk.get("legs", "#3a2d22"))), 0.2, 0.45)
+	var bone := _stone("mandibles", Color(str(lk.get("mandibles", "#d8c7a0"))), 0.0, 0.3)
+	var eyes: Dictionary = lk.get("eyes", {})
+	var glow := Color(str(cfg.get("glow", "#c07aff")))
+	_eye_mat = _glow_mat(glow, float(eyes.get("energy", 4.0)))
+	_eye_core_mat = _glow_mat(glow.lerp(Color.WHITE, float(eyes.get("core_white", 0.6))), float(eyes.get("core_energy", 9.0)))
+	var pupil := StandardMaterial3D.new()
+	pupil.albedo_color = Color(str(eyes.get("pupil", "#120a06")))
+	pupil.roughness = 0.2
 	var r := radius
 	# ---- the head (forward is -Z)
 	_ball = Node3D.new()
@@ -229,8 +250,15 @@ func _build_look() -> void:
 	_sphere(_ball, r * 0.95, Vector3(1.15, 0.75, 1.0), Vector3.ZERO, _mat)
 	_sphere(_ball, r * 0.62, Vector3(1.2, 0.8, 1.0), Vector3(0, -0.2 * r, -0.62 * r), _shell_mat)
 	for sx in [-1.0, 1.0]:
-		_sphere(_ball, r * 0.17, Vector3.ONE, Vector3(sx * 0.5 * r, 0.12 * r, -0.72 * r), _eye_mat)
-		_sphere(_ball, r * 0.1, Vector3.ONE, Vector3(sx * 0.3 * r, 0.3 * r, -0.8 * r), _eye_mat)
+		# Eyes: a glowing orb with a white-hot core and a slit pupil; a smaller pair above.
+		for e in [[0.17, Vector3(sx * 0.5 * r, 0.12 * r, -0.72 * r)], [0.1, Vector3(sx * 0.3 * r, 0.3 * r, -0.8 * r)]]:
+			var er: float = r * float(e[0])
+			var at: Vector3 = e[1]
+			var out := Vector3(sx * 0.45, 0.15, -1.0).normalized()
+			_sphere(_ball, er, Vector3.ONE, at, _eye_mat)
+			_sphere(_ball, er * 0.54, Vector3.ONE, at + out * er * 0.5, _eye_core_mat)
+			var slit := _sphere(_ball, er * 0.5, Vector3.ONE, at + out * er * 0.98, pupil)
+			slit.basis = Basis.looking_at(out, Vector3.UP) * Basis.from_scale(Vector3(0.16, 1.5, 0.3))
 		# Mandibles: curved pincers that open and close.
 		var m := Node3D.new()
 		m.name = "Mandible"
@@ -253,6 +281,16 @@ func _build_look() -> void:
 		for i in 3:
 			_limb(a, ap[i], ap[i + 1], r * (0.06 - 0.015 * i), r * (0.045 - 0.015 * i), _leg_mat)
 	_limb(_ball, Vector3(0, 0.45 * r, -0.5 * r), Vector3(0, 1.3 * r, -1.5 * r), r * 0.2, 0.0, bone)   # the horn
+	if _looks():
+		# The eyes light what is in front of them (the jaws, the sand) at dusk and night.
+		_eye_light = OmniLight3D.new()
+		_eye_light.name = "EyeGlow"
+		_eye_light.light_color = glow
+		_eye_light.light_energy = float(eyes.get("light", 1.6))
+		_eye_light.omni_range = r * float(eyes.get("light_range_r", 3.5))
+		_eye_light.shadow_enabled = false
+		_eye_light.position = Vector3(0, 0.15 * r, -1.2 * r)
+		_ball.add_child(_eye_light)
 	# ---- the body: segments, each with a pair of legs
 	var n := int(cfg.get("segments", 14))
 	for i in n:
@@ -287,6 +325,48 @@ func _build_look() -> void:
 		add_child(cs)
 		segments.append({ "node": seg, "r": sr, "shape": cs })
 	_seed_trail()
+
+
+func _looks() -> bool:
+	return demo != null and bool(demo.get("use_look"))
+
+
+## One part's shell: weathered stone (beast_shell.gdshader) in the part's colour,
+## with its strata, cracks and lumps from the data's look.stone block; plain
+## chitin where the look is off (headless runs), as cheap as it was.
+func _stone(part: String, c: Color, metal: float, rough: float) -> Material:
+	if not _looks():
+		return _chitin(c, metal, rough)
+	var st: Dictionary = cfg.get("look", {}).get("stone", {})
+	var p: Dictionary = st.get(part, {})
+	var dust := Color(str(st.get("dust", "#d3ad78")))
+	var m := ShaderMaterial.new()
+	m.shader = SHELL
+	m.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 7, 0.012))
+	m.set_shader_parameter("rock_a", c.darkened(0.12))
+	m.set_shader_parameter("rock_b", c.lerp(dust, 0.3))
+	m.set_shader_parameter("rock_dark", c.darkened(0.62))
+	m.set_shader_parameter("dust", dust)
+	m.set_shader_parameter("strata", float(p.get("strata", 3.0)))
+	m.set_shader_parameter("cracks", float(p.get("cracks", 1.0)))
+	m.set_shader_parameter("bump", float(p.get("bump", 1.0)))
+	m.set_shader_parameter("dust_amount", float(p.get("dust", 1.0)))
+	var sp := ground.sphere() if ground != null else null
+	if sp != null:
+		m.set_shader_parameter("planet_center", sp.center)
+		m.set_shader_parameter("planet_radius", sp.radius)
+	return m
+
+
+static func _glow_mat(c: Color, energy: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	m.set_meta("energy", energy)
+	return m
 
 
 static func _chitin(c: Color, metal: float, rough: float) -> StandardMaterial3D:
@@ -373,6 +453,14 @@ func _pose() -> void:
 		(m as Node3D).rotation = Vector3(0, signf((m as Node3D).position.x) * (-0.15 + 0.55 * open), 0)
 	for i in _antennae.size():
 		(_antennae[i] as Node3D).rotation = Vector3(0.2 * sin(_t * 1.1 + i), 0.15 * sin(_t * 0.7 + i * 2.0), 0) * (1.0 - _sink)
+	# The eyes smoulder, flare when it chases, and go out as it dies.
+	var eyes: Dictionary = cfg.get("look", {}).get("eyes", {})
+	var glow := (1.0 + float(eyes.get("pulse", 0.15)) * sin(_t * 2.3)) * (float(eyes.get("chase", 1.7)) if chasing else 1.0) * (1.0 - _sink)
+	for em in [_eye_mat, _eye_core_mat]:
+		if em != null:
+			(em as StandardMaterial3D).emission_energy_multiplier = float(em.get_meta("energy", 1.0)) * glow
+	if _eye_light != null:
+		_eye_light.light_energy = float(eyes.get("light", 1.6)) * glow
 	# Walk the trail once, placing each segment its gap further back.
 	var gap := float(cfg.get("segment_gap", 3.2))
 	var want := radius * 0.9
@@ -400,9 +488,13 @@ func _pose() -> void:
 		var ahead: Vector3 = global_position if i == 0 else pts[i - 1]
 		var tan := ahead - pts[i]
 		var u := _up(pts[i])
-		if tan.length() < 0.01 or absf(tan.normalized().dot(u)) > 0.95:
-			tan = heading
 		var node: Node3D = s.node
+		if tan.length() < 0.01 or absf(tan.normalized().dot(u)) > 0.95:
+			# Bunched up (or the body runs straight up): keep facing the way it was,
+			# rather than snapping round to the head's heading every frame.
+			tan = _flat(-node.global_basis.z, pts[i])
+			if tan.length() < 0.01:
+				tan = heading
 		node.global_transform = Transform3D(Basis.looking_at(tan.normalized(), u), pts[i])
 		if i == segments.size() - 1:
 			node.scale = Vector3.ONE * (1.0 + 0.25 * _squash)
@@ -431,32 +523,106 @@ func _physics_process(dt: float) -> void:
 	_tick_fart(dt)
 
 
-## Aimless: the heading drifts at random, the pace changes now and then. Only a
-## loose leash round its own home turns it back if it strays very far. Chasing, it
-## steers at the player instead, at its chase speed.
+## Aimless: it crawls in long curves that bend one way, then another, now and
+## then; the pace changes now and then. Only a loose leash round its own home
+## turns it back if it strays very far. Chasing, it steers at the player instead,
+## at its chase speed. Either way it turns along a curve (radius at least
+## min_turn_radius_m, chase_turn_radius_m in a chase), never on the spot.
 func _wander(dt: float) -> void:
 	var at := global_position - _up(global_position) * radius
 	_speed_left -= dt
 	if _speed_left <= 0.0:
 		_new_pace()
-	if chasing:
-		_chase(at, dt)
-	else:
-		var jitter := deg_to_rad(float(cfg.get("turn_jitter_deg", 70.0)))
-		heading = heading.rotated(_up(at), _rng.randfn() * jitter * sqrt(dt))
-		if at.distance_to(home) > float(cfg.get("leash_m", 1400.0)):
-			heading = heading.lerp(_flat(home - at, at).normalized(), minf(1.0, dt * 0.5))
-	heading = _flat(heading, at).normalized()
 	var pace := float(cfg.get("chase_speed", 5.5)) if chasing else speed
+	if chasing:
+		_chase(at)
+	else:
+		_roam(at, dt)
+	heading = _flat(heading.rotated(_up(at), _curve * pace * dt), at).normalized()
 	var step := heading * pace * dt
 	var next := _ground_at(at + step)
 	travelled += step.length()
 	_place(next)
 	_push_trail(next)
+	if not chasing:
+		_watch(at, dt)
+
+
+## The tightest it bends its path, as a curvature (1/m).
+func _max_curve() -> float:
+	return 1.0 / maxf(0.5, float(cfg.get("chase_turn_radius_m", 6.0) if chasing else cfg.get("min_turn_radius_m", 14.0)))
+
+
+## The curvature that brings its heading round to `dir`: as tight as it may while
+## far off, easing out as it lines up (so it doesn't swing past and back).
+func _toward(at: Vector3, dir: Vector3) -> float:
+	var d := _flat(dir, at)
+	if d.length() < 0.001:
+		return 0.0
+	var ang := heading.signed_angle_to(d.normalized(), _up(at))
+	return _max_curve() * clampf(ang / 0.6, -1.0, 1.0)
+
+
+## Wandering: now and then it settles on a new bend (most gentle, some tight,
+## left or right) and eases into it. The leash and walking out of a muddle
+## override that bend while they last.
+func _roam(at: Vector3, dt: float) -> void:
+	var kmax := _max_curve()
+	_curve_left -= dt
+	if _curve_left <= 0.0:
+		_curve_left = _range("turn_change_s", 4.0, 12.0)
+		_curve_want = clampf(_rng.randfn() / maxf(1.0, float(cfg.get("turn_radius_m", 40.0))), -kmax, kmax)
+	var want := _curve_want
+	if _unstick_left > 0.0:
+		_unstick_left -= dt
+		want = _toward(at, _unstick_dir)
+	elif at.distance_to(home) > float(cfg.get("leash_m", 1400.0)):
+		want = _toward(at, home - at)
+	_curve = move_toward(_curve, want, dt * kmax / maxf(0.1, float(cfg.get("turn_ease_s", 2.0))))
+
+
+## Is it milling about? Once a second, note where it is; if over the last
+## stuck_window_s it has ended up less than stuck_net_frac of the way it walked
+## from where it started (going round in circles, or caught on something and
+## treading sand), it walks out.
+func _watch(at: Vector3, dt: float) -> void:
+	_track_left -= dt
+	if _track_left > 0.0:
+		return
+	_track_left = 1.0
+	_track.append([at, travelled])
+	var win := maxi(2, int(cfg.get("stuck_window_s", 20.0)))
+	if _track.size() > win + 1:
+		_track.pop_front()
+	if _unstick_left > 0.0 or _track.size() <= win:
+		return
+	var walked := travelled - float(_track[0][1])
+	if walked > 4.0 and at.distance_to(_track[0][0]) < walked * float(cfg.get("stuck_net_frac", 0.3)):
+		_unstick(at)
+
+
+## Out of the muddle: away from the middle of where it has been milling about
+## and of its own (likely coiled) body, held for unstick_s before it wanders again.
+func _unstick(at: Vector3) -> void:
+	unsticks += 1
+	var mid := Vector3.ZERO
+	for p in _track:
+		mid += p[0] as Vector3
+	for s in segments:
+		mid += (s.node as Node3D).global_position
+	mid /= maxf(1.0, _track.size() + segments.size())
+	var away := _flat(at - mid, at)
+	if away.length() < 0.5:
+		away = heading.rotated(_up(at), PI * 0.5 * (1.0 if _rng.randf() < 0.5 else -1.0))
+	_unstick_dir = away.normalized()
+	_unstick_left = _range("unstick_s", 15.0, 25.0)
+	_curve_want = 0.0
+	_track.clear()
+	unstuck.emit()
 
 
 ## After the player: steer at them; give up once they are far enough away (or dead).
-func _chase(at: Vector3, dt: float) -> void:
+func _chase(at: Vector3) -> void:
 	if player == null or not is_instance_valid(player) or bool(player.get("is_downed")):
 		_calm()
 		return
@@ -465,14 +631,17 @@ func _chase(at: Vector3, dt: float) -> void:
 		_calm()
 		_toast(line("gave_up"))
 		return
-	if to.length() > 0.01:
-		heading = heading.lerp(to.normalized(), minf(1.0, dt * float(cfg.get("chase_turn", 2.5))))
+	_curve = _toward(at, to)
 
 
 func _calm() -> void:
 	if not chasing:
 		return
 	chasing = false
+	_curve = clampf(_curve, -_max_curve(), _max_curve())
+	_curve_left = 0.0
+	_unstick_left = 0.0
+	_track.clear()
 	_new_pace()
 	gave_up.emit()
 

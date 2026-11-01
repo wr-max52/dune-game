@@ -45,6 +45,12 @@ func test_rolls() -> void:
 	_true("ON_GROUND")
 
 
+func test_does_not_go_round_in_circles() -> void:
+	_true("TURNS_SMOOTHLY")
+	_true("UNSTUCK")
+	_true("WALKED_OUT")
+
+
 func test_farts() -> void:
 	_true("FARTED")
 	_true("FART_SOUND")
