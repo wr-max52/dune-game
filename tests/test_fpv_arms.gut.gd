@@ -126,3 +126,15 @@ func test_new_outfit_gets_new_arms() -> void:
 	assert_ne(avatar._fpv, before)
 	assert_true((avatar._fpv.hands["l"] as Node3D).visible)
 	assert_eq(avatar.joints["l_elbow"].get_children().filter(func(n): return n.name == "FpvArm").size(), 1)
+
+
+## A save that owns the red saber swaps the sword's hilt as it loads; the old
+## hilt's meshes are freed, and the next V into first person cast a freed object.
+func test_new_hilt_is_not_left_in_the_mesh_lists() -> void:
+	avatar = _skinned()
+	avatar.build_weapons(["energy_blade"])
+	avatar.set_blade_color(Color.RED, "res://assets/gear/saber_hilt_dark.glb")
+	for m in avatar._arm_meshes + avatar._kit_arms + avatar._other_meshes:
+		assert_true(is_instance_valid(m) and (m as Node).is_inside_tree(), "every listed mesh is live")
+	avatar.set_first_person(true)
+	assert_true(avatar.first_person)
