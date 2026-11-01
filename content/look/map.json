@@ -1,0 +1,21 @@
+{
+  "note": "How the F11 Map page's globe looks (src/ui/globe_view.gd). Each pin kind is a small shape (star, triangle, square, diamond, cross, circle, ring) in a colour; 'ink' is the globe's own lines (null = the player's HUD colour). Names and what goes on the map: content/core/flow/map.json.",
+  "sea": "#141009",
+  "ink": null,
+  "grid_alpha": 0.14,
+  "rim_alpha": 0.85,
+  "pin_size": 6.0,
+  "pins": {
+    "port": { "shape": "star", "color": "#f2e2b0" },
+    "remnant_outpost": { "shape": "triangle", "color": "#e0573a" },
+    "outpost": { "shape": "triangle", "color": "#a89a80" },
+    "droid_merchant_outpost": { "shape": "diamond", "color": "#5ec8e8" },
+    "post": { "shape": "square", "color": "#e8c050" },
+    "wreck": { "shape": "cross", "color": "#b8b0a0" },
+    "camp": { "shape": "circle", "color": "#d89060" },
+    "camp_hostile": { "shape": "circle", "color": "#e0573a" },
+    "cantina": { "shape": "square", "color": "#f2e2b0" },
+    "vendor": { "shape": "square", "color": "#e8c050" },
+    "spot": { "shape": "ring", "color": "#f2e2b0" }
+  }
+}

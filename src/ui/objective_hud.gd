@@ -7,7 +7,8 @@ extends CanvasLayer
 ##
 ## It only reads. `demo` (town_demo.gd) turns the objective's target word into a
 ## place: live bodies, town markers, the smuggling drop (near it, issue #251),
-## the range, the pit, the desert outposts, the crashed cruiser ("wreck", issue #205).
+## the range, the pit, the desert outposts, the crashed cruiser ("wreck", issue #205),
+## and a waypoint set on the F11 map (a ground spot, or another planet's port).
 ##
 ## Issue #201: a new optional quest (Quests.take_news) shows a toast in the top
 ## right for TOAST_TIME seconds.
@@ -84,10 +85,17 @@ func _process(dt: float) -> void:
 	marks.queue_redraw()
 
 
-## Re-read the objective and find its place.
+## Re-read the objective and find its place. A waypoint set on the F11 map
+## clears itself once the player is there.
 func refresh() -> void:
 	objective = Objective.current()
 	target_pos = where(str(objective.get("target", "")))
+	if objective.get("map", false) and target_pos != Vector3.INF:
+		var d := distance()
+		if d >= 0.0 and d < float(objective.get("arrive", 30.0)):
+			GlobeMap.clear_waypoint()
+			objective = Objective.current()
+			target_pos = where(str(objective.get("target", "")))
 	label.text = text_line()
 	label.visible = not objective.is_empty()
 	if not Quests.take_news().is_empty():
@@ -174,6 +182,20 @@ func where(target: String) -> Vector3:
 					if best == Vector3.INF or p.distance_to(site.pos) < p.distance_to(best):
 						best = site.pos
 			return best
+		"map":
+			# The F11 map: a place on the ground, in map coordinates (PlanetSphere).
+			var x := float(id.get_slice(",", 0))
+			var z := float(id.get_slice(",", 1))
+			if PlanetSphere.current != null:
+				return PlanetSphere.current.surface_at(x, z)
+			return Vector3(x, 0.0, z)
+		"planet":
+			# The F11 map's off-planet list: that planet's port, in this sky.
+			var tr = demo.pilot.travel if demo.get("pilot") != null and demo.pilot.travel != null else null
+			if tr != null:
+				for b in tr.bodies:
+					if str(b.id) == id:
+						return b.offset
 		"outpost":
 			if demo.outposts != null:
 				for o in demo.outposts.outposts:

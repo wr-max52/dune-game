@@ -1,0 +1,39 @@
+{
+  "note": "The F11 Map page (src/systems/flow/globe_map.gd, src/ui/globe_view.gd): a globe of the planet with the places that stay put, each clickable to set a waypoint the HUD's objective pointer follows. Pins come from the world's landmarks (content/core/worlds/), the planet's native camps and the town's markers; nothing that moves is on it. 'kinds' names each landmark kind ('location' landmarks use their location file's kind); a location's own 'label' wins over the kind's, and 'labels' wins over both. 'skip' lists landmark ids left off. 'town' are the port's own stops, shown once zoomed in past 'town_zoom' (the port's pin hides then); the town's vendors (content/core/vendors/) are added to them. 'arrive' is how close (m) counts as there: the waypoint clears itself. 'off_planet' are the places in the sky: every planet you can fly to from here, and the Remnant cruiser when this world has one. Looks: content/look/map.json.",
+  "lines": {
+    "waypoint": "Waypoint: %s",
+    "marked": "Marked spot",
+    "none": "Click a place to set a waypoint. Drag to turn, wheel to zoom.",
+    "off_planet": "OFF PLANET",
+    "legend": "LEGEND",
+    "clear": "Clear waypoint",
+    "home": "Centre on port",
+    "no_globe": "No surface map here: this place is not a planet."
+  },
+  "kinds": {
+    "port": { "label": "Port", "arrive": 60 },
+    "remnant_outpost": { "label": "Remnant outpost", "legend": "Remnant outpost", "arrive": 35 },
+    "outpost": { "label": "Abandoned outpost", "legend": "Ruin", "arrive": 35 },
+    "droid_merchant_outpost": { "label": "Droid relay", "legend": "Droid station", "arrive": 25 },
+    "post": { "label": "Trader", "legend": "Merchant", "arrive": 25 },
+    "wreck": { "label": "Cruiser wreck", "legend": "Wreck", "arrive": 220 },
+    "camp": { "label": "Camp", "legend": "Native camp", "arrive": 30 },
+    "cantina": { "label": "Cantina", "arrive": 8 },
+    "vendor": { "label": "Stall", "arrive": 6 },
+    "spot": { "label": "Marked spot", "legend": "Your mark", "arrive": 15 },
+    "planet": { "label": "Planet" },
+    "cruiser": { "label": "Remnant cruiser", "arrive": 40 }
+  },
+  "labels": {
+    "skrugs_post": "Speeder stall",
+    "mechanic_yard": "Mechanic's yard"
+  },
+  "skip": ["skrugs_ramp"],
+  "camp_label": "%s camp",
+  "town_zoom": 14.0,
+  "town": [
+    { "marker": "cantina_door", "kind": "cantina", "label": "Cantina" },
+    { "marker": "t89", "kind": "vendor", "label": "Ship dealer" },
+    { "marker": "vendor_4", "kind": "vendor", "label": "Droid merchant" }
+  ]
+}
