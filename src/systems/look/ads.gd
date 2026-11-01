@@ -47,6 +47,13 @@ static func weapon_global(cam: Transform3D, sight: Vector3, relief: float) -> Tr
 	return Transform3D(b, cam.origin - cam.basis.orthonormalized().z * relief - b * sight)
 
 
+## The same pose in the camera's own space: weapon_global with the camera at the
+## origin. Small numbers only, so it holds to the micron however far out the
+## camera is (GunSights.pin draws the scope at it).
+static func weapon_local(sight: Vector3, relief: float) -> Transform3D:
+	return weapon_global(Transform3D.IDENTITY, sight, relief)
+
+
 ## How far (metres) the sight point is off the camera's centre line; 0 when aligned.
 static func centre_error(cam: Transform3D, weapon: Transform3D, sight: Vector3) -> float:
 	var local := cam.affine_inverse() * (weapon * sight)

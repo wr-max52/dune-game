@@ -3,6 +3,16 @@ shader_type spatial;
 // ORM maps stay, so the detail and wear survive. Neutral (grey) texels are
 // multiplied down hard; saturated texels (the painted orange/red glow panels) keep
 // most of their colour and get a little emission so they still read as glowing.
+// Aimed in through a scope, the barrel left in view is pinned to the eye
+// (viewmodel_pin, GunSights.pin).
+render_mode skip_vertex_transform;
+
+#include "res://src/systems/look/shaders/viewmodel_pin.gdshaderinc"
+
+// Both sides drawn: where the model is cut open (its old optic and front sight, and
+// aimed in the near_clip below) the inside shows as solid dark metal, not a hole
+// that reads as a see-through gun.
+render_mode cull_disabled;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap, repeat_enable;
@@ -20,6 +30,14 @@ uniform float fill : hint_range(0.0, 1.0) = 0.0;
 // Aimed in through a scope (GunSights.scope_view): nearer than this to the eye is
 // cut, so the receiver round the open tube goes but the barrel ahead stays. 0 = off.
 uniform float near_clip = 0.0;
+
+void vertex() {
+	mat4 mv = pin_modelview(MODELVIEW_MATRIX);
+	VERTEX = (mv * vec4(VERTEX, 1.0)).xyz;
+	NORMAL = normalize(mat3(mv) * NORMAL);
+	TANGENT = normalize(mat3(mv) * TANGENT);
+	BINORMAL = normalize(mat3(mv) * BINORMAL);
+}
 
 void fragment() {
 	if (-VERTEX.z < near_clip) {
@@ -44,5 +62,12 @@ void fragment() {
 	} else {
 		ROUGHNESS = 0.55;
 		METALLIC = 0.0;
+	}
+	if (!FRONT_FACING) {
+		ALBEDO = vec3(0.012, 0.012, 0.014);
+		EMISSION = vec3(0.0);
+		ROUGHNESS = 0.9;
+		METALLIC = 0.0;
+		RIM = 0.0;
 	}
 }

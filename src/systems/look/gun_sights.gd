@@ -15,6 +15,8 @@ extends RefCounted
 
 const RETICLE_ENERGY := 3.0
 const SCOPE_METAL := preload("res://src/systems/look/shaders/scope_metal.gdshader")
+const SCOPE_GLASS := preload("res://src/systems/look/shaders/scope_glass.gdshader")
+const SCOPE_RETICLE := preload("res://src/systems/look/shaders/scope_reticle.gdshader")
 const DARK := preload("res://src/systems/look/shaders/weapon_dark.gdshader")
 
 static var _cut_cache: Dictionary = {}
@@ -141,6 +143,46 @@ static func scope_view(weapon: Node3D, on: bool, barrel_from := 0.0) -> void:
 			g.visible = not on
 
 
+## Aimed in, pin what shows of the scope (tube, bells, rim, lenses, reticle) and
+## the barrel running out under it (the gun's weapon_dark meshes, scope_view keeps
+## them) to the eye: `cam_from_weapon` is the weapon's transform in the camera's
+## space, and each part is drawn at it times its own small transform under the
+## weapon, never through world positions (viewmodel_pin.gdshaderinc says why).
+## A pinned barrel casts no shadow (its vertices are in the camera's space, not
+## the light's). Off (or no scope): drawn the usual way again, shadow back.
+static func pin(weapon: Node3D, cam_from_weapon: Transform3D, on: bool) -> void:
+	var scope := weapon.find_child("Scope", true, false) as Node3D
+	if scope == null:
+		return
+	for mi in weapon.find_children("*", "GeometryInstance3D", true, false):
+		var g := mi as GeometryInstance3D
+		var sm := g.material_override as ShaderMaterial
+		var barrel := sm != null and sm.shader == DARK
+		if not scope.is_ancestor_of(g) and not barrel:
+			continue
+		if not on:
+			g.set_instance_shader_parameter("pin_on", 0.0)
+			if g.has_meta("pin_shadow"):
+				g.cast_shadow = g.get_meta("pin_shadow")
+				g.remove_meta("pin_shadow")
+			continue
+		var xf := g.transform
+		var p := g.get_parent()
+		while p != null and p != weapon:
+			if p is Node3D:
+				xf = (p as Node3D).transform * xf
+			p = p.get_parent()
+		xf = cam_from_weapon * xf
+		var b := xf.basis
+		g.set_instance_shader_parameter("pin_x", Vector4(b.x.x, b.y.x, b.z.x, xf.origin.x))
+		g.set_instance_shader_parameter("pin_y", Vector4(b.x.y, b.y.y, b.z.y, xf.origin.y))
+		g.set_instance_shader_parameter("pin_z", Vector4(b.x.z, b.y.z, b.z.z, xf.origin.z))
+		g.set_instance_shader_parameter("pin_on", 1.0)
+		if barrel and not g.has_meta("pin_shadow"):
+			g.set_meta("pin_shadow", g.cast_shadow)
+			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 static func _scope_mat(c: Color, rough: float, knurl := 0.0, groove := 0.0, weave := 0.0) -> ShaderMaterial:
 	if _noise == null:
 		_noise = NoiseTexture2D.new()
@@ -245,19 +287,15 @@ static func build_scope(s: Dictionary) -> Node3D:
 		tooth.size = Vector3(0.022, 0.003, 0.0052)
 		_mesh(hw, tooth, body, Vector3(0, -drop + 0.0072, -rail_len * 0.5 + 0.005 + i * 0.01))
 	# Glass: faint, so the front one reads from outside and neither tints the view.
-	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.4, 0.7, 0.75, 0.1)
-	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glass.roughness = 0.03
-	glass.metallic_specular = 1.0
+	var glass := ShaderMaterial.new()
+	glass.shader = SCOPE_GLASS
+	glass.set_shader_parameter("tint", Color(0.4, 0.7, 0.75, 0.1))
 	glass.render_priority = -1
 	# The objective's coating: a violet-amber sheen at a glance, clear head on.
-	var coated := glass.duplicate() as StandardMaterial3D
-	coated.albedo_color = Color(0.42, 0.3, 0.62, 0.12)
-	coated.rim_enabled = true
-	coated.rim = 1.0
-	coated.rim_tint = 1.0
-	coated.metallic = 0.6
+	var coated := glass.duplicate() as ShaderMaterial
+	coated.set_shader_parameter("tint", Color(0.42, 0.3, 0.62, 0.12))
+	coated.set_shader_parameter("rim", 1.0)
+	coated.set_shader_parameter("metallic", 0.6)
 	for g in [[r_ob - 0.003, length * 0.5 - 0.004, coated], [r_oc - 0.004, -length * 0.5 + 0.02, glass]]:
 		var d := CylinderMesh.new()
 		d.top_radius = g[0]
@@ -275,14 +313,10 @@ static func build_scope(s: Dictionary) -> Node3D:
 static func _reticle(col: Color, reach: float) -> Node3D:
 	var n := Node3D.new()
 	n.name = "Reticle"
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = col
-	m.emission_enabled = true
-	m.emission = col
-	m.emission_energy_multiplier = RETICLE_ENERGY
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.no_depth_test = true            # floats over the view, never hidden by the glass
+	var m := ShaderMaterial.new()
+	m.shader = SCOPE_RETICLE          # unshaded, no depth test: floats over the view
+	m.set_shader_parameter("color", col)
+	m.set_shader_parameter("energy", RETICLE_ENERGY)
 	m.render_priority = 10
 	var t := 0.0006
 	var gap := 0.003
