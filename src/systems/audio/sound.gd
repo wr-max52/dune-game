@@ -13,7 +13,7 @@ extends Node
 ##   Sound.club_vibe("hard")            Oda changes the song to one with that mood
 ##   Sound.radio_next()                 issue #291: J in a ship, the next station
 ##
-## The music is three ambient tracks that play in a shuffled order (a new one
+## The music is eight ambient tracks that play in a shuffled order (a new one
 ## each game) with cross-fades, a battle track
 ## (from 30 s in) while NPCs are shooting at you and for `battle_hold` seconds
 ## after, and a space track during a fight in orbit (not for being up there:
@@ -280,9 +280,10 @@ func _switch(to: String) -> void:
 	var start := 0.0
 	var fade_in := _fade()
 	var fade_out := _fade()
-	# Issue #80: into and out of a fight the music cuts over at once (a slow
-	# cross-fade lagged behind the gunfire); ambient tracks still blend.
-	if to == "battle" or mode == "battle":
+	# Issue #80: into a fight the music cuts over at once (a slow cross-fade
+	# lagged behind the gunfire). Out of one, back to ambient, the next track
+	# fades in like any other; ambient tracks still blend.
+	if to == "battle" or (mode == "battle" and to != "ambient"):
 		fade_in = float(m.get("battle_cut", 0.25))
 		fade_out = float(m.get("battle_cut", 0.25))
 	match to:

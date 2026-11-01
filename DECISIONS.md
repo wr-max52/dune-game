@@ -1299,3 +1299,18 @@ Every significant technical choice, the alternative, and why. Newest on top.
   from the same lights as the glints (a little sky, a wash, and a tight glare
   where it reflects a light at you), so the glare slides round it as the sun and
   bolts move.
+
+## 2026-11-01 — Five more ambient tracks, CC0 from OpenGameArt
+
+- **OpenGameArt, CC0 only, not Pixabay.** Pixabay refuses scripted downloads
+  (403), and CC0 needs no licence record beyond the source page. Tracks under
+  CC-BY or with no clear licence were skipped. Picked for calm and space:
+  Galactic Temple (yd), Starfield Romance and The Budding of Consciousness
+  (Yoiyami), Calm Ambient 1 / Synthwave 4k (The Cynic Project), Contemplation
+  (joth). All are 2-4 minutes long, like the first three.
+- **Encoded like the first three**: the `rip_music.sh` ffmpeg line (loudnorm
+  I=-18, 160 kb/s MP3, 44.1 kHz), saved as `ambient4..8.mp3`.
+- **The ambient list stays a list of paths.** The source pages go in a
+  separate `music.ambient_sources` map that Sound never reads, so the shuffle
+  code did not change.
+
