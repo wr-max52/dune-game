@@ -105,10 +105,12 @@
     "ceiling_margin": 900.0,
     "give_up_s": 10.0,
     "respawn_s": 120.0,
+    "replace_s": 8.0,
+    "pad_clear": 30.0,
     "land_from": 60.0,
     "return_altitude": 90.0,
     "kill_standing": -10,
     "bolt_color": "#ff3020",
-    "note": "launch_distance: metres from the town's edge you must be before it takes off after you (a stolen outpost ship scrambles it at once). floor_agl / look_ahead_s: it pulls up when it is lower than this above the ground now or look_ahead_s ahead. ceiling_margin: it never climbs closer than this to the edge of space. give_up_s: seconds with nothing to chase (you landed, went to space, or are not wanted) before it flies home. respawn_s: shot down, a new one stands on the pad this long after. land_from: metres from the pad where it comes straight down; return_altitude: how high it flies home."
+    "note": "launch_distance: metres from the town's edge you must be before it takes off after you (a stolen outpost ship scrambles it at once). floor_agl / look_ahead_s: it pulls up when it is lower than this above the ground now or look_ahead_s ahead. ceiling_margin: it never climbs closer than this to the edge of space. give_up_s: seconds with nothing to chase (you landed, went to space, or are not wanted) before it flies home. respawn_s: shot down (in the air or on its pad), a new one stands on the pad this long after. replace_s: taken from its pad (it is flyable there, and taking it sounds the barracks alarm), a new one lands this long after, once nothing is within pad_clear metres of the pad, and comes after you. land_from: metres from the pad where it comes straight down; return_altitude: how high it flies home."
   }
 }

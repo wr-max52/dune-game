@@ -279,7 +279,8 @@ func add_berth(v: Node3D, id: String, box_id: String) -> int:
 ## Issue #76: a Remnant ship parked at a desert outpost. Flyable, but boarding it
 ## the first time sets off that outpost's alarm (and scrambles the barracks
 ## interceptor, AtmoFighter). Lost (shot down or crashed), it is gone and you wake
-## in the pit. Not saved: a new session finds it back at its outpost.
+## in the pit. Not saved: a new session finds it back at its outpost. The barracks
+## pad's interceptor is one too while it stands there (AtmoFighter._offer_berth).
 func add_outpost_berth(v: Node3D, id: String, outpost_id: String) -> int:
 	var i := add_berth(v, id, "outpost_ship_" + outpost_id)
 	berths[i]["outpost"] = outpost_id
@@ -1769,10 +1770,14 @@ func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
 # ------------------------------------------------------------------ parked ships (issue #64)
 
 ## A parked ship shot by another ship (its guns: the shooter is a ship's hull)
-## takes the damage. Not the one you sit in.
+## takes the damage. Not the one you sit in. A "foot_target" berth (the barracks
+## pad's interceptor) takes your hand weapons too: your bolts, and a blade (no shooter).
 func _parked_target(i: int, shooter: Node) -> bool:
 	var b: Dictionary = berths[i]
-	if bool(b.get("destroyed", false)) or not (shooter is ShipHull) or shooter == b.hull:
+	if bool(b.get("destroyed", false)) or shooter == b.hull:
+		return false
+	var by_hand: bool = bool(b.get("foot_target", false)) and (shooter == null or shooter == player())
+	if not (shooter is ShipHull) and not by_hand:
 		return false
 	return not (i == berth and (piloting or atmo.state != AtmoFlight.State.PARKED))
 
@@ -1839,7 +1844,9 @@ func _steal(i: int) -> void:
 	steals += 1
 	var outposts = demo.outposts if "outposts" in demo else null
 	var g = outposts.garrisons.get(str(berths[i].outpost)) if outposts != null else null
-	if g != null:
+	if bool(berths[i].get("town_alarm", false)):
+		g = demo.garrison if "garrison" in demo else null     # the barracks pad's (AtmoFighter)
+	if g != null and is_instance_valid(g):
 		g._raise("ship_stolen")
 	var where := str(berths[i].get("where", Story.outpost_label(str(berths[i].outpost))))
 	WorldState.log_event("A Remnant ship was stolen from %s." % where)
