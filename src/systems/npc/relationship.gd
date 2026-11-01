@@ -23,6 +23,7 @@ var tab := 0                     ## credits owed
 var drinks_this_visit := 0
 var credited_jobs: Array = []    ## jobs she gave that the game already thanked you for
 var banned_until := -1.0         ## WorldState.clock time; she will not serve before it
+var heard_until := -1.0          ## issue #185: WorldState.clock when they last talked (-1 = never); events after it are news
 
 
 func tier() -> String:
@@ -72,7 +73,7 @@ func to_save() -> Dictionary:
 		"trust": trust, "mood": mood, "visits": visits, "turns_total": turns_total,
 		"known_rumors": known_rumors.duplicate(), "hinted_secrets": hinted_secrets.duplicate(),
 		"facts": facts.duplicate(), "tab": tab, "credited_jobs": credited_jobs.duplicate(),
-		"banned_until": banned_until,
+		"banned_until": banned_until, "heard_until": heard_until,
 	}
 
 
@@ -87,3 +88,4 @@ func from_save(d: Dictionary) -> void:
 	tab = int(d.get("tab", 0))
 	credited_jobs = d.get("credited_jobs", []).duplicate()
 	banned_until = float(d.get("banned_until", -1.0))
+	heard_until = float(d.get("heard_until", -1.0))
