@@ -105,12 +105,15 @@ func show_values(v: Dictionary) -> void:
 
 ## Issue #181: the cockpit view (its dash and instruments) or the chase view (the
 ## flight-sim HUD). The reticle, target box, marker and flash show in both.
-func set_cockpit(on: bool) -> void:
+## The cinematic view (V's third) shows neither: its shots are off the ship's
+## centre line, so the reticle and the ladder would point at nothing.
+func set_cockpit(on: bool, cinematic := false) -> void:
 	if cockpit == null:
 		return
 	cockpit_view = on
 	cockpit.visible = on
-	sim.visible = not on
+	sim.visible = not on and not cinematic
+	gauge.visible = not cinematic
 	gauge.queue_redraw()
 
 

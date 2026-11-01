@@ -160,7 +160,8 @@
       "text": "The general says the old cruiser in the sand is worth a look. Something red is still aboard." }
   ],
   "ship_locked": "Locked. The keys aren't yours to take yet.",
-  "opening_view": "V: change view",
+  "opening_view": "Press V to switch views",
+  "opening_cinematic_secs": 8,
   "opening_exit": "E: get out",
   "ship_wreck": "Your ship. A wreck: T-89 in the pit can rebuild it.",
   "ship_not_yours": "Not yours. No keys, no flight.",

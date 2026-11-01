@@ -202,7 +202,7 @@ func _step() -> void:
 	if _frames == 60:
 		rig.toggle_mode()  # FPV -> TPV (rows 60+ show TPV)
 	if _frames == 305:
-		rig.toggle_mode()  # TPV -> FPV (a later row shows FPV)
+		rig.set_mode(rig.Mode.FPV)  # TPV -> FPV (a later row shows FPV; V would go on to cinematic)
 
 	var work := 0.0
 

@@ -98,7 +98,7 @@ var _stick := Vector2.ZERO
 var _external: Dictionary = {}   ## a bot's command; empty = read the keys
 var _cam_near := 0.05
 var _cam_far := 4000.0
-var _rig_was_fp := false
+var _rig_was_view := 0            ## the on-foot view (CameraRig.Mode) to give back on getting out
 var _boost := false
 var _motion_basis := Basis.IDENTITY
 var _motion_basis_valid := false
@@ -125,6 +125,7 @@ var dockings := 0                 ## times that brought her down there (traces, 
 var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
 var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
+var opening_t := 0.0              ## seconds into it: the cinematic view has the first few to itself
 var ejections := 0                ## issue #275: times the pilot ejected (traces, tests)
 var _eject_hold := 0.0            ## seconds B has been held
 
@@ -188,6 +189,7 @@ func _ready() -> void:
 	RetroUI.prompt(_foot_prompt)
 	layer.add_child(_foot_prompt)
 	kit = ShipKit.new(demo._flat_mats())
+	chase.cine.blocked = _cine_clear
 	_gather_berths()
 	_use_berth(0)
 	if "planet" in demo and not demo.planet.is_empty():
@@ -473,7 +475,7 @@ func board() -> bool:
 	_stick = Vector2.ZERO
 	var rig = demo._rig
 	if rig != null:
-		_rig_was_fp = rig.rig.is_first_person()
+		_rig_was_view = rig.rig.mode
 		var cam: Camera3D = rig.camera()
 		_cam_near = cam.near
 		_cam_far = cam.far
@@ -495,6 +497,8 @@ func exit_ship() -> bool:
 	if opening:
 		opening = false
 		chase.fit_to(_look_length())
+		if chase.is_cinematic():
+			chase.set_mode(chase.Mode.CHASE)    # the opening's view, not one the player picked
 		Story.event("landed")          # issue #202: out of the ship; the general is waiting
 	exited.emit()
 	return true
@@ -567,7 +571,7 @@ func _leave_seat(spot: Vector3) -> void:
 		p.rotation.y = rig.rig.yaw
 		if "player_kit" in demo and demo.player_kit != null and demo.player_kit.avatar != null:
 			demo.player_kit.avatar.facing_yaw = rig.rig.yaw
-		rig.set_first_person(_rig_was_fp)
+		rig.set_view(_rig_was_view)
 		var cam: Camera3D = rig.camera()
 		cam.near = _cam_near
 		cam.far = _cam_far
@@ -814,7 +818,7 @@ func _seat_arriving() -> void:
 	_set_player_collision(false)
 	var rig = demo._rig
 	if rig != null:
-		_rig_was_fp = rig.rig.is_first_person()
+		_rig_was_view = rig.rig.mode
 		var cam: Camera3D = rig.camera()
 		_cam_near = cam.near
 		_cam_far = cam.far
@@ -826,6 +830,8 @@ func _seat_arriving() -> void:
 ## the autopilot were bringing it in, the camera far back. Nothing but V (change
 ## view) does anything until she is down; then E gets you out (exit_ship), and
 ## the story moves on ("landed"). The pad's "opening" sets where she starts.
+## It is filmed in the cinematic view; the story's "opening_cinematic_secs" in, the
+## prompt says V changes it.
 func opening_landing() -> void:
 	_seat_arriving()
 	var o: Dictionary = pad.get("opening", {})
@@ -836,11 +842,28 @@ func opening_landing() -> void:
 	atmo.place_flying(at, to, 0.0, 0.4)
 	_throttle = 0.0
 	opening = true
+	opening_t = 0.0
 	bay_landing = true
 	chase._primed = false
 	chase.fit_to(_look_length() * float(o.get("camera_scale", 3.5)))
+	chase.set_mode(chase.Mode.CINE)
 	hud.visible = true
 	_sync_visual()
+
+
+## The cinematic view's ray (ChaseCamera.cine): how far from the ship toward a
+## shot is clear, so a shot never sits inside the pit's walls or under the ground.
+## Her own hull is not in the way.
+func _cine_clear(from: Vector3, to: Vector3) -> Vector3:
+	var space: PhysicsDirectSpaceState3D = demo.get_world_3d().direct_space_state if demo.is_inside_tree() else null
+	if space == null:
+		return to
+	var q := PhysicsRayQueryParameters3D.create(from, to)
+	if hull != null and is_instance_valid(hull):
+		q.exclude = [hull.get_rid()]
+	q.collision_mask = 1
+	var hit: Dictionary = space.intersect_ray(q)
+	return to if hit.is_empty() else hit.position - (to - from).normalized()
 
 
 func _look_length() -> float:
@@ -987,6 +1010,8 @@ func _seated(dt: float) -> void:
 			float(_external.get("roll", 0.0)), _throttle, _boost)
 	if st == AtmoFlight.State.LIFTOFF or st == AtmoFlight.State.FLYING or st == AtmoFlight.State.LANDING:
 		flight_time += dt
+	if opening:
+		opening_t += dt
 	_jolt_xf = jolt.step(dt)
 	if fight != null:
 		_fight_step(dt)
@@ -1022,6 +1047,7 @@ func _seated(dt: float) -> void:
 		demo.detail.update_motion(dt, atmo.altitude(), atmo.speed(), turn_rate, in_flight)
 		_set_flight_terrain_quality(demo.detail.motion_active)
 	if demo._rig != null:
+		chase.up = atmo.up()
 		demo._rig.set_override(chase.update(dt, atmo.transform()), 72.0)
 	_update_hud(agl_now)
 
@@ -1324,7 +1350,7 @@ func _update_hud(agl_now: float) -> void:
 	# The stick as last commanded, for the cockpit's yoke (centred while the bay
 	# landing flies her in, which commands nothing).
 	var cmd: Dictionary = {} if bay_landing else atmo._command
-	hud.set_cockpit(chase.is_cockpit())
+	hud.set_cockpit(chase.is_cockpit(), chase.is_cinematic())
 	hud.show_values({
 		"speed": f.speed, "throttle": _throttle, "max_speed": live.max_speed(),
 		"boost": live.boost_left / maxf(live.boost_time(), 0.001),
@@ -1338,7 +1364,10 @@ func _update_hud(agl_now: float) -> void:
 	})
 	var tip := ""
 	if opening:
-		hud.set_prompt(Story.line("opening_exit" if atmo.state == AtmoFlight.State.PARKED else "opening_view"))
+		var hint := "opening_exit" if atmo.state == AtmoFlight.State.PARKED else ""
+		if hint == "" and opening_t >= float(Story.data().get("opening_cinematic_secs", 8.0)):
+			hint = "opening_view"
+		hud.set_prompt(Story.line(hint) if hint != "" else "")
 		return
 	match atmo.state:
 		AtmoFlight.State.PARKED:
