@@ -1,5 +1,5 @@
 {
-  "note": "Rumors (M12). Each one is only shown to the cantina owner when its conditions hold in WorldState, so everything she passes on is true right now. requires: flags (all), not_flags (none), tier, standing { faction: [min, max] }, counters { name: min }, time [presets].",
+  "note": "Rumors (M12). Each one is only shown to the cantina owner when its conditions hold in WorldState, so everything she passes on is true right now. requires: flags (all), not_flags (none), tier, standing { faction: [min, max] }, counters { name: min }, time [presets]. Issue #303: the dark master (r_dark_master, r_dark_master_dead, r_dark_roof) and the Remnant taking the town back (r_town_retaken).",
   "rumors": [
     { "id": "r_checkpoint", "text": "The Remnant set up a checkpoint at the front gate. They search anything bigger than a lunchbox.", "requires": { "flags": ["gate_checkpoint_up"] }, "weight": 3 },
     { "id": "r_gate_bribe", "text": "The front gate gets lazy after dark. Coin helps it get lazier.", "requires": { "flags": ["gate_checkpoint_up"], "tier": "regular", "time": ["dusk"] }, "weight": 2 },
@@ -62,6 +62,10 @@
    "text": "No more Remnant in the desert. The locals have the outposts and the barracks, and the gate is ours.",
    "requires": { "flags": ["remnant_driven_off"] },
    "weight": 5
-  }
+  },
+    { "id": "r_dark_master", "text": "Pilots coming down from orbit say the general's cruiser isn't empty. Someone in black armour walks its bay now, with a red blade, and the Remnant who were scattering have stopped running.", "requires": { "flags": ["cruiser_taken"], "not_flags": ["dark_master_dead:cruiser", "town_retaken"] }, "weight": 4 },
+    { "id": "r_dark_master_dead", "text": "That one in black on the cruiser? Dead. Whoever did it, I'd buy them a drink.", "requires": { "flags": ["dark_master_dead:cruiser"] }, "weight": 3 },
+    { "id": "r_town_retaken", "text": "The Remnant are back in the barracks. Somebody killed every one of our guards there first, and nobody's saying who.", "requires": { "flags": ["town_retaken"], "not_flags": ["remnant_driven_off"] }, "weight": 5 },
+    { "id": "r_dark_roof", "text": "There's a figure in black standing on the barracks roof, day and night. Red blade. He doesn't move, he just watches the gate.", "requires": { "flags": ["town_retaken"], "not_flags": ["locals_hold_outpost", "remnant_driven_off", "dark_master_dead:barracks"] }, "weight": 4 }
   ]
 }

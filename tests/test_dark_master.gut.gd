@@ -316,3 +316,19 @@ func test_his_blade_turns_most_bolts_from_the_front() -> void:
 	assert_eq(f.guard(10.0, false, false), 10.0, "from behind, every one")
 	f.update(0.016, 1.5, 0.0)          # a blow starts
 	assert_eq(f.guard(10.0, true, false), 10.0, "mid-blow he is open")
+
+
+func test_the_cantina_hears_about_him_and_the_barracks() -> void:
+	WorldState.new_game(WorldState.FREEPLAY)
+	var heard := func(): return WorldState.rumors("confidant", [], 99).map(func(r): return str(r.id))
+	assert_false(heard.call().has("r_dark_master"))
+	WorldState.on_cruiser_taken("General Test", {})
+	assert_true(heard.call().has("r_dark_master"), "pilots talk about the one in black")
+	_kill_barracks_guards()
+	assert_true(heard.call().has("r_town_retaken"))
+	assert_true(heard.call().has("r_dark_roof"), "the Remnant hold the planet: he's on the roof")
+	assert_false(heard.call().has("r_dark_master"), "the town news is bigger")
+	Territory.take(str(Story.OUTPOSTS[0]))
+	assert_false(heard.call().has("r_dark_roof"), "an outpost lost: he's gone from the roof")
+	DarkPact.on_killed("cruiser")
+	assert_true(heard.call().has("r_dark_master_dead"))
