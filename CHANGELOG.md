@@ -2,6 +2,23 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Oda's recap when you come back (issue #185, 2026-10-31)
+
+- **She opens with the news.** Come back to Oda after time away and she starts
+  with a short recap of what has happened since you last talked: a bounty
+  done, a ship bought, the beast killed. Up to three things, newest first.
+- **With AI on**, her usual greeting comes first, then the model's turn. It
+  recaps in her own voice, briefed with only those events and told not to
+  invent anything. **With AI off** (or no provider), her greeting is an
+  authored recap built from the same events.
+- **No recap** on a first visit, in a fresh game, when nothing new has
+  happened, or when the story or an opener has something to say first.
+- The save remembers when you last talked (`heard_until` on her relationship).
+  "Story:" bookkeeping lines are never news.
+- Any AI character can do this with a `recap` block on their card (open,
+  close, max, cue, instruction); Oda's is in cantina_owner_card.json.
+- Test: tests/test_oda_recap.gut.gd.
+
 ## The beast's rock shell, glowing eyes, and no more spinning (2026-11-01)
 
 - **Its shell is desert rock now.** Old Murk's plates, body, legs and jaws are

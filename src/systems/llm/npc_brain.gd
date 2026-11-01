@@ -72,6 +72,9 @@ var _rng := RandomNumberGenerator.new()
 var _summary_id := -1
 var _topic_now := ""                 ## issue #328: the menu topic this turn answers ("" = by keyword)
 var _hint_lines: Array = []          ## issue #328: the authored lines of the hints this turn set off
+var recap_events: Array = []         ## issue #185: what happened since they last talked (newest first), this visit
+var recap_wanted := false            ## issue #185: the model should open with a recap (recap_turn)
+var _recap_now := false              ## the turn in flight is the recap
 
 
 ## `card_src`: a card's path, or (issue #75: a planet's own Oda) the card itself.
@@ -105,6 +108,11 @@ func attach(service: LLMService) -> void:
 ## The player stepped up to the bar. Returns her greeting (no model call: instant).
 func begin_visit() -> String:
 	var returning := rel.visits > 0
+	# Issue #185: what happened since they last talked, for a character with a
+	# "recap" block on their card (Oda). Never on a first visit or a fresh game.
+	recap_events = news() if returning and card.has("recap") else []
+	recap_wanted = false
+	rel.heard_until = WorldState.clock
 	rel.begin_visit()
 	history.clear()
 	insults = 0
@@ -115,8 +123,60 @@ func begin_visit() -> String:
 	rel.mood = baseline_mood()
 	var g: Array = card.get("greetings", {}).get(rel.tier(), ["Yeah?"])
 	var line := str(g[_rng.randi() % g.size()])
+	if not recap_events.is_empty():
+		if model_ready():
+			recap_wanted = true          # the greeting now, then the model's recap (recap_turn)
+		else:
+			line = authored_recap()      # no model: the authored version, from the same events
 	history.append({ "role": "assistant", "content": JSON.stringify({ "say": line, "then": [], "tone": rel.mood }) })
 	return line
+
+
+## Issue #185: the events since they last talked (WorldState.clock heard_until),
+## newest first, at most the card's recap.max (3). Story bookkeeping is left out.
+func news() -> Array:
+	if rel.heard_until < 0.0:
+		return []
+	var out: Array = []
+	for i in range(WorldState.events.size() - 1, -1, -1):
+		var e: Dictionary = WorldState.events[i]
+		if float(e.get("t", 0.0)) <= rel.heard_until:
+			break
+		var text := str(e.get("text", ""))
+		if text == "" or text.begins_with("Story:"):
+			continue
+		out.append(e)
+		if out.size() >= int(card.get("recap", {}).get("max", 3)):
+			break
+	return out
+
+
+## Issue #185: a model is there to ask (AI characters on, a provider up).
+func model_ready() -> bool:
+	return llm != null and llm.ai_on() and not llm.active_chain().is_empty()
+
+
+## Issue #185: the canned recap, built from the same events the model would get.
+func authored_recap() -> String:
+	var r: Dictionary = card.get("recap", {})
+	var said: PackedStringArray = []
+	for e in recap_events:
+		said.append(str(e.text))
+	return ("%s %s %s" % [_pick(r.get("open", ["Look who's back. Word travels."])), " ".join(said),
+		_pick(r.get("close", ["So. What'll it be?"]))]).strip_edges()
+
+
+## Issue #185: the model's turn that opens with the recap, in her own voice. The
+## scene calls it right after the greeting; no player line is shown for it.
+func recap_turn() -> bool:
+	if not recap_wanted or busy:
+		return false
+	recap_wanted = false
+	_recap_now = true
+	if not say(str(card.get("recap", {}).get("cue", "(They come back up to the bar after some time away.)"))):
+		_recap_now = false
+		return false
+	return true
 
 
 ## Issue #64: the story's line instead of the greeting begin_visit() picked.
@@ -128,6 +188,7 @@ func replace_greeting(line: String) -> void:
 ## The player walked off. Summarize the visit in the background (if online).
 func end_visit() -> void:
 	talking = false
+	rel.heard_until = WorldState.clock      # issue #185: what happened while they talked is not news
 	if llm == null or not llm.ai_on() or history.size() < 3:
 		return
 	_summary_id = llm.chat(builder.summary_messages(rel, history), { "max_tokens": 80, "temperature": 0.3, "background": true })
@@ -253,7 +314,7 @@ func say(text: String) -> bool:
 		"story": Story.brief(id()),
 		"beast": PlanetBeast.brief(GameFlow.planet()),     # everyone here knows the planet's beast
 		"club_moods": Sound.lib().cfg.get("club", {}).get("moods", []),   # issue #261: what she can ask the band for
-		"extra": (extra_brief.call() if extra_brief.is_valid() else []) + last_hints,
+		"extra": (extra_brief.call() if extra_brief.is_valid() else []) + last_hints + _recap_brief(),
 		"ship_buy": _ship_offer(),
 	}
 	var built := builder.build(world, rel, rumors, jobs, history, text)
@@ -342,6 +403,7 @@ func _finish_turn(result: Dictionary) -> void:
 		cleaned = filter.clean(c2.say)
 		proposed = c2.actions
 	_topic_now = ""
+	_recap_now = false
 	if source == "canned":
 		# Issue #328: the hint their words set off, in the card's authored line
 		# (after the sentence cap: it is written, not generated).
@@ -494,7 +556,20 @@ func accept_job(id: String) -> bool:
 
 ## This turn's canned answer: the menu topic's, else the player's words'.
 func _canned_now() -> Dictionary:
+	if _recap_now:
+		return { "say": authored_recap(), "actions": [] }     # issue #185
 	return canned_reply(_player_text, _topic_now)
+
+
+## Issue #185: the briefing lines for the recap turn ([] on any other turn).
+func _recap_brief() -> Array:
+	if not _recap_now or recap_events.is_empty():
+		return []
+	var said: PackedStringArray = []
+	for e in recap_events:
+		said.append("- " + str(e.text))
+	return ["SINCE THEY WERE LAST HERE (newest first, all true):\n" + "\n".join(said),
+		str(card.get("recap", {}).get("instruction", "They just walked back in. Open with a short recap of what has happened since they were last here, in your own voice, true to the list above (at most 2 sentences), then ask what they want. Do not invent anything else."))]
 
 
 ## A real answer without a model: keyword topic + true data. Only topics whose

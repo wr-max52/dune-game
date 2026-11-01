@@ -382,6 +382,12 @@ func start_talk(s: TalkSpot = null) -> void:
 	var story_line := _story_mood(s)
 	_speak(s, story_line if story_line != "" else greeting)
 	s.speak_pulse()
+	# Issue #185: back after time away, she opens with what happened (the model's
+	# turn, in her own voice) unless the story or an opener spoke first.
+	if beat.is_empty() and opening.is_empty() and s.brain.recap_wanted:
+		s.brain.recap_turn()
+	else:
+		s.brain.recap_wanted = false
 
 
 func end_talk() -> void:

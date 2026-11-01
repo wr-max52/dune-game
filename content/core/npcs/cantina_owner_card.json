@@ -44,6 +44,14 @@
     { "id": "s_arm", "tier": "confidant", "text": "PRODUCT OWNER TO WRITE. Draft: you did not lose the arm to a crane. You lost it pulling a stranger out of a burning freighter in the pit, the night the Empire first arrived. The stranger was a Remnant officer who now commands the gate. He does not remember you. You have never decided whether to tell him." }
   ],
   "stall_barks": ["Mm.", "Go on.", "Hold that thought.", "One second.", "Hm.", "I heard you."],
+  "recap": {
+    "note": "Issue #185: coming back after time away, she opens with what has happened since you last talked (WorldState events after Relationship.heard_until, newest first, at most max). With a model she says it in her own voice (instruction); without one, the authored open + the events + close.",
+    "max": 3,
+    "cue": "(The player comes back up to the bar after some time away.)",
+    "instruction": "They just walked back in after time away. Open with a short recap of what has happened since they were last here, in your own voice, dry and knowing, true to the list above (at most 2 sentences), then ask what they're having. Do not invent anything that is not on the list.",
+    "open": ["Well, look who's back. Word gets to this bar before you do:", "You've been busy since you last sat here. I heard:", "Back in one piece. The talk at the bar says:"],
+    "close": ["So. What are you having?", "Sit. Tell me the rest.", "Drink first, stories after."]
+  },
   "greetings": {
     "stranger": ["New face. Drink or directions?", "You're dripping sand on my floor. Order something."],
     "regular": ["You again. The usual trouble?", "Back already. Sit."],
