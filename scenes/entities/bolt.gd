@@ -129,6 +129,10 @@ func _ready() -> void:
 		add_child(mesh)
 	body_entered.connect(_on_body_entered)
 	add_to_group("bolts")
+	if not matte:
+		# The cockpit's glass catches it going by (CockpitView.gather_lights).
+		add_to_group("glints")
+		set_meta("glint_color", color)
 	if stylize:
 		_build_streak()
 
