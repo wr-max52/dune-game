@@ -178,8 +178,9 @@
       "id": "droid_post_wash",
       "kind": "location",
       "location": "droid_post_wash",
-      "at": [1000, 0, 850],
-      "yaw_deg": 155,
+      "note": "The droid post nearest the port: about 310 m straight out from the front gate, a kilometre closer than it first stood, so its hut and tall array show through the gate from the street inside. Its counter faces the gate.",
+      "at": [310, 0, 12],
+      "yaw_deg": 270,
       "clear": 28
     },
     {
