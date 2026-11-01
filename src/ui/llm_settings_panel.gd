@@ -70,9 +70,10 @@ func _ready() -> void:
 		var e := LineEdit.new()
 		e.custom_minimum_size = Vector2(380, 0)
 		_fields[f[0]] = e
-		v.add_child(_row(f[1], e))
+		var row := _row(f[1], e)
 		if (f[0] as String).ends_with("/model"):
-			v.add_child(_help_row((f[0] as String).get_slice("/", 0)))
+			_add_help_buttons(row, (f[0] as String).get_slice("/", 0))
+		v.add_child(row)
 	_prompt_box = VBoxContainer.new()
 	_prompt_box.visible = false
 	v.add_child(_prompt_box)
@@ -82,6 +83,7 @@ func _ready() -> void:
 	_prompt_box.add_child(_prompt_intro)
 	_prompt_text = TextEdit.new()
 	_prompt_text.editable = false
+	_prompt_text.add_theme_color_override("font_readonly_color", Color(0.88, 0.85, 0.8))
 	_prompt_text.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	_prompt_text.custom_minimum_size = Vector2(600, 120)
 	_prompt_box.add_child(_prompt_text)
@@ -146,13 +148,9 @@ func _row(label: String, c: Control) -> HBoxContainer:
 	return h
 
 
-## Under a provider's model: Link (its download page) and Prompt (set-up text for a
+## Beside a provider's model: Link (its download page) and Prompt (set-up text for a
 ## coding agent, copied and shown).
-func _help_row(id: String) -> HBoxContainer:
-	var h := HBoxContainer.new()
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(130, 0)
-	h.add_child(spacer)
+func _add_help_buttons(h: HBoxContainer, id: String) -> void:
 	var link := Button.new()
 	link.text = "Link"
 	link.tooltip_text = "Open " + LLMSetupHelp.link(id)
@@ -163,7 +161,6 @@ func _help_row(id: String) -> HBoxContainer:
 	prompt.tooltip_text = "Copy a set-up prompt for a coding agent"
 	prompt.pressed.connect(func(): show_prompt(id))
 	h.add_child(prompt)
-	return h
 
 
 ## Show the set-up prompt for `id` and put it on the clipboard.
