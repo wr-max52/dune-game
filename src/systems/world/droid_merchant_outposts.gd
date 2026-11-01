@@ -4,6 +4,8 @@ extends Node3D
 ## home planet. Their footprints and map coordinates come from core location and
 ## world data; this node adds the compact huts, conspicuous antenna arrays, and
 ## their keepers. It does not join or alter the Remnant's story outposts.
+## Issue #355: painted, chipped metal (StallTextures), and droid parts and the
+## items in content/look/items.json "stalls" > "droid_posts" on the merchant table.
 
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
 const MerchantNPC := preload("res://src/systems/npc/merchant_npc.gd")
@@ -99,9 +101,9 @@ func _dress(root: Node3D, loc: Dictionary) -> void:
 	var look: Dictionary = loc.get("look", {})
 	var accent := Color(str(look.get("accent", "#b68a42")))
 	var wall := mats.plaster(0.0, 3.4, accent, Color("#49494a"))
-	var dark := mats.flat(Color("#202225"), 0.7, 0.35)
-	var steel := mats.flat(Color("#71777a"), 0.5, 0.65)
-	var trim := mats.flat(accent, 0.65, 0.25)
+	var dark := mats.painted(Color("#202225"), 0.7, 0.35)
+	var steel := mats.painted(Color("#71777a"), 0.5, 0.65)
+	var trim := mats.painted(accent, 0.65, 0.25)
 	var glow := mats.glow(Color("#69e4d6"))
 	glow.emission_energy_multiplier = 2.4
 	var beacon := mats.glow(Color("#ffad48"))
@@ -139,6 +141,7 @@ func _dress(root: Node3D, loc: Dictionary) -> void:
 							z_sign * (size.z * 0.5 - 0.08)))
 			_part(root, _box(Vector3(size.x * 0.7, 0.06, size.z * 0.58)), trim,
 				pos + Vector3(0, size.y - top.y - 0.04, 0))
+			_table_wares(root, pos + Vector3(0, size.y, 0), size, mats, dark)
 	# Chocked cargo cases and a small repair trolley keep the yard detailed,
 	# without expanding its building footprint.
 	_part(root, _box(Vector3(0.85, 0.8, 0.85)), steel, Vector3(-3.2, 0.4, -2.7))
@@ -146,6 +149,43 @@ func _dress(root: Node3D, loc: Dictionary) -> void:
 	_part(root, _box(Vector3(1.3, 0.12, 0.55)), trim, Vector3(2.0, 0.55, -2.4))
 	_antenna_array(root, float(look.get("antenna_height", 8.5)), str(look.get("array_style", "wide")),
 		steel, dark, trim, glow, beacon)
+
+
+## Issue #355: what the keeper sells, on the merchant table (`top`: the middle of
+## its top, root frame): a droid head with a lit eye on a stand, a loose arm, a
+## servo ring and a few lit cells, and the post's items on the end nearest the
+## counter.
+func _table_wares(root: Node3D, top: Vector3, size: Vector3, mats: LookMaterials, dark: Material) -> void:
+	var shell := mats.painted(Color("#8a8278"), 0.5, 0.55)
+	var eye := mats.glow(Color("#ff5a3a"))
+	eye.emission_energy_multiplier = 1.2
+	var cell := mats.glow(Color("#69e4d6"))
+	cell.emission_energy_multiplier = 1.4
+	var head := top + Vector3(size.x * 0.22, 0, -size.z * 0.15)
+	_part(root, _cyl(0.07, 0.09, 0.08), dark, head + Vector3(0, 0.04, 0))
+	_part(root, _ball(0.16, 0.28), shell, head + Vector3(0, 0.22, 0))
+	_part(root, _ball(0.045, 0.045), eye, head + Vector3(0, 0.26, 0.14))
+	var arm := top + Vector3(size.x * 0.25, 0.04, size.z * 0.25)
+	_rod(root, 0.035, 0.5, shell, arm, Vector3.RIGHT)
+	_part(root, _ball(0.055, 0.11), dark, arm + Vector3(-0.25, 0, 0))
+	for k in 3:
+		_part(root, _cyl(0.035, 0.035, 0.16), cell, top + Vector3(-size.x * 0.05 + k * 0.1, 0.08, size.z * 0.3))
+	var looks: Array = ItemKit._read_json(ItemKit.LOOKS_PATH).get("stalls", {}).get("droid_posts", {}).get("items", [])
+	var kit := ItemKit.new(mats)
+	var x := -size.x * 0.5 + 0.1
+	for l in looks:
+		if not kit.has_look(str(l)):
+			continue
+		var item := kit.build(str(l))
+		var turn := Basis(Vector3.UP, PI)          # a case's latch (-Z) to the customer
+		var b := ItemKit.bounds(item, Transform3D(turn, Vector3.ZERO))
+		if x + b.size.x > size.x * 0.05:
+			item.free()
+			break
+		item.transform = Transform3D(turn, top + Vector3(x - b.position.x, -b.position.y, -b.get_center().z))
+		item.set_meta("decor", "stall_item")
+		root.add_child(item)
+		x += b.size.x + 0.08
 
 
 ## A layered roof relay, deliberately much taller and broader than the little
@@ -219,4 +259,22 @@ func _part(root: Node3D, mesh: Mesh, mat: Material, at: Vector3,
 func _box(size: Vector3) -> BoxMesh:
 	var mesh := BoxMesh.new()
 	mesh.size = size
+	return mesh
+
+
+func _cyl(top: float, bottom: float, h: float) -> CylinderMesh:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = top
+	mesh.bottom_radius = bottom
+	mesh.height = h
+	mesh.radial_segments = 10
+	return mesh
+
+
+func _ball(r: float, h: float) -> SphereMesh:
+	var mesh := SphereMesh.new()
+	mesh.radius = r
+	mesh.height = h
+	mesh.radial_segments = 12
+	mesh.rings = 6
 	return mesh

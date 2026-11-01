@@ -126,5 +126,17 @@
     "spin": 0.8,
     "bob": 0.08,
     "lift": 0.75
+  },
+  "stalls": {
+    "note": "Issue #355: what a trader's market stall shows (src/systems/world/town_market.gd), keyed by vendor id (content/core/vendors, and droids.json 'vendor'). The stall is the one nearest the vendor's marker. 'wares': the drawn goods on its table and back shelf (food, gear, contraband, droids); 'items': look ids above, laid along the customer's edge in this order (ones that do not fit the counter are left off). 'droid_posts' and 'skrugs': the items on the droid relays' merchant tables and on Skrugs's counter.",
+    "vendors": {
+      "food_stall": { "wares": "food", "items": ["crystal_case"] },
+      "gear_trader": { "wares": "gear", "items": ["armour_case", "jetpack", "cell_case"] },
+      "fence": { "wares": "contraband", "items": ["rifle_case", "crystal_case", "quantonium_flask", "tooth_crate"] },
+      "station_fence": { "wares": "contraband", "items": ["crystal_case", "quantonium_flask", "tooth_crate"] },
+      "droid_merchant": { "wares": "droids", "items": ["cell_case"] }
+    },
+    "droid_posts": { "items": ["cell_case"] },
+    "skrugs": { "items": ["cell_case"] }
   }
 }

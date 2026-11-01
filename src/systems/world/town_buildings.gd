@@ -40,6 +40,8 @@ var trim: Material
 var panel: Material
 var metal: Material
 var seam: Material
+var crate_woods: Array = []   ## issue #355: plank crates in three woods (StallTextures)
+var crate_band: Material      ## and the painted iron bands round them
 
 var solid := false            ## issue #55: while on, `put` parts also collide (see flush)
 var solids := 0               ## colliders the last flush made (tests, review)
@@ -65,6 +67,8 @@ func _init(m: LookMaterials, l: LookEnvironment) -> void:
 	panel = mats.flat(Color("#5e5955"), 0.4, 0.55)
 	metal = mats.flat(Color("#4a4440"), 0.55, 0.5)
 	seam = mats.flat(Color("#141211"), 0.9)
+	crate_woods = [mats.wood(Color("#8a7350"), 0.85), mats.wood(Color("#6b6a4a"), 0.85), mats.wood(Color("#7a4a32"), 0.85)]
+	crate_band = mats.painted(Color("#4a4440"), 0.55, 0.5)
 
 
 # ---------------------------------------------------------------- batching
@@ -587,8 +591,8 @@ func _door_clutter(wall_x: float, door_z: float, lz: float) -> void:
 			if _rng.randf() < 0.5:
 				part(cyl(0.24, 0.26, 0.7, 12), mats.flat(Color("#5d4b3e"), 0.7, 0.3), Vector3(x + 0.1, 0.35, z + signf(z - door_z) * 0.55))
 		1:
-			part(box(0.6, 0.55, 0.7), trim, Vector3(x, 0.275, z), Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)))
-			part(box(0.45, 0.4, 0.5), trim, Vector3(x, 0.75, z), Basis(Vector3.UP, _rng.randf_range(-0.4, 0.4)))
+			part(box(0.6, 0.55, 0.7), crate_woods[_rng.randi() % 3], Vector3(x, 0.275, z), Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)))
+			part(box(0.45, 0.4, 0.5), crate_woods[_rng.randi() % 3], Vector3(x, 0.75, z), Basis(Vector3.UP, _rng.randf_range(-0.4, 0.4)))
 		2:
 			var jar := mats.plaster(-1000.0, -1000.0, LookMaterials.CLOTH_TEAL, Color("#b07a52"))
 			part(ball(0.26, 0.7, false, 12), jar, Vector3(x, 0.35, z))
@@ -712,9 +716,10 @@ func _look_stage(b: Dictionary, lx: float, _lz: float, h: float) -> void:
 
 
 ## A crate stack on a cover box's footprint: never squared up. Each crate is turned
-## a little and shrunk until the turn still fits inside the collision box.
+## a little and shrunk until the turn still fits inside the collision box. Issue
+## #355: plank crates with painted iron bands.
 func _look_crates(_b: Dictionary, lx: float, lz: float, h: float) -> void:
-	var woods := [trim, mats.flat(Color("#6b6a4a"), 0.85), mats.flat(Color("#7a4a32"), 0.85)]
+	var woods := crate_woods
 	var two_low := lx > 1.9 and _rng.randf() < 0.5
 	var h1 := h if _rng.randf() < 0.3 else h * _rng.randf_range(0.55, 0.65)
 	if two_low:
@@ -739,6 +744,6 @@ func _crate(base: Vector3, w: float, d: float, h: float, mat: Material) -> void:
 	var hh := snappedf(h, 0.05)
 	var at := Basis(Vector3.UP, yaw)
 	part(box(cw, hh, cd), mat, base + Vector3(0, hh * 0.5, 0), at)
-	part(box(cw + 0.04, 0.08, cd + 0.04), metal, base + Vector3(0, hh * 0.3, 0), at)
-	part(box(cw + 0.04, 0.08, cd + 0.04), metal, base + Vector3(0, hh * 0.75, 0), at)
+	part(box(cw + 0.04, 0.08, cd + 0.04), crate_band, base + Vector3(0, hh * 0.3, 0), at)
+	part(box(cw + 0.04, 0.08, cd + 0.04), crate_band, base + Vector3(0, hh * 0.75, 0), at)
 
