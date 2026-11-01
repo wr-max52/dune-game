@@ -77,12 +77,12 @@ func on_event(e: Dictionary) -> void:
 			elif float(e.get("blast_size", 0.0)) > 0.0:
 				# A seeker goes up like a ship does (its splash is the "splash" hits).
 				ExplosionFx.big(self, e.point, float(e.blast_size), true)
-				Sound.play("ship_boom", e.point)
+				Sound.play("vehicle_boom", e.point)
 			else:
 				ExplosionFx.small(self, e.point)
 			Sound.play("ship_hit", e.point)
 		"kill":
-			Sound.play("ship_boom", e.point)
+			Sound.play("vehicle_boom", e.point)
 			ExplosionFx.big(self, e.point, 1.2, true)
 
 

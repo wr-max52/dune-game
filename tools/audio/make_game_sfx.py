@@ -11,7 +11,8 @@ and cross-faded end into start, so they repeat without a click.
   ship_laser.wav    a ship gun's bolt
   ship_missile.wav  a missile leaving the rail
   ship_hit.wav      a hit on a hull or shield
-  ship_boom.wav     a ship blowing up
+  ship_boom.wav     a ship blowing up (now only droid_pop, pitched up; vehicles
+                    use the CC0 vehicle_boom set)
   droid_beep_N.wav  the sparring remote's chirps (droid talk)
   droid_hum.wav     the sparring remote's hover hum (loop)
   cargo_beep_N.wav  a cargo droid's low bloops (issue #51)

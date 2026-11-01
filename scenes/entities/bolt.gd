@@ -77,7 +77,7 @@ func apply_to(target: Object) -> void:
 	# bolt pop of sparks; a rock just thuds. One that runs out of range does not.
 	if blast_size > 0.0 and is_inside_tree():
 		ExplosionFx.big(get_parent(), global_position, blast_size)
-		Sound.play("ship_boom", global_position)
+		Sound.play("vehicle_boom", global_position)
 	elif not matte and is_inside_tree():
 		ExplosionFx.bolt(get_parent(), global_position)
 	handle_hit(target)

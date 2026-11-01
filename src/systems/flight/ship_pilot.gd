@@ -1280,6 +1280,7 @@ func _on_event(e: Dictionary) -> void:
 			if visual != null:
 				visual.visible = false
 			_crash_fx(e.at)
+			Sound.play("vehicle_boom", e.at)
 		"reached_space":
 			if space_time < 0.0:
 				space_time = flight_time
@@ -1840,7 +1841,7 @@ func _wreck_berth(i: int, boom: bool, sold: bool = false) -> void:
 	if boom and is_instance_valid(v):
 		var at := v.global_position + Vector3(0, 1.5, 0)
 		_crash_fx(at)
-		Sound.play("ship_boom", at)
+		Sound.play("vehicle_boom", at)
 		WorldState.log_event("A parked ship in the pit was shot to pieces.")
 	if is_instance_valid(v):
 		v.visible = false
