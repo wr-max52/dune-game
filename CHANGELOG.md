@@ -2,6 +2,27 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The beast's rock shell, glowing eyes, and no more spinning (2026-11-01)
+
+- **Its shell is desert rock now.** Old Murk's plates, body, legs and jaws are
+  weathered stone, not shiny plastic: sandstone strata across each segment,
+  cracks and pits, lumps in the surface, a darker belly, and sand settled on
+  its back and in the cracks. The stone sticks to the body as it walks.
+- **Its eyes glow.** Each eye is a glowing orb with a white-hot core and a dark
+  slit pupil. They throw a little light on the jaws and sand in front of them,
+  pulse slowly, flare brighter when it chases you, and go out when it dies.
+- **It no longer spins on the spot.** Its heading used to take a fresh random
+  kick every frame, so the head twitched and its path looped back on itself in
+  a space smaller than its 50 m body, which then coiled through itself. Now it
+  crawls in long curves, never tighter than a 14 m radius (6 m in a chase).
+  Bunched-up segments keep their facing instead of snapping round with the head.
+- **If it does end up milling about, it walks out.** It checks every second: if
+  over the last 20 s it got less than a third of the way it walked from where
+  it started, it heads away from where it has been for 15 to 25 s, then
+  wanders again.
+- Numbers are in content/core/hazards/beast.json: `turn_radius_m`,
+  `min_turn_radius_m`, `chase_turn_radius_m`, `stuck_window_s`,
+  `stuck_net_frac`, `unstick_s`, and the `look.stone` and `look.eyes` blocks.
 ## Barracks and outposts stop you like the gate (2026-10-31, issue #308)
 
 - **Walk into the barracks yard or up to a Remnant outpost below 40 standing**

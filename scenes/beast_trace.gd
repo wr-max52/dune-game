@@ -99,6 +99,37 @@ func _run() -> void:
 	out("TAIL_ON_GROUND", absf(s_last.node.global_position.distance_to(tg) - float(s_last.r)) < float(s_last.r) * 0.35)
 	var gp: Vector3 = beast._ground_at(beast.global_position)
 	out("ON_GROUND", absf(beast.global_position.distance_to(gp) - beast.radius) < beast.radius * 0.25)
+	# ---------------------------------------------------------------- it doesn't go round in circles
+	# Its turns are curves, never on the spot; forced into a tight loop anyway, it
+	# notices it is milling about and walks out. Driven straight, a step at a time.
+	beast.set_physics_process(false)
+	var dt := 1.0 / 60.0
+	var h0: Vector3 = beast.heading
+	beast._wander(dt)
+	out("TURNS_SMOOTHLY", rad_to_deg(h0.angle_to(beast.heading)) < 1.0)
+	var kept: float = beast.cfg.get("min_turn_radius_m", 14.0)
+	beast.cfg["min_turn_radius_m"] = 2.0
+	beast._curve_want = 0.5
+	beast._curve = 0.5
+	beast._curve_left = 999.0
+	beast._unstick_left = 0.0
+	beast._track.clear()
+	var u0: int = beast.unsticks
+	for i in 60 * 40:
+		beast._wander(dt)
+		if beast.unsticks > u0:
+			break
+	out("UNSTUCK", beast.unsticks > u0)
+	var ua: Vector3 = beast.global_position
+	var ut: float = beast.travelled
+	for i in 60 * 15:
+		beast._wander(dt)
+	out("WALKED_OUT", beast.global_position.distance_to(ua) > (beast.travelled - ut) * 0.6)
+	beast.cfg["min_turn_radius_m"] = kept
+	beast._curve_left = 0.0
+	beast._curve = 0.0
+	beast._pose()
+	beast.set_physics_process(true)
 	# ---------------------------------------------------------------- it farts
 	var f0: int = beast.farts
 	beast._fart_left = 0.0
