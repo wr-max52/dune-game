@@ -294,6 +294,11 @@ func test_his_blade_falls_where_he_does_and_you_activate_it() -> void:
 	assert_eq(gear.toggle_item(item), "attached", "activated in the inventory")
 	assert_gt(gear.blade_color().r, 0.9, "now it is red")
 	assert_true(WorldState.weapon_allowed("energy_blade"), "and it can be drawn")
+	var saved := WorldState.inventory.to_save()
+	WorldState.inventory = Inventory.new()
+	assert_eq(gear.blade_color().a, 0.0)
+	WorldState.inventory.from_save(saved)
+	assert_gt(gear.blade_color().r, 0.9, "still red after a reload")
 	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "taken stays taken")
 	gear.free()
 
