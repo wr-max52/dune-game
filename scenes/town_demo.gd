@@ -125,7 +125,7 @@ func _ready() -> void:
 	# Issue #113: the first town of a run opened from a save is the save's planet.
 	if resume_saved and not lookdev_mode and DisplayServer.get_name() != "headless" \
 			and GameFlow.arrival.is_empty() and GameFlow.planet_id == "":
-		GameFlow.resume_from_save("user://save.json")
+		GameFlow.resume_from_save(SaveSlots.current_path())
 	# Issue #45: the planet decides the town, the world, the ground and the look.
 	planet = GameFlow.planet()
 	PlanetSphere.current = null       # issue #77: only a ball planet sets it again (_build_desert)
@@ -1223,12 +1223,13 @@ func _attach_body(with_range: bool = true) -> void:
 	player_kit.weapons.in_range_zone = training_range.contains
 
 
-## `scripted` = CI providers (no network); `save_path` "" = do not persist.
-func _build_bar(scripted = null, save_path: String = "user://save.json") -> void:
+## `scripted` = CI providers (no network); `save_path` "" = do not persist, null =
+## the save being played (SaveSlots: story or free roam).
+func _build_bar(scripted = null, save_path = null) -> void:
 	bar = ConversationHost.new()
 	bar.name = "Bar"
 	bar.autosave = save_path != ""
-	if save_path != "":
+	if save_path != null and save_path != "":
 		bar.save_path = save_path
 	add_child(bar)
 	bar.setup(self, scripted)

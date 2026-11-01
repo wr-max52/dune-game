@@ -474,6 +474,7 @@ func test_ships_locked_until_oda_says() -> void:
 
 
 func test_new_story_game_starts_over() -> void:
+	WorldState.new_game(WorldState.STORY)
 	Story.skip_to("free")
 	WorldState.credits = 9000
 	WorldState.inventory.add("jetpack")
@@ -491,7 +492,7 @@ func test_new_story_game_starts_over() -> void:
 	assert_eq(int(WorldState.standing.locals), 0, "a story starts neutral")
 	assert_false(Story.ships_unlocked())
 	assert_false(Story.remnant_hostile())
-	assert_eq(WorldState.names, names, "names are kept")
+	assert_eq(WorldState.names, names, "the story save's names are kept")
 	assert_false(ShipSalesman.greeted, "T-89 says hello again")
 
 

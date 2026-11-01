@@ -172,6 +172,9 @@ static func event(name: String) -> bool:
 		WorldState.set_flag("remnant_fleet_beaten")
 		WorldState.log_event("The Remnant fleet in orbit was broken. The garrison is pulling out of town.")
 	catch_up()
+	var next_line := str(Objective.chapter_objective().get("text", ""))
+	if next_line != "":
+		QuestNews.push("objective", next_line)      # the banner: what the story wants now
 	return true
 
 

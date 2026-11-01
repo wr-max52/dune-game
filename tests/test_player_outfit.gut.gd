@@ -13,7 +13,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
-	PlayerOutfit.save_path = PlayerOutfit.PATH
+	PlayerOutfit.save_path = ""
 
 
 func _meshes(body: Node3D) -> Array:

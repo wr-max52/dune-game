@@ -659,6 +659,7 @@ func hand_over(uid: int) -> int:
 	WorldState.change_standing("imperial_remnant", int(cfg.get("droid_standing", 5)), "Someone sold the Remnant general an assassin droid.")
 	WorldState.jobs_taken.erase(job_id())       # open again
 	WorldState.bump("general_droids")
+	QuestNews.push("droid_delivered", "+%d cr" % pay)
 	Story.event("general_droid_sold")
 	_say(_line("paid") % pay)
 	maybe_tip()

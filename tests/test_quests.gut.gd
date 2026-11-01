@@ -14,11 +14,13 @@ func after_each() -> void:
 func test_an_event_unlocks_a_quest_with_news_and_no_waypoint() -> void:
 	Story.event("heard_of_rifle")
 	assert_eq(Quests.state("barracks_rifle"), "open")
-	assert_eq(Quests.take_news(), ["barracks_rifle"], "the toast's news")
-	assert_eq(Quests.take_news(), [], "announced once")
+	var news := QuestNews.take()
+	assert_eq(news.key, "quest_new", "the banner's news")
+	assert_eq(news.sub, "Steal a rifle")
+	assert_eq(QuestNews.take(), {}, "announced once")
 	assert_true(Quests.waypoint().is_empty(), "no automatic waypoint")
 	Story.event("heard_of_rifle")
-	assert_eq(Quests.take_news(), [], "not offered twice")
+	assert_eq(QuestNews.take(), {}, "not offered twice")
 
 
 func test_the_waypoint_toggle_leads_the_pointer_one_at_a_time() -> void:
@@ -45,7 +47,7 @@ func test_done_clears_the_waypoint_and_survives_save_and_load() -> void:
 	WorldState.from_save(d)
 	assert_eq(Quests.state("tower_blade"), "done")
 	assert_eq(Quests.state("barracks_rifle"), "open")
-	assert_eq(Quests.take_news(), [], "a load is not news")
+	assert_eq(QuestNews.take(), {}, "a load is not news")
 
 
 func test_the_log_lists_quests_with_a_toggle() -> void:
