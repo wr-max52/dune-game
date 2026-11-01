@@ -271,7 +271,7 @@ func test_the_story_plays_landing_to_free_play_with_ai_off() -> void:
 	var beat := _talk(svc, ODA, "cantina_owner")
 	assert_eq(str(beat.get("job", "")), "j_smuggle_run", "the run comes with its job card")
 	var remind := str(Story.beat("cantina_owner").get("say", ""))
-	assert_true(remind.contains("cargo droid"), "the jetpack hint, to the player: " + remind)
+	assert_true(remind.contains("tower"), "the jetpack hint, to the player: " + remind)
 	assert_false(remind.contains("the player"), "not written to a model")
 	_smuggle_run(content)
 	assert_eq(Story.chapter(), "droid_merchant")

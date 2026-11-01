@@ -76,7 +76,7 @@ general does not cost you with Oda or the locals, and the other way round.
 | 2 | `t89` | T-89 | Pushes the tutorial, quotes the 500 credit repair (1 credit with the comrade discount), sends you to Oda. Until you own a ship you get around by speeder. | `met_oda` |
 | 3 | `range` | Oda | As today. | `range_visited` |
 | 4 | `remote` | Oda | As today. | `range_visited` |
-| 5 | `smuggle_1` | Oda | The fence's drop, as today. Oda tells you about the jetpack hidden in the pit cargo droid instead of lending hers. | `smuggle_sold` |
+| 5 | `smuggle_1` | Oda | The fence's drop, as today. Oda tells you about the jetpack hidden on top of the cantina tower (by the energy blade) instead of lending hers. | `smuggle_sold` |
 | 6 | `droid_merchant` | Oda | *A friend of mine in need of three cargo droids. You could buy them, or fix some up in the desert. Get that done and I'll tell you about an incredible weapon.* Then she tells you about the energy blade on the cantina tower. | Three droids delivered |
 | 7 | `bounty` | Oda | The general (standing <= -15) or the outpost officer. Paid by the fence. Unlocks quantonium armour. | `bounty_paid` |
 | 8 | `fleet` | Oda | Take **your own** ship (rebuilt or bought) up to the Remnant fleet. No free keys in story mode. | `fleet_beaten` |
@@ -100,8 +100,9 @@ has a toggle in the log.
 | The blade on the cantina tower | Oda, after `droid_merchant` | Energy blade |
 | The crashed cruiser | The general, in good standing | Red saber (the only prize there) |
 
-The jetpack is not an optional quest. Oda points you at the cargo droid
-during `smuggle_1`. The droid can be opened but still can't be hurt.
+The jetpack is not an optional quest. Oda points you at the top of the
+cantina tower during `smuggle_1`; it lies on the lookout floor beside the
+energy blade. In free play it is still inside the pit cargo droid.
 
 ## Shops and upgrades (#186)
 

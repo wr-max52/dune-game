@@ -879,8 +879,11 @@ const TIERS := ["stranger", "regular", "trusted", "confidant"]
 
 
 ## requires: { flags: [..], not_flags: [..], tier: "regular", story: "<chapter reached>",
-##   standing: { faction: [min, max] }, counters: { name: min }, time: [..] }
+##   standing: { faction: [min, max] }, counters: { name: min }, time: [..],
+##   mode: "story" or "freeplay" (only in that kind of save) }
 static func _conditions_hold(req: Dictionary, tier: String) -> bool:
+	if req.has("mode") and str(req.mode) != mode:
+		return false
 	if req.has("story") and not Story.reached(str(req.story)):
 		return false
 	for f in req.get("flags", []):

@@ -159,9 +159,9 @@ func test_a_later_flight_pays_as_before() -> void:
 	assert_false(Story.remnant_hostile())
 
 
-func test_oda_tells_you_about_the_jetpack_in_the_cargo_droid() -> void:
+func test_oda_tells_you_about_the_jetpack_on_the_tower() -> void:
 	Story.skip_to("smuggle_1")
-	assert_true(Story.brief("cantina_owner").contains("cargo droid"), "issue #210: her briefing points at the droid")
+	assert_true(Story.brief("cantina_owner").contains("tower"), "her briefing points at the cantina tower")
 	assert_eq(Story.on_owner_mood("amused"), "", "she no longer lends hers")
 	assert_false(WorldState.inventory.has("jetpack"))
 
