@@ -173,3 +173,7 @@ flight_next_target={
 3d_physics/layer_2="cover"
 3d_physics/layer_3="player"
 3d_physics/layer_4="enemies"
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
