@@ -33,8 +33,11 @@ extends Node
 ##     ship's own stats, guns and Shift ability fly from then on. The one you left
 ##     stays where you landed it.
 ##   - issue #193: Z within reach of the Remnant cruiser in orbit (any altitude, a
-##     fight running or not) flies her round its hull, in through its bay's mouth and
-##     down onto its empty pad (dock()); Space lifts off again, out through the bay.
+##     fight running or not) flies her round its hull, in through its bay's shield,
+##     turns her round and sets her down on its empty pad (dock()), in one smooth
+##     curve from where she was; Space lifts off again, out through the bay. The Z
+##     prompt and toast name where she will land (the cruiser's bay before your own,
+##     which goes by its town: "Quartzspring bay").
 ##     While Oda has you on the cruiser, the climb out meets its escort instead of
 ##     the pad's fight. Its hull is solid in a fight too, and flying in through the
 ##     bay's mouth or landing on it (C) breaks the fight off.
@@ -122,7 +125,16 @@ var bay_landing := false          ## issue #75: Z near the bay: she is flying he
 var bay_landings := 0             ## times that brought her down (traces, tests)
 var docking := false              ## issue #193: Z by the cruiser: she is flying herself into its bay
 var dockings := 0                 ## times that brought her down there (traces, tests)
-var _dock_path: Array = []        ## the world points still to fly through, the last over the pad
+var _dock_curve: Curve3D          ## the docking flight, one smooth curve from her to over the pad
+var _dock_s := 0.0                ## metres along it so far
+var _dock_v := 0.0                ## her speed along it
+var _dock_bay := 0.0              ## its length from off the bay's mouth to the end (the gentle part)
+var _dock_spin := -1.0            ## over the pad: seconds into turning round (-1: still flying in)
+var _dock_yaw0 := 0.0             ## her heading when the turn round began
+var _dock_drop := 0.0             ## how far the turn round lowers her (to just over the deck)
+var _dock_y0 := 0.0
+var _dock_to := ""                ## where Z is taking her ("<name> bay"), for the HUD
+var _dock_head := 0.0             ## the curve's heading last frame (its turn rate banks her)
 var steals := 0                   ## issue #76: outpost ships taken (traces, tests)
 var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
 var opening_t := 0.0              ## seconds into it: the cinematic view has the first few to itself
@@ -620,7 +632,7 @@ func bay_land() -> bool:
 		return false
 	bay_landing = true
 	_throttle = 0.0
-	hud.toast(GameFlow.label("bay_landing"), 3.0)
+	hud.toast(GameFlow.label("bay_landing") % bay_place(), 3.0)
 	return true
 
 
@@ -677,47 +689,138 @@ func dock() -> bool:
 	if docking or not near_cruiser():
 		return false
 	var c = cruiser()
+	var f = atmo.flight
+	var pts: Array = c.dock_path(atmo.position())
 	bay_landing = false
 	docking = true
-	_dock_path = c.dock_path(atmo.position())
+	_dock_curve = dock_curve(atmo.position(), f.forward(), pts)
+	_dock_s = 0.0
+	_dock_v = maxf(float(f.speed), 20.0)
+	_dock_spin = -1.0
+	_dock_head = f.basis.get_euler().y
+	var mouth: Vector3 = pts[maxi(pts.size() - 3, 0)]
+	_dock_bay = _dock_curve.get_baked_length() - _dock_curve.get_closest_offset(mouth)
 	_throttle = 0.0
-	hud.toast(c.line("docking"), 3.0)
+	_dock_to = dock_place()
+	hud.toast(c.line("docking") % _dock_to, 3.0)
 	return true
 
 
-## One frame of the docking autopilot: on to the next point of the path (fast out
-## in space, slow from the bay's mouth in), nose along the way and level with the
-## cruiser, then over the pad turned to its heading, and the normal landing.
+## The docking flight as one curve: from `from`, leaving along `heading` (so taking
+## over does not snap her round), through each point of `pts`, the last three (off
+## the bay's mouth, the apron, over the pad) on one straight line in through the
+## shield. Each point's handles run along the way through it, a third of the
+## shorter leg long, so the curve stays close to the path round the hull.
+static func dock_curve(from: Vector3, heading: Vector3, pts: Array) -> Curve3D:
+	var all: Array = [from]
+	for p in pts:
+		if (p as Vector3).distance_to(all[all.size() - 1]) > 1.0:
+			all.append(p)
+	var curve := Curve3D.new()
+	curve.bake_interval = 1.0
+	var n := all.size()
+	var into: Vector3 = ((all[n - 1] as Vector3) - (all[maxi(n - 3, 0)] as Vector3)).normalized()
+	for i in n:
+		var p: Vector3 = all[i]
+		var prev: Vector3 = all[maxi(i - 1, 0)]
+		var next: Vector3 = all[mini(i + 1, n - 1)]
+		var dir: Vector3 = (next - prev).normalized()
+		if i == 0:
+			dir = heading.normalized()
+		elif i >= n - 3:
+			dir = into
+		var reach := 300.0
+		if i > 0:
+			reach = minf(reach, p.distance_to(prev) * 0.35)
+		if i < n - 1:
+			reach = minf(reach, p.distance_to(next) * 0.35)
+		curve.add_point(p, -dir * reach, dir * reach)
+	return curve
+
+
+## Where Z takes her from here: the cruiser's bay by its name when it is in reach
+## (Z docks first), else your own bay on this planet by its town's ("Quartzspring
+## bay"); "" when neither.
+func dock_place() -> String:
+	if near_cruiser():
+		var c = cruiser()
+		return GameFlow.label("bay_place") % (c.vessel_name if c.vessel_name != "" else c.label())
+	if near_bay():
+		return bay_place()
+	return ""
+
+
+## Your bay on this planet, by its town's name (else the planet's).
+func bay_place() -> String:
+	var town := NameHooks.town(world)
+	var place := town if town != "" else planet_name
+	return GameFlow.label("bay_place") % place if place != "" else GameFlow.label("bay_place_none")
+
+
+## One frame of the docking autopilot: along the curve, quick out in space and
+## braking gently from off the bay's mouth, nose along the way and banked into
+## the turns, through the shield to a stop over the pad; then she turns round on
+## the spot to the pad's heading (nose out to space) as she sinks to just over
+## the deck, and the normal landing sets her down.
 func _dock_step(dt: float) -> void:
 	var c = cruiser()
-	if c == null or _dock_path.is_empty():
+	if c == null or _dock_curve == null:
 		docking = false
 		return
 	var f = atmo.flight
 	var dc: Dictionary = c.dock_cfg()
-	var goal: Vector3 = _dock_path[0]
-	var to: Vector3 = goal - f.position
-	var d := to.length()
-	var last := _dock_path.size() == 1
-	var slow := _dock_path.size() <= 2
-	var top := float(dc.get("slow_speed", 26.0)) if slow else float(dc.get("speed", 140.0))
-	var v := clampf(d * (0.8 if slow else 0.6), 3.0, top)
-	if d < 0.5 or v * dt >= d:
-		f.position = goal
-		_dock_path.pop_front()
-		if last:
-			f.speed = 0.0
-			f.basis = Basis(Vector3.UP, c.dock_yaw())
-			docking = false
-			if atmo.land():
-				dockings += 1
-				hud.toast(c.line("docked"), 3.0)
+	if _dock_spin >= 0.0:
+		_dock_turn(dt, c, dc)
 		return
-	f.position += to / d * v * dt
-	var flat := Vector3(to.x, 0.0, to.z)
-	var yaw: float = atan2(-flat.x, -flat.z) if flat.length() > 4.0 and not last else float(c.dock_yaw())
-	f.basis = f.basis.slerp(Basis(Vector3.UP, yaw), minf(1.0, dt * 2.0)).orthonormalized()
-	f.speed = v
+	var length := _dock_curve.get_baked_length()
+	var left := length - _dock_s
+	# The fastest she can go and still stop over the pad: gently inside the bay's
+	# stretch, hard out in space, never past the cruise speed.
+	var b_in := float(dc.get("brake_in", 22.0))
+	var cap := sqrt(2.0 * b_in * minf(left, _dock_bay))
+	if left > _dock_bay:
+		cap = sqrt(cap * cap + 2.0 * float(dc.get("brake", 160.0)) * (left - _dock_bay))
+	cap = minf(cap, float(dc.get("speed", 500.0)))
+	_dock_v = maxf(minf(move_toward(_dock_v, cap, float(dc.get("accel", 220.0)) * dt), cap), 2.0)
+	_dock_s = minf(_dock_s + _dock_v * dt, length)
+	var at := _dock_curve.sample_baked(_dock_s, true)
+	var ahead := _dock_curve.sample_baked(minf(_dock_s + maxf(6.0, _dock_v * 0.3), length), true)
+	f.position = at
+	f.speed = _dock_v
+	var to := ahead - at
+	if to.length() > 0.5 and Vector2(to.x, to.z).length() > 0.05 * to.length():
+		var look := Basis.looking_at(to, Vector3.UP)
+		var head: float = look.get_euler().y
+		var turn := wrapf(head - _dock_head, -PI, PI) / maxf(dt, 0.0001)
+		_dock_head = head
+		var bank := clampf(turn * 0.35, -0.7, 0.7)
+		f.basis = f.basis.slerp(look * Basis(Vector3.BACK, bank), minf(1.0, dt * 5.0)).orthonormalized()
+	if left <= 0.01:
+		_dock_spin = 0.0
+		_dock_yaw0 = f.basis.get_euler().y
+		_dock_y0 = f.position.y
+		_dock_drop = maxf(atmo.agl() - float(dc.get("settle", 3.0)), 0.0)
+		f.speed = 0.0
+
+
+## Over the pad: turn round to its heading, easing in and out, and sink to just
+## over the deck; then the normal landing.
+func _dock_turn(dt: float, c, dc: Dictionary) -> void:
+	var f = atmo.flight
+	var secs := maxf(float(dc.get("spin_secs", 1.3)), 0.01)
+	_dock_spin += dt
+	var k := smoothstep(0.0, 1.0, minf(_dock_spin / secs, 1.0))
+	var yaw := _dock_yaw0 + wrapf(float(c.dock_yaw()) - _dock_yaw0, -PI, PI) * k
+	f.basis = Basis(Vector3.UP, yaw)
+	f.position.y = _dock_y0 - _dock_drop * k
+	f.speed = 0.0
+	if k < 1.0:
+		return
+	docking = false
+	_dock_curve = null
+	if atmo.land():
+		dockings += 1
+		hud.toast(c.line("docked"), 3.0)
 
 
 ## A bot's command for this frame and on: { pitch, yaw, roll, throttle, boost }.
@@ -1442,10 +1545,13 @@ func _update_hud(agl_now: float) -> void:
 			tip = GameFlow.label("seated")
 		AtmoFlight.State.FLYING:
 			tip = GameFlow.label("can_land") if atmo.can_land(agl_now) else ""
+			# Z says where it takes her: the cruiser's bay before your own.
 			if bay_landing:
-				tip = GameFlow.label("bay_landing")
-			elif near_bay():
-				tip = (tip + "    " if tip != "" else "") + GameFlow.label("bay_land")
+				tip = GameFlow.label("bay_heading") % bay_place()
+			elif docking:
+				tip = GameFlow.label("bay_heading") % _dock_to
+			elif near_cruiser() or near_bay():
+				tip = (tip + "    " if tip != "" else "") + GameFlow.label("bay_land") % dock_place()
 		AtmoFlight.State.LANDING:
 			tip = GameFlow.label("landing")
 	hud.set_prompt(tip)

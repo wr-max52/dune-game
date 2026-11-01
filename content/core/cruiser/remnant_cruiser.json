@@ -16,10 +16,13 @@
     "approach_x": 230.0,
     "over_y": 150.0,
     "under_y": -90.0,
-    "speed": 140.0,
-    "slow_speed": 26.0,
-    "slow_within": 240.0,
-    "note": "Z within radius metres of the cruiser (any altitude, a fight running or not) flies you round the hull, in through the bay's mouth at hold_y and sets you down on the dock pad. Z again gives you the stick back. A fight running is not broken off: while you dock, are down in the bay or walk the decks it goes on without you (nobody targets you), and you are back in it when you fly out. The escort's fight ends when the general dies (or every wave is shot down, or you are)."
+    "speed": 500.0,
+    "accel": 220.0,
+    "brake": 160.0,
+    "brake_in": 30.0,
+    "spin_secs": 1.3,
+    "settle": 3.0,
+    "note": "Z within radius metres of the cruiser (any altitude, a fight running or not) flies you round the hull, in through the bay's shield at hold_y, turns you round over the dock pad and sets you down, nose out to space. The flight is one smooth curve from where you are, leaving along your heading: up to speed (m/s, accel m/s/s), braking at brake m/s/s out in space and brake_in from approach_x off the mouth in, so she slides through the shield and stops over the pad; then spin_secs to turn round as she sinks to settle metres over the deck, and the normal landing. Z again gives you the stick back. A fight running is not broken off: while you dock, are down in the bay or walk the decks it goes on without you (nobody targets you), and you are back in it when you fly out. The escort's fight ends when the general dies (or every wave is shot down, or you are)."
   },
   "approach": {
     "cone_deg": 40.0,
@@ -104,7 +107,7 @@
   },
   "lines": {
     "dock_hint": "%s  ·  %.1f km  ·  Z to land in its bay",
-    "docking": "Lining up with the cruiser's bay. Z to take back control.",
+    "docking": "Bringing her into %s. Z to take back control.",
     "docked": "Down in the cruiser's bay. The fight outside goes on without you.",
     "escort_gone": "With the general dead, the Remnant's pilots turn and run.",
     "general_dead": "%s is dead. The cruiser is yours.",
