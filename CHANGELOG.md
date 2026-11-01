@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The dark master's red blade (2026-11-01)
+
+- **He waits where the corridor opens into the cruiser's bay.** Walking back
+  from the bridge to your ship you pass him, and his offer opens.
+- **His blade falls where he does.** Kill him and his red energy sword lies on
+  the floor, glowing like the one on the wreck's cargo droid. Walk up and press
+  E to pick it up.
+- **A red saber no longer takes over your blue sword.** Picking one up (his, or
+  the wreck's) just puts it in your backpack. Open the inventory (I) and press
+  Activate to fight with the red blade; Put away and your sword is blue again.
+  An activated red saber can be drawn in a story save even without the blue
+  one. A save that already had the wreck's saber starts with it put away.
+
 ## Sword fighting the dark master (2026-10-31)
 
 - **Parries throw sparks.** When your blade blocks one of his blows, or his
@@ -126,7 +139,8 @@ Plain English, newest on top. One entry per milestone.
   end card no longer pops up on the bridge: the story says "go back to Oda", and
   her telling brings the end card.
 - **A dark master waits in the cruiser's bay.** After the general dies, a figure
-  in all-black armour with a red energy sword stands by your ship. Walk up and
+  in all-black armour with a red energy sword stands where the corridor opens
+  into the bay. Walk past him on the way back to your ship and
   he talks to you (an AI character): "There is a dark energy emerging. Join me,
   and realize more power than you could know." You can't walk away; answer him,
   and if the talk drags on the game asks you outright: Join or Refuse.

@@ -130,7 +130,8 @@ static func owns_ship() -> bool:
 ## the pistol, and any other once you own it (issue #210: the rifle on the barracks
 ## roof, the blade on the cantina tower) or something sets its "weapon_<id>" flag.
 static func weapon_allowed(id: String) -> bool:
-	return not story_mode() or id == STORY_WEAPON or inventory.has(id) or has_flag("weapon_" + id)
+	return not story_mode() or id == STORY_WEAPON or inventory.has(id) or has_flag("weapon_" + id) \
+		or (id == "energy_blade" and inventory.in_slot("blade") != "")     # an activated red saber is a blade too
 
 
 ## Issue #203: searched on the spot (the general's guards): the gate's rules, so

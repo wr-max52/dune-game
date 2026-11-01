@@ -120,7 +120,7 @@ func _item_row(inv: Inventory, id: String, prefix: String) -> void:
 	rows.append(row)
 	_wrap(_text(list, row, 16, RED if illegal else INK))
 	if toggle_item.is_valid() and str(it.get("slot", "")) != "":
-		_wear_button(id, inv.is_attached(id))
+		_wear_button(id, inv.is_attached(id), it.get("toggle_labels", ["Wear", "Take off"]))
 
 
 ## The job log, from Objective: a title over each entry's line, then the tally.
@@ -170,10 +170,11 @@ func _quest_log() -> void:
 		quest_buttons[id] = b
 
 
-## Issue #209: a worn item's toggle (the jetpack, the armour).
-func _wear_button(id: String, on: bool) -> void:
+## Issue #209: a worn item's toggle (the jetpack, the armour; the red saber's
+## Activate / Put away, its item's "toggle_labels": [on, off]).
+func _wear_button(id: String, on: bool, labels: Array = ["Wear", "Take off"]) -> void:
 	var b := Button.new()
-	b.text = "Take off" if on else "Wear"
+	b.text = str(labels[1]) if on else str(labels[0])
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.pressed.connect(func():

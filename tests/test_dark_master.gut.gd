@@ -71,6 +71,17 @@ func test_he_waits_on_the_cruiser_to_make_his_offer() -> void:
 	assert_false(DarkPact.hostile_at("cruiser"), "he talks first")
 
 
+func test_he_waits_just_out_of_the_corridor_door() -> void:
+	var cr: Dictionary = DarkPact.cfg().get("cruiser", {})
+	var at := DarkMasterPost._v(cr.get("at"))
+	var door := Vector3(0, CruiserHull.DECK_Y, CruiserHull.BAY_Z.y)
+	assert_eq(at.y, CruiserHull.DECK_Y, "on the bay deck")
+	assert_lt(at.z, CruiserHull.BAY_Z.y, "in the bay, not the corridor")
+	assert_lt(absf(at.x), CruiserHull.HALL_HALF, "in line with the door")
+	assert_lt(at.distance_to(door), float(DarkPact.cfg().get("meet_reach", 9.0)), "walking out of the door opens his offer")
+	assert_gt(DarkMasterPost._v(cr.get("face")).z, 0.0, "facing the door")
+
+
 func test_join_makes_the_remnant_friends_and_opens_the_oath() -> void:
 	_story_at_kill()
 	assert_true(Story.remnant_hostile(), "before: the Remnant shoot on sight")
@@ -260,6 +271,36 @@ func test_decide_join_and_refuse() -> void:
 	assert_eq(post.said, "Then I must destroy you.")
 	assert_true(bool(post.hostile.get(DarkMasterPost.CRUISER, false)))
 	post.free()
+
+
+func test_his_blade_falls_where_he_does_and_you_activate_it() -> void:
+	_story_at_kill()
+	var content = load("res://src/systems/dataload/core_content.gd").new()
+	content.load_from()
+	var gear := GearController.new()
+	gear.content = content
+	gear.items = ItemKit.new()
+	gear.labels = ItemKit._read_json(GearController.LABELS_PATH).get("labels", {})
+	var item := str(DarkPact.cfg().get("drops", ""))
+	var at := Vector3(3, -14, 20)
+	var node = gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item, "reach": 2.6 }, at)
+	assert_not_null(node, "it lies where he fell")
+	assert_eq((node as Node3D).position.x, at.x)
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "once")
+	assert_eq(gear._take(node), "picked_up")
+	assert_true(WorldState.inventory.has(item))
+	assert_false(WorldState.inventory.is_attached(item), "picked up, not switched on")
+	assert_eq(gear.blade_color().a, 0.0, "your blue blade is still yours")
+	assert_eq(gear.toggle_item(item), "attached", "activated in the inventory")
+	assert_gt(gear.blade_color().r, 0.9, "now it is red")
+	assert_true(WorldState.weapon_allowed("energy_blade"), "and it can be drawn")
+	var saved := WorldState.inventory.to_save()
+	WorldState.inventory = Inventory.new()
+	assert_eq(gear.blade_color().a, 0.0)
+	WorldState.inventory.from_save(saved)
+	assert_gt(gear.blade_color().r, 0.9, "still red after a reload")
+	assert_null(gear.drop_item({ "id": "dark_master_blade_cruiser", "item": item }, at), "taken stays taken")
+	gear.free()
 
 
 # ------------------------------------------------------------------ the sword fight

@@ -340,17 +340,20 @@ func blade_points(fractions: Array = [0.3, 0.65, 1.0]) -> Array:
 
 
 ## Issue #148: the energy sword's colour and hilt (the red saber's black hilt); the
-## sword already built is recoloured, one built later starts in it. A new hilt
-## frees the old one's meshes, so the view's mesh lists are gathered again.
+## sword already built is recoloured, one built later starts in it. Alpha 0 and ""
+## put the energy blade's own back. A new hilt frees the old one's meshes, so the
+## view's mesh lists are gathered again.
 func set_blade_color(color: Color, hilt: String = "") -> void:
 	blade_color = color
 	blade_hilt = hilt
 	var w := weapon_node("energy_blade")
-	if w != null and color.a > 0.0:
-		CharacterKit.recolor_energy_sword(w.get_meta("sword"), color)
-		kit.set_sword_hilt(w.get_meta("sword"), hilt)
-		_collect_meshes()
-		set_first_person(first_person)
+	if w == null:
+		return
+	var c := color if color.a > 0.0 else Color.html(str(kit.blade_cfg.get("blade_color", "#3aa0ff")))
+	CharacterKit.recolor_energy_sword(w.get_meta("sword"), c)
+	kit.set_sword_hilt(w.get_meta("sword"), hilt if hilt != "" else str(kit.blade_cfg.get("hilt", "")))
+	_collect_meshes()
+	set_first_person(first_person)
 
 
 ## 0 = retracted, 1 = full length.

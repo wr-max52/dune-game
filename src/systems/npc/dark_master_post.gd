@@ -2,7 +2,7 @@ class_name DarkMasterPost
 extends Node3D
 ## Issue #303: the dark master, a Remnant officer in all-black guard armour with a
 ## red energy sword. Where he stands is DarkPact's to say:
-##   - the cruiser's bay, by your docked ship, once the general is dead. In a
+##   - the cruiser's bay, at the corridor's door, once the general is dead. In a
 ##     story save he makes his offer there: the talk opens by itself when you walk
 ##     up, Esc can't leave it, and it ends on "join" or "refuse" (his brain says
 ##     which; after `turns` of his lines with neither, a Join / Refuse menu asks).
@@ -128,11 +128,10 @@ func post_of(where: String) -> Dictionary:
 		var c = demo.cruiser if demo != null and "cruiser" in demo else null
 		if c == null:
 			return {}
-		var pd := CruiserHull.dock_pad()
-		var local: Vector3 = (pd.get("at", Vector3.ZERO) as Vector3) + _v(cfg.get("cruiser", {}).get("offset", [-9, 0, 9]))
+		var cr: Dictionary = cfg.get("cruiser", {})
+		var local := _v(cr.get("at", [0, CruiserHull.DECK_Y, 20]))
 		var at: Vector3 = c.to_world(local)
-		var pad: Vector3 = c.to_world(pd.get("at", Vector3.ZERO) as Vector3)
-		return { "at": at, "face": pad - at }
+		return { "at": at, "face": c.to_world(local + _v(cr.get("face", [0, 0, 1]))) - at }
 	var town = demo.town if demo != null and "town" in demo else null
 	if town == null:
 		return {}
@@ -356,10 +355,11 @@ func _on_died(where: String) -> void:
 		host.end_talk()
 	meeting = false
 	DarkPact.on_killed(where)
+	# His blade falls where he does: a pickup, yours to activate in the inventory.
 	var item := str(cfg.get("drops", ""))
-	if item != "" and not WorldState.inventory.has(item):
-		WorldState.inventory.add(item)
-		_toast(_line("blade_taken"))
+	var b := body(where)
+	if item != "" and b != null and gear != null and gear.drop_item({ "id": "dark_master_blade_" + where, "item": item, "reach": 2.6 }, b.global_position) != null:
+		_toast(_line("blade_dropped"))
 
 
 # ------------------------------------------------------------------ the offer (story mode)
