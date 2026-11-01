@@ -11,7 +11,7 @@ This is a **vertical slice**, not the full game.
 - **Godot 4.7.2** (pinned in `scripts/pin.txt`; CI checks it).
 - GDScript (no C#).
 - Dev/target: macOS on Apple Silicon, 64 GB unified memory.
-- Windows export kept possible but not tested.
+- Windows and Mac share builds: `./scripts/package.sh` (see `docs/SHARING.md`).
 
 ## How to run (macOS, Apple Silicon)
 
