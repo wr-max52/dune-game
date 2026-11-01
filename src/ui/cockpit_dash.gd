@@ -12,7 +12,7 @@ extends Control
 ## that catches the light. The dials are analog, lit from inside by small LEDs
 ## round their rims in the player's HUD colour (RetroUI.accent), and the needles,
 ## bars and the compass's mark are that colour too; the attitude ball is a paper
-## card lit from behind. The instruments:
+## card lit from behind, its wings mark a fixed orange. The instruments:
 ##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
 ##   hull, shield and boost meters, and one lamp for the Shift ability.
 ##
@@ -33,6 +33,7 @@ const PAPER_SKY := Color(0.42, 0.6, 0.76, 1.0)    ## the attitude card's sky, pr
 const PAPER_EARTH := Color(0.66, 0.46, 0.28, 1.0)   ## and its ground
 const INK := Color(0.13, 0.11, 0.1, 0.85)          ## what the card's lines are printed in
 const TICK := Color(0.85, 0.82, 0.75)
+const WING := Color(1.0, 0.7, 0.2)                 ## the attitude ball's fixed wings mark (not the HUD colour)
 const LED_GLOW := 0.13             ## how strongly a dial's edge LEDs light its face, 0..1
 const LAMP_ON := Color(1.0, 0.62, 0.15, 1.0)
 const LAMP_OFF := Color(0.22, 0.16, 0.1, 1.0)
@@ -221,7 +222,7 @@ func _attitude(c: Vector2, r: float, pitch: float, roll: float) -> void:
 			var w := r * (0.18 if absf(k) < 15.0 else 0.3)
 			draw_line(mid2 - h.normal.orthogonal() * w, mid2 + h.normal.orthogonal() * w, Color(INK, 0.6), 1.0, true)
 	draw_arc(c, r, 0.0, TAU, 48, Color(0.05, 0.05, 0.05), 3.0)
-	var wing := RetroUI.accent
+	var wing := WING
 	draw_line(c + Vector2(-r * 0.5, 0), c + Vector2(-r * 0.15, 0), Color(0, 0, 0, 0.5), 5.0)
 	draw_line(c + Vector2(r * 0.15, 0), c + Vector2(r * 0.5, 0), Color(0, 0, 0, 0.5), 5.0)
 	draw_line(c + Vector2(-r * 0.5, 0), c + Vector2(-r * 0.15, 0), wing, 3.0)
