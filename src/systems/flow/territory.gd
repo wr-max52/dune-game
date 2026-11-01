@@ -267,6 +267,7 @@ static func deliver(id: String) -> int:
 	WorldState.bump("supplies_delivered")
 	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("supplied", 3)), "Supplies reached the locals.")
 	WorldState.log_event(line("supplied") % [Story.outpost_label(id), pay])
+	QuestNews.push("supplies_delivered", "+%d cr" % pay)
 	_sync_flags()
 	return pay
 

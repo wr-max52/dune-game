@@ -1,25 +1,27 @@
 extends SceneTree
 ## Issue #58: screenshots of T-89 and the spare pad for review. Opens the town,
 ## waits for T-89's hello, then looks at him, the empty pad, and the pad once a
-## ship is bought. Needs a display. Saves and restores the player's save file.
+## ship is bought. Needs a display. Saves and restores the save being played
+## (SaveSlots).
 ##
 ##   godot --path . -s res://tools/review/t89_shot.gd -- out=/abs/dir
 
-const SAVE := "user://save.json"
 const BACKUP := "user://save.t89_shot.bak"
 
 var demo
 var out := "user://"
 var f := 0
 var cam: Camera3D
+var save := ""
 
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("out="):
 			out = a.trim_prefix("out=").trim_suffix("/") + "/"
-	if FileAccess.file_exists(SAVE):
-		DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE), ProjectSettings.globalize_path(BACKUP))
+	save = SaveSlots.current_path()
+	if FileAccess.file_exists(save):
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(save), ProjectSettings.globalize_path(BACKUP))
 	Disclaimers.launch_shown = true
 	demo = (load("res://scenes/town_demo.tscn") as PackedScene).instantiate()
 	get_root().add_child(demo)
@@ -72,7 +74,7 @@ func _process(_d: float) -> bool:
 		_shoot("shop")
 	if f > 370:
 		if FileAccess.file_exists(BACKUP):
-			DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP), ProjectSettings.globalize_path(SAVE))
+			DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP), ProjectSettings.globalize_path(save))
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP))
 		quit()
 	return false

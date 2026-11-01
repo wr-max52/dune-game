@@ -103,6 +103,7 @@ func _build_tabs() -> void:
 	tabs.add_child(_map_tab())
 	tabs.add_child(_inventory_tab())
 	var game := _tab("Game")
+	_saves_page(game)
 	_story_page(game)
 	_world_page(game)
 	_new_game_page(game)
@@ -862,11 +863,42 @@ func _story_page(v: VBoxContainer) -> void:
 		go.text = "Skip ahead" if WorldState.story_mode() else "Skip to it")
 
 
+## The story save and the free roam save, side by side (SaveSlots): the one being
+## played, and Play on the other (from where it was left, or a new game when it
+## has none).
+func _saves_page(v: VBoxContainer) -> void:
+	_section(v, "Saves")
+	for m in [[WorldState.STORY, "Story"], [WorldState.FREEPLAY, "Free roam"]]:
+		var row := HBoxContainer.new()
+		var about := Label.new()
+		about.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var play := Button.new()
+		play.pressed.connect(func(): switch_save(m[0]))
+		row.add_child(about)
+		row.add_child(play)
+		_row(v, m[1], row)
+		_refreshers.append(func():
+			var here: bool = SaveSlots.playing() == m[0]
+			var s := SaveSlots.summary(m[0])
+			if here:
+				about.text = "Playing now: %s, %d credits" % [Story.chapter().replace("_", " "), WorldState.credits]
+			elif bool(s.exists):
+				about.text = "%s, %d credits" % [str(s.chapter).replace("_", " "), int(s.credits)]
+			else:
+				about.text = "None yet: Play starts one"
+			play.text = "Playing" if here else "Play"
+			play.disabled = here)
+	var note := Label.new()
+	note.text = "Each save keeps its own world, gear, ships, standing, names and outfit. This one is saved before the other opens; the town reloads."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+
+
 ## Issue #64: start again, as a story or as free roam.
 func _new_game_page(v: VBoxContainer) -> void:
 	_section(v, "New game")
 	var note := Label.new()
-	note.text = "Starts again as on a first play: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you. Names are kept. The town reloads.\nStory: the story from the start, every faction neutral, the pistol only, locked to the smuggler.\nFree roam: drops and bounties on repeat, any character."
+	note.text = "Starts that save again as on a first play: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you. Its names are kept. The other save is not touched. The town reloads.\nStory: the story from the start, every faction neutral, the pistol only, locked to the smuggler.\nFree roam: drops and bounties on repeat, any character."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var row := HBoxContainer.new()
@@ -898,22 +930,57 @@ func skip_chapter(id: String) -> bool:
 ## Issue #64: back to the start, as on a first play. Everything the player has or
 ## has done goes (WorldState: credits, gear, droids, the bought ship, flags,
 ## standing, the story), every character's opinion of them goes back to a
-## stranger's, T-89 says hello again; the names stay. Issue #200: in `mode`
-## (WorldState.STORY or FREEPLAY). Saved, then the town is built again from
-## scratch. `reload` false: just the state (tests).
+## stranger's, T-89 says hello again; that save's names stay. Issue #200: in
+## `mode` (WorldState.STORY or FREEPLAY), in that mode's own save (SaveSlots): a
+## new story game never touches the free roam save, nor the other way round. The
+## game being left is saved first, then the town is built again from scratch, as
+## on a launch (SaveSlots.fresh_launch). `reload` false: just the state (tests).
 func new_game(mode: String, reload := true) -> void:
-	var kept := WorldState.names
-	WorldState.new_game(mode)
-	WorldState.names = kept
-	ShipSalesman.greeted = false
-	if WorldState.story_mode():
-		# what free roam may have switched, which outlives the town reloading
-		GameFlow.dogfight_override = null
-		NpcBody.show_debug = false
+	var persist := _persists()
+	if persist and mode != SaveSlots.current():
+		_save_left()
+	var kept := WorldState.names if mode == WorldState.mode else (SaveSlots.names_in(mode) if persist else NameBook.new())
+	_leave()
+	SaveSlots.start(mode, kept, persist)
 	if demo != null and demo.bar != null:
 		for s in demo.bar.spots:
 			s.brain.rel = Relationship.new()
-		demo.bar._save_memory()
+	_reload(reload)
+
+
+## Play `mode`'s save instead of this one: this one is saved, then the other opens
+## from where it was left (a new game there when it has none). `reload` false:
+## just the state (tests).
+func switch_save(mode: String, reload := true) -> void:
+	var persist := _persists()
+	if persist and mode == SaveSlots.current():
+		return
+	_save_left()
+	_leave()
+	SaveSlots.enter(mode, persist)
+	_reload(reload)
+
+
+## This town saves to disk (not a test's or a trace's).
+func _persists() -> bool:
+	return demo != null and demo.bar != null and demo.bar.autosave
+
+
+## Save the game being left in its slot, unless it never started (a first launch's
+## menu is still up: there is nothing to keep).
+func _save_left() -> void:
+	if demo != null and demo.bar != null and not demo.bar.fresh:
+		_save()
+
+
+## The town being left must not save again on its way out: by then WorldState is
+## the next game's.
+func _leave() -> void:
+	if demo != null and demo.bar != null:
+		demo.bar.autosave = false
+
+
+func _reload(reload: bool) -> void:
 	if not reload or not is_inside_tree():
 		return
 	visible = false

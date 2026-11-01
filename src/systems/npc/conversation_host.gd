@@ -24,7 +24,6 @@ extends Node
 
 const TALK_RADIUS := 1.9
 const TWO_SHOT_FOV := 34.0
-const SAVE_PATH := "user://save.json"
 const GROUP := "conversation_host"      ## issue #303: the end card waits while any host is talking
 
 var demo                              ## town_demo.gd
@@ -33,7 +32,7 @@ var panel: DialoguePanel
 var overlay: LLMDebugOverlay
 var settings: LLMSettingsPanel
 var save := SaveSystem.new()
-var save_path := SAVE_PATH
+var save_path := ""                   ## "" = the save being played (SaveSlots), fixed at setup
 var autosave := true
 var fresh := false                ## issue #200: no save was found (a first launch): NewGameMenu asks the mode
 var spots: Array = []                 ## TalkSpot, the Cantina Owner first
@@ -55,7 +54,7 @@ var npc: CantinaOwnerNPC:
 var bar_front: Vector3:
 	get: return owner_spot.stand if owner_spot != null else Vector3.ZERO
 
-static var _loaded_once := false
+static var _loaded_once := false      ## this run's WorldState is the save's (SaveSlots sets it on a switch)
 
 var _prompt: Label
 var _status_dot: Label
@@ -70,6 +69,8 @@ const SaveSystem := preload("res://src/systems/save/save_system.gd")
 func setup(town_demo, scripted = null) -> void:
 	demo = town_demo
 	_scripted = scripted
+	if save_path == "":
+		save_path = SaveSlots.current_path()
 	add_to_group(GROUP)
 	# Issue #303: a checkpoint (the general's death, the dark master's answer) saves now.
 	WorldState.checkpoint_hooks.append(_on_checkpoint)

@@ -11,9 +11,8 @@ extends RefCounted
 ## before it was ever offered is just done, with no news.
 ##
 ## Nothing points at a quest until the player switches its waypoint on in the job
-## log (one at a time). A new quest goes in `news` for the HUD's toast.
-
-static var news: Array = []            ## quest ids unlocked and not yet announced (take_news)
+## log (one at a time). A quest offered, done or failed is news for the HUD's
+## banner (QuestNews).
 
 
 static func all() -> Array:
@@ -48,7 +47,7 @@ static func unlock(id: String) -> bool:
 	if q.is_empty() or WorldState.quests.has(id):
 		return false
 	WorldState.quests[id] = { "state": "open", "waypoint": false }
-	news.append(id)
+	QuestNews.push("quest_new", str(q.get("title", id)))
 	WorldState.log_event("New quest: %s." % str(q.get("title", id)))
 	return true
 
@@ -56,8 +55,9 @@ static func unlock(id: String) -> bool:
 static func complete(id: String) -> bool:
 	if cfg(id).is_empty() or state(id) in ["done", "failed"]:
 		return false
+	if state(id) == "open":            # done before it was offered: no news
+		QuestNews.push("quest_done", str(cfg(id).get("title", id)))
 	WorldState.quests[id] = { "state": "done", "waypoint": false }
-	news.erase(id)
 	return true
 
 
@@ -66,7 +66,7 @@ static func fail(id: String) -> bool:
 	if state(id) != "open":
 		return false
 	WorldState.quests[id] = { "state": "failed", "waypoint": false }
-	news.erase(id)
+	QuestNews.push("quest_failed", str(cfg(id).get("title", id)))
 	WorldState.log_event("Quest failed: %s." % str(cfg(id).get("title", id)))
 	return true
 
@@ -109,11 +109,4 @@ static func entries() -> Array:
 		out.append({ "id": id, "title": str(q.get("title", id)), "text": DarkPact.fill(str(q.get("text", ""))),
 			"done": state(id) == "done", "failed": state(id) == "failed", "waypoint": bool(WorldState.quests[id].get("waypoint", false)),
 			"can_point": can_point(id) })
-	return out
-
-
-## The quests unlocked since the last call (for the toast).
-static func take_news() -> Array:
-	var out := news.duplicate()
-	news.clear()
 	return out

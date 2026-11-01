@@ -52,7 +52,10 @@
     "droid_fix":    { "stream": "res://assets/audio/sfx/droid_fix.wav", "volume_db": -8.0, "pitch": [0.95, 1.05], "unit_size": 3.0, "max_distance": 25.0 },
     "droid_wake":   { "stream": "res://assets/audio/sfx/droid_wake.wav", "volume_db": -8.0, "unit_size": 3.0, "max_distance": 30.0 },
     "droid_shot":   { "stream": "res://assets/audio/sfx/droid_shot.wav", "volume_db": -8.0, "pitch": [0.92, 1.08], "unit_size": 6.0, "max_distance": 80.0 },
-    "slide_scuff":  { "stream": "res://assets/audio/sfx/slide_scuff.wav", "volume_db": -10.0, "pitch": [0.94, 1.06] }
+    "slide_scuff":  { "stream": "res://assets/audio/sfx/slide_scuff.wav", "volume_db": -10.0, "pitch": [0.94, 1.06] },
+    "quest_start":  { "stream": "res://assets/audio/sfx/quest_start.wav", "volume_db": -6.0 },
+    "quest_success": { "stream": "res://assets/audio/sfx/quest_success.wav", "volume_db": -6.0 },
+    "quest_fail":   { "stream": "res://assets/audio/sfx/quest_fail.wav", "volume_db": -7.0 }
   },
   "max_one_shots": 24,
   "club": {
