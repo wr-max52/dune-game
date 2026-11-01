@@ -190,6 +190,11 @@ func hostile_in_town() -> bool:
 	return riding and model.alive() and demo != null and TownNav.in_town(demo.get("town"), model.position)
 
 
+## Ridden and whole: an outpost's troopers fight it as they would you on foot.
+func targetable() -> bool:
+	return riding and model.alive()
+
+
 ## What the troopers' eyes and bolts hit while you ride.
 func hull_body() -> CollisionObject3D:
 	return hull

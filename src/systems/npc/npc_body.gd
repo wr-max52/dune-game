@@ -44,6 +44,9 @@ var target_crouched: Callable  ## -> bool
 ## Issue #55: a garrison trooper also watches the target's speeder or ship while
 ## it is a threat in town (the vehicle's hostile_in_town()). Townsfolk do not.
 var sees_vehicles := false
+## An outpost's trooper watches the speeder or ship the target is in wherever it
+## is (the vehicle's targetable()): out there it is just you, harder to hit.
+var vehicles_anywhere := false
 ## Issue #96: a desert pack walks open ground with no navmesh: straight at its
 ## goal, along the ground (the ball's up), instead of standing still.
 var free_walk := false
@@ -670,7 +673,9 @@ func hostile_vehicle() -> Node:
 	if not sees_vehicles or target == null or not is_instance_valid(target):
 		return null
 	var v = target.get("vehicle")
-	if v == null or not is_instance_valid(v) or not v.hostile_in_town():
+	if v == null or not is_instance_valid(v):
+		return null
+	if not v.hostile_in_town() and not (vehicles_anywhere and v.targetable()):
 		return null
 	return v
 

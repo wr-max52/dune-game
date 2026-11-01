@@ -69,6 +69,9 @@ var respawned := 0
 var handles_player := true
 var klaxon_at := Vector3.INF      ## INF = the town's klaxon marker
 var always_hostile := false       ## issue #193: the Remnant cruiser's crew shoot on sight, whatever your standing
+## An outpost's garrison fights the player in a speeder or ship as on foot (set
+## before setup). Out there the vehicle is no offence by itself: no "vehicle" alarm.
+var vehicles_anywhere := false
 var knockout_s := 1.6             ## black screen before you wake in the pit
 
 ## Numbers the traces read.
@@ -143,6 +146,7 @@ func _adopt(g: NpcBody) -> void:
 	b.post_facing = g.post_facing
 	brains[g] = b
 	g.sees_vehicles = true
+	g.vehicles_anywhere = vehicles_anywhere
 	g.died.connect(_on_guard_died.bind(g))
 	g.hit_by.connect(_on_guard_hit.bind(g))
 
@@ -338,7 +342,7 @@ func _run_brain(g: NpcBody, dt: float, ppos: Vector3) -> void:
 	var b: GuardBrain = brains[g]
 	var vel := Vector3.ZERO
 	if ppos != Vector3.INF:
-		var v := _hostile_vehicle()
+		var v := target_vehicle()
 		vel = v.threat_velocity() if v != null else player.velocity
 	g.brief(b, ppos, vel)
 	b.update(dt)
@@ -735,12 +739,12 @@ func forgive_player() -> void:
 
 
 ## Where the garrison's target is: the player on foot, or the speeder / ship they
-## are in while it is a threat in town (it carries the player's position). INF
-## for nobody to fight.
+## are in while it is a target (target_vehicle; it carries the player's position).
+## INF for nobody to fight.
 func _player_pos() -> Vector3:
 	if player == null or not is_instance_valid(player) or _ko_left > 0.0:
 		return Vector3.INF
-	if player.get("piloting") == true and _hostile_vehicle() == null:
+	if player.get("piloting") == true and target_vehicle() == null:
 		return Vector3.INF
 	return player.global_position
 
@@ -753,6 +757,17 @@ func _hostile_vehicle() -> Node:
 	if v == null or not is_instance_valid(v) or not v.hostile_in_town():
 		return null
 	return v
+
+
+## The speeder or ship the troopers see and shoot at: the one hostile in town, or
+## (an outpost's garrison) whatever the player is in. null when on foot or none.
+func target_vehicle() -> Node:
+	var v := _hostile_vehicle()
+	if v != null or not vehicles_anywhere or player == null or not is_instance_valid(player) \
+			or player.get("piloting") != true:
+		return v
+	v = player.get("vehicle")
+	return v if v != null and is_instance_valid(v) and v.targetable() else null
 
 
 ## The player, or a bolt from the speeder or ship they are in.

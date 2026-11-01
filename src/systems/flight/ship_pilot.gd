@@ -1464,6 +1464,12 @@ func hostile_in_town() -> bool:
 		and atmo.state != AtmoFlight.State.CRASHED and TownNav.in_town(demo.town, atmo.position())
 
 
+## Flown or sat in on the ground, and not wrecked: an outpost's troopers fight it
+## as they would you on foot (out there it is no offence by itself).
+func targetable() -> bool:
+	return piloting and not _fight_flying() and atmo.state != AtmoFlight.State.CRASHED
+
+
 ## What the troopers' eyes and bolts hit while you fly.
 func hull_body() -> CollisionObject3D:
 	return hull

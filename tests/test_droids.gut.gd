@@ -187,6 +187,29 @@ func test_fix_wreck_and_save_round_trip() -> void:
 class FakePlayer extends CharacterBody3D:
 	var piloting := false
 	var locked := false
+	var vehicle: Node
+
+
+## A speeder or ship the player sits in: its hull is the box around them.
+class FakeVehicle extends StaticBody3D:
+	func _init() -> void:
+		var c := CollisionShape3D.new()
+		var b := BoxShape3D.new()
+		b.size = Vector3(2.0, 1.2, 3.0)
+		c.shape = b
+		add_child(c)
+
+	func hostile_in_town() -> bool:
+		return false
+
+	func targetable() -> bool:
+		return true
+
+	func hull_body() -> CollisionObject3D:
+		return self
+
+	func threat_velocity() -> Vector3:
+		return Vector3.ZERO
 
 
 func _scene(demo = null) -> Array:
@@ -425,6 +448,38 @@ func test_outpost_cargo_droid_flees_and_becomes_a_wreck() -> void:
 	assert_gt(at.x, 0.0, "away from the player")
 	assert_true(ctl.wreck_nodes.has(int(w.uid)), "lying there to be fixed")
 	assert_gt(u.respawn_left, 0.0, "the outpost gets another")
+
+
+## An outpost's droid fights the player in a speeder or ship (its garrison's
+## target_vehicle): it shoots the hull. A town garrison's minds one only in town.
+func test_remnant_droid_shoots_the_vehicle_its_garrison_fights() -> void:
+	var s := _scene()
+	var ctl: DroidController = s[0]
+	var p: FakePlayer = s[1]
+	var g := Garrison.new()
+	autofree(g)
+	g.player = p
+	g.alarm = TownAlarm.new()
+	g.alarm.raise("attacked")
+	var spec := { "kind": "assassin", "variant": "remnant", "hp": 60, "garrison": g,
+		"patrol": [Vector3(0, 0, 0), Vector3(1, 0, 0)] }
+	var u = ctl._spawn_remnant(spec, 0)
+	var v := FakeVehicle.new()
+	p.add_child(v)
+	p.global_position = Vector3(8, 0, 0)
+	p.vehicle = v
+	p.piloting = true
+	assert_null(ctl._vehicle_hull(u), "out of town a town garrison leaves it alone")
+	for i in 30:
+		await wait_physics_frames(1)
+	assert_eq(ctl.shots_fired, 0, "so its droid holds fire")
+	g.vehicles_anywhere = true
+	assert_eq(ctl._vehicle_hull(u), v, "an outpost's droid has the hull to shoot")
+	for i in 90:
+		await wait_physics_frames(1)
+	assert_gt(ctl.shots_fired, 0, "and shoots back")
+	p.piloting = false
+	assert_null(ctl._vehicle_hull(u), "on foot it aims at you")
 
 
 ## The scene parts the droids look through for a fight: the Remnant (npcs), the
