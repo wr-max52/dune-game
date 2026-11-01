@@ -372,7 +372,7 @@ static func _resale_in(c: Dictionary, ship_id: String) -> int:
 static func settle_sale(ship_id: String, paid: int) -> void:
 	WorldState.credits += paid
 	if WorldState.hangar == ship_id:
-		WorldState.hangar = ""
+		Fleet.lose(Fleet.T89)              # issue #368: and where it was left, and the primary mark
 	if not ShipUpgrades.owned().has(ship_id):
 		WorldState.ship_fits.erase(ship_id)
 
@@ -501,11 +501,14 @@ func sell() -> int:
 	if id == "":
 		return -1
 	var pilot = demo.pilot if demo != null else null
-	if bought_ship != null and pilot != null:
-		var last: int = pilot.berths.size() - 1
-		if last <= 0 or pilot.berths[last].visual != bought_ship:
-			return -1
+	var i: int = pilot.berth_of(Fleet.T89) if pilot != null else -1
+	if i >= 0 and i == pilot.berths.size() - 1 and pilot.berths[i].visual == bought_ship:
 		if not pilot.remove_last_berth():
+			_say(_line("flying_it") % ship_label(id))
+			return -1
+	elif i >= 0:
+		# Issue #368: wherever else it stands (the pit as your primary, the sand).
+		if not pilot.sell_berth(i):
 			_say(_line("flying_it") % ship_label(id))
 			return -1
 	elif bought_ship != null:
@@ -638,7 +641,8 @@ func fit(ship_id: String, up: String) -> String:
 
 
 ## Put WorldState.hangar's ship on the spare pad (bought now, or loaded from a
-## save) and make it boardable.
+## save) and make it boardable. Issue #368: not when it is somewhere else already
+## (on the pit pad as your primary, or left elsewhere: ShipPilot.place_fleet).
 func park_owned() -> void:
 	if WorldState.hangar == "" or bought_ship != null or demo == null:
 		return
@@ -646,6 +650,14 @@ func park_owned() -> void:
 	if box.is_empty():
 		push_warning("ShipSalesman: no pad box " + str(cfg.get("pad", "")))
 		return
+	if demo.pilot != null and demo.pilot.berth_of(Fleet.T89, true) >= 0:
+		return
+	var s := Fleet.spot(Fleet.T89)
+	if not s.is_empty():
+		var c := (WorldGround._v3(box.min) + WorldGround._v3(box.max)) * 0.5
+		var at := Fleet.spot_xf(s).origin
+		if str(s.get("planet", "")) != GameFlow.current_planet_id() or Vector2(at.x - c.x, at.z - c.z).length() > 8.0:
+			return
 	if demo.decor != null:
 		bought_ship = demo.decor.park_ship(WorldState.hangar, box)
 	if bought_ship == null:
@@ -657,8 +669,7 @@ func park_owned() -> void:
 			(float(box.min[2]) + float(box.max[2])) * 0.5)
 		bought_ship.rotation.y = deg_to_rad(float(box.get("parked_yaw_deg", 0.0)))
 	if demo.pilot != null:
-		var i: int = demo.pilot.add_berth(bought_ship, WorldState.hangar, str(box.id))
-		demo.pilot.berths[i]["owned"] = true      # issue #206: yours to fly in a story save
+		demo.pilot.add_berth(bought_ship, WorldState.hangar, str(box.id), Fleet.T89)   # issue #206: yours to fly
 
 
 # ------------------------------------------------------------------ AI

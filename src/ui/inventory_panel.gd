@@ -18,6 +18,10 @@ extends HBoxContainer
 ##
 ## No game logic: the settings panel hands it GearController's item data and wear
 ## toggle; it only reads, and calls the pickers above.
+##
+## Issue #368: your ships (Fleet.rows), each with its upgrades and where it is; the
+## primary marked, with the Call button (greyed out while she is on her way), and a
+## Set primary button on each of the others.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
@@ -30,6 +34,12 @@ var name_of: Callable             ## id -> shown name (GearController._shown); o
 var toggle_item: Callable         ## issue #209: id -> put a worn item on or off (GearController.toggle_item); optional
 var wear_buttons: Dictionary = {}  ## item id -> its Wear / Take off button (tests)
 var on_waypoint: Callable         ## called after a waypoint button changes the pointer (the HUD refreshes); optional
+var set_primary: Callable         ## issue #368: Fleet key -> make it the primary (ShipPilot.set_primary); optional
+var call_ship: Callable           ## issue #368: -> "" (on her way) or a label key why not (ShipPilot.call_ship); optional
+var call_state: Callable          ## issue #368: -> { ok, text } for the Call button (ShipPilot.call_state); optional
+var on_called: Callable           ## issue #368: after a call went out (the settings panel closes); optional
+var primary_buttons: Dictionary = {}  ## issue #368: Fleet key -> its Set primary button (tests)
+var call_button: Button           ## issue #368: the primary's Call button (tests), or null
 var title: Label
 var credits_label: Label
 var backpack_label: Label
@@ -325,20 +335,61 @@ func _droid_rows() -> void:
 ## Issues #207, #208: your ships with what T-89 fitted, and the fence's upgrades
 ## on your guns.
 func _owned_rows() -> void:
-	var ships := ShipUpgrades.owned()
+	primary_buttons.clear()
+	call_button = null
+	var ships := Fleet.rows()
 	if not ships.is_empty():
 		_heading(list, Objective.line("log_ships"))
-		for sid in ships:
-			var fits: Array = ShipUpgrades.fitted(str(sid)).map(func(id): return ShipUpgrades.label(id).to_lower())
-			var detail := ", ".join(PackedStringArray(fits)) if not fits.is_empty() else Objective.line("ledger_stock")
-			owned_rows.append("%s: %s" % [ShipUpgrades.ship_label(str(sid)), detail])
-			_line(list, ShipUpgrades.ship_label(str(sid)), detail, INK)
+		for r in ships:
+			_ship_row(r)
 	var gear := GearUpgrades.owned_line()
 	if gear != "":
 		_heading(list, Objective.line("log_gear"))
 		for g in gear.split(", "):
 			owned_rows.append(g)
 			_line(list, g, "", INK)
+
+
+## Issue #368: one of your ships: its name (PRIMARY on the one that wakes with you),
+## its upgrades and the planet it was left on; Call on the primary, Set primary on
+## the others.
+func _ship_row(r: Dictionary) -> void:
+	var detail := str(r.fits) if str(r.fits) != "" else Objective.line("ledger_stock")
+	var planet := str(r.planet)
+	if planet != "" and planet != GameFlow.current_planet_id():
+		detail += "    " + PlanetGen.display_name(PlanetGen.build(planet))
+	if bool(r.wrecked):
+		detail += "    " + Objective.line("ledger_wrecked")
+	var shown := str(r.label) + ("   " + Objective.line("ledger_primary") if bool(r.primary) else "")
+	owned_rows.append("%s: %s" % [shown, detail])
+	var h := _line(list, shown, detail, AMBER if bool(r.primary) else INK)
+	if bool(r.primary):
+		if call_ship.is_valid():
+			var st: Dictionary = call_state.call() if call_state.is_valid() else { "ok": true, "text": "Call" }
+			call_button = _row_button(h, str(st.get("text", "Call")), func():
+				var why: String = call_ship.call()
+				if why == "" and on_called.is_valid():
+					on_called.call()
+				elif why != "":
+					owned_rows.append(GameFlow.label(why))
+				refresh())
+			call_button.disabled = not bool(st.get("ok", true))
+	elif set_primary.is_valid():
+		var key := str(r.key)
+		primary_buttons[key] = _row_button(h, Objective.line("ledger_set_primary"), func():
+			set_primary.call(key)
+			refresh())
+
+
+func _row_button(h: HBoxContainer, text: String, pressed: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.add_theme_font_size_override("font_size", 13)
+	b.pressed.connect(pressed)
+	h.add_child(b)
+	return b
 
 
 ## Credits change under the open page (the Game page's spin box, a sale).

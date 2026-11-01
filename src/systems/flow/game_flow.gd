@@ -41,6 +41,7 @@ static var dogfight_override: Variant = null
 ## the player flew in on from another planet ("" = none: the pad's own ship).
 static var planet_id := ""
 static var flown_ship := ""
+static var flown_key := ""                ## issue #368: which of your ships that is (Fleet key; "" = none of yours)
 ## Issue #113: the game opened from a save resumes where it was: the planet, then
 ## the spot (resume_pos, taken once by the town's spawn). Once per run.
 static var resumed := false
@@ -170,6 +171,7 @@ static func reset() -> void:
 	dogfight_override = null
 	planet_id = ""
 	flown_ship = ""
+	flown_key = ""
 
 
 # ------------------------------------------------------------------ resume (issue #113)

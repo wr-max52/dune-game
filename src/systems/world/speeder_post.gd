@@ -25,6 +25,10 @@ extends Node3D
 ##     price, or the one T-89 sold you, at T-89's buy-back price): his chat offers
 ##     it (offer_ship_buy), and only the player's click sells. A stolen one he
 ##     offers for the moment you talk to him (the spot's opener).
+##   - issue #368: turn down his price for a stolen ship and he offers to clean it
+##     up instead, for keep_rate times its list price: only your click pays, and
+##     it is yours (Fleet: no longer hunted, T-89 upgrades it, it stays where you
+##     leave it). He buys your kept ships back at T-89's buy-back price.
 
 const LANDMARK := "skrugs_post"         ## its location differs per layout (issue #295)
 const RAMP := "skrugs_ramp"
@@ -51,6 +55,7 @@ var ramp_at := Vector3.INF            ## the ramp's middle and its run-up spot (
 var ramp_start := Vector3.INF
 var sales := 0                        ## speeders sold this session (tests, traces)
 var ships_bought := 0                 ## issue #295: ships he bought this session (tests, traces)
+var ships_kept := 0                   ## issue #368: stolen ships he cleaned up for you this session (tests, traces)
 var _offered: Dictionary = {}         ## the item on the card right now
 var _paint_scenes: Dictionary = {}    ## issue #82: path -> the paint's model, loaded in the background
 
@@ -184,7 +189,16 @@ func _on_offer(item: Dictionary) -> void:
 
 
 func _on_answer(id: String, accepted: bool) -> void:
-	if not accepted or host == null or host.active != spot or id != str(_offered.get("id", "")):
+	if host == null or host.active != spot or id != str(_offered.get("id", "")):
+		return
+	if not accepted:
+		if bool(_offered.get("selling", false)) and bool(_offered.get("stolen", false)):
+			_offered = {}
+			_offer_keep()                  # issue #368: not selling? he cleans her up instead
+		return
+	if bool(_offered.get("keeping", false)):
+		_offered = {}
+		keep_ship()
 		return
 	if bool(_offered.get("selling", false)):
 		_offered = {}
@@ -360,12 +374,13 @@ func ship_offer() -> Dictionary:
 	return best
 
 
-## "stolen", "owned" (T-89's sale, on his pad's berth) or "" (he won't touch it).
+## "stolen", "owned" (T-89's sale, or issue #368: one he cleaned up for you) or ""
+## (he won't touch it).
 func _berth_kind(b: Dictionary) -> String:
 	if bool(b.get("stolen", false)):
 		return "stolen"
-	var pad := str(demo.salesman.cfg.get("pad", "spare_pad")) if "salesman" in demo and demo.salesman != null else "spare_pad"
-	if WorldState.hangar != "" and str(b.get("box_id", "")) == pad and str(b.ship_id) == WorldState.hangar:
+	var key := str(b.get("key", ""))
+	if key == Fleet.T89 or key.begins_with("kept_"):
 		return "owned"
 	return ""
 
@@ -390,8 +405,57 @@ func _on_ship_offer(item: Dictionary) -> void:
 
 ## The chat box's card for selling him ship offer `o`.
 func _ship_card(o: Dictionary) -> Dictionary:
-	return { "id": o.id, "name": o.name, "price": o.price, "selling": true,
+	return { "id": o.id, "name": o.name, "price": o.price, "selling": true, "stolen": str(o.kind) == "stolen",
 		"text": str(card.get("ship_buy", {}).get("lines", {}).get("card", "%s")) % str(o.name) }
+
+
+## Issue #368: what he asks to clean up stolen ship `ship_id`: keep_rate times its list price.
+func keep_price(ship_id: String) -> int:
+	return int(round(ShipSalesman.list_price(ship_id) * float(card.get("ship_buy", {}).get("keep_rate", 0.5))))
+
+
+## Issue #368: you turned his price down for a stolen ship: the chat box offers to
+## clean it up instead, if it is still there.
+func _offer_keep() -> void:
+	var o := ship_offer()
+	if o.is_empty() or str(o.kind) != "stolen" or host == null or host.active != spot:
+		return
+	var lines: Dictionary = card.get("ship_buy", {}).get("lines", {})
+	var price := keep_price(str(demo.pilot.berths[int(o.berth)].ship_id))
+	_offered = { "id": "keep:%d" % int(o.berth), "name": o.name, "price": price, "keeping": true,
+		"text": str(lines.get("keep_card", "%s")) % str(o.name) }
+	_answer_line(str(lines.get("keep_offer", "%s, %d credits.")) % [str(o.name), price])
+	host.panel.show_sale(_offered, WorldState.credits)
+
+
+## Issue #368: pay him to clean up the stolen ship by his post. It is yours from
+## now on (ShipPilot.keep_berth). Returns the credits paid, or -1 (nothing there,
+## or you cannot pay).
+func keep_ship() -> int:
+	var o := ship_offer()
+	if o.is_empty() or str(o.kind) != "stolen":
+		return -1
+	var pilot = demo.pilot
+	var i := int(o.berth)
+	var price := keep_price(str(pilot.berths[i].ship_id))
+	var lines: Dictionary = card.get("ship_buy", {}).get("lines", {})
+	if WorldState.credits < price:
+		if host != null and host.active == spot:
+			_answer_line(str(lines.get("keep_short", "%d credits, friend.")) % price)
+		return -1
+	if not pilot.keep_berth(i):
+		return -1
+	WorldState.credits -= price
+	WorldState.log_event(str(lines.get("event_kept", "Skrugs cleaned up a %s for someone.")) % str(o.name))
+	ships_kept += 1
+	if spot != null:
+		var rel := spot.brain.rel
+		rel.mood = "warm"
+		rel.add_trust(2, "cleaned up a ship for you")
+		rel.remember("cleaned up a " + str(o.name).to_lower() + " for you")
+		if host != null and host.active == spot:
+			_answer_line(str(lines.get("kept", "She's yours. %d credits.")) % price)
+	return price
 
 
 ## His spot's opener: a stolen ship within reach, and he names his price before

@@ -50,6 +50,9 @@ static var mode := FREEPLAY                ## issue #200: STORY or FREEPLAY, pic
 static var ship_fits: Dictionary = {}      ## issue #207: ship id -> [upgrade id] T-89 fitted (ShipUpgrades)
 static var gear_fits: Array = []           ## issues #208, #209: fence offers bought (GearUpgrades)
 static var wreck_ship := ""                ## issue #207: the ship id of the wreck T-89 rebuilt ("" = none)
+static var kept_ships: Array = []          ## issue #368: stolen ships Skrugs cleaned up for you: [{ key, ship }] (Fleet)
+static var ship_spots: Dictionary = {}     ## issue #368: owned ship key -> { planet, pos, rot } where it was last left (Fleet)
+static var primary_ship := ""              ## issue #368: the owned ship key that wakes with you ("" = the first; Fleet.primary)
 static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 static var control: Dictionary = {}        ## issue #187: who holds each outpost, and the supply run out (Territory)
 static var map_waypoint: Dictionary = {}   ## the F11 map's waypoint: { id, label, target, planet, arrive } (GlobeMap)
@@ -100,6 +103,9 @@ static func reset() -> void:
 	Quests.news.clear()
 	ship_fits = {}
 	wreck_ship = ""
+	kept_ships = []
+	ship_spots = {}
+	primary_ship = ""
 	gear_fits = []
 
 
@@ -124,8 +130,9 @@ static func story_mode() -> bool:
 
 
 ## Issue #206: the player owns a ship: the wreck T-89 rebuilt, or one bought from him.
+## Issue #368: or a stolen one Skrugs cleaned up.
 static func owns_ship() -> bool:
-	return has_flag(SHIP_REBUILT) or hangar != ""
+	return has_flag(SHIP_REBUILT) or hangar != "" or not kept_ships.is_empty()
 
 
 ## Issue #200: may the player draw hand weapon `id`? Freeplay: all of them. Story:
@@ -891,6 +898,9 @@ static func to_save() -> Dictionary:
 		"quests": quests.duplicate(true),
 		"ship_fits": ship_fits.duplicate(true),
 		"wreck_ship": wreck_ship,
+		"kept_ships": kept_ships.duplicate(true),
+		"ship_spots": ship_spots.duplicate(true),
+		"primary_ship": primary_ship,
 		"gear_fits": gear_fits.duplicate(),
 		"control": control.duplicate(true),
 		"map_waypoint": map_waypoint.duplicate(),
@@ -933,6 +943,9 @@ static func from_save(d: Dictionary) -> void:
 	quests = d.get("quests", {}).duplicate(true)
 	ship_fits = d.get("ship_fits", {}).duplicate(true)
 	wreck_ship = str(d.get("wreck_ship", ""))
+	kept_ships = d.get("kept_ships", []).duplicate(true)
+	ship_spots = d.get("ship_spots", {}).duplicate(true)
+	primary_ship = str(d.get("primary_ship", ""))
 	gear_fits = d.get("gear_fits", []).duplicate()
 	control = d.get("control", {}).duplicate(true)
 	map_waypoint = d.get("map_waypoint", {}).duplicate()

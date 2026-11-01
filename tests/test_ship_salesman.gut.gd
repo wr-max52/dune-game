@@ -217,8 +217,10 @@ func test_bought_ship_is_saved() -> void:
 	WorldState.from_save(d)
 	assert_eq(WorldState.hangar, "gunship")
 	var t = _town()
-	assert_not_null(t.salesman.bought_ship, "parked on the pad when the town loads")
-	assert_eq(t.pilot.berths[-1].ship_id, "gunship")
+	# Issue #368: your only ship is your primary: it waits on the pit pad, not his.
+	assert_null(t.salesman.bought_ship, "not on his pad")
+	assert_eq(t.pilot.berths[0].ship_id, "gunship", "on the pit pad when the town loads")
+	assert_true(t.pilot.berth_flies(0))
 
 
 func test_decor_parks_a_bought_ship_on_the_pad() -> void:

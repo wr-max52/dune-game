@@ -155,6 +155,7 @@ func handoff(id: String) -> void:
 	if not change:
 		last_handoff = extra
 		return
+	GameFlow.flown_key = pilot.berth_key()        # issue #368: which of your ships it is
 	GameFlow.travel(get_tree() if is_inside_tree() else null, id, pilot.ship_id, str(b.name), extra)
 
 
@@ -186,6 +187,7 @@ func go(id: String) -> void:
 	travel_started.emit(id)
 	if not change:
 		return
+	GameFlow.flown_key = pilot.berth_key()        # issue #368: which of your ships it is
 	if not is_inside_tree():
 		GameFlow.travel(null, id, pilot.ship_id, str(b.name))
 		return

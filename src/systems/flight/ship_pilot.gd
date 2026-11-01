@@ -57,6 +57,12 @@ extends Node
 ##   - issue #291: J while seated steps the radio (Sound.radio_next) through the
 ##     club mixes and off; it plays on across a handoff, in space and in a fight,
 ##     and goes off when you leave the seat.
+##   - issue #368: your own ships (Fleet) are berths with a key. The primary stands
+##     on the pit pad when the town is built and whenever you wake in the pit
+##     (woke_in_pit), patched up for T-89's fee if it was shot to pieces; the others
+##     stand where you last left them (place_fleet). call_ship() flies the primary
+##     to clear ground by where you called it from, with nobody at the controls
+##     and nobody chasing it.
 ##
 ## The headless trace drives it with board(), takeoff(), land(), exit_ship(), eject() and
 ## set_external_command(): the same code paths the keys use.
@@ -148,6 +154,12 @@ var steals := 0                   ## issue #76: outpost ships taken (traces, tes
 var opening := false              ## issue #202: the story's first landing (the autopilot; V and E only)
 var opening_t := 0.0              ## seconds into it: the cinematic view has the first few to itself
 var ejections := 0                ## issue #275: times the pilot ejected (traces, tests)
+var pit_key := ""                 ## issue #368: whose ship stood on the pit pad when the town was built (Fleet key)
+var fleet_placed := false         ## issue #368: place_fleet ran
+var calling := false              ## issue #368: the primary is flying itself to you (call_ship)
+var call_to := Vector3.ZERO       ## the ground she sets down on
+var call_yaw := 0.0               ## her heading there (towards where you called from)
+var calls := 0                    ## times a call brought her down (traces, tests)
 var _eject_hold := 0.0            ## seconds B has been held
 
 
@@ -186,9 +198,9 @@ func _ready() -> void:
 	var pads: Array = GameFlow.pads_for_scene(SCENE_PATH)
 	pad = demo.resolve_pad(pads[0]) if not pads.is_empty() else {}
 	var enc: Dictionary = content.get_encounter(str(pad.get("encounter", "")))
-	ship_id = str(enc.get("player", {}).get("ship", "interceptor"))
-	if GameFlow.flown_ship != "" and content.ships.has(GameFlow.flown_ship):
-		ship_id = GameFlow.flown_ship         # issue #45: the ship you flew in on is on the pad
+	# Issue #45: the ship you flew in on is on the pad; issue #368: else your primary.
+	ship_id = Fleet.pit_ship(str(enc.get("player", {}).get("ship", "interceptor")), content.ships)
+	pit_key = Fleet.pit_key()
 	ship_cfg = content.get_ship(ship_id)
 	atmo = AtmoFlight.new()
 	atmo.setup(ship_cfg, ground)
@@ -249,13 +261,14 @@ func _gather_berths() -> void:
 		var v: Node3D = parked[i]
 		var id := ship_id if i == 0 else str(v.get_meta("ship_id", ship_id))
 		var box_id := str(pad.get("town_box", "ship")) if i == 0 else str(v.get_meta("box_id", ""))
-		add_berth(v, id, box_id)
+		add_berth(v, id, box_id, pit_key if i == 0 else "")
 
 
 ## A parked ship becomes one you can board: its data, model, hull and home bay.
 ## Issue #58: also how a ship bought from T-89 joins once it is on the spare pad.
-## Returns its berth index.
-func add_berth(v: Node3D, id: String, box_id: String) -> int:
+## Issue #368: `key` is the Fleet key of one of your own (yours to fly; never lost
+## for good to ships_destroyed). Returns its berth index.
+func add_berth(v: Node3D, id: String, box_id: String, key: String = "") -> int:
 	var i := berths.size()
 	var b := {
 		"ship_id": id, "cfg": ship_cfg if i == 0 else content.get_ship(id), "visual": v,
@@ -270,8 +283,11 @@ func add_berth(v: Node3D, id: String, box_id: String) -> int:
 	b.hull.on_damage = _on_hull_hit.bind(i)
 	b.box_id = box_id
 	b.destroyed = false
+	b.key = key
+	if key != "":
+		b.owned = true
 	berths.append(b)
-	if WorldState.ships_destroyed.has(box_id):
+	if key == "" and WorldState.ships_destroyed.has(box_id):
 		_wreck_berth(i, false)          # issue #64: shot to pieces in an earlier session
 	return i
 
@@ -298,10 +314,10 @@ func berth_flies(i: int) -> bool:
 ## the pit pad's, once T-89 rebuilt your wreck or when you flew in on it; one he
 ## sold you, "owned"). An outpost's ship is still there to steal once ships fly.
 static func berth_open(b: Dictionary, i: int) -> bool:
-	if not WorldState.story_mode() or b.has("outpost"):
-		return Story.ships_unlocked()
 	if bool(b.get("owned", false)):
 		return true
+	if not WorldState.story_mode() or b.has("outpost"):
+		return Story.ships_unlocked()
 	return i == 0 and (WorldState.has_flag(WorldState.SHIP_REBUILT) or GameFlow.flown_ship != "")
 
 
@@ -336,13 +352,18 @@ func remove_last_berth() -> bool:
 
 ## Issue #295: berth `i` sold to Skrugs. It goes for good the way a lost stolen
 ## ship does (_lose_stolen), but you stay where you are: a stolen one's chase ends
-## with it, and the one T-89 sold you frees his pad. Never the pit pad's ship
-## (berth 0), never the one you sit in. True when it went.
+## with it, and the one T-89 sold you frees his pad. Never the pit pad's own ship
+## (berth 0 when it is nobody's; issue #368: one of yours there may go), never the
+## one you sit in. True when it went.
 func sell_berth(i: int) -> bool:
-	if i <= 0 or i >= berths.size() or bool(berths[i].get("destroyed", false)) or (piloting and berth == i):
+	if i < 0 or i >= berths.size() or bool(berths[i].get("destroyed", false)) or (piloting and berth == i):
+		return false
+	if i == 0 and berth_key(0) == "":
+		return false
+	if calling and i == berth:
 		return false
 	berths[i]["stolen"] = false
-	_wreck_berth(i, false)
+	_wreck_berth(i, false, true)
 	return true
 
 
@@ -373,7 +394,7 @@ func _use_berth(i: int) -> void:
 	home_yaw = b.home_yaw
 	atmo.setup(ship_cfg, ground)
 	atmo.clearance = b.clearance
-	atmo.park(visual.global_position, visual.rotation.y)
+	atmo.park(visual.global_position, _yaw_of(visual.global_transform))
 	_sync_visual()
 	defense = ShipDefense.new(ship_cfg)
 	guns = ShipLoadout.new(ship_cfg, content)
@@ -455,6 +476,8 @@ func nearest_berth() -> int:
 	var reach := float(pad.get("board_reach", 9.0))
 	var best := -1
 	var best_d := INF
+	if calling:
+		return -1                 # issue #368: not while your primary flies itself in
 	# Issue #276: while the ship you ejected from is still coming down (or waiting
 	# for her tow) she is the berth flown: no switching to another until she is down.
 	var settling := atmo.state == AtmoFlight.State.ADRIFT or crash_left >= 0.0
@@ -520,6 +543,7 @@ func exit_ship() -> bool:
 		return false
 	var spot := _exit_spot()
 	_leave_seat(spot)
+	_remember(berth)                   # issue #368: one of yours stays where you left it
 	if opening:
 		opening = false
 		chase.fit_to(_look_length())
@@ -1035,6 +1059,8 @@ func _physics_process(dt: float) -> void:
 		_on_foot()
 		if atmo.state == AtmoFlight.State.ADRIFT:
 			_adrift_step(dt)
+		elif calling:
+			_call_step(dt)
 	else:
 		_seated(dt)
 	if fight != null and fight.sheltered:
@@ -1243,6 +1269,8 @@ func _on_event(e: Dictionary) -> void:
 		"landed":
 			hud.toast(GameFlow.label("landed"), 4.0)
 			_set_hull(true)
+			if not piloting:
+				_remember(berth)           # issue #368: came down on her own (an ejection)
 		"crashed":
 			hud.toast(GameFlow.label("crashed"), 3.0)
 			crash_left = CRASH_TOW_TIME
@@ -1536,6 +1564,7 @@ func _tow_home() -> void:
 	if bool(berths[berth].get("stolen", false)) or bool(berths[berth].get("borrowed", false)):
 		_lose_stolen(seated)
 		return
+	_remember(berth)
 	hud.toast(GameFlow.label("towed"), 4.0)
 	if demo.pads.size() > 0:
 		demo.pads[0].toast(GameFlow.label("towed"), 4.0)
@@ -1798,8 +1827,10 @@ func _hit_parked(i: int, amount: float) -> void:
 
 ## Berth `i` is gone for good: it blows up (when `boom`), its model and hull go,
 ## nobody can board it, and the save remembers (WorldState.ships_destroyed), so it
-## never comes back. A ship bought from T-89 frees his pad.
-func _wreck_berth(i: int, boom: bool) -> void:
+## never comes back. A ship bought from T-89 frees his pad. Issue #368: one of
+## yours (`sold` or not the primary) leaves your fleet; the primary only waits for
+## T-89's patch-up (Fleet.WRECKED, back on the pad when you next wake).
+func _wreck_berth(i: int, boom: bool, sold: bool = false) -> void:
 	var b: Dictionary = berths[i]
 	if bool(b.get("destroyed", false)):
 		return
@@ -1814,13 +1845,23 @@ func _wreck_berth(i: int, boom: bool) -> void:
 		v.visible = false
 	if b.hull != null and is_instance_valid(b.hull):
 		b.hull.dead = true
+		if b.hull.collision_layer != 0:
+			b.hull_layer = b.hull.collision_layer
+			b.hull_mask = b.hull.collision_mask
 		b.hull.collision_layer = 0
 		b.hull.collision_mask = 0
 	var key := str(b.get("box_id", ""))
+	var owner := str(b.get("key", ""))
 	var pad_id := ""
 	if demo.salesman != null:
 		pad_id = str(demo.salesman.cfg.get("pad", "spare_pad"))
-	if key != "" and key == pad_id:
+	if owner != "" and owner == Fleet.primary() and not sold:
+		WorldState.set_flag(Fleet.WRECKED)
+	elif owner != "":
+		Fleet.lose(owner)
+		if owner == Fleet.T89 and demo.salesman != null:
+			demo.salesman.bought_ship = null
+	elif key != "" and key == pad_id:
 		WorldState.hangar = ""             # T-89's pad is free again
 		demo.salesman.bought_ship = null
 	elif key != "" and not b.has("outpost") and not WorldState.ships_destroyed.has(key):
@@ -1830,6 +1871,410 @@ func _wreck_berth(i: int, boom: bool) -> void:
 			if not bool(berths[j].get("destroyed", false)):
 				_use_berth(j)
 				break
+
+
+# ------------------------------------------------------------------ your ships (issue #368)
+
+## Berth `i`'s owner (a Fleet key), "" = nobody's. -1: the berth you fly.
+func berth_key(i: int = -1) -> String:
+	if i < 0:
+		i = berth
+	return str(berths[i].get("key", "")) if i < berths.size() else ""
+
+
+## The berth holding your ship `key`, or -1. Shot to pieces counts only with `wrecked`.
+func berth_of(key: String, wrecked: bool = false) -> int:
+	if key == "":
+		return -1
+	for i in berths.size():
+		if str(berths[i].get("key", "")) == key and (wrecked or not bool(berths[i].get("destroyed", false))):
+			return i
+	return -1
+
+
+## Issue #368: a stolen ship becomes yours (Skrugs cleaned it up): no longer stolen
+## or any outpost's, so nobody hunts it and a crash tows it back here, where it
+## stands now. False when berth `i` is not a stolen ship standing on the ground.
+func keep_berth(i: int) -> bool:
+	if i < 0 or i >= berths.size() or not bool(berths[i].get("stolen", false)) or bool(berths[i].get("destroyed", false)):
+		return false
+	if i == berth and (piloting or atmo.state != AtmoFlight.State.PARKED):
+		return false
+	var b: Dictionary = berths[i]
+	for k in ["stolen", "borrowed", "outpost", "town_alarm", "foot_target", "where"]:
+		b.erase(k)
+	b.key = Fleet.keep(str(b.ship_id))
+	b.owned = true
+	var v: Node3D = b.visual
+	b.home = atmo.position() if i == berth else v.global_position
+	b.home_yaw = _yaw_of(atmo.transform() if i == berth else v.global_transform)
+	if i == berth:
+		home = b.home
+		home_yaw = b.home_yaw
+	_remember(i)
+	return true
+
+
+## Make `key` the primary. The old one stays where it stands.
+func set_primary(key: String) -> bool:
+	var old := Fleet.primary()
+	if not Fleet.set_primary(key):
+		return false
+	var j := berth_of(old)
+	if j >= 0:
+		_remember(j)
+	return true
+
+
+## Once the town is built (after T-89 parked his sale): each of your ships not here
+## yet stands where you last left it on this planet. One with no spot yet (a save
+## from before) stands on clear ground by the pit, on the home planet. A spot on the
+## pit pad that another ship holds now moves aside. A primary shot to pieces is back,
+## patched up for T-89's fee.
+func place_fleet() -> void:
+	if fleet_placed or berths.is_empty():
+		return
+	fleet_placed = true
+	var here := GameFlow.current_planet_id()
+	for e in Fleet.owned():
+		var key := str(e.key)
+		if berth_of(key, true) >= 0:
+			continue
+		var s := Fleet.spot(key)
+		if not s.is_empty() and str(s.get("planet", "")) == here:
+			var i := _spawn_owned(key, Fleet.spot_xf(s))
+			if i > 0 and _on_pad(i):
+				_move_aside(i)
+		elif s.is_empty() and here == PlanetGen.home_id():
+			var foot := clear_spot(_pad_foot(), GameFlow.setting("call_aside_min", 16.0))
+			var i := _spawn_owned(key, Transform3D(Basis.IDENTITY, foot)) if foot != Vector3.INF else -1
+			if i >= 0:
+				_stand(i, foot, float(berths[0].home_yaw))
+				_remember(i)
+	var p := berth_of(Fleet.primary(), true)
+	if p >= 0 and WorldState.has_flag(Fleet.WRECKED):
+		_patch_up(p)
+
+
+## You woke in the pit (downed, killed, a fall, a lost stolen ship): your primary is
+## on its pad, wherever it was, patched up if it was shot to pieces.
+func woke_in_pit() -> void:
+	if piloting or berths.is_empty() or not Fleet.goes_to_pit():
+		return
+	calling = false
+	bring_primary_to_pit()
+
+
+## The primary on the pit pad: moved there (or brought from wherever it is, another
+## planet too), and whatever stood on the pad moved aside onto clear ground.
+func bring_primary_to_pit() -> void:
+	var key := Fleet.primary()
+	if key == "" or berths.is_empty():
+		return
+	var foot := _pad_foot()
+	var yaw := float(berths[0].home_yaw)
+	var i := berth_of(key, true)
+	if i < 0:
+		i = _spawn_owned(key, Transform3D(Basis.IDENTITY, foot))
+		if i < 0:
+			return
+	if bool(berths[i].get("destroyed", false)) or WorldState.has_flag(Fleet.WRECKED):
+		_patch_up(i)
+	if i == berth and atmo.state != AtmoFlight.State.PARKED:
+		crash_left = -1.0
+		atmo.park(foot, yaw)
+	for j in berths.size():
+		if j != i and _on_pad(j):
+			_move_aside(j)
+	var u := ground.up_at(foot)
+	berths[i].home = foot + u * float(berths[i].clearance)
+	berths[i].home_yaw = yaw
+	if i == berth:
+		home = berths[i].home
+		home_yaw = yaw
+	_stand(i, foot, yaw)
+	(berths[i].visual as Node3D).visible = true
+	_remember(i)
+
+
+## Call: your primary flies itself to clear ground by where you are now (that spot,
+## even if you walk on). "" = on its way; otherwise a label key for why not.
+func call_ship() -> String:
+	var key := Fleet.primary()
+	var p := player()
+	if key == "" or p == null:
+		return "call_none"
+	if calling:
+		return "call_busy"
+	if piloting:
+		return "call_seated"
+	var i := berth_of(key, true)
+	if atmo.state == AtmoFlight.State.ADRIFT or crash_left >= 0.0:
+		return "call_busy"            # a ship still coming down (or waiting for her tow) first
+	var at := p.global_position
+	var foot := clear_spot(at, 0.0, -1.0, i)
+	if foot == Vector3.INF:
+		return "call_nowhere"
+	if i >= 0 and (bool(berths[i].get("destroyed", false)) or WorldState.has_flag(Fleet.WRECKED)):
+		_patch_up(i)
+	var u := ground.up_at(foot)
+	var from := Vector3.INF
+	if i < 0:
+		# Not on this planet (or nowhere yet): she comes down out of the sky.
+		from = foot + u * GameFlow.setting("call_from_height", 900.0) \
+			+ _tangent(u) * GameFlow.setting("call_from_far", 1500.0)
+		i = _spawn_owned(key, Transform3D(PlanetSphere.tilt_to(ground.up_at(from)), from))
+		if i < 0:
+			return "call_none"
+	if i != berth:
+		_use_berth(i)
+	if from == Vector3.INF:
+		var d := _flat(foot - atmo.position(), u).length()
+		if atmo.state == AtmoFlight.State.PARKED and d < GameFlow.setting("call_near", 15.0):
+			return "call_here"
+		atmo.takeoff()
+	else:
+		atmo.place_flying(from, _flat(foot - from, u), 0.0, 0.0)
+	call_to = foot
+	var to_you := PlanetSphere.tilt_to(u).inverse() * (at - foot)
+	call_yaw = atan2(-to_you.x, -to_you.z) if Vector2(to_you.x, to_you.z).length() > 0.5 else _yaw_of(atmo.transform())
+	calling = true
+	_set_hull(true)
+	visual.visible = true
+	_foot_toast(GameFlow.label("call_inbound") % vessel_name)
+	return ""
+
+
+## What Call can do right now, for the ledger: { ok, text }.
+func call_state() -> Dictionary:
+	if Fleet.primary() == "":
+		return { "ok": false, "text": GameFlow.label("call_none") }
+	if calling:
+		return { "ok": false, "text": GameFlow.label("call_busy") }
+	if piloting:
+		return { "ok": false, "text": GameFlow.label("call_seated") }
+	return { "ok": true, "text": GameFlow.label("call") }
+
+
+## One frame of a call: up off the ground, across at cruise height over whatever is
+## under her, then straight down over the spot with the normal landing. The same
+## flight model's state, moved the way the bay landing moves it (_bay_step).
+func _call_step(dt: float) -> void:
+	match atmo.state:
+		AtmoFlight.State.LIFTOFF:
+			atmo.step(dt)              # its events (the seated toasts) are not for you
+		AtmoFlight.State.FLYING:
+			_call_fly(dt)
+		AtmoFlight.State.LANDING:
+			for e in atmo.step(dt):
+				if str(e.type) == "landed":
+					_call_done()
+				elif str(e.type) == "crashed":
+					calling = false
+					_on_event(e)
+		AtmoFlight.State.PARKED:
+			_call_done()
+		_:
+			calling = false
+	_sync_visual()
+
+
+func _call_fly(dt: float) -> void:
+	var f = atmo.flight
+	var u := ground.up_at(call_to)
+	var pos: Vector3 = f.position
+	var flat := _flat(call_to - pos, u)
+	var d := flat.length()
+	var h := (pos - call_to).dot(u)
+	var climb := GameFlow.setting("call_climb", 40.0)
+	var v := clampf(d * 0.6, 3.0, GameFlow.setting("call_speed", 140.0))
+	var rise := 0.0
+	if d > GameFlow.setting("call_descend_at", 60.0):
+		var agl := atmo.agl()
+		var cruise := GameFlow.setting("call_cruise_agl", 120.0)
+		rise = clampf((cruise - agl) * 0.8, -climb, climb)
+		if agl < minf(cruise * 0.5, 40.0):
+			v = 0.0                    # clear of the roofs first
+	else:
+		rise = clampf((atmo.clearance + GameFlow.setting("call_hold", 25.0) - h) * 0.8, -climb, climb)
+	if d < 1.0:
+		f.position = call_to + u * h
+		f.speed = 0.0
+		f.basis = f.basis.slerp(PlanetSphere.tilt_to(u) * Basis(Vector3.UP, call_yaw), minf(1.0, dt * 3.0)).orthonormalized()
+		if absf(rise) < 2.0:
+			f.basis = PlanetSphere.tilt_to(u) * Basis(Vector3.UP, call_yaw)
+			if not atmo.land():
+				atmo.state = AtmoFlight.State.LANDING
+			return
+		f.position += u * rise * dt
+		return
+	f.position = pos + flat.normalized() * minf(v * dt, d) + u * rise * dt
+	var local := PlanetSphere.tilt_to(u).inverse() * flat
+	var yaw := atan2(-local.x, -local.z) if d > 20.0 else call_yaw
+	f.basis = f.basis.slerp(PlanetSphere.tilt_to(u) * Basis(Vector3.UP, yaw), minf(1.0, dt * 2.0)).orthonormalized()
+	f.speed = v
+
+
+func _call_done() -> void:
+	calling = false
+	calls += 1
+	_set_hull(true)
+	_remember(berth)
+	_foot_toast(GameFlow.label("call_landed") % vessel_name)
+
+
+## Clear, landable, flat-enough ground for a ship nearest `near` (rings out to
+## `max_r`, from `min_r`), counting a climb up onto a roof as three times its
+## height in distance. Not on another ship (berth `skip` aside). INF = none.
+func clear_spot(near: Vector3, min_r: float = 0.0, max_r: float = -1.0, skip: int = -1) -> Vector3:
+	if max_r < 0.0:
+		max_r = GameFlow.setting("call_land_radius", 150.0)
+	var u := ground.up_at(near)
+	var t1 := _tangent(u)
+	var t2 := u.cross(t1)
+	var room := GameFlow.setting("call_room", 9.0)
+	var best := Vector3.INF
+	var best_score := INF
+	var r := min_r
+	while r <= max_r and r < best_score:
+		var n := 1 if r < 0.5 else clampi(int(TAU * r / 6.0), 6, 48)
+		for k in n:
+			var a := TAU * float(k) / float(n)
+			var foot := ground.surface_below(near + (t1 * cos(a) + t2 * sin(a)) * r + u * 200.0)
+			var score := r + absf((foot - near).dot(u)) * 3.0
+			if score < best_score and _clear_at(foot, room, skip):
+				best = foot
+				best_score = score
+		r += 6.0
+	return best
+
+
+func _clear_at(foot: Vector3, room: float, skip: int) -> bool:
+	if not ground.landable(foot.x, foot.z):
+		return false
+	var u := ground.up_at(foot)
+	var half := room * 0.5
+	if ground.hit(foot + u * (half + 0.6), half) != "" or ground.hit(foot + u * (room + 1.5), half) != "":
+		return false
+	var t1 := _tangent(u)
+	var t2 := u.cross(t1)
+	var flat := GameFlow.setting("call_flat", 1.5)
+	for off in [t1 * room * 0.6, -t1 * room * 0.6, t2 * room * 0.6, -t2 * room * 0.6]:
+		if absf((ground.surface_below(foot + off + u * 5.0) - foot).dot(u)) > flat:
+			return false
+	for j in berths.size():
+		if j == skip or bool(berths[j].get("destroyed", false)) or not is_instance_valid(berths[j].visual):
+			continue
+		if _flat((berths[j].visual as Node3D).global_position - foot, u).length() < room + 4.0:
+			return false
+	return true
+
+
+## Berth `i`'s ship stands on the pit pad (berth 0's home), on the ground.
+func _on_pad(i: int) -> bool:
+	if bool(berths[i].get("destroyed", false)) or not is_instance_valid(berths[i].visual):
+		return false
+	if i == berth and (piloting or atmo.state != AtmoFlight.State.PARKED):
+		return false
+	var foot := _pad_foot()
+	return _flat((berths[i].visual as Node3D).global_position - foot, ground.up_at(foot)).length() < GameFlow.setting("call_pad_room", 8.0)
+
+
+## Berth `i` off the pit pad, onto clear ground beside it.
+func _move_aside(i: int) -> void:
+	var foot := clear_spot(_pad_foot(), GameFlow.setting("call_aside_min", 16.0), -1.0, i)
+	if foot == Vector3.INF:
+		return
+	_stand(i, foot, float(berths[i].home_yaw))
+	_remember(i)
+
+
+## The pit pad's deck: under berth 0's home.
+func _pad_foot() -> Vector3:
+	var h: Vector3 = berths[0].home
+	return h - ground.up_at(h) * float(berths[0].clearance)
+
+
+## Berth `i` stood on the ground at `foot`, facing `yaw` (in the ground's own frame).
+func _stand(i: int, foot: Vector3, yaw: float) -> void:
+	var b: Dictionary = berths[i]
+	var u := ground.up_at(foot)
+	var xf := Transform3D(PlanetSphere.tilt_to(u) * Basis(Vector3.UP, yaw), foot + u * float(b.clearance))
+	(b.visual as Node3D).global_transform = xf
+	if i == berth and not piloting:
+		atmo.park(xf.origin, yaw)
+		_sync_visual()
+
+
+## One of your ships stood at `xf` as a berth (a model, or a bare node in the
+## greybox). Returns its berth index, -1 when it has no ship data.
+func _spawn_owned(key: String, xf: Transform3D) -> int:
+	var sid := Fleet.ship_of(key)
+	if sid == "" or not content.ships.has(sid):
+		return -1
+	var v: Node3D
+	var look_id := str(content.get_ship(sid).get("look", ""))
+	if demo.use_look and look_id != "":
+		v = kit.build(ShipUpgrades.look(sid, look_id))
+		kit.dress(v, ShipUpgrades.fitted(sid))
+	else:
+		v = Node3D.new()
+	v.name = "Owned_" + key
+	v.set_meta("ship_id", sid)
+	demo.add_child(v)
+	v.global_transform = xf
+	return add_berth(v, sid, "", key)
+
+
+## Shot to pieces and back: whole again, its fee paid (a toast says how much).
+func _patch_up(i: int) -> void:
+	var b: Dictionary = berths[i]
+	b.destroyed = false
+	b.erase("defense")
+	if is_instance_valid(b.visual):
+		(b.visual as Node3D).visible = true
+	if b.hull != null and is_instance_valid(b.hull):
+		b.hull.dead = false
+		b.hull.collision_layer = int(b.get("hull_layer", 1))
+		b.hull.collision_mask = int(b.get("hull_mask", 1))
+	if i == berth:
+		defense = ShipDefense.new(ship_cfg)
+	var fee := Fleet.repair()
+	if fee >= 0:
+		_foot_toast(GameFlow.label("repaired") % [ShipUpgrades.ship_label(str(b.ship_id)), fee])
+
+
+## Where berth `i` stands now is where it stays (one of yours; Fleet.remember).
+func _remember(i: int) -> void:
+	if i < 0 or i >= berths.size() or berth_key(i) == "" or bool(berths[i].get("destroyed", false)):
+		return
+	if i == berth and not piloting:
+		Fleet.remember(berth_key(i), atmo.transform())
+	elif i != berth and is_instance_valid(berths[i].visual):
+		Fleet.remember(berth_key(i), (berths[i].visual as Node3D).global_transform)
+
+
+## A heading in the ground's own frame (issue #77: on the ball "up" leans).
+func _yaw_of(xf: Transform3D) -> float:
+	return (PlanetSphere.tilt_to(ground.up_at(xf.origin)).inverse() * xf.basis).get_euler().y
+
+
+static func _flat(v: Vector3, u: Vector3) -> Vector3:
+	return v - u * v.dot(u)
+
+
+static func _tangent(u: Vector3) -> Vector3:
+	var t := _flat(Vector3.RIGHT, u)
+	return (t if t.length() > 0.1 else _flat(Vector3.FORWARD, u)).normalized()
+
+
+## A line for you on foot (the gear HUD's toast; the flight HUD's in a test without one).
+func _foot_toast(text: String) -> void:
+	var gear = demo.get("gear") if demo != null else null
+	if gear != null and gear.hud != null:
+		gear.hud.toast(text, 4.0)
+	else:
+		hud.toast(text, 4.0)
 
 
 # ------------------------------------------------------------------ stolen ships (issue #76)
@@ -1868,6 +2313,7 @@ func _lose_stolen(wake_in_pit: bool = true) -> void:
 		if p.has_method("align_to_ground"):
 			p.call("align_to_ground", true)
 	hud.toast(GameFlow.label("stolen_lost"), 4.0)
+	woke_in_pit()
 
 
 # ------------------------------------------------------------------ helpers

@@ -54,13 +54,13 @@ static func fit(ship_id: String, id: String) -> bool:
 	return true
 
 
-## The ships the player owns, by id: the wreck T-89 rebuilt and the one on his pad.
+## The ships the player owns, by id (each kind once): the wreck T-89 rebuilt, the
+## one he sold you, and issue #368's stolen ones Skrugs cleaned up (Fleet).
 static func owned() -> Array:
 	var out: Array = []
-	if WorldState.has_flag(WorldState.SHIP_REBUILT) and WorldState.wreck_ship != "":
-		out.append(WorldState.wreck_ship)
-	if WorldState.hangar != "" and not out.has(WorldState.hangar):
-		out.append(WorldState.hangar)
+	for e in Fleet.owned():
+		if not out.has(str(e.ship)):
+			out.append(str(e.ship))
 	return out
 
 

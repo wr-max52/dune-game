@@ -20,6 +20,8 @@
   },
   "default_price": 1500,
   "resale_rate": 0.6,
+  "repair_rate": 0.2,
+  "repair_note": "Issue #368: your primary ship shot to pieces is back on the pit pad the next time you wake (or load); T-89's fee is repair_rate times its price here (all your credits, if you have less). Fleet.repair.",
   "prices": {
     "courier": 900,
     "interceptor": 1200,

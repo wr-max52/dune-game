@@ -277,6 +277,10 @@ func build_plan(staged_build: bool) -> Array:
 		if with_salesman and gear != null:
 			_build_salesman()
 		return true)
+	add.call("fleet", LATER, func():
+		if pilot != null:
+			pilot.place_fleet()          # issue #368: your other ships where you left them
+		return true)
 	add.call("end_card", LATER, func():
 		add_child(EndCard.new())          # issue #214: shows itself when the story ends
 		return true)
