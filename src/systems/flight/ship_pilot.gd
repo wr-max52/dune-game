@@ -1213,14 +1213,24 @@ func _fight_held() -> bool:
 	return fight != null and c != null and fight.encounter_id == c.escort_id()
 
 
-## Not out in the fight: docking, landing or down in the cruiser's bay, parked, on
-## foot, crashed, or (the escort) dived well under the edge of space. The fight goes
+## Close by the cruiser: inside its approach's fight_off_radius the fight lets go of
+## her and normal flight lines her up with the bay. Once out, she stays out until
+## past fight_back_radius, so the edge does not flick her back and forth.
+func _by_cruiser(c) -> bool:
+	var ap: Dictionary = c.cfg.get("approach", {})
+	var r := float(ap.get("fight_back_radius", 1300.0)) if fight != null and fight.sheltered \
+		else float(ap.get("fight_off_radius", 1000.0))
+	return c.distance(atmo.position()) <= r
+
+
+## Not out in the fight: docking, landing or down in the cruiser's bay, close by the
+## cruiser, parked, on foot, crashed, or (the escort) dived well under the edge of space. The fight goes
 ## on without her (Dogfight.player_sheltered) until she is out in it again.
 func _out_of_fight() -> bool:
 	if not piloting or docking or bay_landing or atmo.state != AtmoFlight.State.FLYING:
 		return true
 	var c = cruiser()
-	if c != null and c.aboard(atmo.position()):
+	if c != null and (c.aboard(atmo.position()) or _by_cruiser(c)):
 		return true
 	return _fight_held() and atmo.altitude() < atmo.space_altitude \
 		- float(c.cfg.get("approach", {}).get("floor", 1500.0))

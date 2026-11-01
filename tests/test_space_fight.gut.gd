@@ -192,6 +192,35 @@ func test_zero_throttle_stops_her_in_the_fight_as_in_normal_flight() -> void:
 			break
 
 
+func test_the_fight_lets_go_of_her_by_the_cruiser() -> void:
+	var t = _town()
+	var pilot := _in_space(t)
+	var c = t.cruiser
+	assert_not_null(c, "the home world has its cruiser")
+	var ap: Dictionary = c.cfg.approach
+	var off := float(ap.fight_off_radius)
+	var back := float(ap.fight_back_radius)
+	var out_dir: Vector3 = c.frame.basis * Vector3.RIGHT          # the bay's side
+	var at := func(d: float) -> void:
+		pilot.atmo.place_flying(c.frame.origin + out_dir * d, -out_dir, 100.0, 0.3)
+		if pilot.fight != null and pilot.fight.player_flight() != null:
+			pilot.fight.player_flight().position = pilot.atmo.position()
+	at.call(off + 100.0)
+	pilot.atmo.reached_space = true
+	assert_true(pilot.start_fight())
+	_step(pilot, 2)
+	assert_false(pilot.fight.sheltered, "past fight_off_radius the fight flies her")
+	at.call(off - 100.0)
+	_step(pilot, 2)
+	assert_true(pilot.fight.sheltered, "inside it normal flight has her for the bay")
+	at.call((off + back) * 0.5)
+	_step(pilot, 2)
+	assert_true(pilot.fight.sheltered, "and keeps her between the two radii, no flicker")
+	at.call(back + 100.0)
+	_step(pilot, 2)
+	assert_false(pilot.fight.sheltered, "past fight_back_radius she is back in it")
+
+
 func test_the_throttle_key_lifts_her_off_at_zero_throttle() -> void:
 	var t = _town()
 	var pilot: ShipPilot = t.pilot
