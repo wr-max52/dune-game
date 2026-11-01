@@ -248,6 +248,7 @@ func _cfg(local_mode: String, ollama_mode: String) -> LLMConfig:
 	var c := LLMConfig.new()
 	c.user_path = "user://m12_trace_no_user_config.json"
 	c.load_all()
+	c.set_ai_enabled(true)             # issue #328: off by default
 	var base := "http://127.0.0.1:%d/" % port
 	c.set_value("profiles/local/base_url", base + local_mode + "/v1")
 	c.set_value("profiles/local/health_url", base + local_mode + "/health")

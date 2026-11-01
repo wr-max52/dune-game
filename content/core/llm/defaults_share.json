@@ -1,5 +1,6 @@
 {
   "note": "Defaults for the shared build (export feature 'share'). Cloud only, Anthropic direct. No keys, ever: the player pastes their key in F10 (stored in user://llm/keys.cfg). Selected by LLMConfig.default_path().",
+  "ai_enabled": false,
   "chain": ["cloud"],
   "profiles": {
     "cloud": {
@@ -15,6 +16,7 @@
     "temperature": 0.8,
     "max_tokens": 220,
     "first_token_timeout_ms": { "cloud": 5000 },
+    "give_up_ms": 9000,
     "stall_ms": 3000,
     "total_timeout_ms": 20000
   },

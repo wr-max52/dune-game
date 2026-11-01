@@ -15,6 +15,10 @@ extends RefCounted
 ##
 ## If every provider fails she still answers, from canned lines that use real
 ## data (a true rumor, a real job), so the bar never dead-ends.
+##
+## Issue #328: with AI characters off that is the only path. topics() is the menu
+## the dialogue shows then (say_topic() answers one), and a hint the player's words
+## set off is told in the card's own authored "line".
 
 signal thinking(bark: String)                 ## no first word yet: a beat to cover it
 signal line_delta(text_so_far: String)        ## streamed, filtered subtitle
@@ -36,6 +40,7 @@ const BRIEF_PATH := "res://content/core/llm/world_briefing.json"
 const SCHEMA_PATH := "res://content/core/llm/reply_schema.json"
 const LOG_ROOT := "user://logs"         ## transcripts go to <root>/<card id>/
 const BARK_AFTER_MS := 900
+const TOPICS_PATH := "res://content/core/npcs/topics.json"   ## issue #328: the AI-off menu
 
 var llm: LLMService
 var card: Dictionary
@@ -65,6 +70,8 @@ var _t0 := 0
 var _barked := false
 var _rng := RandomNumberGenerator.new()
 var _summary_id := -1
+var _topic_now := ""                 ## issue #328: the menu topic this turn answers ("" = by keyword)
+var _hint_lines: Array = []          ## issue #328: the authored lines of the hints this turn set off
 
 
 ## `card_src`: a card's path, or (issue #75: a planet's own Oda) the card itself.
@@ -121,9 +128,9 @@ func replace_greeting(line: String) -> void:
 ## The player walked off. Summarize the visit in the background (if online).
 func end_visit() -> void:
 	talking = false
-	if llm == null or history.size() < 3:
+	if llm == null or not llm.ai_on() or history.size() < 3:
 		return
-	_summary_id = llm.chat(builder.summary_messages(rel, history), { "max_tokens": 80, "temperature": 0.3 })
+	_summary_id = llm.chat(builder.summary_messages(rel, history), { "max_tokens": 80, "temperature": 0.3, "background": true })
 
 
 ## Can she serve right now? (false after she threw the player out)
@@ -131,11 +138,12 @@ func serving() -> bool:
 	return WorldState.clock >= rel.banned_until
 
 
-## Warm the local model's prompt cache with the static prefix (call on town entry).
-func warm_up() -> void:
+## Load provider `pid`'s model and warm its prompt cache with the static prefix
+## (issue #328: in the background; player turns skip it until it answers).
+func warm_up(pid: String = "local") -> int:
 	if llm == null:
-		return
-	llm.chat([builder.persona_message(), builder.rules_message(), { "role": "user", "content": "<player_says>...</player_says>" }], { "max_tokens": 1 })
+		return -1
+	return llm.warm(pid, [builder.persona_message(), builder.rules_message(), { "role": "user", "content": "<player_says>...</player_says>" }])
 
 
 func baseline_mood() -> String:
@@ -182,10 +190,45 @@ func hints_for(text: String, tier: String = "stranger") -> Array:
 			continue
 		Story.event(str(h.get("event", "")))
 		out.append("TELL THEM NOW, in your own words: " + str(h.get("say", "")))
+		if str(h.get("line", "")) != "":
+			_hint_lines.append(str(h.line))
 	return out
 
 
 # ------------------------------------------------------------------ a turn
+
+## Issue #328: the topics this character can answer without a model, in the
+## menu's order: [{ id, label, say }] (say: the player's line for it). A topic
+## is on the menu when the card has its canned line and the action it needs.
+func topics() -> Array:
+	var menu: Dictionary = _read(TOPICS_PATH)
+	var c: Dictionary = card.get("canned", {})
+	var can: Array = builder.actions()
+	var out: Array = []
+	for t in menu.get("topics", []):
+		var tid := str(t.get("id", ""))
+		var need := str(t.get("needs", ""))
+		if need != "" and not can.has(need):
+			continue
+		var keys: Array = t.get("canned", [])
+		if not keys.is_empty() and not keys.any(func(k): return c.has(str(k))):
+			continue
+		out.append({ "id": tid, "label": str(t.get("label", tid)), "say": str(t.get("say", tid)) })
+	return out
+
+
+## Issue #328: the player picked a topic from the menu. Same turn as say(), but
+## the canned answer is that topic's, whatever the words.
+func say_topic(topic: String) -> bool:
+	for t in topics():
+		if str(t.id) == topic:
+			_topic_now = topic
+			var ok := say(str(t.say))
+			if not ok:
+				_topic_now = ""
+			return ok
+	return false
+
 
 ## The player said something. Returns false if she is mid-answer.
 func say(text: String) -> bool:
@@ -198,6 +241,7 @@ func say(text: String) -> bool:
 	if _hostile:
 		insults += 1
 	var tier := rel.tier()
+	_hint_lines.clear()
 	var rumors := WorldState.rumors(tier, rel.known_rumors, 4)
 	# Issue #204: a job is the giver's ("giver" on the board, Oda's by default).
 	var jobs := my_jobs(tier)
@@ -219,14 +263,20 @@ func say(text: String) -> bool:
 	_shown = ""
 	_barked = false
 	_t0 = Time.get_ticks_msec()
-	if llm == null:
-		_finish_turn({ "ok": false, "text": "", "provider": "none", "fell_back_from": [], "error": "no llm" })
+	if llm == null or llm.active_chain().is_empty():
+		# No model to ask (issue #328: AI characters off, or every one down): canned now.
+		_finish_turn({ "ok": false, "text": "", "provider": "none", "fell_back_from": [], "error": "no llm" if llm == null else "no provider" })
 		return true
 	var opts := { "schema": builder.schema }
 	if card.has("temperature"):
 		opts["temperature"] = float(card.temperature)
 	_turn_id = llm.chat(_messages, opts)
 	return true
+
+
+## Issue #328: the reply in flight has shown its first words.
+func has_words() -> bool:
+	return _shown != ""
 
 
 ## Call every frame while busy (the scene does): emits the thinking beat.
@@ -282,15 +332,21 @@ func _finish_turn(result: Dictionary) -> void:
 		mood = str(parsed.mood)
 	else:
 		source = "canned"
-		var c := canned_reply(_player_text)
+		var c := _canned_now()
 		say_text = c.say
 		proposed = c.actions
 	var cleaned := filter.clean(say_text, _rng.randi())
 	if (cleaned.flags as Array).has("empty"):
 		source = "canned"
-		var c2 := canned_reply(_player_text)
+		var c2 := _canned_now()
 		cleaned = filter.clean(c2.say)
 		proposed = c2.actions
+	_topic_now = ""
+	if source == "canned":
+		# Issue #328: the hint their words set off, in the card's authored line
+		# (after the sentence cap: it is written, not generated).
+		for line in _hint_lines:
+			cleaned.say = (str(cleaned.say) + " " + filter.scrub_terms(str(line))).strip_edges()
 	var v := ActionValidator.validate(proposed, _ids, {
 		"trust": rel.trust, "trust_this_visit": rel.trust_this_visit, "hostile": _hostile, "insults": insults,
 	})
@@ -436,11 +492,17 @@ func accept_job(id: String) -> bool:
 
 # ------------------------------------------------------------------ offline
 
+## This turn's canned answer: the menu topic's, else the player's words'.
+func _canned_now() -> Dictionary:
+	return canned_reply(_player_text, _topic_now)
+
+
 ## A real answer without a model: keyword topic + true data. Only topics whose
 ## action this character has (no job board at Skrugs's stall, no drinks).
-func canned_reply(text: String) -> Dictionary:
+func canned_reply(text: String, topic: String = "") -> Dictionary:
 	var c: Dictionary = card.get("canned", {})
-	var topic := _topic(text)
+	if topic == "":
+		topic = _topic(text)
 	var can: Array = builder.actions()
 	if can.has("offer_ship") and topic in ["buy", "recommend"]:
 		return _canned_ship(text, c)

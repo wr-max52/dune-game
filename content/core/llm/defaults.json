@@ -1,5 +1,6 @@
 {
-  "note": "Shipped LLM defaults (no keys, ever). user://llm_config.json overrides these field by field; the settings panel (F10) writes it. Keys come from the env var named by api_key_env, else user://llm/keys.cfg.",
+  "note": "Shipped LLM defaults (no keys, ever). Issue #328: 'ai_enabled' is off on a fresh install (no model is called, no sidecar starts); the player turns it on in F11 > LLM or on first launch. 'gen.give_up_ms': a player turn with no first word by then gets canned lines, and the next turn tries the model again. user://llm_config.json overrides these field by field; the settings panel (F10) writes it. Keys come from the env var named by api_key_env, else user://llm/keys.cfg.",
+  "ai_enabled": false,
   "chain": ["local", "ollama", "cloud"],
   "profiles": {
     "local": {
@@ -29,14 +30,20 @@
       "base_url": "https://openrouter.ai/api/v1",
       "model": "anthropic/claude-haiku-4.5",
       "api_key_env": "DUNE_LLM_KEY",
-      "enabled": false,
+      "enabled": true,
       "grammar": false
     }
+  },
+  "key_presets": {
+    "note": "Issue #328: a cloud key sets the cloud profile to match it, by its prefix, unless the player set the URL or type by hand. Anything else: openai_compat, URL left as it is.",
+    "sk-ant-": { "type": "anthropic", "base_url": "https://api.anthropic.com/v1", "model": "claude-haiku-5-5" },
+    "sk-or-": { "type": "openai_compat", "base_url": "https://openrouter.ai/api/v1", "model": "anthropic/claude-haiku-4.5" }
   },
   "gen": {
     "temperature": 0.8,
     "max_tokens": 220,
     "first_token_timeout_ms": { "local": 2500, "ollama": 4000, "cloud": 5000 },
+    "give_up_ms": 9000,
     "stall_ms": 3000,
     "total_timeout_ms": 20000
   },

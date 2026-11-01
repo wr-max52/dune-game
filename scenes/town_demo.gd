@@ -323,7 +323,9 @@ func build_plan(staged_build: bool) -> Array:
 			retro_hud = RetroHud.new()
 			retro_hud.demo = self
 			add_child(retro_hud)
-			DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
+			var notice := DisclaimerOverlay.show_once(self)   # issue #29: AI characters are not real people
+			if notice != null:
+				notice.ai_chosen.connect(_on_first_run_ai)   # issue #328: the first launch asks
 			return true)
 		add.call("objective_hud", LATER, func():
 			objective_hud = ObjectiveHud.new()
@@ -539,6 +541,17 @@ func _kit() -> CharacterKit:
 	if _kit_inst == null:
 		_kit_inst = CharacterKit.new(_flat_mats(), 0.0)
 	return _kit_inst
+
+
+## Issue #328: the first launch's answer: AI characters on or off, saved, never asked again.
+func _on_first_run_ai(on: bool) -> void:
+	if bar != null and bar.has_method("answer_first_run"):
+		bar.answer_first_run(on)
+		return
+	var cfg := LLMConfig.new().load_all()
+	cfg.set_first_run_asked()
+	cfg.set_ai_enabled(on)
+	cfg.save_user()
 
 
 var _mats: LookMaterials

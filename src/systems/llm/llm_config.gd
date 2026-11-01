@@ -26,7 +26,71 @@ func load_all(defaults_path: String = "") -> LLMConfig:
 	data = _read(defaults_path if defaults_path != "" else default_path())
 	var user := _read(user_path)
 	data = merge(data, user)
+	# Issue #328: a stored key picks its provider, unless the player set one by hand.
+	var hand: Dictionary = user.get("profiles", {}).get("cloud", {})
+	if not hand.has("type") and not hand.has("base_url"):
+		apply_key_preset("cloud", api_key("cloud"), hand)
 	return self
+
+
+## Issue #328: AI characters on or off (off on a fresh install). Off, no model is
+## called and no sidecar starts: everyone talks from their canned lines.
+func ai_enabled() -> bool:
+	return bool(data.get("ai_enabled", false))
+
+
+func set_ai_enabled(on: bool) -> void:
+	data["ai_enabled"] = on
+
+
+## Issue #328: the first launch asks once whether to turn AI characters on.
+func first_run_asked() -> bool:
+	return bool(data.get("first_run_asked", false))
+
+
+func set_first_run_asked() -> void:
+	data["first_run_asked"] = true
+
+
+## Issue #328: the preset ("key_presets" in the defaults) a key's prefix names, or {}.
+func key_preset(key: String) -> Dictionary:
+	var presets: Dictionary = data.get("key_presets", {})
+	for prefix in presets:
+		if presets[prefix] is Dictionary and key.begins_with(str(prefix)):
+			return presets[prefix]
+	return {}
+
+
+## Set profile `id` to the provider its key belongs to (but not the fields in
+## `keep`, set by hand). Returns true if it changed.
+func apply_key_preset(id: String, key: String, keep: Dictionary = {}) -> bool:
+	var pre := key_preset(key)
+	if pre.is_empty() or profile(id).is_empty():
+		return false
+	var changed := false
+	for k in pre:
+		if not keep.has(k) and str(profile(id).get(k, "")) != str(pre[k]):
+			set_value("profiles/%s/%s" % [id, k], pre[k])
+			changed = true
+	return changed
+
+
+## Issue #328: the stored key belongs to another provider than the profile points
+## at (an Anthropic key sent to OpenRouter): "" if it fits or nothing says.
+func key_mismatch(id: String) -> String:
+	var pre := key_preset(api_key(id))
+	if pre.is_empty():
+		return ""
+	var p := profile(id)
+	if str(p.get("type", "openai_compat")) != str(pre.get("type", "")) \
+			or str(p.get("base_url", "")).trim_suffix("/") != str(pre.get("base_url", "")).trim_suffix("/"):
+		return "the key is for %s but the profile points at %s" % [_host(str(pre.get("base_url", ""))), _host(str(p.get("base_url", "")))]
+	return ""
+
+
+static func _host(url: String) -> String:
+	var rest := url.trim_prefix("https://").trim_prefix("http://")
+	return rest.substr(0, rest.find("/")) if rest.find("/") >= 0 else rest
 
 
 ## Deep merge: dictionaries merge key by key, everything else replaces.
@@ -50,6 +114,11 @@ func profile(id: String) -> Dictionary:
 
 func gen() -> Dictionary:
 	return data.get("gen", {})
+
+
+## Issue #328: how long a player waits for a first word before canned lines.
+func give_up_ms() -> int:
+	return int(gen().get("give_up_ms", 9000))
 
 
 func first_token_timeout_ms(id: String) -> int:

@@ -417,7 +417,10 @@ func _on_line(turn: Dictionary) -> void:
 		decide("let_go", false)
 		return
 	_meet_lines += 1
-	if _meet_lines >= int(_meet_cfg().get("turns", 3)):
+	# Issue #328: with AI characters off his lines are written ones: fewer of them.
+	var offline := host != null and host.llm != null and not host.llm.ai_on()
+	var turns := int(_meet_cfg().get("turns_offline" if offline else "turns", _meet_cfg().get("turns", 3)))
+	if _meet_lines >= turns:
 		decide_default()
 
 

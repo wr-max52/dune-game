@@ -106,7 +106,8 @@
         "rifle"
       ],
       "event": "heard_of_rifle",
-      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof."
+      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof.",
+      "line": "The Remnant? Sloppy lot. Guns left lying on top of the barracks, and nobody watching the roof."
     },
     {
       "words": [
@@ -119,7 +120,8 @@
         "trade"
       ],
       "event": "heard_of_nomads",
-      "say": "the nomad packs out in the desert will trade you anything anyone in town sells, but only for sand pig. Five gets you a blaster. If a pack turns on you, keep your gun down for a minute and they come round."
+      "say": "the nomad packs out in the desert will trade you anything anyone in town sells, but only for sand pig. Five gets you a blaster. If a pack turns on you, keep your gun down for a minute and they come round.",
+      "line": "The nomad packs out in the sand trade anything the town sells, but only for sand pig. Five gets you a blaster. If a pack turns on you, keep your gun down a minute and they come round."
     }
   ]
 }

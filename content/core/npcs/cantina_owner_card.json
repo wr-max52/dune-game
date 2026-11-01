@@ -102,7 +102,8 @@
         "rifle"
       ],
       "event": "heard_of_rifle",
-      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof."
+      "say": "the Remnant guards keep guns lying around on top of the barracks. Nobody watches the roof.",
+      "line": "Word of advice: the Remnant leave guns lying about on the barracks roof. Nobody watches it."
     }
   ]
 }

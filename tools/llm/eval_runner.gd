@@ -35,6 +35,7 @@ func _initialize() -> void:
 	svc = LLMService.new()
 	get_root().add_child(svc)
 	var cfg := LLMConfig.new().load_all()
+	cfg.set_ai_enabled(true)           # issue #328: the eval talks to the real models
 	svc.configure(cfg)
 	svc.set_mode(mode)
 	if mode in ["auto", "local"]:

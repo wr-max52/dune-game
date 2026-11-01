@@ -31,6 +31,7 @@ func test_report_names_the_reason_when_offline() -> void:
 	cfg.user_path = "user://none.json"
 	cfg.keys_path = "user://none_keys.cfg"
 	cfg.load_all()
+	cfg.set_ai_enabled(true)
 	svc.configure(cfg)
 	svc.sidecar = LLMSidecar.new(cfg.profile("local"))
 	svc.sidecar.state = LLMSidecar.State.NO_BINARY
@@ -40,7 +41,7 @@ func test_report_names_the_reason_when_offline() -> void:
 	assert_true(str(rep.summary).contains("canned"))
 	assert_true(str(rep.lines).contains("brew install llama.cpp"))
 	assert_true(str(rep.lines).contains("ollama: not running"))
-	assert_true(str(rep.lines).contains("cloud: off"))
+	assert_true(str(rep.lines).contains("cloud: needs an API key"))
 
 
 func test_second_health_check_waits_instead_of_dropping() -> void:
@@ -65,6 +66,7 @@ func test_repeat_sidecar_start_preserves_owned_instance() -> void:
 	add_child_autofree(svc)
 	var cfg := LLMConfig.new()
 	cfg.load_all()
+	cfg.set_ai_enabled(true)
 	cfg.set_value("profiles/local/sidecar/enabled", true)
 	svc.configure(cfg)
 	var owned := LLMSidecar.new(cfg.profile("local"))
@@ -79,6 +81,7 @@ func test_repeat_sidecar_start_queues_only_one_health_callback() -> void:
 	add_child_autofree(svc)
 	var cfg := LLMConfig.new()
 	cfg.load_all()
+	cfg.set_ai_enabled(true)
 	cfg.set_value("profiles/local/sidecar/enabled", true)
 	cfg.set_value("profiles/local/health_url", "http://127.0.0.1:9/health")
 	svc.configure(cfg)
