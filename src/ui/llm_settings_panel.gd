@@ -22,9 +22,6 @@ var _elevenlabs_key: LineEdit
 var _elevenlabs_key_now: Label
 var _speech_speed: SpinBox
 var _result: Label
-var _prompt_box: VBoxContainer
-var _prompt_intro: Label
-var _prompt_text: TextEdit
 var _test_id := -1
 var _voice_settings_saved := true
 var _content: VBoxContainer
@@ -74,29 +71,6 @@ func _ready() -> void:
 		if (f[0] as String).ends_with("/model"):
 			_add_help_buttons(row, (f[0] as String).get_slice("/", 0))
 		v.add_child(row)
-	_prompt_box = VBoxContainer.new()
-	_prompt_box.visible = false
-	v.add_child(_prompt_box)
-	_prompt_intro = Label.new()
-	_prompt_intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_prompt_intro.custom_minimum_size = Vector2(600, 0)
-	_prompt_box.add_child(_prompt_intro)
-	_prompt_text = TextEdit.new()
-	_prompt_text.editable = false
-	_prompt_text.add_theme_color_override("font_readonly_color", Color(0.88, 0.85, 0.8))
-	_prompt_text.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	_prompt_text.custom_minimum_size = Vector2(600, 120)
-	_prompt_box.add_child(_prompt_text)
-	var pb := HBoxContainer.new()
-	_prompt_box.add_child(pb)
-	var copy := Button.new()
-	copy.text = "Copy prompt"
-	copy.pressed.connect(func(): _copy_prompt(_prompt_text.text))
-	pb.add_child(copy)
-	var hide_btn := Button.new()
-	hide_btn.text = "Hide"
-	hide_btn.pressed.connect(func(): _prompt_box.visible = false)
-	pb.add_child(hide_btn)
 	_cloud_type = OptionButton.new()
 	_cloud_type.add_item("openai_compat")
 	_cloud_type.add_item("anthropic")
@@ -149,7 +123,7 @@ func _row(label: String, c: Control) -> HBoxContainer:
 
 
 ## Beside a provider's model: Link (its download page) and Prompt (set-up text for a
-## coding agent, copied and shown).
+## coding agent, copied to the clipboard).
 func _add_help_buttons(h: HBoxContainer, id: String) -> void:
 	var link := Button.new()
 	link.text = "Link"
@@ -159,21 +133,20 @@ func _add_help_buttons(h: HBoxContainer, id: String) -> void:
 	var prompt := Button.new()
 	prompt.text = "Prompt"
 	prompt.tooltip_text = "Copy a set-up prompt for a coding agent"
-	prompt.pressed.connect(func(): show_prompt(id))
+	prompt.pressed.connect(func(): copy_prompt(id, prompt))
 	h.add_child(prompt)
 
 
-## Show the set-up prompt for `id` and put it on the clipboard.
-func show_prompt(id: String) -> void:
-	_prompt_intro.text = "%s: %s" % [str(LLMSetupHelp.provider(id).get("title", id)), LLMSetupHelp.intro()]
-	_prompt_text.text = LLMSetupHelp.prompt(id)
-	_prompt_box.visible = true
-	_copy_prompt(_prompt_text.text)
-
-
-func _copy_prompt(text: String) -> void:
-	DisplayServer.clipboard_set(text)
-	_result.text = "Prompt copied. " + LLMSetupHelp.intro()
+## Put the set-up prompt for `id` on the clipboard and confirm it: the button says
+## "Copied" for two seconds and the result line says what to do with it.
+func copy_prompt(id: String, button: Button = null) -> void:
+	DisplayServer.clipboard_set(LLMSetupHelp.prompt(id))
+	_result.text = "Prompt copied; give it to your agent.\n" + LLMSetupHelp.intro()
+	if button != null:
+		button.text = "Copied"
+		get_tree().create_timer(2.0).timeout.connect(func():
+			if is_instance_valid(button):
+				button.text = "Prompt")
 
 
 func toggle() -> void:
@@ -238,6 +211,8 @@ func _apply() -> void:
 	_voice_settings_saved = true
 	for path in _fields:
 		cfg.set_value("profiles/" + path, (_fields[path] as LineEdit).text.strip_edges())
+	for id in ["local", "ollama"]:
+		cfg.follow_base_url(id)
 	cfg.set_value("profiles/cloud/type", _cloud_type.get_item_text(_cloud_type.selected))
 	cfg.set_value("profiles/cloud/enabled", _cloud_on.button_pressed)
 	if _key.text.strip_edges() != "":

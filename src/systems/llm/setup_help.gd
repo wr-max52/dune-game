@@ -3,7 +3,7 @@ extends RefCounted
 ## Settings > AI brain: a Link and a Prompt button for Ollama, the local server and the
 ## cloud. Pure; the links and prompts live in content/core/llm/setup_help.json.
 ##   link(id)    -- the page to install it from
-##   prompt(id)  -- text to give a coding agent, with this machine's real paths filled in
+##   prompt(id)  -- set-up text for a coding agent (the Prompt button copies it)
 ##   intro()     -- what to do with the prompt
 
 const PATH := "res://content/core/llm/setup_help.json"
@@ -33,15 +33,7 @@ static func intro() -> String:
 	return str(data().get("prompt_intro", ""))
 
 
-## `paths` can replace game_dir, user_dir and config_file (tests do).
-static func prompt(id: String, paths: Dictionary = {}) -> String:
-	var text := str(provider(id).get("prompt", ""))
-	var fill := {
-		"game_dir": ProjectSettings.globalize_path("res://").trim_suffix("/"),
-		"user_dir": ProjectSettings.globalize_path("user://").trim_suffix("/"),
-		"config_file": ProjectSettings.globalize_path(LLMConfig.USER_PATH),
-	}
-	fill.merge(paths, true)
-	for k in fill:
-		text = text.replace("{%s}" % k, str(fill[k]))
-	return text
+## The prompt is stored as an array of lines in the JSON so it stays readable.
+static func prompt(id: String) -> String:
+	var p = provider(id).get("prompt", "")
+	return "\n".join(PackedStringArray(p)) if p is Array else str(p)

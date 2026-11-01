@@ -4,16 +4,21 @@ Plain English, newest on top. One entry per milestone.
 
 ## Settings: set up an AI brain with a link or a prompt (2026-11-01)
 
-- **Ollama, the local server (llama.cpp) and the cloud each get two buttons** in
-  the AI settings (F10): **Link** opens the page to download it (ollama.com,
-  the llama.cpp project, platform.claude.com), and **Prompt** copies a set-up
-  prompt and shows it, headed "Give this to a coding agent with access to the
-  internet and your computer, in a trusted location (e.g.
-  ~/projects/desert-spaceport)."
-- The prompts name this machine's real game and settings folders, pick a model
-  by how much memory you have, and for the cloud leave the account, billing and
-  key to you (the key goes in the game's key box, never in a file in the project).
-  Text is in `content/core/llm/setup_help.json`.
+- **Ollama, the local server (llama.cpp) and the cloud each get two buttons** beside
+  their model in the AI settings (F10): **Link** opens the download page
+  (ollama.com, the llama.cpp project, platform.claude.com), and **Prompt** copies a
+  detailed set-up prompt for a coding agent. The button says "Copied" and the
+  settings say "Prompt copied; give it to your agent", with a reminder to run the
+  agent with access to the internet and your computer, in a trusted folder.
+- Each prompt asks the agent only to get the server running (or, for the cloud,
+  to walk you through making a key yourself) and to hand back the URL and model
+  name to paste in, with examples of what is allowed. It picks a model by this
+  machine's memory, and tests the server with the same kind of streamed JSON
+  request the game sends, against the game's first-word time limit. Text is in
+  `content/core/llm/setup_help.json`.
+- **A Local or Ollama URL on another port now works.** Its health check and the
+  local server's port follow the URL you type, so a server on, say, port 8080 is
+  no longer reported down.
 
 ## The general's pit meeting opens as you climb out (2026-11-01)
 
