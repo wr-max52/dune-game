@@ -4,7 +4,7 @@ extends Control
 ## icon at every place that stays put (GlobeMap.pins). Not a tracking map: no
 ## player, no people that move.
 ##
-## Drag turns it, the wheel zooms (zoomed in past the data's town_zoom the
+## Drag turns it, the wheel or the + / - buttons in its top left zoom (zoomed in past the data's town_zoom the
 ## port's pin opens into its own stops). Hover names a pin; a click sets the
 ## waypoint there (`pin_clicked`), a click on bare ground drops a marked spot
 ## (`spot_clicked`). Shapes and colours: content/look/map.json.
@@ -19,6 +19,7 @@ signal spot_clicked(map: Vector2)
 const ZOOM_MIN := 1.0
 const ZOOM_MAX := 48.0
 const ZOOM_STEP := 1.25
+const BUTTON_STEP := 2.0                 ## how far one press of the + / - buttons zooms
 const HIT := 11.0                        ## px: how near a click has to land on a pin
 const DRAG := 4.0                        ## px: further than this and a press is a drag, not a click
 const PITCH_MAX := 1.45
@@ -44,6 +45,18 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE
 	custom_minimum_size = Vector2(220, 220)
+	var zb := VBoxContainer.new()
+	zb.position = Vector2(8, 8)
+	zb.add_theme_constant_override("separation", 4)
+	add_child(zb)
+	for z in [["+", BUTTON_STEP], ["-", 1.0 / BUTTON_STEP]]:
+		var b := Button.new()
+		b.name = "ZoomIn" if z[0] == "+" else "ZoomOut"
+		b.text = z[0]
+		b.custom_minimum_size = Vector2(28, 28)
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(func(): set_zoom(zoom * z[1]))
+		zb.add_child(b)
 
 
 func view() -> Basis:
@@ -280,6 +293,23 @@ static func draw_shape(ci: CanvasItem, at: Vector2, shape: String, col: Color, r
 			ci.draw_arc(at, r, 0.0, TAU, 24, edge, 4.0, true)
 			ci.draw_arc(at, r, 0.0, TAU, 24, col, 2.0, true)
 			return
+		"planet":
+			# a ball with a tilted ring round it: the ring's back half behind, front half over
+			var ring := PackedVector2Array()
+			for k in 33:
+				var a := TAU * k / 32.0
+				ring.append(at + Vector2(cos(a) * r * 1.5, sin(a) * r * 0.45).rotated(-0.35))
+			ci.draw_polyline(ring.slice(16, 33), edge, 3.5, true)
+			ci.draw_polyline(ring.slice(16, 33), col, 1.5, true)
+			ci.draw_circle(at, r * 0.8 + 1.0, edge)
+			ci.draw_circle(at, r * 0.8, col)
+			ci.draw_polyline(ring.slice(0, 17), edge, 3.5, true)
+			ci.draw_polyline(ring.slice(0, 17), col, 1.5, true)
+			return
+		"cruiser":
+			# a long wedge, nose right, with a notch at the stern for the drives
+			pts = PackedVector2Array([at + Vector2(r * 1.5, 0), at + Vector2(-r * 1.2, -r * 0.8),
+				at + Vector2(-r * 0.7, 0), at + Vector2(-r * 1.2, r * 0.8)])
 		_:
 			ci.draw_circle(at, r * 0.85 + 1.0, edge)
 			ci.draw_circle(at, r * 0.85, col)
