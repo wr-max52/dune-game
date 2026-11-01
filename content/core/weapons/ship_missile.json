@@ -5,11 +5,15 @@
   "fire_group": "secondary",
   "homing": true,
   "damage": 85,
+  "personnel_damage": 250,
   "bolt_speed": 130.0,
   "turn_rate": 2.6,
   "rate": 0.3,
   "recoil": 0.0,
   "range": 1500.0,
+  "splash_radius": 12.0,
+  "splash_damage": 80,
+  "blast_size": 0.8,
   "mag": 4,
   "reload_time": 12.0,
   "reload_each": 1.5,
@@ -17,5 +21,5 @@
   "lock_cone_deg": 20.0,
   "lock_range": 1100.0,
   "visible_bolt": true,
-  "note": "IP-neutral. Needs a lock: keep the target in the cone for lock_time seconds. A rack of four (mag): holding the key with a lock fires them off one every rate seconds, and the lock holds through the salvo (AI pilots lock afresh for each). reload_each: one seeker comes back every 1.5 s while the rack is short (reload_time is unused then). In a space fight its speed and ranges are scaled (content/core/flow/space_fight.json)."
+  "note": "IP-neutral. Fires with or without a lock, in space and in the air: with one (keep the target in the cone for lock_time seconds) it homes; without one it flies straight off the nose like a bolt. A rack of four (mag): holding the key fires them off one every rate seconds, and a lock holds through the salvo (AI pilots only fire locked, and lock afresh for each). reload_each: one seeker comes back every 1.5 s while the rack is short (reload_time is unused then); the air and space share one rack. Where it bursts (a hit, or the ground) it goes up like a vehicle (ExplosionFx.big at blast_size) and hurts everything within splash_radius by splash_damage. 'damage' is a hit on a ship's hull, 'personnel_damage' a hit on anything else (as ship_cannon). In a space fight its speed and ranges (splash_radius too) are scaled (content/core/flow/space_fight.json). In the air it locks on the Remnant interceptor."
 }

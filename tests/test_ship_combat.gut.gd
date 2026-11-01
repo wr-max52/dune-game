@@ -1,7 +1,7 @@
 extends GutTest
 ## M10: ship weapons and damage. The lead solver aims where a moving target will be,
-## the projectile field sweeps fast bolts so they cannot tunnel, seekers home and
-## need a lock, the shield takes damage before the hull and recharges after a
+## the projectile field sweeps fast bolts so they cannot tunnel, seekers home on a
+## lock, the shield takes damage before the hull and recharges after a
 ## delay, and the loadout builds its guns from data.
 
 const LeadSolver := preload("res://src/systems/flight/lead_solver.gd")
@@ -150,6 +150,27 @@ func test_cannons_fire_linked_bolts_that_inherit_velocity() -> void:
 		assert_lt(v.z, -300.0, "bolt speed adds to the ship's own speed")
 	var again: Array = lo.fire(1.0 / 60.0, Transform3D.IDENTITY, vel, true, false)
 	assert_eq(again.size(), 0, "the fire rate limits the next shot")
+
+
+func test_seeker_spawn_carries_its_splash_and_homes_only_on_a_target() -> void:
+	var lo = ShipLoadout.new(content.get_ship("interceptor"), content)
+	var w: Dictionary = content.get_weapon("ship_missile")
+	var out: Array = lo.fire(1.0 / 60.0, Transform3D.IDENTITY, Vector3.ZERO, false, true)
+	assert_eq(out.size(), 1, "the seeker trigger launches without a target")
+	assert_eq(out[0].kind, "missile")
+	assert_eq(int(out[0].target_id), -1, "no target: it flies straight")
+	assert_gt(float(out[0].splash_radius), 0.0, "a seeker bursts with splash")
+	assert_almost_eq(float(out[0].splash_radius), float(w.splash_radius), 0.001)
+	assert_gt(float(out[0].blast_size), 0.0, "and goes up like a vehicle")
+
+
+func test_seeker_rack_hands_across() -> void:
+	var air = ShipLoadout.new(content.get_ship("interceptor"), content)
+	var space = ShipLoadout.new(content.get_ship("interceptor"), content)
+	air.fire(1.0 / 60.0, Transform3D.IDENTITY, Vector3.ZERO, false, true)
+	assert_eq(air.group_ammo("secondary"), int(content.get_weapon("ship_missile").mag) - 1)
+	space.set_rack("secondary", air.rack("secondary"))
+	assert_eq(space.group_ammo("secondary"), air.group_ammo("secondary"), "one rack in the air and in space")
 
 
 func test_cannons_converge_ahead_of_the_nose() -> void:

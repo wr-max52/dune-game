@@ -8,7 +8,8 @@ extends RefCounted
 ## reads the hits. One implementation, two consumers -- the M2/M5 pattern.
 
 var items: Array = []   ## each: { uid, kind, pos, prev, vel, speed, damage, range_left,
-						##         team, owner, homing, turn_rate, target_id, weapon_id }
+						##         team, owner, homing, turn_rate, target_id, weapon_id,
+						##         splash_radius, splash_damage, blast_size }
 var _next_uid := 1
 
 
@@ -32,6 +33,9 @@ func add(spawn: Dictionary, owner_id: int, team: String) -> int:
 		"homing": bool(spawn.get("homing", false)),
 		"turn_rate": float(spawn.get("turn_rate", 0.0)),
 		"target_id": int(spawn.get("target_id", -1)),
+		"splash_radius": float(spawn.get("splash_radius", 0.0)),
+		"splash_damage": float(spawn.get("splash_damage", 0.0)),
+		"blast_size": float(spawn.get("blast_size", 0.0)),
 	})
 	return uid
 
@@ -42,7 +46,8 @@ func count() -> int:
 
 ## Advance every projectile and return the hits this frame.
 ## `targets` is an Array of { id, team, position, radius, alive }.
-## Each hit: { uid, kind, weapon_id, owner, team, target_id, damage, point }.
+## Each hit: { uid, kind, weapon_id, owner, team, target_id, damage, point,
+## splash_radius, splash_damage, blast_size }.
 func step(dt: float, targets: Array) -> Array:
 	var hits: Array = []
 	var by_id := {}
@@ -73,6 +78,8 @@ func step(dt: float, targets: Array) -> Array:
 					"uid": p.uid, "kind": p.kind, "weapon_id": p.weapon_id,
 					"owner": p.owner, "team": p.team, "target_id": int(t.id),
 					"damage": p.damage, "point": closest_point(p.prev, p.pos, t.position),
+					"splash_radius": p.splash_radius, "splash_damage": p.splash_damage,
+					"blast_size": p.blast_size,
 				})
 				hit = true
 				break

@@ -197,8 +197,9 @@ func _draw_gauge() -> void:
 
 
 ## Issue #76: the space fight's target box and lead pip, for an enemy in the air: a
-## box on it (with its hull under it), the dot where to aim, and an arrow at the
-## screen's edge pointing to it when it is behind or off screen.
+## box on it (with its hull under it), the dot where to aim, the seekers' lock
+## filling a ring round it, and an arrow at the screen's edge pointing to it when it
+## is behind or off screen.
 func _draw_target() -> void:
 	if target.is_empty():
 		return
@@ -212,6 +213,10 @@ func _draw_target() -> void:
 	var sp := cam.unproject_position(tp) if on_screen else Vector2.ZERO
 	if on_screen and Rect2(Vector2.ZERO, vp).has_point(sp):
 		gauge.draw_rect(Rect2(sp - Vector2(18, 18), Vector2(36, 36)), col, false, 1.5)
+		# The seekers' lock building round the box, as in a space fight.
+		var lock := clampf(float(target.get("lock", 0.0)), 0.0, 1.0)
+		if lock > 0.0:
+			gauge.draw_arc(sp, 26.0, -PI * 0.5, -PI * 0.5 + TAU * lock, 32, col, 2.5)
 		var hp := clampf(float(target.get("hull", 1.0)), 0.0, 1.0)
 		gauge.draw_rect(Rect2(sp + Vector2(-18, 22), Vector2(36, 4)), Color(0, 0, 0, 0.5))
 		gauge.draw_rect(Rect2(sp + Vector2(-18, 22), Vector2(36 * hp, 4)), col)
