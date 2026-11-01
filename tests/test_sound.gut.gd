@@ -71,6 +71,22 @@ func test_battle_holds_then_lets_go() -> void:
 	assert_eq(s.want_mode(), "ambient", "quiet long enough")
 
 
+## Issue #80: the fight music cuts in at once; after the fight the next
+## ambient track fades in over `fade` seconds, not the battle cut.
+func test_battle_cuts_in_and_ambient_fades_back() -> void:
+	var s: Sound = add_child_autofree(Sound.new())
+	var full := float(cfg.music.volume_db)
+	s._switch("ambient")
+	s._switch("battle")
+	s._tw.custom_step(0.5)
+	assert_almost_eq(s._deck.volume_db, full, 0.1, "battle is in at once")
+	s._switch("ambient")
+	s._tw.custom_step(0.5)
+	assert_lt(s._deck.volume_db, full - 6.0, "ambient is still fading in")
+	s._tw.custom_step(float(cfg.music.fade))
+	assert_almost_eq(s._deck.volume_db, full, 0.1, "ambient faded in")
+
+
 func test_battle_plays_from_30s_and_loops_there() -> void:
 	var s: Sound = add_child_autofree(Sound.new())
 	s._switch("battle")
