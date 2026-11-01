@@ -524,7 +524,8 @@ func _look_upper(b: Dictionary, lx: float, lz: float, h: float) -> void:
 func _look_watchtower(b: Dictionary, lx: float, lz: float, h: float) -> void:
 	var mat := _plaster(b, 2.9)
 	const LEAN := 0.04
-	part(frustum(lx, lz, h, LEAN), mat, Vector3(0, h * 0.5, 0))
+	# The plaster stops inside the crown, not flush with its top (they flickered).
+	part(frustum(lx, lz, h - 0.2, LEAN), mat, Vector3(0, (h - 0.2) * 0.5, 0))
 	var y := FLOOR_H
 	while y < h - 1.0:
 		var k := 1.0 - LEAN * y / h
