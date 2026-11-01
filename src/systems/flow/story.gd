@@ -106,27 +106,39 @@ static func fresh() -> Dictionary:
 static func skip_to(id: String) -> void:
 	if index(id) < 0:
 		return
+	var from := index(chapter())
+	var told := bool(WorldState.story.get("told", false))
 	for c in chapters().slice(0, index(id)):
 		if applies(c):
-			_skipped(c)
+			var at := index(str(c.id))
+			_skipped(c, at >= from, at > from or not told)
 	WorldState.story = { "chapter": id, "told": id == "free" }
 	if reached("fleet"):
 		WorldState.set_flag("ships_unlocked")
 
 
-## Chapter `c` skipped past: its "skipped" flags, counters (at least) and standing
-## (once: not when its done_flag is set already), its one-off job card done, and
-## in a story save the quests its telling unlocks (the blade on the tower).
-static func _skipped(c: Dictionary) -> void:
+## Chapter `c` skipped past: its "skipped" flags and counters (at least), its
+## one-off job card done, and in a story save the quests its telling unlocks (the
+## blade on the tower). Not finished yet (`unplayed`): also its credits and
+## standing, once (not when its done_flag is set or its counters are met already:
+## skipping back and on again in free roam), and its "pays" when it was not told
+## yet (`untold`: the teller pays with the intro).
+static func _skipped(c: Dictionary, unplayed: bool, untold: bool) -> void:
 	var s: Dictionary = c.get("skipped", {})
+	var cs: Dictionary = s.get("counters", {})
 	var done_flag := str(c.get("done_flag", ""))
-	if done_flag == "" or not WorldState.has_flag(done_flag):
+	var done := (done_flag != "" and WorldState.has_flag(done_flag)) \
+		or (not cs.is_empty() and cs.keys().all(func(n): return WorldState.count(str(n)) >= int(cs[n])))
+	if unplayed and not done:
+		var pay := (int(c.get("pays", 0)) if untold else 0) + int(s.get("credits", 0))
+		if pay > 0:
+			WorldState.credits += pay
+			WorldState.log_event("Skipped %s: %d cr." % [str(c.id).replace("_", " "), pay])
 		var st: Dictionary = s.get("standing", {})
 		for f in st:
 			WorldState.change_standing(str(f), int(st[f]))
 	for f in s.get("flags", []):
 		WorldState.set_flag(str(f))
-	var cs: Dictionary = s.get("counters", {})
 	for n in cs:
 		WorldState.counters[str(n)] = maxi(WorldState.count(str(n)), int(cs[n]))
 	var job := str(c.get("job", ""))

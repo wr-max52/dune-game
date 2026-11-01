@@ -191,10 +191,14 @@ func test_beats_only_for_their_teller() -> void:
 
 func test_skipping_ahead_unlocks_what_playing_would() -> void:
 	WorldState.new_game(WorldState.STORY)
+	var c0 := WorldState.credits
 	Story.skip_to("bounty")
+	assert_eq(WorldState.credits, c0 + int(Story.chapter_cfg("remote").pays), "Oda's practice fee")
 	assert_false(GearUpgrades.open_offers().any(func(o): return str(o.id) == "quantonium_armour"), "no bounty paid yet")
 	assert_eq(Quests.state("tower_blade"), "", "Oda has not told the bounty chapter yet")
 	Story.skip_to("fleet")
+	assert_eq(int(Story.chapter_cfg("bounty").skipped.credits), int(Story.bounty_cfg().first_pay), "the first bounty's pay")
+	assert_eq(WorldState.credits, c0 + int(Story.chapter_cfg("remote").pays) + int(Story.bounty_cfg().first_pay))
 	assert_true(GearUpgrades.open_offers().any(func(o): return str(o.id) == "quantonium_armour"), "the fence sells the armour")
 	assert_eq(WorldState.count("merchant_droids"), 3)
 	assert_eq(str(WorldState.jobs_taken.get("j_droid_merchant", "")), "done", "the droid merchant's card is not left open")
@@ -207,6 +211,8 @@ func test_skipping_ahead_unlocks_what_playing_would() -> void:
 
 func test_skipping_past_the_fleet_is_the_cruiser_taken() -> void:
 	WorldState.new_game(WorldState.STORY)
+	Story.skip_to("fleet")
+	var c0 := WorldState.credits
 	Story.skip_to("free")
 	assert_true(Story.cruiser_taken() and Story.remnant_gone() and WorldState.has_flag("locals_hero"))
 	assert_true(bool(WorldState.story.told))
@@ -216,9 +222,21 @@ func test_skipping_past_the_fleet_is_the_cruiser_taken() -> void:
 		assert_eq(int(st[f]), int(reward[f]), "the skip's %s standing is the cruiser's reward" % f)
 	assert_eq(int(st.imperial_remnant), int(reward.remnant))
 	assert_eq(int(WorldState.standing.imperial_remnant), int(reward.remnant))
+	assert_eq(int(Story.chapter_cfg("fleet").skipped.credits), int(reward.credits))
+	assert_eq(WorldState.credits, c0 + int(reward.credits), "the cruiser's reward")
 	Story.skip_to("free")
 	assert_eq(int(WorldState.standing.imperial_remnant), int(reward.remnant), "given once")
+	assert_eq(WorldState.credits, c0 + int(reward.credits), "paid once")
 	assert_eq(WorldState.count("bounties_paid"), 1, "at least one, not one more each skip")
+
+
+func test_a_skip_does_not_pay_twice_for_what_was_played() -> void:
+	WorldState.new_game(WorldState.STORY)
+	Story.skip_to("remote")
+	Story.beat("cantina_owner")
+	var c0 := WorldState.credits
+	Story.skip_to("smuggle_1")
+	assert_eq(WorldState.credits, c0, "Oda paid for the practice when she told it")
 
 
 # ---- data ----------------------------------------------------------------------
