@@ -123,7 +123,9 @@
       "space": { "handoff": 2600.0, "note": "Issue #99: no fade between planets. Within handoff metres of this ball's surface its own scene flies you (switched in mid-flight, the ship where it was, the same sun and stars); further out you are in its parent's (near) sky." },
       "body": { "radius": 1500.0, "color": "#7a7a7e", "dark": "#2e2e32" },
       "arrival": { "altitude": 520.0, "distance": 900.0 },
-      "fall_text": ""
+      "fall_text": "",
+      "harmful_surface": { "damage_per_s": 5.0, "remind_s": 6.0, "text": "Put on armour to roam this planet's surface.",
+                           "note": "Issue #298: no air on the rock. Outside the dome, the hallway and the landing pit, without armour on, you lose damage_per_s health a second, a straight line to death, reminded every remind_s seconds. A planet's own harmful_surface replaces this; {} turns it off. Read by src/systems/world/harmful_surface.gd." }
     }
   }
 }

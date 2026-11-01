@@ -2,6 +2,21 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## No air on the asteroid without armour (issue #298, 2026-10-31)
+
+- **The asteroid's rock has no air.** Step outside the station (past the dome,
+  the hallway and the landing pit) without armour on and you lose 5 health a
+  second, a straight line to death. A message says "Put on armour to roam this
+  planet's surface." every few seconds. Die out there and you wake as from any
+  other death.
+- **Armour keeps you breathing** (anything worn in the armour slot, e.g. the
+  Quantonium armour). Flying a ship is safe too.
+- **Any planet can be harmful**: a `harmful_surface` block on its type
+  (types.json; the asteroid has one) or on its own file, which wins. PlanetGen
+  passes it through and the town adds the hazard (HarmfulSurface). Shelter is
+  AsteroidWorld.sheltered(): the dome's ring, the hallway or the pit.
+- Test: tests/test_harmful_surface.gut.gd.
+
 ## Silent sword kills (issue #307, 2026-10-31)
 
 - **Cut someone down before they notice you and nobody knows.** An energy sword

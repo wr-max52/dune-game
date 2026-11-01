@@ -2,6 +2,16 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #298, no air outside (2026-10-31)
+
+**Checked:** tests/test_harmful_surface.gut.gd on its own (4/4). The full suite
+and a walk outside in the game were not run.
+
+- **A speeder counts as shelter** (riding sets `piloting`, the same as a ship).
+- **No air meter or breathing sound.** Just the toast and the health bar.
+- **Shelter is a plan-view check** (the ring, the hallway's rectangle, the pit's
+  circle), not the actual walls.
+
 ## After issue #307, silent sword kills (2026-10-31)
 
 **Checked:** compiles; not playtested. As the issue asked, there is no new
