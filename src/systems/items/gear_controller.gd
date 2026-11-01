@@ -48,7 +48,6 @@ var rig_node: Node              ## camera rig node (first-person check), optiona
 var location_id := "port_town"
 var items: ItemKit
 var hud: GearHud
-var inventory_panel: InventoryPanel
 var labels: Dictionary = {}
 var pickups: Array = []         ## PickupNode
 var drop                        ## PickupNode: Oda's smuggling drop, while one is lying out there
@@ -108,12 +107,6 @@ func _ready() -> void:
 	items = ItemKit.new()
 	hud = GearHud.new()
 	add_child(hud)
-	# M15: what you are carrying, on I.
-	inventory_panel = InventoryPanel.new()
-	inventory_panel.content = content
-	inventory_panel.name_of = _shown
-	inventory_panel.toggle_item = toggle_item
-	add_child(inventory_panel)
 	menu = DroidMenu.new()
 	add_child(menu)
 	lowest_floor = _lowest_floor()
@@ -349,6 +342,16 @@ func _find_focus() -> Dictionary:
 
 ## An item as a prompt shows it: its label and its make and model, "Jetpack
 ## (Redfern BX-14 Wingbeat)" (issue #15; just the label when it has no naming).
+## M15: what you are carrying, the settings panel's Inventory page (on I), wired
+## to this gear's item data and wear toggle.
+func inventory_page() -> InventoryPanel:
+	var page := InventoryPanel.new()
+	page.content = content
+	page.name_of = _shown
+	page.toggle_item = toggle_item
+	return page
+
+
 func _shown(item: Dictionary, id: String) -> String:
 	var label := str(item.get("label", id))
 	var model := NameHooks.equipment(item, id)

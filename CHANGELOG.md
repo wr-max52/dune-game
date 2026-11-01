@@ -15,6 +15,25 @@ Plain English, newest on top. One entry per milestone.
   An activated red saber can be drawn in a story save even without the blue
   one. A save that already had the wreck's saber starts with it put away.
 
+## Sword fighting the dark master (2026-10-31)
+
+- **Parries throw sparks.** When your blade blocks one of his blows, or his
+  guard turns one of your cuts, a small burst of sparks goes off where the
+  blades cross and you both get shoved back about a metre and a half. The
+  camera jolts and the game pauses for a split second.
+- **He no longer charges you the whole time.** He comes at you, strikes one to
+  three times, then steps back out of reach and circles you for a second or so
+  before he comes again. He runs in from far away and walks in from close up.
+  Step into his reach while he circles and he cuts at you once, then backs off
+  again. After you parry him he staggers, then backs off.
+## Map zoom buttons and off-planet icons (2026-11-01)
+
+- **Zoom buttons.** The F11 map's globe has + and - buttons in its top-left
+  corner. Each press zooms twice as far in or out, alongside the mouse wheel.
+- **Off-planet icons.** Each place in the sky has an icon beside it: a ringed
+  planet for a planet you can fly to, a red wedge for the Remnant cruiser.
+  Looks: content/look/map.json.
+
 ## The barracks change hands back and forth (2026-11-01)
 
 - **Kill every Remnant trooper at the barracks and the locals take the town

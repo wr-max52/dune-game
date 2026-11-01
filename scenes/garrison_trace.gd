@@ -289,6 +289,16 @@ func _smuggle() -> void:
 	kv("SOLD", sold)
 	kv("EARNED", WorldState.credits - credits0)
 	kv("CELLS_AFTER", WorldState.inventory.count("unmarked_cells"))
-	gear.inventory_panel.open()
-	kv("PANEL_OPEN", gear.inventory_panel.is_open())
-	kv("PANEL_ROWS", gear.inventory_panel.rows.size())
+	# I opens the settings panel on its Inventory page.
+	for down in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_I
+		key.pressed = down
+		Input.parse_input_event(key)
+	await _frames(2)
+	var settings: DevSettingsPanel = demo.dev_settings
+	var open := settings != null and settings.visible
+	kv("PANEL_OPEN", open and settings.tabs.get_tab_title(settings.tabs.current_tab) == "Inventory")
+	kv("PANEL_ROWS", settings.inventory.rows.size() if open else 0)
+	if open:
+		settings.close()

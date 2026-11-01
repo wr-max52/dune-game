@@ -1,13 +1,13 @@
 class_name InventoryPanel
-extends CanvasLayer
-## What you are carrying (M15), on I. Credits, then every item you own with how
+extends ScrollContainer
+## What you are carrying (M15): the Inventory page of the settings panel, on I
+## (DevSettingsPanel; M is its Map page). Credits, then every item you own with how
 ## many, whether it is worn, what a vendor would pay, and a CONTRABAND tag on what
 ## the Remnant would confiscate at the gate. Beside it, the job log: the story's
 ## chapter, the drop or goods you are running, the bounty out, and any job taken
-## (Objective.log_entries). No game logic: GearController hands it the inventory
-## and the item data; it only reads. Issue #201: under the jobs, the optional
-## quests (Quests.entries) with a waypoint toggle each; the mouse is free while
-## the panel is open so the toggles can be clicked.
+## (Objective.log_entries). No game logic: the settings panel hands it
+## GearController's item data and wear toggle; it only reads. Issue #201: under
+## the jobs, the optional quests (Quests.entries) with a waypoint toggle each.
 ##
 ## The backpack (Inventory.slots_used): its numbered slots, the pistol in the
 ## first, one kind of item in each of the rest, then the empty ones. Activated
@@ -17,15 +17,12 @@ extends CanvasLayer
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
 const RED := Color("#ff6a55")
-const SIZE := Vector2(800, 460)   ## the panel's size, shrunk to fit a small (or text-scaled) screen
-const MARGIN := Vector2(16, 48)   ## kept clear on each side: the HUD's banner and footer
 
 var inventory: Inventory          ## null = WorldState.inventory, read fresh (a load replaces it)
 var content                       ## CoreContent (item labels, values, contraband)
 var name_of: Callable             ## id -> shown name (GearController._shown); optional
 var toggle_item: Callable         ## issue #209: id -> put a worn item on or off (GearController.toggle_item); optional
 var wear_buttons: Dictionary = {}  ## item id -> its Wear / Take off button (tests)
-var panel: PanelContainer
 var title: Label
 var credits_label: Label
 var backpack_label: Label
@@ -34,40 +31,19 @@ var jobs: VBoxContainer
 var rows: Array = []              ## the text of each row, for tests
 var job_rows: Array = []          ## the job log's text, title then line, for tests
 var quest_buttons: Dictionary = {}  ## quest id -> its waypoint toggle (tests)
-var _mouse_before := Input.MOUSE_MODE_VISIBLE
 
 
 func _init() -> void:
-	name = "InventoryPanel"
-	layer = 7
+	name = "Inventory"            # the tab's title
+	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 
 
 func _ready() -> void:
-	panel = PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.06, 0.05, 0.9)
-	sb.border_color = AMBER
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(6)
-	sb.set_content_margin_all(16)
-	panel.add_theme_stylebox_override("panel", sb)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.visible = false
-	add_child(panel)
-	var outer := VBoxContainer.new()
-	outer.add_theme_constant_override("separation", 8)
-	panel.add_child(outer)
-	# Scrolls (the wheel) when a long job log is taller than the panel, so the
-	# panel never grows past the screen.
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(scroll)
+	# Scrolls (the wheel) when a long job log is taller than the page.
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 24)
 	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(cols)
+	add_child(cols)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	v.custom_minimum_size.x = 220
@@ -88,7 +64,6 @@ func _ready() -> void:
 	jobs = VBoxContainer.new()
 	jobs.add_theme_constant_override("separation", 6)
 	jv.add_child(jobs)
-	_text(outer, "[I] close", 13, Color(INK, 0.6))
 
 
 func _text(parent: Control, t: String, size: int, color: Color) -> Label:
@@ -101,46 +76,6 @@ func _text(parent: Control, t: String, size: int, color: Color) -> Label:
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	return l
-
-
-func is_open() -> bool:
-	return panel != null and panel.visible
-
-
-func toggle() -> void:
-	if is_open():
-		close()
-	else:
-		open()
-
-
-func open() -> void:
-	_fit()
-	refresh()
-	if not panel.visible:
-		_mouse_before = Input.mouse_mode
-	panel.visible = true
-	if DisplayServer.get_name() != "headless":
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
-
-## Centre the panel at SIZE, or smaller when the screen (after the text scale)
-## is: the columns wrap to whatever width they get.
-func _fit() -> void:
-	var vp := panel.get_viewport_rect().size if panel.is_inside_tree() else SIZE
-	var half := Vector2(minf(SIZE.x, vp.x - 2.0 * MARGIN.x), minf(SIZE.y, vp.y - 2.0 * MARGIN.y)) * 0.5
-	panel.offset_left = -half.x
-	panel.offset_right = half.x
-	panel.offset_top = -half.y
-	panel.offset_bottom = half.y
-
-
-func close() -> void:
-	if not panel.visible:
-		return
-	panel.visible = false
-	if DisplayServer.get_name() != "headless":
-		Input.mouse_mode = _mouse_before
 
 
 ## Rebuild the rows from the inventory as it is now.
@@ -267,15 +202,7 @@ func _droid_rows() -> void:
 		_wrap(_text(list, row, 16, AMBER))
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("inventory"):
-		toggle()
-		get_viewport().set_input_as_handled()
-	elif is_open() and event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
-		close()
-		get_viewport().set_input_as_handled()
-
-
+## Credits change under the open page (the Game page's spin box, a sale).
 func _process(_dt: float) -> void:
-	if is_open():
+	if is_visible_in_tree():
 		credits_label.text = "Credits:  %d cr" % WorldState.credits
