@@ -456,7 +456,7 @@ func board() -> bool:
 		return false
 	if i != berth:
 		_use_berth(i)
-	if berths[i].has("outpost") and not bool(berths[i].stolen):
+	if berths[i].has("outpost") and not bool(berths[i].stolen) and not bool(berths[i].get("borrowed", false)):
 		_steal(i)
 	var p := player()
 	piloting = true
@@ -1316,7 +1316,7 @@ func _tow_home() -> void:
 	var seated := piloting
 	if piloting:
 		exit_ship()
-	if bool(berths[berth].get("stolen", false)):
+	if bool(berths[berth].get("stolen", false)) or bool(berths[berth].get("borrowed", false)):
 		_lose_stolen(seated)
 		return
 	hud.toast(GameFlow.label("towed"), 4.0)
@@ -1561,8 +1561,15 @@ func _wreck_berth(i: int, boom: bool) -> void:
 
 # ------------------------------------------------------------------ stolen ships (issue #76)
 
-## Taking an outpost's ship: its garrison sounds the alarm.
+## Taking an outpost's ship: its garrison sounds the alarm. Issue #303: a friend of
+## the Remnant in free play borrows it instead: no alarm, no chase, a little
+## standing, and (not stolen) nothing for Skrugs to buy.
 func _steal(i: int) -> void:
+	if DarkPact.borrow_ok():
+		berths[i]["borrowed"] = true
+		WorldState.change_standing("imperial_remnant", DarkPact.borrow_cost(),
+			"Someone borrowed a Remnant ship from %s." % str(berths[i].get("where", Story.outpost_label(str(berths[i].outpost)))))
+		return
 	berths[i].stolen = true
 	steals += 1
 	var outposts = demo.outposts if "outposts" in demo else null

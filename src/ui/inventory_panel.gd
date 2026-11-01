@@ -214,7 +214,7 @@ func _quest_log() -> void:
 	job_rows.append(Objective.line("log_quests"))
 	_text(jobs, job_rows[-1], 15, AMBER)
 	for q in qs:
-		var head := "%s   (%s)" % [str(q.title).to_upper(), Objective.line("quest_done" if q.done else "quest_open")]
+		var head := "%s   (%s)" % [str(q.title).to_upper(), Objective.line("quest_failed" if q.get("failed", false) else ("quest_done" if q.done else "quest_open"))]
 		job_rows.append(head)
 		_text(jobs, head, 13, Color(AMBER, 0.6) if q.done else AMBER)
 		job_rows.append(str(q.text))

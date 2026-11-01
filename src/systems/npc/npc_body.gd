@@ -94,6 +94,13 @@ var perform := ""
 ## Issue #261: the club crowd's bottle, in the right hand (profile "drinks"), with a
 ## sip every so often while their pistol is put away.
 var bottle: Node3D
+var blade: Node3D              ## issue #303: an energy sword in the right hand (hold_blade)
+var blade_grip := Transform3D(Basis.from_euler(Vector3(deg_to_rad(90.0), 0.0, 0.0)), Vector3(0.0, -0.08, -0.06))   ## in the hand
+var _blade_bone := -1          ## the rigged model's hand bone the blade follows (-1: the wrist joint holds it)
+var hold_pose: Dictionary = {} ## joint -> degrees, held over the walk while no move plays (a sword's guard)
+## Issue #303: (amount, shooter, by_blade) -> the damage that gets through (0 = turned
+## aside). The dark master's red blade deflects bolts and parries cuts.
+var guard_hit: Callable
 var sips := 0
 var _sip_wait := 0.0
 const SIP_EVERY := Vector2(6.0, 14.0)
@@ -551,6 +558,7 @@ func _process(_delta: float) -> void:
 			look_body.position = _look_rest
 		return
 	look_body.position = _look_rest + local_offset(global_basis, render_origin(), global_position)
+	_place_blade()
 
 
 func _walk(dt: float) -> Vector3:
@@ -716,6 +724,10 @@ func apply_damage_from(amount: float, shooter: Node) -> void:
 	last_hit_by = shooter
 	if shooter is Node3D and is_instance_valid(shooter):
 		last_hit_from = (shooter as Node3D).global_position
+	if guard_hit.is_valid():
+		amount = float(guard_hit.call(amount, shooter, false))
+		if amount <= 0.0:
+			return
 	apply_damage(amount)
 	hit_by.emit(shooter, amount)
 
@@ -741,7 +753,12 @@ func apply_blade_hit(amount: float, sweep: Vector3) -> void:
 		return
 	_blade_sweep = Vector3(sweep.x, 0.0, sweep.z).normalized()
 	last_hit_from = global_position - _blade_sweep     # the kick follows the blade too
-	apply_damage(amount)
+	if guard_hit.is_valid():
+		amount = float(guard_hit.call(amount, target, true))
+		if amount > 0.0:
+			hit_by.emit(target, amount)          # (issue #303: he knows who cut him)
+	if amount > 0.0:
+		apply_damage(amount)
 	_blade_sweep = Vector3.ZERO
 
 
@@ -880,6 +897,10 @@ func _animate(dt: float, move: Vector3) -> void:
 			kit.reach(look_body, "l", w.transform * (grips.l as Vector3), Vector3(0.6, -0.7, -0.4))
 	if perform != "":
 		_reach_instrument(out)
+	if action == "" and not hold_pose.is_empty():
+		for jn in hold_pose:
+			if joints.has(jn):
+				(joints[jn] as Node3D).rotation_degrees = hold_pose[jn]
 	if bottle != null:
 		bottle.visible = not drawn
 		if bottle.visible and action == "":
@@ -914,6 +935,7 @@ func _animate(dt: float, move: Vector3) -> void:
 	# when told to, after they have moved this frame.
 	if look_body.has_meta("skin"):
 		(look_body.get_meta("skin") as SkinnedBody).sync(look_body)
+		_place_blade()
 
 
 ## Issue #261: the dancer and the band play their loop every frame wherever the
@@ -940,6 +962,40 @@ func _reach_instrument(out: Dictionary) -> void:
 			continue
 		var from := chest.global_transform.affine_inverse() * wrist.global_position
 		kit.reach(look_body, side, from.lerp(to_chest * (at as Vector3), w), HAND_POLES[side])
+
+
+## Issue #303: an energy sword in the right hand, the blade up out of the fist while
+## the forearm is level (as the bottle). Its look is CharacterKit's (the player's).
+## A rigged model draws its hand off the joints, so there the blade follows the
+## model's own hand bone (`grip` in that bone's space), not the wrist joint.
+func hold_blade(color: Color, hilt: String = "", length: float = -1.0, grip = null) -> Node3D:
+	var wrist := joints.get("r_wrist") as Node3D
+	if wrist == null or kit == null:
+		return null
+	blade = kit.make_energy_sword(color, length, hilt)
+	blade.name = "HeldBlade"
+	if grip is Transform3D:
+		blade_grip = grip
+	var skin: SkinnedBody = look_body.get_meta("skin") if look_body.has_meta("skin") else null
+	if skin != null and skin.bone_of.has("r_wrist"):
+		_blade_bone = int(skin.bone_of.r_wrist)
+		look_body.add_child(blade)
+		blade.top_level = true
+		_place_blade()
+	else:
+		wrist.add_child(blade)
+		blade.transform = blade_grip
+	return blade
+
+
+## The blade in the rigged hand: the bone's frame without its scale, then the grip.
+func _place_blade() -> void:
+	if blade == null or _blade_bone < 0 or not is_instance_valid(blade):
+		return
+	var skin: SkinnedBody = look_body.get_meta("skin")
+	var hand := skin.skeleton.global_transform * skin.skeleton.get_bone_global_pose(_blade_bone)
+	hand.basis = hand.basis.orthonormalized()
+	blade.global_transform = hand * blade_grip
 
 
 ## Issue #261: a bottle in the right hand, upright while the forearm is level

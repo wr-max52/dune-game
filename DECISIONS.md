@@ -2,6 +2,34 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-10-31 — Divergent endings: the Remnant can be gone and still your friends (issue #303)
+
+- **"Gone" and "hostile" are two questions now.** `Story.remnant_gone()` (the
+  fleet is beaten: the town garrison leaves, the general wears the desert
+  armour, the barracks go to the locals) and `Story.remnant_hostile()` (gone,
+  and you did not swear the dark master's oath: fighters, outposts and droids
+  shoot on sight). Alternative: keep one predicate and special-case the oath at
+  each call site. Rejected: the barracks owner needs "gone" while the troopers
+  need "hostile", and the two would drift apart.
+- **The fleet is beaten at the general's death, not at the end card.** The
+  locals have to hold the barracks while the oath is open (their guards are its
+  target), so the `debrief` chapter starts with the Remnant already gone. Free
+  roam does the same in `WorldState.on_cruiser_taken`.
+- **The town changes hands on a world rule, not on the pact.** Every local guard
+  on the barracks posts dead (saved per post in `WorldState.control`) hands the
+  town to the Remnant in any mode; the oath only decides whether they come back
+  friendly and whether it ends the story. Alternative: a pact-only scripted
+  takeover. Rejected: the free-roam game is meant to diverge the same way.
+- **The dark master is driven by his own node, not a garrison.** A sword fighter
+  does not fit GuardBrain (cover, bursts, aim). DarkMasterPost moves his NpcBody
+  with a small pure brain (BladeFighter) the way NativesDirector runs the
+  nomads' melee; NpcBody only gained a damage hook (deflect/parry), a held pose
+  and a held sword.
+- **Checkpoint saves.** `WorldState.checkpoint(why)` runs the hooks the town's
+  ConversationHost (which owns the save) registers. Before this the game only
+  saved when a talk ended or the scene closed, so a crash after the general's
+  death lost it.
+
 ## 2026-10-30 — The Remnant cruiser is part of the home planet's map (issue #193)
 
 - **Not a planet of its own.** The cruiser is a landmark of the home world

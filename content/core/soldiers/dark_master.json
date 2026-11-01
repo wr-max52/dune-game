@@ -1,0 +1,17 @@
+{
+  "id": "dark_master",
+  "base": "outpost_trooper",
+  "label": "Dark master",
+  "archetype": "dark_master",
+  "note": "Issue #303: the dark master (src/systems/npc/dark_master_post.gd drives him, not a garrison). All-black guard armour (characters.json dark_master, guard:void), a red energy sword in his right hand, no gun. A boss: a lot of health, quick on his feet. His blade work (reach, damage, deflecting) is content/core/npcs/dark_master.json 'blade'. Only the blocks below differ from outpost_trooper.json.",
+  "hp": 650,
+  "walk_speed": 3.4,
+  "sprint_speed": 7.4,
+  "turn_rate_deg": 420.0,
+  "upper": "sword",
+  "perception": {
+    "sight_range": 70.0,
+    "fov_deg": 200.0,
+    "reaction_s": 0.3
+  }
+}

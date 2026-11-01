@@ -1,0 +1,334 @@
+extends GutTest
+## Issue #303: the divergent endings, without a scene. The general's death is paid
+## and saved and sends you back to Oda; the dark master's offer (join / refuse);
+## the oath (clear the barracks' local guards, or break it by telling Oda first);
+## the town changing hands; free roam; the friends-of-the-Remnant perks; and his
+## sword fight (BladeFighter).
+
+var _saves: Array = []
+
+
+func before_each() -> void:
+	WorldState.reset()
+	WorldState.checkpoint_hooks.clear()
+	_saves.clear()
+	WorldState.checkpoint_hooks.append(func(why): _saves.append(why))
+
+
+func after_each() -> void:
+	WorldState.checkpoint_hooks.clear()
+	WorldState.reset()
+
+
+func _story_at_kill() -> void:
+	WorldState.new_game(WorldState.STORY)
+	Story.skip_to("fleet")
+	WorldState.on_cruiser_taken("General Test", CruiserHull.data().get("reward", {}))
+
+
+func _kill_barracks_guards() -> void:
+	for post in Territory.barracks_posts():
+		Territory.barracks_guard_died(str(post))
+
+
+func _remnant() -> int:
+	return int(WorldState.standing.get("imperial_remnant", 0))
+
+
+# ------------------------------------------------------------------ the kill
+
+func test_the_generals_death_pays_saves_and_sends_you_back_to_oda() -> void:
+	WorldState.new_game(WorldState.STORY)
+	Story.skip_to("fleet")
+	var c0 := WorldState.credits
+	WorldState.on_cruiser_taken("General Test", CruiserHull.data().get("reward", {}))
+	assert_eq(WorldState.credits, c0 + int(CruiserHull.data().reward.credits), "paid at the kill")
+	assert_true(_saves.has("cruiser_taken"), "and saved on the spot")
+	assert_eq(Story.chapter(), "debrief")
+	assert_true(Story.remnant_gone(), "the fleet is beaten at the kill")
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS, "the locals hold the barracks")
+	assert_eq(str(Objective.current().target), "npc:cantina_owner", "the arrow points at Oda")
+	var oda := Story.beat("cantina_owner")
+	assert_string_contains(str(oda.say), "dead")
+	assert_eq(Story.chapter(), "end", "her telling brings the end card")
+	assert_false(EndCard.dark())
+	assert_eq(EndCard.title(), "THE REMNANT LEAVE THE MOON")
+
+
+func test_a_checkpoint_runs_every_hook_and_drops_dead_ones() -> void:
+	assert_eq(WorldState.checkpoint("test"), 1)
+	assert_eq(_saves, ["test"])
+
+
+# ------------------------------------------------------------------ the offer
+
+func test_he_waits_on_the_cruiser_to_make_his_offer() -> void:
+	WorldState.new_game(WorldState.STORY)
+	assert_false(DarkPact.on_cruiser(), "not before the general dies")
+	_story_at_kill()
+	assert_true(DarkPact.offer_due())
+	assert_true(DarkPact.on_cruiser())
+	assert_false(DarkPact.hostile_at("cruiser"), "he talks first")
+
+
+func test_join_makes_the_remnant_friends_and_opens_the_oath() -> void:
+	_story_at_kill()
+	assert_true(Story.remnant_hostile(), "before: the Remnant shoot on sight")
+	assert_true(DarkPact.join())
+	assert_false(DarkPact.join(), "once")
+	assert_true(DarkPact.joined())
+	assert_gte(_remnant(), 25, "Remnant standing is friendly")
+	assert_eq(WorldState.standing_label(_remnant()), "friendly")
+	assert_false(Story.remnant_hostile(), "the Remnant are on your side")
+	assert_eq(Quests.state(DarkPact.QUEST), "open")
+	assert_true(_saves.has("dark_pact"))
+	assert_false(DarkPact.on_cruiser(), "he leaves the cruiser")
+	var o := Objective.current()
+	assert_eq(str(o.target), "marker:trooper_yard_a", "the oath comes before Oda")
+	assert_string_contains(str(o.text), "local guards")
+
+
+func test_clearing_the_barracks_on_the_oath_is_the_dark_ending() -> void:
+	_story_at_kill()
+	DarkPact.join()
+	var posts := Territory.barracks_posts()
+	assert_eq(posts.size(), 5, "four guards and a sentry")
+	for i in posts.size() - 1:
+		Territory.barracks_guard_died(str(posts[i]))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS, "not until the last one")
+	Territory.barracks_guard_died(str(posts[0]))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS, "the same guard twice counts once")
+	Territory.barracks_guard_died(str(posts[posts.size() - 1]))
+	assert_true(DarkPact.town_retaken())
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.REMNANT, "the Remnant hold the town again")
+	assert_true(Story.town_garrison())
+	assert_eq(Quests.state(DarkPact.QUEST), "done")
+	assert_eq(Story.chapter(), "end", "the debrief ends without Oda")
+	assert_true(EndCard.dark())
+	assert_eq(EndCard.title(), "THE REMNANT HOLD THE MOON")
+	assert_true(Territory.remnant_planet(), "and every outpost is theirs")
+	assert_true(DarkPact.on_roof(), "he stands on the barracks roof")
+	assert_false(DarkPact.hostile_at("barracks"), "your friend, until you strike him")
+	EndCard.close()
+	assert_string_contains(str(Story.beat("cantina_owner").say), "barracks again", "Oda carries on, knowing")
+
+
+func test_telling_oda_first_breaks_the_oath() -> void:
+	_story_at_kill()
+	DarkPact.join()
+	Story.beat("cantina_owner")
+	assert_eq(Quests.state(DarkPact.QUEST), "failed")
+	assert_false(DarkPact.joined())
+	assert_true(WorldState.has_flag("dark_oath_broken"))
+	assert_lte(_remnant(), -40, "the Remnant turn on you")
+	assert_true(Story.remnant_hostile())
+	assert_eq(Story.chapter(), "end")
+	assert_false(EndCard.dark(), "the light card")
+	assert_true(DarkPact.on_cruiser(), "he waits aboard")
+	assert_true(DarkPact.hostile_at("cruiser"), "as an enemy")
+	_kill_barracks_guards()
+	assert_false(EndCard.dark(), "too late for the dark ending")
+	var entry: Dictionary = Quests.entries().filter(func(q): return q.id == DarkPact.QUEST).front()
+	assert_true(entry.failed)
+
+
+func test_refuse_and_he_fights_until_he_dies() -> void:
+	_story_at_kill()
+	assert_true(DarkPact.refuse())
+	assert_false(DarkPact.joined())
+	assert_true(DarkPact.on_cruiser())
+	assert_true(DarkPact.hostile_at("cruiser"))
+	assert_true(Story.remnant_hostile())
+	DarkPact.on_killed("cruiser")
+	assert_true(DarkPact.dead_at("cruiser"))
+	assert_false(DarkPact.on_cruiser(), "dead stays dead")
+	Story.beat("cantina_owner")
+	assert_eq(Story.chapter(), "end")
+
+
+func test_home_to_oda_without_meeting_him_and_the_offer_is_gone() -> void:
+	_story_at_kill()
+	Story.beat("cantina_owner")
+	assert_true(DarkPact.offered())
+	assert_false(DarkPact.offer_due())
+	assert_false(DarkPact.on_cruiser())
+
+
+func test_killing_him_on_the_roof_while_sworn_turns_the_remnant() -> void:
+	_story_at_kill()
+	DarkPact.join()
+	_kill_barracks_guards()
+	DarkPact.on_killed("barracks")
+	assert_false(DarkPact.joined())
+	assert_lte(_remnant(), -40)
+	assert_true(Story.remnant_hostile())
+	assert_false(DarkPact.on_roof())
+
+
+func test_without_the_oath_the_town_still_falls_to_a_hostile_remnant() -> void:
+	_story_at_kill()
+	DarkPact.refuse()
+	_kill_barracks_guards()
+	assert_true(DarkPact.town_retaken())
+	assert_true(Story.remnant_hostile(), "they come back shooting")
+	assert_eq(Story.chapter(), "debrief", "and Oda still waits")
+	assert_false(DarkPact.on_roof(), "the roof is his only on the oath, in a story save")
+
+
+func test_driving_them_off_every_outpost_gives_the_town_back() -> void:
+	_story_at_kill()
+	DarkPact.join()
+	_kill_barracks_guards()
+	for id in Story.OUTPOSTS:
+		Territory.take(str(id))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS)
+	assert_false(Territory.remnant_planet())
+
+
+# ------------------------------------------------------------------ free roam
+
+func test_free_roam_he_is_an_enemy_after_the_general() -> void:
+	WorldState.new_game(WorldState.FREEPLAY)
+	assert_false(DarkPact.on_cruiser())
+	assert_false(Story.remnant_gone())
+	WorldState.on_cruiser_taken("General Test", {})
+	assert_true(Story.remnant_gone(), "the fleet breaks in free roam too")
+	assert_true(DarkPact.on_cruiser())
+	assert_true(DarkPact.hostile_at("cruiser"))
+	assert_false(DarkPact.offer_due(), "no offer")
+	assert_false(DarkPact.on_roof(), "the locals hold the barracks")
+	_kill_barracks_guards()
+	assert_true(Territory.remnant_planet())
+	assert_true(DarkPact.on_roof(), "the Remnant hold the planet: he is on the roof too")
+	assert_true(DarkPact.hostile_at("barracks"))
+	assert_true(Story.remnant_hostile())
+
+
+func test_friends_of_the_remnant_borrow_ships_in_free_play() -> void:
+	WorldState.new_game(WorldState.FREEPLAY)
+	WorldState.standing["imperial_remnant"] = 0
+	assert_false(DarkPact.borrow_ok(), "neutral: it is stealing")
+	WorldState.standing["imperial_remnant"] = 20
+	assert_true(DarkPact.borrow_ok())
+	assert_lt(DarkPact.borrow_cost(), 0, "it costs a little standing")
+	WorldState.set_flag("remnant_fleet_beaten")
+	assert_false(DarkPact.borrow_ok(), "not while they shoot on sight")
+
+
+func test_droid_prices_follow_whose_side_you_are_on() -> void:
+	WorldState.new_game(WorldState.FREEPLAY)
+	for f in ["imperial_remnant", "locals"]:
+		WorldState.standing[f] = 0
+	for kind in ["cargo", "assassin"]:
+		assert_eq(DarkPact.droid_price(kind, true), DroidRoster.price(kind), "neutral: list price")
+		assert_eq(DarkPact.droid_price(kind, false), DroidRoster.price(kind))
+	WorldState.standing["locals"] = 30
+	assert_lt(DarkPact.droid_price("cargo", false), DroidRoster.price("cargo"), "the market deals with the locals' friends")
+	assert_eq(DarkPact.droid_price("cargo", true), DroidRoster.price("cargo"), "the desert posts don't care")
+	WorldState.standing["imperial_remnant"] = 30
+	assert_lt(DarkPact.droid_price("cargo", true), DroidRoster.price("cargo"), "the desert posts deal with the Remnant's")
+	for kind in ["floating", "cargo", "assassin"]:
+		for post in [true, false]:
+			assert_gte(DarkPact.droid_price(kind, post), DroidRoster.resale(kind), "never a buy-and-sell profit")
+	var r := DroidRoster.new().buy("cargo", "", 1000, 7)
+	assert_eq(int(r.cost), 7, "the roster charges what the stall asks")
+
+
+func test_the_town_name_fills_his_lines() -> void:
+	DarkPact.town_label = "Dustfall"
+	assert_string_contains(DarkPact.line("joined"), "Dustfall")
+	DarkPact.town_label = ""
+	assert_string_contains(DarkPact.line("joined"), "the port")
+
+
+# ------------------------------------------------------------------ his answer (no scene)
+
+func test_decide_join_and_refuse() -> void:
+	_story_at_kill()
+	var post := DarkMasterPost.new()
+	post.cfg = DarkPact.cfg()
+	assert_true(post.decide("join"))
+	assert_false(post.decide("refuse"), "one answer")
+	assert_true(DarkPact.joined())
+	assert_string_contains(post.said, "local guards")
+	post.free()
+	WorldState.reset()
+	_story_at_kill()
+	post = DarkMasterPost.new()
+	post.cfg = DarkPact.cfg()
+	assert_true(post.decide("refuse"))
+	assert_eq(post.said, "Then I must destroy you.")
+	assert_true(bool(post.hostile.get(DarkMasterPost.CRUISER, false)))
+	post.free()
+
+
+# ------------------------------------------------------------------ the sword fight
+
+func _fighter() -> BladeFighter:
+	return BladeFighter.new(DarkPact.cfg().get("blade", {}))
+
+
+func test_he_runs_you_down_then_strikes() -> void:
+	var f := _fighter()
+	assert_eq(str(f.update(0.016, 6.0, 0.0).act), "chase", "out of reach, short of a bound")
+	var out := f.update(0.016, 1.5, 0.0)
+	assert_ne(str(out.start), "", "in reach: a blow starts")
+	assert_false(bool(out.strike), "it lands part way through")
+	var landed := false
+	for i in 120:
+		if bool(f.update(0.016, 1.5, 0.0).strike):
+			landed = true
+			break
+	assert_true(landed)
+	assert_eq(str(f.update(0.016, 1.5, 0.0).start), "", "a pause between blows")
+	assert_eq(f.blows, 1)
+
+
+func test_a_blocked_blow_staggers_him() -> void:
+	var f := _fighter()
+	f.on_parried()
+	assert_eq(f.mode, "stagger")
+	assert_eq(str(f.update(0.1, 1.5, 0.0).act), "hold")
+	assert_eq(f.guard(10.0, true, false), 10.0, "open while he reels")
+
+
+func test_he_bounds_off_a_roof_and_across_the_deck() -> void:
+	var f := _fighter()
+	assert_eq(str(f.update(0.016, 4.0, -6.0).act), "leap", "you are below him")
+	for i in 60:
+		f.update(0.016, 4.0, -6.0)
+	assert_eq(f.leaps, 1)
+	var g := _fighter()
+	assert_eq(str(g.update(0.016, 15.0, 0.0).act), "leap", "a long way off on the level")
+	assert_eq(str(_fighter().update(0.016, 40.0, 0.0).act), "chase", "too far for one bound")
+	var to := f.leap_target(Vector3.ZERO, Vector3(10, -6, 0))
+	assert_lt(to.distance_to(Vector3(10, -6, 0)), f.reach(), "he lands within reach")
+	assert_gt(BladeFighter.leap_point(Vector3.ZERO, Vector3(10, 0, 0), 0.5, 3.0).y, 2.9, "an arc")
+
+
+func test_his_blade_turns_most_bolts_from_the_front() -> void:
+	var f := _fighter()
+	var through := 0
+	for i in 200:
+		if f.guard(10.0, true, false) > 0.0:
+			through += 1
+	assert_between(through, 30, 90, "about three in ten get through")
+	assert_eq(f.guard(10.0, false, false), 10.0, "from behind, every one")
+	f.update(0.016, 1.5, 0.0)          # a blow starts
+	assert_eq(f.guard(10.0, true, false), 10.0, "mid-blow he is open")
+
+
+func test_the_cantina_hears_about_him_and_the_barracks() -> void:
+	WorldState.new_game(WorldState.FREEPLAY)
+	var heard := func(): return WorldState.rumors("confidant", [], 99).map(func(r): return str(r.id))
+	assert_false(heard.call().has("r_dark_master"))
+	WorldState.on_cruiser_taken("General Test", {})
+	assert_true(heard.call().has("r_dark_master"), "pilots talk about the one in black")
+	_kill_barracks_guards()
+	assert_true(heard.call().has("r_town_retaken"))
+	assert_true(heard.call().has("r_dark_roof"), "the Remnant hold the planet: he's on the roof")
+	assert_false(heard.call().has("r_dark_master"), "the town news is bigger")
+	Territory.take(str(Story.OUTPOSTS[0]))
+	assert_false(heard.call().has("r_dark_roof"), "an outpost lost: he's gone from the roof")
+	DarkPact.on_killed("cruiser")
+	assert_true(heard.call().has("r_dark_master_dead"))

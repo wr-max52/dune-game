@@ -6,9 +6,9 @@
   "note": "The Remnant general in the barracks yard (src/systems/npc/general_post.gd): a garrison member like any trooper, so he can be shot, and on the town alarm he fights where he stands (hold_ground, from cruiser_general.json). Named by his card (General Vask), never comes back once dead (WorldState.on_general_killed). His look is general.json's 'outfit'. Only the blocks below differ from cruiser_general.json.",
   "hp": 300,
   "outfit": {
-    "head": "guard:oxblood",
-    "torso": "guard:oxblood",
-    "legs": "guard:oxblood"
+    "head": "guard:blood",
+    "torso": "guard:blood",
+    "legs": "guard:blood"
   },
   "combat": {
     "hold_radius": 4.0

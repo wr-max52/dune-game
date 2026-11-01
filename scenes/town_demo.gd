@@ -106,6 +106,8 @@ var salesman: ShipSalesman
 @export var with_barge := true        ## issue #269: the planet's party barge (band, boss, steerage), if it has one
 @export var with_beast := true        ## issue #220: the planet's beast that rolls about the desert (touch = death)
 var general_post: GeneralPost         ## issue #203: the Remnant general (story saves)
+var dark_master: DarkMasterPost       ## issue #303: the dark master (cruiser bay, barracks roof)
+var barracks_locals: Dictionary = {}  ## issue #303: barracks post id -> the locals' guard on it (NpcBody)
 @export var with_natives := true      ## issue #96: native packs and wild animals (when the planet has any)
 @export var with_outposts := true     ## issue #64: the Remnant's three desert outposts (needs with_ship: they share the ship's ground)
 var outposts: RemnantOutposts
@@ -275,6 +277,10 @@ func build_plan(staged_build: bool) -> Array:
 		if gear != null and str(planet.get("id", PlanetGen.home_id())) == PlanetGen.home_id():
 			_build_general()
 		return true)
+	add.call("dark_master", LATER, func():
+		if gear != null and str(planet.get("id", PlanetGen.home_id())) == PlanetGen.home_id():
+			_build_dark_master()
+		return true)
 	add.call("fence", LATER, func():
 		if bar != null and gear != null and townsfolk != null:
 			_build_fence()
@@ -399,6 +405,7 @@ func _build_shot_camera() -> void:
 func _name_places() -> void:
 	town_name = NameHooks.town(world)
 	planet_name = NameHooks.planet(world)
+	DarkPact.town_label = town_name
 	if town_name == "":
 		return
 	var layer := CanvasLayer.new()
@@ -643,11 +650,18 @@ func _build_npc(m: Dictionary) -> void:
 		return
 	var soldier := str(m.soldier)
 	var key := "npc:%s/%s" % [str(town.data.get("id", "town")), str(m.id)]
+	var barracks_post := ""
 	if _is_remnant_post(m) and not Story.town_garrison():
 		# Issue #187: the locals hold the barracks; their guard on this post, if any.
 		soldier = Territory.locals_post("barracks", str(m.id))
 		key += "/locals"
 		if soldier == "":
+			return
+		# Issue #303: one guard a post, and a dead one stays dead (the Remnant take
+		# the town back when the last of them dies).
+		barracks_post = str(m.id)
+		var had = barracks_locals.get(barracks_post)
+		if (had != null and is_instance_valid(had)) or Territory.barracks_dead().has(barracks_post):
 			return
 	var here := town.marker_pos(str(m.id))
 	var face := town.marker_pos("gate") if m.role == "trooper_post" else town.marker_pos("cantina_door")
@@ -658,6 +672,10 @@ func _build_npc(m: Dictionary) -> void:
 		return
 	characters[str(m.id)] = npc.look_body if npc.look_body != null else npc
 	built_markers += 1
+	if barracks_post != "":
+		barracks_locals[barracks_post] = npc
+		npc.set_meta("barracks_locals", barracks_post)
+		npc.died.connect(Territory.barracks_guard_died.bind(barracks_post))
 
 
 ## Once every town NPC stands: the desert outposts and their guards.
@@ -845,7 +863,7 @@ func _withdraw_town_remnant() -> void:
 		return
 	_town_withdrawn = true
 	for n in npcs.duplicate():
-		if n.has_meta("outpost") or n.has_meta("bounty") or n.has_meta("cruiser"):
+		if n.has_meta("outpost") or n.has_meta("bounty") or n.has_meta("cruiser") or n.has_meta("dark_master"):
 			continue
 		if garrison != null:
 			garrison.remove_member(n)
@@ -855,6 +873,37 @@ func _withdraw_town_remnant() -> void:
 		droids.withdraw_town_remnant()
 	WorldState.set_flag("gate_checkpoint_up", false)
 	_locals_take_barracks()
+
+
+## Issue #303: the Remnant take the town back (its barracks guards all dead): the
+## locals left on the posts go, the troopers and their droids come back on their
+## posts, and the gate checkpoint is up again. Hostile, or (on the dark master's
+## oath) on your side: the garrison reads your standing as usual.
+func _return_town_remnant() -> void:
+	if (_player != null and _player.piloting):
+		return
+	_town_withdrawn = false
+	for post in barracks_locals:
+		var n = barracks_locals[post]
+		if n == null or not is_instance_valid(n) or n.dead:
+			continue
+		if townsfolk != null:
+			townsfolk.remove_member(n)
+		locals.erase(n)
+		n.queue_free()
+	barracks_locals.clear()
+	for m in town.markers():
+		if not _is_live_npc(m) or not _is_remnant_post(m):
+			continue
+		var before := npcs.size()
+		_build_npc(m)
+		if garrison != null and npcs.size() > before:
+			garrison.add_member(npcs.back())
+	if droids != null:
+		droids.return_town_remnant()
+	WorldState.set_flag("gate_checkpoint_up", not town.markers_with_role("trooper_post").is_empty())
+	if gear != null and gear.hud != null:
+		gear.hud.toast(Territory.line("barracks_remnant"), 5.0)
 
 
 ## Issue #187: the locals move into the barracks: their guards on the posts the
@@ -989,6 +1038,17 @@ func _build_general() -> void:
 		general_post.attach_host(bar)
 
 
+## Issue #303: the dark master: in the cruiser's bay after the general dies, on the
+## barracks roof while the Remnant hold the planet. He joins the bar's host as an
+## AI character (his offer is a talk).
+func _build_dark_master() -> void:
+	dark_master = DarkMasterPost.new()
+	dark_master.setup(self, _player, gear)
+	add_child(dark_master)
+	if bar != null:
+		dark_master.attach_host(bar)
+
+
 ## Issue #188: the fence talks: an AI character on the bar's host from his own card
 ## (content/core/npcs/fence_card.json), in the body of the local who keeps his
 ## stall. "Talk" leads the stall's [E] menu (GearController.vendor_talk), so he
@@ -1111,6 +1171,8 @@ func _physics_process(dt: float) -> void:
 	WorldState.tick(dt)
 	if not _town_withdrawn and not Story.town_garrison():
 		_withdraw_town_remnant()
+	elif _town_withdrawn and Story.town_garrison():
+		_return_town_remnant()
 
 
 # ---------------------------------------------------------------- desert

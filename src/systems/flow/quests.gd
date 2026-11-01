@@ -1,7 +1,9 @@
 class_name Quests
 extends RefCounted
 ## Optional quests (issue #201). Pure and static, like Story; their state lives in
-## WorldState.quests (saved with the world): id -> { state: "open"|"done", waypoint }.
+## WorldState.quests (saved with the world): id -> { state: "open"|"done"|"failed", waypoint }.
+## Issue #303: a quest can fail (fail(): the dark master's oath, broken); "{town}"
+## in its text is the town's name.
 ##
 ## Each quest is data in content/core/story/main.json "quests": { id, title, text,
 ## target, unlocked_by, done_on }. Every Story.event() reaches event() here, so a
@@ -25,7 +27,7 @@ static func cfg(id: String) -> Dictionary:
 	return {}
 
 
-## "" (not offered), "open" or "done".
+## "" (not offered), "open", "done" or "failed".
 static func state(id: String) -> String:
 	return str(WorldState.quests.get(id, {}).get("state", ""))
 
@@ -52,10 +54,20 @@ static func unlock(id: String) -> bool:
 
 
 static func complete(id: String) -> bool:
-	if cfg(id).is_empty() or state(id) == "done":
+	if cfg(id).is_empty() or state(id) in ["done", "failed"]:
 		return false
 	WorldState.quests[id] = { "state": "done", "waypoint": false }
 	news.erase(id)
+	return true
+
+
+## An open quest that can no longer be done.
+static func fail(id: String) -> bool:
+	if state(id) != "open":
+		return false
+	WorldState.quests[id] = { "state": "failed", "waypoint": false }
+	news.erase(id)
+	WorldState.log_event("Quest failed: %s." % str(cfg(id).get("title", id)))
 	return true
 
 
@@ -80,7 +92,7 @@ static func waypoint() -> Dictionary:
 	for id in WorldState.quests:
 		if bool(WorldState.quests[id].get("waypoint", false)) and can_point(str(id)):
 			var q := cfg(str(id))
-			return { "text": str(q.get("text", "")), "target": str(q.target) }
+			return { "text": DarkPact.fill(str(q.get("text", ""))), "target": str(q.target) }
 	return {}
 
 
@@ -91,8 +103,8 @@ static func entries() -> Array:
 		var id := str(q.id)
 		if state(id) == "":
 			continue
-		out.append({ "id": id, "title": str(q.get("title", id)), "text": str(q.get("text", "")),
-			"done": state(id) == "done", "waypoint": bool(WorldState.quests[id].get("waypoint", false)),
+		out.append({ "id": id, "title": str(q.get("title", id)), "text": DarkPact.fill(str(q.get("text", ""))),
+			"done": state(id) == "done", "failed": state(id) == "failed", "waypoint": bool(WorldState.quests[id].get("waypoint", false)),
 			"can_point": can_point(id) })
 	return out
 

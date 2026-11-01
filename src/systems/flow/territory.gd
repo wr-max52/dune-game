@@ -11,7 +11,10 @@ extends RefCounted
 ##                 there are all dead, the Remnant take it back (retake).
 ##   the barracks  the Remnant's until the story is done (the fleet beaten) or the
 ##                 Remnant are driven off (every outpost held at once); then
-##                 the locals'. Story.town_garrison() reads it.
+##                 the locals'. Story.town_garrison() reads it. Issue #303: when
+##                 every local guard on its posts is dead, the Remnant take it
+##                 back (town_retaken), hostile or (on the dark master's oath) not.
+##                 Driving them off every outpost again gives it back to the locals.
 ##
 ## What it changes: who stands at each place (RemnantOutposts, the town scene and
 ## DroidController ask owner()), the gate checkpoint (gate_strict, bribe_mult),
@@ -25,6 +28,7 @@ const BARRACKS := "barracks"
 const REMNANT := "remnant"
 const LOCALS := "locals"
 const DRIVEN_OFF := "remnant_driven_off"
+const RETAKEN := "town_retaken"
 const SUPPLY_JOB := "j_supply"
 
 static var _cfg: Dictionary = {}
@@ -53,7 +57,9 @@ static func places() -> Array:
 ## "remnant" or "locals".
 static func owner(id: String) -> String:
 	if id == BARRACKS:
-		return LOCALS if Story.remnant_hostile() or WorldState.has_flag(DRIVEN_OFF) else REMNANT
+		if WorldState.has_flag(DRIVEN_OFF):
+			return LOCALS
+		return LOCALS if Story.remnant_gone() and not WorldState.has_flag(RETAKEN) else REMNANT
 	if WorldState.has_flag(DRIVEN_OFF):
 		return LOCALS
 	var c = WorldState.control.get(id, {})
@@ -91,6 +97,7 @@ static func take(id: String) -> void:
 	WorldState.log_event(line("taken") % Story.outpost_label(id))
 	if lost() == Story.OUTPOSTS.size():
 		WorldState.set_flag(DRIVEN_OFF)
+		WorldState.set_flag(RETAKEN, false)
 		_cancel_supply()
 		WorldState.log_event(line("driven_off"))
 	_sync_flags()
@@ -135,6 +142,48 @@ static func tick(dt: float) -> void:
 static func _sync_flags() -> void:
 	WorldState.set_flag("locals_hold_outpost", lost() > 0)
 	WorldState.set_flag("outpost_short", Story.OUTPOSTS.any(func(id): return short(str(id))))
+
+
+# ------------------------------------------------------------------ the barracks change hands (issue #303)
+
+## The barracks posts the locals put a guard on (territory.json "barracks").
+static func barracks_posts() -> Array:
+	var posts: Dictionary = cfg().get(BARRACKS, {}).get("posts", {})
+	return posts.keys().filter(func(k): return str(posts[k]) != "")
+
+
+## Posts whose local guard is dead (they do not come back).
+static func barracks_dead() -> Array:
+	var d = WorldState.control.get("barracks_dead", [])
+	return d if d is Array else []
+
+
+## A local guard on a barracks post died. The last one hands the town to the Remnant.
+static func barracks_guard_died(post: String) -> void:
+	if owner(BARRACKS) != LOCALS or not barracks_posts().has(post):
+		return
+	var dead := barracks_dead()
+	if not dead.has(post):
+		dead.append(post)
+	WorldState.control["barracks_dead"] = dead
+	if barracks_posts().all(func(p): return dead.has(p)):
+		retake_town()
+
+
+## The Remnant hold the town's barracks again.
+static func retake_town() -> void:
+	if WorldState.has_flag(RETAKEN) or WorldState.has_flag(DRIVEN_OFF):
+		return
+	WorldState.set_flag(RETAKEN)
+	WorldState.control.erase("barracks_dead")
+	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("town_retaken", -20)), line("town_retaken"))
+	DarkPact.on_town_retaken()
+	WorldState.checkpoint("town_retaken")
+
+
+## The Remnant hold the whole planet: the town's barracks, and not one outpost lost.
+static func remnant_planet() -> bool:
+	return owner(BARRACKS) == REMNANT and lost() == 0
 
 
 # ------------------------------------------------------------------ supply runs (Oda's j_supply)

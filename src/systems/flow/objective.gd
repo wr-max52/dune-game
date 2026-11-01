@@ -69,11 +69,15 @@ static func current() -> Dictionary:
 ## What the story's chapter wants: its own objective once its teller has told
 ## it, before that "go and talk to them" (the first chapter points at Oda
 ## from the start: T-89 only says where she is).
+## Issue #303: on the dark master's oath, clearing the barracks comes before Oda.
 static func chapter_objective() -> Dictionary:
 	var c := Story.chapter_cfg()
 	if c.is_empty():
 		return {}
 	var mine: Dictionary = cfg().get("chapters", {}).get(str(c.id), {})
+	if str(c.id) == "debrief" and DarkPact.joined() and DarkPact.oath_open():
+		mine = cfg().get("chapters", {}).get(DarkPact.QUEST, mine)
+		return { "text": DarkPact.fill(str(mine.get("text", ""))), "target": str(mine.get("target", "")) }
 	var told := bool(WorldState.story.get("told", false)) or str(c.get("teller", "")) != "cantina_owner"
 	var o: Dictionary = mine if told and not mine.is_empty() else cfg().get("teller", {})
 	return { "text": str(o.get("text", "")), "target": str(o.get("target", "")) } if str(o.get("text", "")) != "" else {}
@@ -125,6 +129,8 @@ static func log_entries() -> Array:
 	if home():
 		var c := Story.chapter_cfg()
 		var say := str(c.get("remind", ""))
+		if str(c.get("id", "")) == "debrief" and DarkPact.joined() and DarkPact.oath_open():
+			say = str(chapter_objective().get("text", ""))
 		if say == "":
 			say = str(chapter_objective().get("text", ""))
 		if say != "":

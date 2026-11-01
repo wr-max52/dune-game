@@ -18,6 +18,7 @@ extends Node
 const TALK_RADIUS := 1.9
 const TWO_SHOT_FOV := 34.0
 const SAVE_PATH := "user://save.json"
+const GROUP := "conversation_host"      ## issue #303: the end card waits while any host is talking
 
 var demo                              ## town_demo.gd
 var llm: LLMService
@@ -58,6 +59,9 @@ const SaveSystem := preload("res://src/systems/save/save_system.gd")
 func setup(town_demo, scripted = null) -> void:
 	demo = town_demo
 	_scripted = scripted
+	add_to_group(GROUP)
+	# Issue #303: a checkpoint (the general's death, the dark master's answer) saves now.
+	WorldState.checkpoint_hooks.append(_on_checkpoint)
 	# The model service every character shares.
 	llm = LLMService.new()
 	add_child(llm)
@@ -472,6 +476,12 @@ func _save_memory() -> void:
 	save.save_to(save_path)
 
 
+func _on_checkpoint(_why: String) -> void:
+	if _loaded:
+		_save_memory()
+
+
 func _exit_tree() -> void:
+	WorldState.checkpoint_hooks.erase(_on_checkpoint)
 	if not spots.is_empty():
 		_save_memory()

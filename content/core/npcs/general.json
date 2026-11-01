@@ -56,9 +56,9 @@
   "job": "j_general_droids",
   "tip_standing": 15,
   "outfit": {
-    "head": "guard:oxblood",
-    "torso": "guard:oxblood",
-    "legs": "guard:oxblood"
+    "head": "guard:blood",
+    "torso": "guard:blood",
+    "legs": "guard:blood"
   },
   "armour_outfit": {
     "head": "guard:desert",

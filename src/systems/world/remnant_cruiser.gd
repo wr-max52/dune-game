@@ -20,7 +20,8 @@ extends Node3D
 ##     garrison of their own that shoots on sight,
 ##   - the general's death: the cruiser is taken (WorldState.on_cruiser_taken): the
 ##     locals' purse, the port's love, and the end of Oda's story. From then on
-##     nobody is aboard; anyone left alive is gone the next time you come back,
+##     nobody is aboard; anyone left alive is gone the next time you come back
+##     (issue #303: but the dark master, DarkMasterPost, waits in the bay),
 ##   - the label naming it in the sky while you fly, and a pull back aboard if you
 ##     fall out of it.
 ## Everything else is data: content/core/cruiser/remnant_cruiser.json.
@@ -271,7 +272,7 @@ func _enlist(g: NpcBody) -> void:
 			return
 		garrison = demo._make_garrison("Garrison_" + id, [g], false,
 			frame * Vector3(0, CruiserHull.DECK_Y, (CruiserHull.BAY_Z.x + CruiserHull.BAY_Z.y) * 0.5))
-		garrison.always_hostile = true
+		garrison.always_hostile = not DarkPact.joined()     # issue #303: his crew is yours on the oath
 		var outposts = demo.outposts
 		if outposts != null:
 			outposts.garrisons[id] = garrison      # a ship taken from its bay sounds its alarm

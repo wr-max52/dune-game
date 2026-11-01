@@ -297,7 +297,7 @@ func _open_menu(title: String, opts: Array, pick: Callable) -> void:
 func trade_options() -> Array:
 	var out := []
 	for kind in cfg.get("vendor", {}).get("stock", []):
-		out.append({ "id": "buy:" + str(kind), "text": _l("buy") % [DroidRoster.label(str(kind)), DroidRoster.price(str(kind))] })
+		out.append({ "id": "buy:" + str(kind), "text": _l("buy") % [DroidRoster.label(str(kind)), price_here(str(kind))] })
 	if not roster().owned.is_empty():
 		out.append({ "id": "upgrades", "text": _l("upgrades") })
 	for d in roster().owned:
@@ -427,15 +427,21 @@ func deliver(uid: int) -> bool:
 	return true
 
 
+## Issue #303: a droid's price at the stall that is open: the desert posts deal
+## cheaply with friends of the Remnant, the port's market with friends of the locals.
+func price_here(kind: String) -> int:
+	return DarkPact.droid_price(kind, _at_post())
+
+
 ## Buy a droid from the merchant. Returns "bought", "full", "cant_afford" or "".
 func buy(kind: String) -> String:
-	var r := roster().buy(kind, DroidRoster.pick_variant(kind, rng), WorldState.credits)
+	var r := roster().buy(kind, DroidRoster.pick_variant(kind, rng), WorldState.credits, price_here(kind))
 	match str(r.get("error", "")):
 		"full":
 			_toast(_l("full") % DroidRoster.max_owned())
 			return "full"
 		"cant_afford":
-			_toast(_l("cant_afford") % [DroidRoster.label(kind), DroidRoster.price(kind), WorldState.credits])
+			_toast(_l("cant_afford") % [DroidRoster.label(kind), price_here(kind), WorldState.credits])
 			return "cant_afford"
 		"unknown":
 			return ""
@@ -1279,6 +1285,15 @@ func withdraw_town_remnant() -> void:
 			remnant.erase(u)
 			u.queue_free()
 	_build_town_units(_side_cfg(Territory.LOCALS))
+
+
+## Issue #303: the Remnant take the town back: the locals' street droids go, theirs return.
+func return_town_remnant() -> void:
+	for u in remnant.duplicate():
+		if not u.spec.has("outpost") and not u.spec.has("site") and u.faction == "locals":
+			remnant.erase(u)
+			u.queue_free()
+	_build_town_units(cfg.get("remnant", {}))
 
 
 ## Issue #187: the side that holds this droid's place still does (else it does not come back).
