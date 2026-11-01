@@ -8,6 +8,7 @@
   ],
   "ship": "remnant_freighter",
   "look": { "mast": false, "tower": true },
+  "zone": { "note": "Issue #308: a ring of radius metres round the outpost is a checkpoint zone. Below the wave band the nearest trooper (a role below) who sees you walks up and the gate's card opens, on the gate's rules (content/core/soldiers/gate_guard.json checkpoint block; anything in this checkpoint block wins). Leave the ring and the card closes; cleared, the outpost leaves you alone for cleared_s.", "radius": 18.0, "roles": ["sentry"], "checkpoint": { "cleared_s": 240.0 } },
   "points": {
     "guard_a": [6, 0, 4],
     "guard_b": [6, 0, -5],

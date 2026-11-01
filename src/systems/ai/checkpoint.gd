@@ -38,6 +38,12 @@ extends RefCounted
 ## Since M15's garrison, how a fight ENDS is the town alarm's call (town_alarm.gd):
 ## the checkpoint stays HOSTILE until set_alarm(false), all guards are down, or
 ## the player is downed.
+##
+## Issue #308: a zone instead of a gate (the barracks yard, the ring round an
+## outpost). The garrison passes s.zone_out, how far the player is outside the
+## zone's edge (0 or less inside), in place of gate_pos and gate_x. Every rule is
+## the same, measured from that edge; there is no line to push across, so walking
+## out of the zone is the only way past a card. cfg.place names it in the log.
 
 enum State { IDLE, CHALLENGE, SEARCHING, WARN, CLEARED, HOSTILE, FOUND }
 
@@ -196,6 +202,9 @@ func update(dt: float, s: Dictionary) -> void:
 	var side := _side(pos)
 	var noticed: bool = s.get("noticed", false)
 	var zone := n("zone_radius", 11.0)
+	if s.has("zone_out"):
+		# A zone: as far from its edge as from the edge of the gate's ring.
+		dist = zone + float(s.zone_out) if pos != Vector3.INF else INF
 
 	match state:
 		State.IDLE:
@@ -338,7 +347,7 @@ func answer(choice_id: String) -> bool:
 			_bark("confiscated")
 			_emit({ "type": "confiscate", "items": found.map(func(it): return str(it.id)) })
 			_emit({ "type": "flag", "name": "contraband_confiscated" })
-			_emit({ "type": "standing", "delta": int(deltas.get("handed_over", -2)), "why": "The front gate confiscated contraband.", "cooldown": "" })
+			_emit({ "type": "standing", "delta": int(deltas.get("handed_over", -2)), "why": "%s confiscated contraband." % place(), "cooldown": "" })
 			found = []
 			_clear()
 		"bribe_keep":
@@ -389,7 +398,7 @@ func drain() -> Array:
 # ------------------------------------------------------------------ internals
 
 func _side(pos: Vector3) -> int:
-	if pos == Vector3.INF:
+	if pos == Vector3.INF or _s.has("zone_out"):
 		return 0
 	var gx := float(_s.get("gate_x", 99.0))
 	if pos.x > gx + 1.2:
@@ -439,7 +448,13 @@ func _go_hostile(why: String) -> void:
 	_emit({ "type": "hostile", "why": why })
 	_emit({ "type": "flag", "name": "gate_fight" })
 	_emit({ "type": "standing", "delta": int(cfg.get("standing", {}).get("fight", -10)),
-		"why": "A firefight broke out at the front gate.", "cooldown": "gate_fight" })
+		"why": "A firefight broke out at %s." % str(cfg.get("place", "the front gate")), "cooldown": "gate_fight" })
+
+
+## Where this is, capitalised for the start of a line: "The front gate".
+func place() -> String:
+	var p := str(cfg.get("place", "the front gate"))
+	return p.left(1).to_upper() + p.substr(1)
 
 
 func _bark(key: String) -> void:
