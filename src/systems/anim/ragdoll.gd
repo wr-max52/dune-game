@@ -235,6 +235,18 @@ func step(dt: float) -> bool:
 	return not asleep
 
 
+## The floor it lies on moved by `by` this tick (a body on the party barge's
+## deck): every particle goes with it, so it falls and settles on the deck, not
+## in the air the deck has left. A no-op once asleep (the joints then ride along
+## in their parent's frame).
+func carry(by: Transform3D) -> void:
+	if asleep or not running or by.is_equal_approx(Transform3D.IDENTITY):
+		return
+	for i in _pos.size():
+		_pos[i] = by * _pos[i]
+		_prev[i] = by * _prev[i]
+
+
 func point(pname: String) -> Vector3:
 	return _pos[_idx[pname]]
 

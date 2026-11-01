@@ -9,9 +9,11 @@ extends AnimatableBody3D
 ## #269 cleanup: driving is a control panel at the stern. Dial a course, engage,
 ## and it goes on autopilot while you walk the decks; it stops dead if it runs
 ## into anything, and blows up if it runs into the planet's beast (it is built
-## again at its home after a while). Everyone on board can be killed and nobody
-## fights back; they are back after `respawn_s` seconds of play (or the next time
-## the scene is built), and it never touches your standing with anyone.
+## again at its home after a while). Everyone on board can be killed, and falls
+## as a ragdoll (Ragdoll, riding the deck); they are back after `respawn_s`
+## seconds of play (or the next time the scene is built). Hurt anyone and the
+## crowd and the guards fight back (see _provoke); nothing that happens on board,
+## the shots you fire there included, touches your standing with anyone.
 ##
 ## Perf: until it is yours it is parked at its home and never moves, so neither do
 ## its colliders. The people on board are only built when you first come within
@@ -68,7 +70,7 @@ var home := Vector3.ZERO
 var travelled := 0.0
 var boss_hp := 400.0
 var party_frames := 0                 ## frames the crowd and band were animated (traces)
-var people: Array = []                ## { node, body, hit, deck, kind, perform, spot, yaw, off, hp, dead, back_at, fall }
+var people: Array = []                ## { node, body, look, hit, deck, kind, perform, spot, yaw, off, hp, dead, back_at, fall, ragdoll, fighter }
 var band: Array = []                  ## the performers: the band on top, the DJ below
 var boss: Node3D
 var console_spot := Vector3.ZERO      ## local: where you stand at the panel
@@ -78,6 +80,8 @@ var wrecked := false                  ## blown up; built again at home later
 var wrecks := 0
 var kills := 0                        ## people killed on board (traces)
 var respawned := 0
+var fights := 0                       ## times the party was provoked (traces)
+var roused := 0                       ## people swapped for fighters (traces)
 var gangplank_down := true
 var look: Node3D                      ## everything seen; collision stays on the body
 var dressing                          ## BargeLook, with the look layer
@@ -106,6 +110,10 @@ var _xf_curr := Transform3D()
 var _xf_frame := -1
 var _people_root: Node3D
 var _playlist := ""
+var _folk                             ## Townsfolk running the fighters (made when first provoked)
+var _rousing: Array = []              ## people still to swap for fighters, nearest the player first
+var _calm_t := 0.0                    ## seconds the fighters' alarm has been down
+var _carry := Transform3D.IDENTITY    ## how the deck moved this tick (the fallen ride along)
 
 
 static func defaults() -> Dictionary:
@@ -613,9 +621,9 @@ func _add_person(look_id: String, at: Vector3, deck: String, kind: String, yaw :
 		body = Node3D.new()                 # headless: a stand-in that still moves
 		body.name = "Stand"
 		holder.add_child(body)
-	var p := { "node": holder, "body": body, "deck": deck, "kind": kind, "perform": "", "off": _rng.randf() * 30.0,
+	var p := { "node": holder, "body": body, "look": look_id, "deck": deck, "kind": kind, "perform": "", "off": _rng.randf() * 30.0,
 		"spot": at, "yaw": holder.rotation.y, "beat": 0.0, "hp": float(cfg.get("person_hp", 60)), "dead": false,
-		"back_at": 0.0, "fall": 0.0, "rest": body.transform }
+		"back_at": 0.0, "fall": 0.0, "rest": body.transform, "ragdoll": null, "fighter": null }
 	p.hit = _hit_for(p)
 	people.append(p)
 	return p
@@ -699,11 +707,13 @@ class PartyHit:
 		damage_usec = Time.get_ticks_usec()
 		barge.hurt(who, amount)
 
-	func apply_damage_from(amount: float, _shooter: Node) -> void:
-		apply_damage(amount)
+	func apply_damage_from(amount: float, shooter: Node) -> void:
+		damage_usec = Time.get_ticks_usec()
+		barge.hurt(who, amount, shooter)
 
-	func apply_blade_hit(amount: float, _dir: Vector3) -> void:
-		apply_damage(amount)
+	func apply_blade_hit(amount: float, sweep: Vector3) -> void:
+		damage_usec = Time.get_ticks_usec()
+		barge.hurt(who, amount, barge.player, sweep)
 
 
 ## The party never stops: everyone dances (the cantina's dance loop), the band and
@@ -714,7 +724,7 @@ func _animate(dt: float) -> void:
 	if player == null or not is_instance_valid(player) or wrecked:
 		return
 	for p in people:
-		if p.dead:
+		if p.dead and p.fighter == null:
 			_fall(p, dt)
 	var d := player.global_position.distance_to(global_position)
 	_people_root.visible = d < float(cfg.get("people_m", 320.0))
@@ -732,7 +742,7 @@ func _animate(dt: float) -> void:
 	var bpm := float(cfg.get("bpm", 100.0))
 	for p in people:
 		var body: Node3D = p.body
-		if p.dead:
+		if p.dead or p.fighter != null:
 			continue
 		var t: float = _t + float(p.off)
 		p.beat = t
@@ -802,9 +812,18 @@ func _sync_skins(body: Node3D) -> void:
 		skins[0].sync(body)
 
 
-## Down on the deck: tipped over backwards, in the barge's own frame so the body
-## rides along wherever it goes.
+## Down on the deck: a ragdoll (started by _kill) carried along by the deck while
+## it settles, then lying still in the barge's own frame so it rides along. The
+## headless stand-in, with no joints, tips over backwards instead.
 func _fall(p: Dictionary, dt: float) -> void:
+	var rd: Ragdoll = p.ragdoll
+	if rd != null:
+		rd.carry(_carry)
+		var moving := not rd.asleep
+		rd.step(dt)
+		if moving:
+			_sync_skins(p.body)
+		return
 	if float(p.fall) >= 1.0:
 		return
 	p.fall = minf(1.0, float(p.fall) + dt * 2.5)
@@ -824,24 +843,28 @@ func _fall(p: Dictionary, dt: float) -> void:
 
 # ------------------------------------------------------------------ hurting people
 
-## Someone on board was hit. Nobody fights back and nobody cares who did it (no
-## alarm, no standing); at zero they drop, and are back on their feet after
-## respawn_s seconds of play. The boss can't die while it is his barge: beat him
-## and he hands it over.
-func hurt(p: Dictionary, amount: float) -> void:
+## Someone on board was hit by `by` (null: we don't know, so the player). The
+## player (or their droid) hitting anyone provokes the party (_provoke), but no
+## standing moves; at zero they drop as a ragdoll, and are back on their feet
+## after respawn_s seconds of play. The boss can't die while it is his barge:
+## beat him and he hands it over. `sweep`: a sword's cut, which flings the body.
+func hurt(p: Dictionary, amount: float, by: Node = null, sweep := Vector3.ZERO) -> void:
 	if p.dead or wrecked or amount <= 0.0:
 		return
+	if by == null or DroidController.by_player(by, player):
+		_provoke()
 	if p.kind == "boss" and not owned:
 		hurt_boss(amount)
 		return
 	p.hp = float(p.hp) - amount
 	if float(p.hp) <= 0.0:
-		_kill(p)
+		_kill(p, amount, by, sweep)
 
 
-func _kill(p: Dictionary) -> void:
+func _kill(p: Dictionary, amount := 0.0, by: Node = null, sweep := Vector3.ZERO) -> void:
 	p.dead = true
 	p.fall = 0.0
+	_go_limp(p, amount, by, sweep)
 	p.back_at = WorldState.clock + float(cfg.get("respawn_s", 180.0))
 	(p.hit as PartyHit).dead = true
 	(p.hit as PartyHit).collision_layer = 0
@@ -849,7 +872,33 @@ func _kill(p: Dictionary) -> void:
 	_party_changed()
 
 
+## The ragdoll the way NpcBody falls: pushed away from whoever hit them, or
+## flung along a sword's cut; the deck it lands on is the barge's own collision.
+func _go_limp(p: Dictionary, amount: float, by: Node, sweep: Vector3) -> void:
+	var body: Node3D = p.body
+	if not body.has_meta("joints") or not body.is_inside_tree():
+		return
+	var rc := Ragdoll.load_config()
+	var at := (p.node as Node3D).global_position
+	var from := Vector3.INF
+	var fling := Vector3.ZERO
+	if sweep != Vector3.ZERO:
+		var cut := Vector3(sweep.x, 0.0, sweep.z).normalized()
+		from = at - cut
+		fling = cut * float(rc.get("blade_fling", 8.0)) + _up(at) * float(rc.get("blade_fling_up", 5.5))
+	elif by is Node3D and is_instance_valid(by):
+		from = (by as Node3D).global_position
+	var rd := Ragdoll.new(body.get_meta("joints"), rc)
+	rd.start(fling, Ragdoll.kick_for(at, from, amount, rc), get_world_3d().direct_space_state, [(p.hit as PartyHit).get_rid()])
+	p.ragdoll = rd
+
+
 func _respawn(p: Dictionary) -> void:
+	if p.fighter != null:
+		_settle(p)
+	if p.ragdoll != null:
+		(p.ragdoll as Ragdoll).stop()
+		p.ragdoll = null
 	p.dead = false
 	p.fall = 0.0
 	p.hp = float(cfg.get("person_hp", 60))
@@ -882,6 +931,112 @@ func party_on() -> bool:
 func _party_changed() -> void:
 	if _music != null:
 		_music.playlist = _playlist if party_on() else ""
+
+
+# ------------------------------------------------------------------ fighting back
+
+## The player hurt someone on board: the crowd and the guards fight back. Each is
+## swapped where they stand for a real NpcBody (profiles content/core/soldiers/
+## barge_*.json, "fighters" in the barge's data, wearing their own look), one a
+## tick, nearest the player first, run by a Townsfolk of the barge's own with
+## standing off, so the fight costs no one's standing. The band plays on and the
+## boss only shouts. Once their alarm is down, each walks back to its spot (which
+## rides with the barge) and dances again (_tick_fight). Without the town's
+## brains (npc_brains off) nobody fights.
+func _provoke() -> void:
+	if wrecked or demo == null or not bool(demo.get("npc_brains")) or not demo.has_method("make_npc"):
+		return
+	if _folk == null:
+		_folk = demo.make_townsfolk("BargeFolk", [])
+		_folk.standing = false
+	fights += 1
+	_folk.provoke()
+	_calm_t = 0.0
+	var kinds: Dictionary = cfg.get("fighters", {})
+	var ppos: Vector3 = player.global_position if player != null and is_instance_valid(player) else global_position
+	_rousing = people.filter(func(p): return not p.dead and p.fighter == null and kinds.has(p.kind))
+	_rousing.sort_custom(func(a, b): return to_global(a.spot).distance_to(ppos) < to_global(b.spot).distance_to(ppos))
+	# The nearest one now: an alarm raised with nobody alive to fight stands down at once.
+	if not _rousing.is_empty():
+		_rouse(_rousing.pop_front())
+
+
+func _rouse(p: Dictionary) -> void:
+	var id := str(cfg.get("fighters", {}).get(p.kind, ""))
+	var soldier: Dictionary = demo._content().get_soldier(id).duplicate(true)
+	if soldier.is_empty():
+		return
+	soldier["archetype"] = p.look
+	var here := to_global(p.spot)
+	var f: Vector3 = global_basis * (Basis(Vector3.UP, float(p.yaw)) * Vector3.FORWARD)
+	var g: NpcBody = demo.make_npc(soldier, here, atan2(-f.x, -f.z), "", "npc:%s/barge_%s" % [planet_id, p.node.name])
+	g.free_walk = true                  # no navmesh out here: straight across the deck
+	g.nav = null
+	g.died.connect(_on_fighter_died.bind(p))
+	p.fighter = g
+	(p.node as Node3D).visible = false
+	(p.hit as PartyHit).collision_layer = 0
+	_folk.add_member(g)
+	if _folk.alarm.active():
+		g.perception.awareness = 1.0
+		g.perception.noticed = true
+	roused += 1
+
+
+## Back to dancing: the fighter goes and the dancer is there again (still dead,
+## if the fighter died: back at respawn like everyone).
+func _settle(p: Dictionary) -> void:
+	var g = p.fighter
+	p.fighter = null
+	if g != null and is_instance_valid(g):
+		_folk.remove_member(g)
+		g.queue_free()
+	(p.node as Node3D).visible = true
+	if not p.dead:
+		p.hp = float(cfg.get("person_hp", 60))
+		(p.hit as PartyHit).collision_layer = 0 if wrecked else LAYER_ENEMIES
+
+
+func _on_fighter_died(p: Dictionary) -> void:
+	p.dead = true
+	p.back_at = WorldState.clock + float(cfg.get("respawn_s", 180.0))
+	kills += 1
+
+
+## One tick of the fight: the next fighters swapped in, every fighter's spot kept
+## on the deck as it moves, and once the alarm has been down a moment, those back
+## at their spot (or everyone, after calm_back_s) swapped back to dancing.
+func _tick_fight(dt: float) -> void:
+	if _folk == null:
+		return
+	var calm: bool = not _folk.alarm.active()
+	_calm_t = _calm_t + dt if calm else 0.0
+	var settled := _calm_t > 1.0
+	if settled:
+		_rousing.clear()
+	for i in int(cfg.get("rouse_per_tick", 1)):
+		if _rousing.is_empty():
+			break
+		var r: Dictionary = _rousing.pop_front()
+		if not r.dead and r.fighter == null:
+			_rouse(r)
+	for p in people:
+		var g = p.fighter
+		if g == null or not is_instance_valid(g) or g.dead:
+			continue
+		var spot := to_global(p.spot)
+		g.post_pos = spot
+		var b = _folk.brains.get(g)
+		if b != null:
+			b.patrol_points = [spot]
+		if settled and (g.global_position.distance_to(spot) < 1.2 or _calm_t > float(cfg.get("calm_back_s", 20.0))):
+			_settle(p)
+
+
+## Nobody counts shots fired here (PlayerWeapons.off_record_zone): on board, on
+## the gangplank or on the sand round it.
+func off_record(p: Vector3) -> bool:
+	return p.distance_to(global_position) < float(cfg.get("off_record_m", 60.0))
 
 
 # ------------------------------------------------------------------ taking it over
@@ -1031,8 +1186,11 @@ func _physics_process(dt: float) -> void:
 	if not _pending.is_empty():
 		_build_party()
 	_read_input(dt)
+	var was := global_transform
 	_move(dt)
+	_carry = global_transform * was.affine_inverse()
 	_animate(dt)
+	_tick_fight(dt)
 	if _tick % 30 == 0:
 		_tick_respawns()
 	_record_xf()
@@ -1259,7 +1417,10 @@ func explode() -> void:
 	look.visible = false
 	for cs in _shapes:
 		(cs as CollisionShape3D).set_deferred("disabled", true)
+	_rousing.clear()
 	for p in people:
+		if p.fighter != null:
+			_settle(p)               # the fighters go up with it too
 		(p.hit as PartyHit).collision_layer = 0
 	_rebuild_at = WorldState.clock + float(cfg.get("rebuild_s", 240.0))
 	_party_changed()

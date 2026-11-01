@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The party barge fights back (2026-11-01)
+
+- **Everyone on the barge falls like everyone else.** Kill a dancer, a band
+  member, a guard or the old boss and they drop as a ragdoll, pushed away from
+  the shot or flung along a sword's cut, and land on the deck (riding along if
+  the barge is under way).
+- **Hurt anyone and the party fights back.** The guards bring their rifles up
+  and the crowd pulls holdout pistols, nearest you first. The band plays on and
+  the boss only yells for his guards. They keep to the barge; once you get away
+  (or are downed) they walk back to their spots and start dancing again.
+- **None of it touches your standing.** Not the fight, the kills, getting
+  away, or shots fired on board or on the sand round it.
+
 ## The barracks change hands back and forth (2026-11-01)
 
 - **Kill every Remnant trooper at the barracks and the locals take the town

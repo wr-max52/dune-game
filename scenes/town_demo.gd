@@ -295,6 +295,8 @@ func build_plan(staged_build: bool) -> Array:
 			barge = PartyBarge.new()
 			barge.setup(self, pilot.ground, planet)
 			add_child(barge)
+			if player_kit != null:
+				player_kit.weapons.off_record_zone = barge.off_record
 		return true)
 	add.call("beast", LATER, func():
 		if with_beast and pilot != null and terrain != null and PlanetBeast.lives_on(planet):
@@ -803,6 +805,22 @@ func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String
 	if soldier.is_empty():
 		push_error("TownDemo: unknown soldier profile " + soldier_id)
 		return null
+	var npc := make_npc(soldier, here, yaw, post_id, name_key, parent)
+	if bool(soldier.get("ambient", false)):
+		stage_performers.append(npc)
+		if bool(soldier.get("band", false)):
+			npc.died.connect(func(): Sound.set_club_live(false))   # issue #261: kill the band, the music stops
+	elif npc.faction == "locals":
+		locals.append(npc)
+	else:
+		npcs.append(npc)
+	return npc
+
+
+## The body alone, from a profile already read (make_soldier, or the party
+## barge's crowd with its own look): in no list, run by whoever asked for it.
+func make_npc(soldier: Dictionary, here: Vector3, yaw: float, post_id: String, name_key: String,
+		parent: Node = null) -> NpcBody:
 	var npc := NpcBody.new()
 	npc.post_id = post_id
 	npc.setup(soldier, here, yaw, _flat_mats() if use_look else null)
@@ -814,14 +832,6 @@ func make_soldier(soldier_id: String, here: Vector3, yaw: float, post_id: String
 	npc.target_armed = func(): return player_kit != null and player_kit.weapons.holder.current != ""
 	var root := get_node_or_null("Npcs") if parent == null else parent
 	(root if root != null else self).add_child(npc)
-	if bool(soldier.get("ambient", false)):
-		stage_performers.append(npc)
-		if bool(soldier.get("band", false)):
-			npc.died.connect(func(): Sound.set_club_live(false))   # issue #261: kill the band, the music stops
-	elif npc.faction == "locals":
-		locals.append(npc)
-	else:
-		npcs.append(npc)
 	return npc
 
 
