@@ -194,6 +194,8 @@
   "opening_view": "Press V to switch views",
   "opening_cinematic_secs": 8,
   "opening_exit": "E: get out",
+  "free_roam_kit": ["rifle_blaster", "energy_blade"],
+  "free_roam_kit_note": "What a new free roam game puts in your backpack (WorldState.new_game). A free roam game also opens with the landing (ShipPilot.opening_landing), once, with no general in the pit.",
   "ship_wreck": "Your ship. A wreck: T-89 in the pit can rebuild it.",
   "ship_not_yours": "Not yours. No keys, no flight.",
   "bounty": {

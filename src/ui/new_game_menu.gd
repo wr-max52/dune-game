@@ -9,7 +9,7 @@ const CHOICES := [
 	[WorldState.STORY, "Story",
 		"You land broke in a wreck, in a port the Remnant runs. Pistol only, nobody's friend yet, and you play the smuggler."],
 	[WorldState.FREEPLAY, "Free Roam",
-		"The town as it is: drops and bounties on repeat, the port's ships, any character you like."],
+		"The town as it is: drops and bounties on repeat, the port's ships, any character you like. The rifle and the blade are in your pack."],
 ]
 
 var settings: DevSettingsPanel

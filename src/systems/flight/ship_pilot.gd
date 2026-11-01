@@ -218,8 +218,8 @@ func _ready() -> void:
 		travel.staged = "staging" in demo and bool(demo.staging)    # issue #121: a handoff's first frame
 		travel.setup(self, demo.planet.get("neighbours", []), demo.use_look)
 		demo.add_child(travel)
-	if str(demo._arrival.get("mode", "")) == "" and WorldState.story_mode() and Story.chapter() == "land":
-		opening_landing.call_deferred()      # issue #202: the story opens with the landing
+	if str(demo._arrival.get("mode", "")) == "" and WorldState.opening_due():
+		opening_landing.call_deferred()      # issue #202: the story (and a new free roam game) opens with the landing
 	elif str(demo._arrival.get("mode", "")) == "reentry":
 		reenter()
 	elif str(demo._arrival.get("mode", "")) == "travel":
@@ -526,6 +526,7 @@ func exit_ship() -> bool:
 		if chase.is_cinematic():
 			chase.set_mode(chase.Mode.CHASE)    # the opening's view, not one the player picked
 		Story.event("landed")          # issue #202: out of the ship; the general is waiting
+		WorldState.set_flag(WorldState.FREE_OPENING, false)    # free roam: no general, and the landing played once
 	exited.emit()
 	return true
 

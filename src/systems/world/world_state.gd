@@ -24,6 +24,7 @@ const STORY_WEAPON := "pistol_blaster"     ## issue #200: the one hand weapon a 
 const GENERAL_CARD := "res://content/core/npcs/general_card.json"
 const SHIP_REBUILT := "ship_rebuilt"        ## issue #206: T-89 rebuilt the wreck on the pit pad (a story save's own ship)
 const COMRADE := "t89_comrade"              ## issue #206: the player told T-89 they can't stand the Remnant
+const FREE_OPENING := "free_opening"        ## a new free roam game: the landing still to play (opening_due)
 
 static var standing: Dictionary = DEFAULT_STANDING.duplicate()
 static var flags: Dictionary = {}          ## name -> true
@@ -106,7 +107,9 @@ static func reset() -> void:
 ## Issue #200: a new save in STORY or FREEPLAY mode. Story starts at the first
 ## chapter with every faction neutral and the pistol only (weapon_allowed).
 ## Freeplay goes straight to the free chapter (drops and bounties on repeat), the
-## port's ships flying, the world otherwise as today.
+## port's ships flying, the world otherwise as today. It also opens with the
+## landing (no general in the pit), with the rifle and the blade already in your
+## backpack (the story's "free_roam_kit").
 static func new_game(m: String) -> void:
 	reset()
 	mode = STORY if m == STORY else FREEPLAY
@@ -117,10 +120,19 @@ static func new_game(m: String) -> void:
 	else:
 		story = { "chapter": "free", "told": true }
 		set_flag("ships_unlocked")
+		set_flag(FREE_OPENING)
+		for id in Story.data().get("free_roam_kit", []):
+			inventory.add(str(id))
 
 
 static func story_mode() -> bool:
 	return mode == STORY
+
+
+## Issue #202: does the town open with the landing (ShipPilot.opening_landing)? A
+## story save at its first chapter, or a new free roam game until you get out.
+static func opening_due() -> bool:
+	return Story.chapter() == "land" if story_mode() else has_flag(FREE_OPENING)
 
 
 ## Issue #206: the player owns a ship: the wreck T-89 rebuilt, or one bought from him.
