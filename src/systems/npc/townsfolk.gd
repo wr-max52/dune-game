@@ -30,6 +30,9 @@ const LINES_PATH := "res://content/core/dialogue/locals_lines.json"
 
 var demo
 var town
+## Fights here count against the locals' standing (and fleeing one is
+## remembered). Off for the party barge's crowd: its fights touch no one's.
+var standing := true
 var player: CharacterBody3D
 var members: Array = []           ## every local NpcBody
 var brains: Dictionary = {}       ## NpcBody -> GuardBrain
@@ -150,7 +153,7 @@ func _raise(why: String) -> void:
 	if not alarm.raise(why, _player_pos()):
 		return
 	_handle(alarm.drain())
-	if why != "remembered":
+	if why != "remembered" and standing:
 		WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("raise_standing", -10)),
 			"Someone opened fire on the port's own people.")
 
@@ -165,9 +168,11 @@ func _handle(events: Array) -> void:
 					g.perception.noticed = true
 				_say(_lead(_alive()), "alarm")
 			"standing":
-				WorldState.change_standing("locals", int(e.delta), "Someone shot up the port's locals and got away.")
+				if standing:
+					WorldState.change_standing("locals", int(e.delta), "Someone shot up the port's locals and got away.")
 			"flag":
-				WorldState.set_flag("fled_locals_fight")
+				if standing:
+					WorldState.set_flag("fled_locals_fight")
 			"calm":
 				for g in _alive():
 					var b: GuardBrain = brains[g]
@@ -238,6 +243,12 @@ func _pick_cover(g: NpcBody, b: GuardBrain) -> Vector3:
 
 # ------------------------------------------------------------------ events
 
+## The player hurt someone this director speaks for who is not one of its bodies
+## (a dancer on the party barge): the alarm goes up next tick, as if a member was hit.
+func provoke() -> void:
+	_attacked = true
+
+
 func _on_local_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
 	brains[g].notify_hit()
 	if DroidController.by_player(shooter, player):
@@ -248,8 +259,9 @@ func _on_local_died(g: NpcBody) -> void:
 	kills += 1
 	claimed.erase(g)
 	if DroidController.by_player(g.last_hit_by, player):
-		WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),
-			"A local was killed in the street.")
+		if standing:
+			WorldState.change_standing("locals", int(cfg.get("alarm", {}).get("killed_standing", -8)),
+				"A local was killed in the street.")
 		_attacked = true
 	var left := _alive()
 	if not left.is_empty():

@@ -2,6 +2,28 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After the party barge fights back (2026-11-01)
+
+**Checked:** `test_smoke`, a headless boot of the town, and a probe run as a
+main scene (look on, brains on): a killed dancer ragdolls onto the lower deck,
+hurting one rouses all 29 crowd and guards (guards' rifles out), a killed
+fighter ragdolls, after the alarm stands down they all go back to dancing,
+everyone respawns, and standing and the street-shots flag never move. The
+barge trace and its test were not run (it runs with brains off, so nobody
+fights there). Nothing was played by hand or rendered.
+
+- **A fighter's body is left behind if the barge drives off** while it lies
+  there (the owner shooting their own crowd, then engaging the autopilot). It
+  hangs in the air where the deck was until respawn_s is up. The dancers'
+  own ragdolls ride along.
+- **Fighters can chase you down the gangplank** onto the sand, as far as their
+  short leash (14-18 m). There is no navmesh on the barge, so they walk
+  straight at you; the ramps between decks work only when the line is clear.
+- **Rousing everyone costs a kit build a tick** for about half a second (one
+  NpcBody per person, nearest you first).
+- **The fighters come back at full health.** A dancer you hurt but did not
+  kill is swapped in fresh.
+
 ## After the fence, droid post and Skrugs's stall pass (2026-10-31)
 
 **Checked:** `test_plot_buildout` (17/17: the armour bought, sold back and bought again), `test_skrugs_yard` (22/22, three new: the 100 m reach, the offer

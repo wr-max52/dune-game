@@ -1,0 +1,12 @@
+{
+  "id": "barge_guard",
+  "base": "local_guard",
+  "label": "Barge guard",
+  "note": "The boss's guards on a party barge (src/systems/world/party_barge.gd): they groove by the dais until you hurt anyone on board, then this body takes their place, rifle up, run by the barge's own Townsfolk with standing off. They keep to the barge and go back to the dais once it is over. Only the blocks below differ from local_guard.json.",
+  "combat": {
+    "cover_search_radius": 0.0,
+    "search_leash": 10.0,
+    "chase_leash": 18.0,
+    "disengage_dist": 50.0
+  }
+}

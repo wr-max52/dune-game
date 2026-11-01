@@ -43,6 +43,7 @@ var look: Dictionary = {}
 var cfg: Dictionary = {}            ## core weapon data by id
 var enabled := true                 ## false while talking at the bar
 var in_range_zone: Callable = Callable()   ## (pos) -> bool: on the sanctioned range?
+var off_record_zone: Callable = Callable() ## (pos) -> bool: nobody counts shots here (at the party barge)
 
 var blade_extent := 0.0
 var aiming := false
@@ -323,7 +324,8 @@ func _shoot(id: String) -> void:
 	_muzzle_flash(origin, dir, b.color)
 	avatar.fire_kick()
 	var in_range: bool = in_range_zone.is_valid() and bool(in_range_zone.call(player.global_position))
-	WorldState.on_player_fired(in_range)
+	if not (off_record_zone.is_valid() and bool(off_record_zone.call(player.global_position))):
+		WorldState.on_player_fired(in_range)
 	# Guards hear it (NoiseEvents). On the range it is "shot_range", which a brain can shrug off.
 	NoiseEvents.emit(avatar.global_position, float(c.get("noise_radius", 45.0)), "shot_range" if in_range else "shot")
 	fired.emit(id)

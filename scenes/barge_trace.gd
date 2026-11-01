@@ -4,7 +4,8 @@ extends SceneTree
 ## band on top, a DJ below, a crowd on every deck; the barge plays the cantina's
 ## club music; the boss sells it. It is parked at home until it is yours, and
 ## its people are only built once you come near.
-## #269 cleanup: anyone on board can be killed, nobody fights back, standing never
+## #269 cleanup: anyone on board can be killed (brains are off here, so nobody
+## fights back; with them on the crowd does, see PartyBarge._provoke), standing never
 ## moves, and they are back after respawn_s of play; kill the whole band and the
 ## music stops until they are back. The owner dials a course at the control
 ## panel, engages and steps away: it swings round and cruises on autopilot with
