@@ -10,8 +10,14 @@ extends Node3D
 ##   aim, still switches instantly);
 ## - recoil kick, screen shake, FOV zoom, and a cinematic override the bar's
 ##   two-shot uses while the player talks.
+##
+## V's third view, cinematic (CinematicShots), is node side too: the camera cuts
+## to a new spot near the player every few seconds and trails them between cuts.
+## The guns still aim along the third person view (aim_transform), which is where
+## the mouse points; going into or out of it is a cut, not a glide.
 
 const CameraRig := preload("res://src/systems/camera/camera_rig.gd")
+const CinematicShots := preload("res://src/systems/camera/cinematic_shots.gd")
 
 signal view_changed(first_person: bool)
 
@@ -22,7 +28,9 @@ signal view_changed(first_person: bool)
 @export var collide := true
 @export var glide_time := 0.2
 @export var base_fov := 75.0
+@export var cine_fov := 55.0          ## the cinematic view's lens
 var rig := CameraRig.new()
+var cine := CinematicShots.new()
 var _camera: Camera3D
 var _player: Node3D
 var input_enabled := true             ## false while a dialogue owns the mouse
@@ -39,6 +47,7 @@ var _override_fov := -1.0
 var _override_blend := 0.0
 var _last_xf := Transform3D()
 var _slide_roll := 0.0                ## current camera roll from a slide (rad)
+var _aim_xf := Transform3D()          ## the third person view the guns aim along, in cinematic
 
 
 func _ready() -> void:
@@ -49,6 +58,7 @@ func _ready() -> void:
 	_camera.make_current()
 	rig.tpv_shoulder = shoulder
 	rig.tpv_distance = tpv_distance
+	cine.blocked = _resolve_collision
 
 
 func set_player(player: Node3D) -> void:
@@ -70,17 +80,37 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_view()
 
 
+## V: first person -> third person -> cinematic -> first person.
 func toggle_view() -> void:
+	set_view((rig.mode + 1) % CameraRig.Mode.size())
+
+
+func set_view(m: int) -> void:
+	if rig.mode == m:
+		return
+	var was_cine := rig.is_cinematic()
+	rig.set_mode(m)
+	# First <-> third person glides; into or out of cinematic is a cut.
 	_glide_from = _last_xf
-	_glide_left = glide_time if _last_xf != Transform3D() else 0.0
-	rig.toggle_mode()
+	_glide_left = glide_time if _last_xf != Transform3D() and not was_cine and not rig.is_cinematic() else 0.0
+	cine.reset()
 	view_changed.emit(rig.is_first_person())
-	print_verbose("CameraRig: view -> ", "TPV" if not rig.is_first_person() else "FPV")
+	print_verbose("CameraRig: view -> ", ["FPV", "TPV", "CINE"][rig.mode])
 
 
 func set_first_person(on: bool) -> void:
 	if rig.is_first_person() != on:
-		toggle_view()
+		set_view(CameraRig.Mode.FPV if on else CameraRig.Mode.TPV)
+
+
+func is_cinematic() -> bool:
+	return rig.is_cinematic()
+
+
+## The view the guns aim along: the camera's, except in cinematic, where the shot
+## is off somewhere else and the aim is still the third person view's.
+func aim_transform() -> Transform3D:
+	return _aim_xf if rig.is_cinematic() and _aim_xf != Transform3D() else _camera.global_transform
 
 
 ## Recoil: pitch the view up by `degrees`, spread over a few frames.
@@ -160,7 +190,11 @@ func _process(delta: float) -> void:
 		pivot = p + tilt * (pivot - p)
 	if not rig.is_first_person() and collide:
 		xf.origin = _resolve_collision(pivot, xf.origin)
-	if _glide_left > 0.0:
+	_aim_xf = xf
+	if rig.is_cinematic():
+		var up: Vector3 = tilt.y
+		xf = cine.update(delta, p + up * 1.2, xf.basis.z * -1.0, up)
+	elif _glide_left > 0.0:
 		_glide_left = maxf(0.0, _glide_left - delta)
 		var f := 1.0 - _glide_left / glide_time
 		f = f * f * (3.0 - 2.0 * f)
@@ -173,11 +207,11 @@ func _process(delta: float) -> void:
 	if _override_blend > 0.0:
 		var b := _override_blend * _override_blend * (3.0 - 2.0 * _override_blend)
 		xf = xf.interpolate_with(_override_xf, b)
-	if absf(_slide_roll) > 0.0005:
+	if absf(_slide_roll) > 0.0005 and not rig.is_cinematic():
 		xf.basis = xf.basis * Basis(Vector3(0, 0, 1), _slide_roll)
 	_camera.global_transform = xf
 	_zoom = lerpf(_zoom, _zoom_target, 1.0 - exp(-12.0 * delta))
-	var fov := base_fov * _zoom
+	var fov := cine_fov if rig.is_cinematic() else base_fov * _zoom
 	if _override_blend > 0.0 and _override_fov > 0.0:
 		fov = lerpf(fov, _override_fov, _override_blend)
 	_camera.fov = fov

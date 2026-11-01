@@ -107,9 +107,9 @@ func _run() -> void:
 	out("FACES_TRAVEL", absf(wrapf(kit.avatar.facing_yaw - atan2(vel.x, vel.z), -PI, PI)) < 0.3)
 	player.set_command(Vector2.ZERO, false, false, false)
 
-	# ---- view toggles: spam 10 times in 10 frames, must end where it started
+	# ---- view toggles: spam 9 times (3 laps of FPV/TPV/cinematic) in 9 frames, must end where it started
 	var start_fp: bool = rig.rig.is_first_person()
-	for i in 10:
+	for i in 9:
 		rig.toggle_view()
 		await frames(1)
 	await frames(20)

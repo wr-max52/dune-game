@@ -277,13 +277,15 @@ func _on_holder_event(ev: String) -> void:
 
 # ------------------------------------------------------------------ blasters
 
-## Where the crosshair points: the first thing under the screen center.
+## Where the crosshair points: the first thing under the screen center. In the
+## cinematic view (no crosshair) it is the third person view's center.
 func aim_point() -> Vector3:
 	var cam: Camera3D = rig_node.camera() if rig_node != null else null
 	if cam == null or not cam.is_inside_tree():
 		return avatar.global_position + avatar.global_basis.z * 50.0
-	var from := cam.global_position
-	var dir := -cam.global_basis.z
+	var view: Transform3D = rig_node.aim_transform() if rig_node.has_method("aim_transform") else cam.global_transform
+	var from := view.origin
+	var dir := -view.basis.z
 	var to := from + dir * 250.0
 	var q := PhysicsRayQueryParameters3D.create(from, to)
 	q.exclude = [player.get_rid()]
@@ -512,8 +514,9 @@ func _play(key: String) -> void:
 		p.play()
 
 
-## The crosshair shows with a gun ready, unless a cinematic owns the camera or the
-## sights are up in first person (then the sight is the crosshair).
+## The crosshair shows with a gun ready, unless a cinematic (the bar's two-shot, or
+## V's cinematic view) owns the camera or the sights are up in first person (then
+## the sight is the crosshair).
 static func crosshair_shown(has_gun: bool, ready: bool, overridden: bool, first_person: bool, ads_blend: float) -> bool:
 	return has_gun and ready and not overridden and not (first_person and ads_blend >= 0.95)
 
@@ -568,7 +571,8 @@ func _update_hud(dt: float) -> void:
 	if _hud == null:
 		return
 	var cur := holder.current
-	_cross.visible = crosshair_shown(guns.has(cur), holder.is_ready(), rig_node != null and rig_node.is_overridden(),
+	_cross.visible = crosshair_shown(guns.has(cur), holder.is_ready(),
+		rig_node != null and (rig_node.is_overridden() or rig_node.has_method("is_cinematic") and rig_node.is_cinematic()),
 		avatar.first_person, avatar.ads_blend)
 	if guns.has(cur):
 		var g: Weapon = guns[cur]

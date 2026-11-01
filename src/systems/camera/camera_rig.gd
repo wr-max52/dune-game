@@ -19,7 +19,9 @@ var tpv_height := 1.8
 ## which is the M1 behavior the tests pin; the scene sets a shoulder.
 var tpv_shoulder := 0.0
 
-enum Mode { FPV, TPV }
+## CINE: the cinematic view. Its shots are the node's (they need the world); the
+## math here treats it as third person, which is also where the aim comes from.
+enum Mode { FPV, TPV, CINE }
 
 var yaw := 0.0            # radians, world-space horizontal angle
 var pitch := 0.0          # radians, clamped
@@ -54,10 +56,11 @@ func camera_transform(player_pos: Vector3) -> Transform3D:
 	return Transform3D(basis, position)
 
 
+## V cycles first person -> third person -> cinematic -> first person.
 ## Returns true if toggling changed the mode.
 func toggle_mode() -> bool:
 	var before := mode
-	mode = Mode.TPV if mode == Mode.FPV else Mode.FPV
+	mode = (mode + 1) % Mode.size()
 	return mode != before
 
 
@@ -72,6 +75,10 @@ func tpv_pivot(player_pos: Vector3) -> Vector3:
 
 func is_first_person() -> bool:
 	return mode == Mode.FPV
+
+
+func is_cinematic() -> bool:
+	return mode == Mode.CINE
 
 
 func add_yaw(delta: float) -> void:

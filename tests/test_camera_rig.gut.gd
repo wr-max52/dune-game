@@ -16,8 +16,12 @@ func test_default_mode_is_first_person() -> void:
 	assert_true(rig.is_first_person())
 
 
-func test_toggle_swaps_mode() -> void:
+func test_toggle_cycles_first_third_cinematic() -> void:
 	assert_true(rig.toggle_mode())
+	assert_eq(rig.mode, rig.Mode.TPV)
+	assert_false(rig.is_first_person())
+	assert_true(rig.toggle_mode())
+	assert_true(rig.is_cinematic())
 	assert_false(rig.is_first_person())
 	assert_true(rig.toggle_mode())
 	assert_true(rig.is_first_person())
@@ -32,6 +36,8 @@ func test_toggle_preserves_aim() -> void:
 	## THE "don't break aim" test.
 	var aim_before: Vector3 = rig.look_direction()
 	rig.mode = 1  # TPV
+	rig.toggle_mode()  # on to cinematic
+	assert_eq(rig.look_direction(), aim_before, "cinematic keeps the aim too")
 	rig.toggle_mode()  # back to FPV
 	var aim_after: Vector3 = rig.look_direction()
 	assert_eq(aim_before, aim_after, "look direction must be identical after toggle")
