@@ -260,7 +260,7 @@ func _step_flying(dt: float) -> void:
 ## left out, so pulling up does not bleed her any harder than before.
 func _shed_overspeed(dt: float) -> void:
 	var top := p("max_speed", 170.0)
-	if bool(_command.get("boost", false)):
+	if flight.boosting:
 		top = p("boost_speed", top * 1.5)
 	top *= air_scale()
 	if flight.speed > top:

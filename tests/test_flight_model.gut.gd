@@ -99,9 +99,20 @@ func test_boost_is_faster_and_runs_out() -> void:
 	assert_lt(f.boost_left, f.boost_time(), "boost drains the meter")
 	_fly(f, f.boost_time() + 1.0)
 	assert_false(f.boosting, "an empty meter ends the boost even while held")
+	# Still held: the recharge must not light it again (it used to flicker on
+	# every other frame and hold boost speed for ever).
+	var lit := 0
+	for i in 600:
+		f.step(1.0 / 60.0)
+		lit += int(f.boosting)
+	assert_eq(lit, 0, "held on an empty meter, boost stays off")
+	assert_almost_eq(f.speed, f.max_speed(), 0.5, "back to full-throttle speed, not boost speed")
 	f.set_command(0, 0, 0, 1.0, false)
 	_fly(f, 1.0)
 	assert_gt(f.boost_left, 0.0, "the meter recharges when not boosting")
+	f.set_command(0, 0, 0, 1.0, true)
+	f.step(1.0 / 60.0)
+	assert_true(f.boosting, "let go and pressed again, what recharged boosts")
 
 
 func test_boost_turns_slower() -> void:

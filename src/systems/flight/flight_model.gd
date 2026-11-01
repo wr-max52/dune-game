@@ -26,6 +26,7 @@ var speed := 0.0
 var throttle := 0.5
 var boost_left := 0.0
 var boosting := false             ## the ability is running this frame (any kind)
+var spent := false                ## the meter ran dry with Shift held: off until it is let go
 var drift_dir := Vector3.ZERO      ## where a drift is carrying the ship
 var command := { "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "throttle": 0.5, "boost": false }
 ## M14: multipliers the atmosphere sets each frame (thin air is faster, climbing
@@ -167,13 +168,18 @@ func target_speed() -> float:
 func step(dt: float) -> void:
 	throttle = float(command.throttle)
 
-	# Boost drains while held, recharges otherwise. An empty meter ends the boost.
+	# Boost drains while held, recharges otherwise. An empty meter ends the boost
+	# until Shift is let go: held on, one frame's recharge would light it again
+	# the next frame, flickering on and off at boost speed for ever.
 	var was := boosting
-	boosting = bool(command.boost) and boost_left > 0.0
+	if not bool(command.boost):
+		spent = false
+	boosting = bool(command.boost) and boost_left > 0.0 and not spent
 	if boosting and not was:
 		drift_dir = forward()
 	if boosting:
 		boost_left = maxf(0.0, boost_left - dt)
+		spent = boost_left <= 0.0
 	else:
 		boost_left = minf(boost_time(), boost_left + boost_recharge() * dt)
 
