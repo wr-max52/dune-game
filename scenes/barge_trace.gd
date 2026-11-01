@@ -2,7 +2,8 @@ extends SceneTree
 ## Issue #269 trace (headless, the real town scene): the home planet's party barge
 ## is built from its planet block (a planet without one has none); the cantina's
 ## band on top, a DJ below, a crowd on every deck; the barge plays the cantina's
-## club music; the boss sells it.
+## club music; the boss sells it. It is parked at home until it is yours, and
+## its people are only built once you come near.
 ## #269 cleanup: anyone on board can be killed, nobody fights back, standing never
 ## moves, and they are back after respawn_s of play; kill the whole band and the
 ## music stops until they are back. The owner dials a course at the control
@@ -81,21 +82,25 @@ func _run() -> void:
 	out("BOSS", barge.boss_name)
 	out("NONE_WITHOUT_BLOCK", not load("res://src/systems/world/party_barge.gd").lives_on({ "id": "x" }))
 	out("HOME_FROM_TOWN_M", int(barge.home.distance_to(demo.town.spawn_pos())))
+	# ---------------------------------------------------------------- built late, parked till bought
+	out("NO_PARTY_FROM_TOWN", barge.people.is_empty() and not barge.party_built)
+	var parked_at: Vector3 = barge.global_position
+	_put(Vector3(0, barge._y[2] + 0.1, 14.0))
+	var built_in := -1
+	for i in 600:
+		await physics_frame
+		if barge.party_built:
+			built_in = i
+			break
+	out("PARTY_BUILT_NEAR_TICKS", built_in)
+	out("PARTY_BUILT_NEAR", built_in > 0)
+	out("PARKED_UNTIL_BOUGHT", barge.global_position.distance_to(parked_at) < 0.001 and barge.speed == 0.0)
 	out("BAND", barge.band.size())
 	out("BAND_ON_TOP", barge.band.filter(func(p): return p.deck == "top").size())
 	out("DJ_BELOW", barge.band.filter(func(p): return p.deck == "lower" and p.perform == "dj").size())
 	for deck in ["top", "lower", "steerage"]:
 		out("CROWD_" + deck.to_upper(), barge.people.filter(func(p): return p.deck == deck and p.kind == "dancer").size())
 	out("CLUB", barge._music != null and barge._music.playlist == str(demo.planet.get("cfg", {}).get("club", "")))
-	# ---------------------------------------------------------------- not a steady drift wobble
-	var h0: Vector3 = barge.heading
-	var wobble := 0.0
-	for i in 60:
-		await physics_frame
-		wobble = maxf(wobble, rad_to_deg(h0.angle_to(barge.heading)))
-		h0 = barge.heading
-	out("DRIFT_TURN_MAX_DEG_A_TICK", snappedf(wobble, 0.001))
-	out("DRIFT_SMOOTH", wobble < 0.2)
 	# ---------------------------------------------------------------- the people: killable, back later
 	var standing: Dictionary = WorldState.standing.duplicate(true)
 	var dancer: Dictionary = barge.people.filter(func(p): return p.kind == "dancer" and p.deck == "top")[0]

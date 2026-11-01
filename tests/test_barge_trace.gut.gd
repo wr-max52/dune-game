@@ -3,7 +3,7 @@ extends GutTest
 ## built from the planet's block, the cantina's band on top and a DJ below, a
 ## crowd on every deck, the cantina's club music, bought from the boss, and
 ## steerage partying too.
-## #269 cleanup: a smooth drift (no shaking), everyone killable and back later
+## #269 cleanup: parked at home until yours (people built only near), everyone killable and back later
 ## with standing untouched, the control panel and autopilot with the player free
 ## to walk the deck, a dead stop against anything, and a fireball into the beast.
 
@@ -37,8 +37,10 @@ func test_the_party() -> void:
 	_true("CLUB")
 
 
-func test_no_shaking() -> void:
-	_true("DRIFT_SMOOTH")
+func test_built_late_parked_till_bought() -> void:
+	_true("NO_PARTY_FROM_TOWN")
+	_true("PARTY_BUILT_NEAR")
+	_true("PARKED_UNTIL_BOUGHT")
 
 
 func test_people_killable_and_back() -> void:

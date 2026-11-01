@@ -578,6 +578,14 @@ func show_panel(off: float, under_way: bool, blocked: bool) -> void:
 	lever.rotation.x = -0.6 if under_way else 0.4
 
 
+## The club's lights and props animate only while the player is near (PartyBarge
+## calls this at anim_m); far off they hold still and fade out anyway.
+func wake(on: bool) -> void:
+	for c in [jazz, rave]:
+		if c != null:
+			(c as Node).process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+
+
 # ------------------------------------------------------------------ last pass
 
 ## Every texture mapped in its mesh's own space, small things fading out far off,

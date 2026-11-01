@@ -13,6 +13,11 @@ extends AnimatableBody3D
 ## fights back; they are back after `respawn_s` seconds of play (or the next time
 ## the scene is built), and it never touches your standing with anyone.
 ##
+## Perf: until it is yours it is parked at its home and never moves, so neither do
+## its colliders. The people on board are only built when you first come within
+## `party_m` (one a physics tick), the club's lights and props only animate within
+## `anim_m`, and the look is only moved between ticks while the barge is moving.
+##
 ## A planet component, like the beast and the natives: a planet has one only if
 ## its file has a "barge" block (content/core/planets/<id>.json); the numbers
 ## every barge shares are content/core/barges/party_barge.json, and the block may
@@ -92,8 +97,9 @@ var _plank_shapes: Array = []         ## the gangplank's
 var _boss_home := Vector3.ZERO
 var _prompt: Label
 var _music: ClubMusic
-var _wander := Vector3.FORWARD        ## the drifting barge's next heading
-var _wander_t := 0.0
+var party_built := false              ## the people on board exist (built near, see party_m)
+var _pending: Array = []              ## people still to build: { look, at, deck, kind, yaw, perform }
+var _awake := true                    ## the club's props animate (within anim_m; the first tick far off stops them)
 var _rebuild_at := 0.0
 var _xf_prev := Transform3D()
 var _xf_curr := Transform3D()
@@ -170,13 +176,12 @@ func _ready() -> void:
 	_ground = home
 	heading = _flat(Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1)), home).normalized()
 	course = heading
-	_wander = heading
 	_measure_lift()
 	_place(0.0)
 	_build_hull()
 	_build_top()
 	_build_below()
-	_build_people()
+	_plan_people()
 	_build_prompt()
 	if demo != null and bool(demo.get("use_look")):
 		dressing = BargeLook.new()
@@ -518,32 +523,52 @@ func merged(mats: Dictionary) -> Array:
 
 # ------------------------------------------------------------------ the people
 
-func _build_people() -> void:
+## Who stands where (cheap): the people themselves are built later, one a
+## physics tick, when the player first comes within party_m (_build_party).
+func _plan_people() -> void:
 	var crowd: Dictionary = cfg.get("crowd", {})
 	var looks: Array = cfg.get("crowd_looks", ["local"])
 	var top := float(_y[2])
+	var add := func(look_id: String, at: Vector3, deck: String, kind: String, yaw: float, perform: String) -> void:
+		_pending.append({ "look": look_id, "at": at, "deck": deck, "kind": kind, "yaw": yaw, "perform": perform })
 	for i in int(crowd.get("top", 12)):
-		_add_person(looks[i % looks.size()], _free_spot("top"), "top", "dancer")
+		add.call(looks[i % looks.size()], _free_spot("top"), "top", "dancer", INF, "")
 	for i in int(crowd.get("lower", 7)):
-		_add_person(looks[(i + 1) % looks.size()], _free_spot("lower"), "lower", "dancer")
+		add.call(looks[(i + 1) % looks.size()], _free_spot("lower"), "lower", "dancer", INF, "")
 	for i in int(crowd.get("steerage", 9)):
-		_add_person(looks[(i + 2) % looks.size()], _free_spot("steerage"), "steerage", "dancer")
+		add.call(looks[(i + 2) % looks.size()], _free_spot("steerage"), "steerage", "dancer", INF, "")
 	# The cantina's band on the stage at the bow, facing aft over the dance floor.
 	var bz := -_L * 0.5 + 0.4 + STAGE_D * 0.45
 	var kinds: Array = cfg.get("band", ["drum", "bass"])
 	for i in kinds.size():
 		var x := lerpf(-1.8, 1.8, float(i) / maxf(1.0, kinds.size() - 1.0))
-		var p := _add_person(str(cfg.get("band_look", "club_band")), Vector3(x, top + 0.12, bz), "top", "band", 0.0)
-		p.perform = str(kinds[i])
-		band.append(p)
+		add.call(str(cfg.get("band_look", "club_band")), Vector3(x, top + 0.12, bz), "top", "band", 0.0, str(kinds[i]))
 	# The DJ at the bow end of the lower deck, behind the desk.
-	var dj := _add_person(str(cfg.get("band_look", "club_band")), Vector3(0, _y[1], -_L * 0.5 + 0.4 + 3.0), "lower", "band", 0.0)
-	dj.perform = "dj"
-	band.append(dj)
+	add.call(str(cfg.get("band_look", "club_band")), Vector3(0, _y[1], -_L * 0.5 + 0.4 + 3.0), "lower", "band", 0.0, "dj")
 	# Guards either side of the dais (they groove too; they never draw).
 	for i in int(cfg.get("guards", 2)):
-		_add_person("desert_guard", _boss_home + Vector3((i * 2 - 1) * 2.6, 0, -0.5), "top", "guard", 0.0)
-	_build_boss()
+		add.call("desert_guard", _boss_home + Vector3((i * 2 - 1) * 2.6, 0, -0.5), "top", "guard", 0.0, "")
+	add.call("cantina_owner", _boss_home, "top", "boss", 0.0, "")
+
+
+## The next person on the list, once the player has come within party_m.
+func _build_party() -> void:
+	if party_built or player == null or not is_instance_valid(player):
+		return
+	# From _ground (set in _ready): the body's own transform reads the origin for its
+	# first tick.
+	if people.is_empty() and player.global_position.distance_to(_ground) > float(cfg.get("party_m", 220.0)):
+		return
+	var s: Dictionary = _pending.pop_front()
+	var p := _add_person(s.look, s.at, s.deck, s.kind, s.yaw)
+	if s.perform != "":
+		p.perform = s.perform
+		band.append(p)
+	if s.kind == "boss":
+		_build_boss(p)
+	if _pending.is_empty():
+		party_built = true
+		_party_changed()
 
 
 ## A clear spot on a deck (local), away from the stairwells, masts, bar, stage,
@@ -645,8 +670,7 @@ func _sphere(r: float) -> SphereMesh:
 
 
 ## The boss: big, wide and ugly, warts and all, on his dais.
-func _build_boss() -> void:
-	var p := _add_person("cantina_owner", _boss_home, "top", "boss", 0.0)
+func _build_boss(p: Dictionary) -> void:
 	boss = p.node
 	var body: Node3D = p.body
 	body.scale *= Vector3(2.0, 1.25, 2.0)
@@ -694,7 +718,12 @@ func _animate(dt: float) -> void:
 			_fall(p, dt)
 	var d := player.global_position.distance_to(global_position)
 	_people_root.visible = d < float(cfg.get("people_m", 320.0))
-	if d > float(cfg.get("anim_m", 160.0)):
+	var near := d <= float(cfg.get("anim_m", 160.0))
+	if near != _awake:
+		_awake = near
+		if dressing != null:
+			dressing.wake(near)
+	if not near:
 		return
 	if d > float(cfg.get("anim_near_m", 50.0)) and _tick % 4 != 0:
 		return
@@ -766,9 +795,11 @@ func _perform(p: Dictionary, joints: Dictionary, t: float, bpm: float, kit) -> v
 		kit.reach(p.body, side, from.lerp(to_chest * (at as Vector3), w), HAND_POLES[side])
 
 
+## SkinnedBody.sync already does every layer in the body's "skins".
 func _sync_skins(body: Node3D) -> void:
-	for s in body.get_meta("skins", []):
-		s.sync(body)
+	var skins: Array = body.get_meta("skins", [])
+	if not skins.is_empty():
+		skins[0].sync(body)
 
 
 ## Down on the deck: tipped over backwards, in the barge's own frame so the body
@@ -840,6 +871,8 @@ func _tick_respawns() -> void:
 func party_on() -> bool:
 	if wrecked:
 		return false
+	if not party_built:
+		return true                   # the band is on, just not built yet
 	for p in band:
 		if not p.dead:
 			return true
@@ -995,6 +1028,8 @@ func _physics_process(dt: float) -> void:
 			_rebuild()
 		_record_xf()
 		return
+	if not _pending.is_empty():
+		_build_party()
 	_read_input(dt)
 	_move(dt)
 	_animate(dt)
@@ -1015,15 +1050,18 @@ func _record_xf() -> void:
 	_xf_frame = f
 
 
+## Setting look.transform moves every node under it (the hull, the people, the
+## club), so it is only set while the barge is moving between ticks.
 func _process(_dt: float) -> void:
 	if look == null:
 		return
-	if not CharBody.smoothing_active() or Engine.get_physics_frames() - _xf_frame > 1:
-		look.transform = Transform3D.IDENTITY
-	else:
+	var want := Transform3D.IDENTITY
+	if CharBody.smoothing_active() and Engine.get_physics_frames() - _xf_frame <= 1 and _xf_prev != _xf_curr:
 		var at := _xf_prev.interpolate_with(_xf_curr, clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0))
-		look.transform = global_transform.affine_inverse() * at
-	if dressing != null:
+		want = global_transform.affine_inverse() * at
+	if look.transform != want:
+		look.transform = want
+	if dressing != null and _awake:
 		dressing.show_panel(_turn_to(heading, course, _up(_ground)), autopilot, blocked_by != "")
 
 
@@ -1089,10 +1127,14 @@ func _just(action: String) -> bool:
 
 
 ## On autopilot: swing round to the course and go, slowly, slower in a tight turn.
-## Not on autopilot and yours (or anyone aboard): it comes to a stop and stays.
-## Nobody's: it drifts about its home, turning gently now and then, no pull toward
-## or away from town, and steers clear of the beast. Into anything: dead stop.
+## Off it: it comes to a stop and stays put (nobody's barge never moves; parked,
+## nothing here runs, so its colliders stay still). Into anything: dead stop.
 func _move(dt: float) -> void:
+	if not autopilot and speed <= 0.001:
+		speed = 0.0
+		if not gangplank_down:
+			_gangplank(true)
+		return
 	var d: Dictionary = cfg.get("drive", {})
 	var up := _up(_ground)
 	var want := heading
@@ -1103,12 +1145,6 @@ func _move(dt: float) -> void:
 		course = want
 		var off := absf(_turn_to(heading, want, up))
 		target = float(d.get("max_speed", 4.5)) * clampf(1.0 - off / (PI * 0.4), 0.0, 1.0)
-	elif owned or (player != null and aboard(player.global_position)):
-		target = 0.0
-	else:
-		target = float(cfg.get("drift_speed", 0.7))
-		rate = deg_to_rad(float(cfg.get("drift_turn_deg_s", 3.0)))
-		want = _drift_heading(dt)
 	var accel := float(d.get("accel", 0.6)) if target > speed else float(d.get("brake", 1.2))
 	speed = move_toward(speed, target, accel * dt)
 	var err := _turn_to(heading, want, up)
@@ -1130,23 +1166,6 @@ func _move(dt: float) -> void:
 	var down := not autopilot and speed < 0.3
 	if down != gangplank_down:
 		_gangplank(down)
-
-
-## Where a drifting barge wants to point: a new way every so often, home when it
-## has wandered too far, and away from the beast when it comes near.
-func _drift_heading(dt: float) -> Vector3:
-	_wander_t -= dt
-	var up := _up(_ground)
-	if _wander_t <= 0.0:
-		_wander_t = _rng.randf_range(12.0, 25.0)
-		var jitter := deg_to_rad(float(cfg.get("turn_jitter_deg", 25.0)))
-		_wander = heading.rotated(up, _rng.randf_range(-jitter, jitter))
-		if _ground.distance_to(home) > float(cfg.get("roam_m", 250.0)):
-			_wander = _flat(home - _ground, _ground).normalized()
-	var b = _beast()
-	if b != null and (b as Node3D).global_position.distance_to(global_position) < float(cfg.get("beast_shy_m", 70.0)):
-		_wander = _flat(global_position - (b as Node3D).global_position, _ground).normalized()
-	return _flat(_wander, _ground).normalized()
 
 
 ## What is just ahead of the bow, low and high, or "" when clear: the world's
@@ -1175,9 +1194,6 @@ func _stop_against(what: String) -> void:
 		autopilot = false
 		_toast(line("blocked"))
 		blocked.emit(what)
-	else:
-		_wander = -heading          # drifting: turn about
-		_wander_t = _rng.randf_range(15.0, 25.0)
 
 
 func _beast():
