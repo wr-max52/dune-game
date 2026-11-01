@@ -2,6 +2,18 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #113, saves remember where you were (2026-10-31)
+
+**Checked:** tests/test_save_where.gut.gd on its own (4/4), and the changed
+scripts compile. A real quit-and-reload wasn't tried.
+
+- **Only a spot where you stood on your own feet is saved.** Saved while
+  flying, riding or down, you load on that planet's spawn, or at the last spot
+  you stood on there.
+- **Mid-flight isn't resumed.** You load on the ground, not in the ship.
+- **Headless runs (traces, CI) never resume**, on purpose, so a save left
+  behind can't move a trace's player.
+
 ## After issue #307, silent sword kills (2026-10-31)
 
 **Checked:** compiles; not playtested. As the issue asked, there is no new
@@ -564,8 +576,6 @@ health bars (hidden calm, filled after damage, gone on death), the new arms.
   - flying home.
 
 **Not done, honestly:**
-- **The game always starts on the home planet.** Save on the station, quit, and
-  you load in the port; the save does not remember which planet you were on.
 - **Generated towns are plainer than the port.** They have no pit bowl (the bays
   are flat pads), no stair tower, stage or alley cables, and no fixer. Their
   layout is a tidy grid of lots, not the port's crooked lanes.
