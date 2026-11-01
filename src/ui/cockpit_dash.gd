@@ -10,8 +10,9 @@ extends Control
 ## The dash itself is modelled (CockpitView.dash_mesh); this paints what sits on
 ## it: recessed plates for the instruments, each in a bevelled bezel under glass
 ## that catches the light. The dials are analog, lit from inside by small LEDs
-## round their rims in the player's HUD colour (RetroUI.accent); the attitude ball
-## is a paper card lit from behind. The instruments:
+## round their rims in the player's HUD colour (RetroUI.accent), and the needles,
+## bars and the compass's mark are that colour too; the attitude ball is a paper
+## card lit from behind. The instruments:
 ##   throttle lever bar | airspeed | altimeter | attitude ball | climb | compass |
 ##   hull, shield and boost meters, and one lamp for the Shift ability.
 ##
@@ -28,7 +29,6 @@ const GLARE_BAND := Color(1, 1, 1, 0.045)
 const GLARE_GLINT := Color(1, 1, 1, 0.4)
 const LIGHT := Vector2(-0.7071, -0.7071)   ## where the canopy's light comes from on screen (upper left)
 const FACE := Color(0.03, 0.03, 0.035, 1.0)
-const NEEDLE := Color(1.0, 0.55, 0.2, 1.0)
 const PAPER_SKY := Color(0.42, 0.6, 0.76, 1.0)    ## the attitude card's sky, printed on thin paper
 const PAPER_EARTH := Color(0.66, 0.46, 0.28, 1.0)   ## and its ground
 const INK := Color(0.13, 0.11, 0.1, 0.85)          ## what the card's lines are printed in
@@ -287,8 +287,8 @@ func _compass(c: Vector2, r: float, heading: float, font: Font, fs: int) -> void
 		if deg % 90 == 0:
 			var p := c + d * r * 0.6
 			draw_string(font, p + Vector2(-12, fs * 0.3), FlightSimHud.compass_label(deg), HORIZONTAL_ALIGNMENT_CENTER,
-				24, fs - 4, NEEDLE if deg == 0 else Color(0.9, 0.87, 0.8))
-	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.98), c + Vector2(-6, -r * 0.8), c + Vector2(6, -r * 0.8)]), NEEDLE)
+				24, fs - 4, RetroUI.accent if deg == 0 else Color(0.9, 0.87, 0.8))
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.98), c + Vector2(-6, -r * 0.8), c + Vector2(6, -r * 0.8)]), RetroUI.accent)
 	draw_string(font, c + Vector2(-r, r + fs + 2.0), "HDG %03d" % posmod(int(round(heading)), 360),
 		HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs - 4, Color(0.75, 0.72, 0.66))
 	_glass(c, r)
@@ -410,7 +410,7 @@ func _fill_at(poly: PackedVector2Array, at: Vector2, col: Color) -> void:
 
 func _needle(c: Vector2, length: float, angle: float) -> void:
 	var d := Vector2.from_angle(angle)
-	draw_line(c - d * length * 0.15, c + d * length, NEEDLE, 3.0)
+	draw_line(c - d * length * 0.15, c + d * length, RetroUI.accent, 3.0)
 	draw_circle(c, 4.0, Color(0.6, 0.58, 0.55))
 
 
@@ -424,7 +424,7 @@ func _bar_v(c: Vector2, h: float, frac: float, label: String, font: Font, fs: in
 	var r := Rect2(c + Vector2(-8, -h * 0.5), Vector2(16, h))
 	draw_rect(r, FACE)
 	var f := h * clampf(frac, 0.0, 1.0)
-	draw_rect(Rect2(Vector2(r.position.x, r.end.y - f), Vector2(16, f)), NEEDLE)
+	draw_rect(Rect2(Vector2(r.position.x, r.end.y - f), Vector2(16, f)), RetroUI.accent)
 	_glass_rect(r)
 	draw_rect(r, DASH_RIM, false, 1.5)
 	draw_string(font, c + Vector2(-40, h * 0.5 + fs + 2.0), label, HORIZONTAL_ALIGNMENT_CENTER, 80, fs - 4, Color(0.75, 0.72, 0.66))
@@ -435,7 +435,7 @@ func _bar_h(top_left: Vector2, w: float, frac: float, label: String, font: Font,
 	var r := Rect2(top_left + Vector2(0, fs - 2), Vector2(w, 7))
 	draw_rect(r, FACE)
 	var f := clampf(frac, 0.0, 1.0)
-	draw_rect(Rect2(r.position, Vector2(w * f, 7)), NEEDLE if f > 0.3 else Color(1.0, 0.25, 0.18))
+	draw_rect(Rect2(r.position, Vector2(w * f, 7)), RetroUI.accent if f > 0.3 else Color(1.0, 0.25, 0.18))
 	_glass_rect(r)
 	draw_rect(r, DASH_RIM, false, 1.0)
 
