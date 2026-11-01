@@ -2,6 +2,23 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The Albatross is a black Lanner gunship (2026-10-31)
+
+- **New look for the pit's gunship.** The Ashford Albatross Mk VI in bay 4 was
+  the last ship still on the first, pale blue textured model, which didn't
+  match the game's style. It is now built on the Lanner's body: a little
+  bigger (9 m), painted black with glowing teal bands and canopy. Same name,
+  same numbers, still not yours until T-89 sells it to you.
+- **It looks like a gunship.** Long cannons out front of the wingtip pods, a
+  twin chin cannon under the nose and a small twin-gun turret on its back, all
+  with teal muzzles. They are always on: a ship look can now carry `parts`
+  (content/look/ships.json), the same kind of part T-89's upgrades bolt on.
+- **T-89's upgrades show on it too:** shield rings, hull armour and the flared
+  boost nozzle, sized up from the Lanner's.
+- Bay 4's box is resized to the new model (port_square.json, regenerated
+  port_round.json, town_kit `ship_boxes`). The old model is kept in
+  assets/vehicles/source/gunship.glb. Stills: docs/lookdev/vehicles/06_albatross.jpg.
+
 ## Divergent endings: the dark master (issue #303, 2026-10-31)
 
 - **The general's death is locked in.** Killing him on the cruiser still pays

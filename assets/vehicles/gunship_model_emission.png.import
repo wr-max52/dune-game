@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bj8cuvfrqqgv5"
-path="res://.godot/imported/gunship_model_orm.png-badf0953f73b3418c152f807d4fb0405.ctex"
+uid="uid://cb4f4yo1whaai"
+path="res://.godot/imported/gunship_model_emission.png-f57e72ea01443cf3e3e7cd4507c695f7.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "de82f6ca3f7c16d80c1cbb25083bfbd6"
+"md5": "bd63c1b902bf70de66c53f589f0aed22"
 }
 
 [deps]
 
-source_file="res://assets/vehicles/gunship_model_orm.png"
-dest_files=["res://.godot/imported/gunship_model_orm.png-badf0953f73b3418c152f807d4fb0405.ctex"]
+source_file="res://assets/vehicles/gunship_model_emission.png"
+dest_files=["res://.godot/imported/gunship_model_emission.png-f57e72ea01443cf3e3e7cd4507c695f7.ctex"]
 
 [params]
 

@@ -92,17 +92,51 @@
       }
     },
     "gunship": {
-      "frame": "hauler",
+      "frame": "dart",
       "scene": "res://assets/vehicles/gunship.glb",
       "length": 9.0,
-      "span": 7.8,
-      "height": 2.6,
-      "hull": "#8fa8b8",
-      "trim": "#d99a2b",
-      "dark": "#2a2c33",
-      "canopy": "#1f7a78",
+      "span": 7.7,
+      "height": 2.3,
+      "hull": "#2e3138",
+      "trim": "#2ee6c8",
+      "dark": "#1c1e22",
+      "canopy": "#2ee6c8",
       "engine": "#8fd8ff",
-      "flames_at": [[-1.9, 0.0, 1.95, 0.44], [1.9, 0.0, 1.95, 0.44], [-0.39, 0.19, 3.4, 0.2], [0.36, 0.19, 3.4, 0.2], [-0.4, -0.44, 3.38, 0.2], [0.36, -0.44, 3.38, 0.2]]
+      "flames_at": [[0.0, 0.0, 4.5, 0.51], [-1.0, -0.11, 3.88, 0.21], [1.0, -0.11, 3.88, 0.21], [-0.96, -0.75, 3.86, 0.18], [0.96, -0.75, 3.86, 0.18]],
+      "parts": [
+        {"mesh": "cyl", "top": 0.055, "bottom": 0.055, "h": 1.5, "pos": [3.63, -0.6, 0.35], "rot": [90, 0, 0], "mat": "metal", "color": "#3a3e46", "mirror": true},
+        {"mesh": "torus", "r": 0.07, "t": 0.02, "pos": [3.63, -0.6, -0.4], "rot": [90, 0, 0], "mat": "glow", "color": "#2ee6c8", "energy": 3.0, "mirror": true},
+        {"mesh": "box", "size": [0.6, 0.2, 1.3], "pos": [0, -0.78, -0.7], "mat": "metal", "color": "#3a3e46"},
+        {"mesh": "cyl", "top": 0.07, "bottom": 0.07, "h": 1.8, "pos": [0.18, -0.86, -1.6], "rot": [90, 0, 0], "mat": "metal", "color": "#3a3e46", "mirror": true},
+        {"mesh": "torus", "r": 0.085, "t": 0.02, "pos": [0.18, -0.86, -2.5], "rot": [90, 0, 0], "mat": "glow", "color": "#2ee6c8", "energy": 3.0, "mirror": true},
+        {"mesh": "cyl", "top": 0.3, "bottom": 0.38, "h": 0.22, "pos": [0, 0.68, 0.9], "mat": "metal", "color": "#3a3e46"},
+        {"mesh": "cyl", "top": 0.045, "bottom": 0.045, "h": 1.0, "pos": [0.1, 0.72, 0.3], "rot": [90, 0, 0], "mat": "metal", "color": "#3a3e46", "mirror": true},
+        {"mesh": "sphere", "r": 0.05, "pos": [0.1, 0.72, -0.2], "mat": "glow", "color": "#2ee6c8", "energy": 3.0, "mirror": true}
+      ],
+      "upgrades": {
+        "shields": [
+          {"mesh": "torus", "r": 0.24, "t": 0.05, "pos": [3.63, -0.6, 1.23], "rot": [90, 0, 0], "mat": "glow", "color": "#62e6ff", "energy": 3.5, "mirror": true},
+          {"mesh": "torus", "r": 0.24, "t": 0.05, "pos": [3.63, -0.6, 2.09], "rot": [90, 0, 0], "mat": "glow", "color": "#62e6ff", "energy": 3.5, "mirror": true},
+          {"mesh": "torus", "r": 0.24, "t": 0.05, "pos": [3.63, -0.6, 2.95], "rot": [90, 0, 0], "mat": "glow", "color": "#62e6ff", "energy": 3.5, "mirror": true},
+          {"mesh": "sphere", "r": 0.16, "pos": [3.63, -0.6, 1.02], "mat": "glow", "color": "#62e6ff", "energy": 3.5, "mirror": true},
+          {"mesh": "cyl", "top": 0.06, "bottom": 0.11, "h": 0.39, "pos": [0.0, 0.79, 0.37], "mat": "metal", "color": "#686e78"},
+          {"mesh": "cyl", "top": 0.34, "bottom": 0.34, "h": 0.04, "pos": [0.0, 0.99, 0.37], "mat": "glow", "color": "#62e6ff", "energy": 3.0},
+          {"mesh": "torus", "r": 0.36, "t": 0.03, "pos": [0.0, 0.99, 0.37], "mat": "metal", "color": "#686e78"}
+        ],
+        "hull": [
+          {"mesh": "box", "size": [0.09, 0.54, 1.61], "pos": [0.58, -0.24, -1.29], "mat": "metal", "color": "#686e78", "mirror": true},
+          {"mesh": "box", "size": [0.21, 0.09, 2.24], "pos": [2.5, -0.45, 0.81], "rot": [0, 52.6, 0], "mat": "metal", "color": "#686e78", "mirror": true},
+          {"mesh": "box", "size": [0.09, 0.39, 2.57], "pos": [1.33, -0.13, 2.36], "mat": "metal", "color": "#686e78", "mirror": true},
+          {"mesh": "box", "size": [0.86, 0.06, 2.79], "pos": [0.0, -1.2, 1.07], "mat": "metal", "color": "#686e78"}
+        ],
+        "boost": [
+          {"mesh": "cyl", "top": 0.77, "bottom": 0.62, "h": 0.64, "open": true, "pos": [0.0, 0.0, 4.77], "rot": [90, 0, 0], "mat": "metal", "color": "#7a7f88"},
+          {"mesh": "torus", "r": 0.77, "t": 0.04, "pos": [0.0, 0.0, 5.09], "rot": [90, 0, 0], "mat": "glow", "color": "#ffa040", "energy": 5.0},
+          {"mesh": "cyl", "top": 0.6, "bottom": 0.6, "h": 0.04, "pos": [0.0, 0.0, 4.5], "rot": [90, 0, 0], "mat": "glow", "color": "#ffa040", "energy": 6.0},
+          {"mesh": "cyl", "top": 0.21, "bottom": 0.21, "h": 0.04, "pos": [1.02, -0.11, 3.88], "rot": [90, 0, 0], "mat": "glow", "color": "#ffa040", "energy": 6.0, "mirror": true},
+          {"mesh": "box", "size": [0.11, 0.03, 2.57], "pos": [1.02, 0.17, 2.46], "mat": "glow", "color": "#ffa040", "energy": 2.5, "mirror": true}
+        ]
+      }
     },
     "interceptor_dark": {"frame": "dart", "scene": "res://assets/vehicles/interceptor.glb", "length": 9.0, "span": 7.6, "height": 1.6, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f7a78", "engine": "#8fd8ff", "flames_at": [[-0.82, -0.48, 4.38, 0.28], [0.79, -0.48, 4.38, 0.28]], "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}},
     "freighter_dark": {"frame": "hauler", "scene": "res://assets/vehicles/freighter.glb", "length": 9.0, "span": 8.0, "height": 2.4, "hull": "#2e3034", "trim": "#6b1e1e", "dark": "#2a2c33", "canopy": "#1f2a33", "engine": "#8fd8ff", "flames_at": [[-0.86, 0.05, 4.3, 0.3], [0.85, 0.05, 4.3, 0.3], [-0.03, -0.4, 4.45, 0.27]], "darken": {"body_mul": 0.34, "accent_mul": 0.5, "glow": 0.15}}
