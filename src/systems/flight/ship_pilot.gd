@@ -1067,7 +1067,8 @@ func _read_keys(dt: float) -> void:
 		if _just("interact"):
 			exit_ship()
 			return
-		if _just("jump") or _axis("flight_throttle_down", "flight_throttle_up") > 0.5:
+		# C takes off, as it lands; Space is the guns (flight_fire) and must not lift her.
+		if _just("crouch_act") or _axis("flight_throttle_down", "flight_throttle_up") > 0.5:
 			takeoff()
 		return
 	if _held("flight_eject") and can_eject():
