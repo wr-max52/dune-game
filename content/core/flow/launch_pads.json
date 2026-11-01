@@ -50,6 +50,7 @@
     "interceptor_up": "A Remnant interceptor is up and coming for you.",
     "interceptor_down": "Remnant interceptor down.",
     "interceptor_home": "The Remnant interceptor breaks off and heads home.",
+    "barracks_where": "the barracks yard",
     "leaving_atmosphere": "Leaving the atmosphere...",
     "leaving_planet": "Leaving %s...",
     "arrive_planet": "Approaching %s.",

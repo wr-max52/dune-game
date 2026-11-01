@@ -17,7 +17,12 @@ extends Node3D
 ##     not wanted any more) it flies home and lands on its pad,
 ##   - shot down, it blows up and a new one stands on the pad `respawn_s` later;
 ##     if it shoots you down you both start again in town (you in the pit, it on
-##     its pad).
+##     its pad),
+##   - standing on its pad it is a ship you can take, like an outpost's (a pilot
+##     berth): taking it sounds the barracks alarm, you fly that one away, and a
+##     new one lands on the pad `replace_s` later (once the pad is clear) to come
+##     after you; another ship's guns can shoot it to pieces there (a new one
+##     `respawn_s` later).
 ## Numbers: the ship's "scramble" block (content/core/ships/remnant_interceptor.json)
 ## and its pilot (content/core/pilots/remnant_hunter.json).
 ##
@@ -31,6 +36,8 @@ const LeadSolver := preload("res://src/systems/flight/lead_solver.gd")
 const TownDecor := preload("res://src/systems/world/town_decor.gd")
 
 enum Mode { PARKED, LAUNCHING, HUNTING, RETURNING, DOWN }
+
+const BARRACKS := "barracks"      ## its berth's "outpost" (ShipPilot: taking it is stealing)
 
 signal launched
 signal shot_down
@@ -55,12 +62,15 @@ var mode := Mode.PARKED
 var respawn_left := -1.0
 var idle_left := 0.0              ## seconds left with nothing to chase before it goes home
 var reset_pending := false        ## it shot you down: back to the pad once you are towed
+var berth := -1                   ## its pilot berth while it stands on the pad (yours to take), or -1
 
 ## For traces and tests.
 var launches := 0
 var kills_of_player := 0
 var times_shot_down := 0
 var shots := 0
+var times_taken := 0
+var times_wrecked := 0
 var log_events: Array = []
 
 var _was_crashed := false
@@ -180,7 +190,11 @@ func step(dt: float) -> void:
 	_watch_player()
 	match mode:
 		Mode.PARKED:
-			if should_scramble():
+			if _taken():
+				_hand_over()
+			elif _wrecked():
+				_wrecked_on_pad()
+			elif should_scramble():
 				scramble()
 		Mode.LAUNCHING:
 			atmo.set_command(0.0, 0.0, 0.0, 0.0, false)
@@ -194,7 +208,7 @@ func step(dt: float) -> void:
 			_return(dt)
 		Mode.DOWN:
 			respawn_left -= dt
-			if respawn_left <= 0.0:
+			if respawn_left <= 0.0 and _pad_clear():
 				_reset_home()
 	defense.step(dt)
 	_sync_visual()
@@ -203,6 +217,8 @@ func step(dt: float) -> void:
 func scramble() -> bool:
 	if mode != Mode.PARKED or not atmo.takeoff():
 		return false
+	_withdraw_berth()
+	_set_solid(true)
 	mode = Mode.LAUNCHING
 	launches += 1
 	launched.emit()
@@ -387,12 +403,100 @@ func _reset_home() -> void:
 	hull.dead = false
 	respawn_left = -1.0
 	visual.visible = true
-	_set_solid(true)
 	_sync_visual()
+	_offer_berth()
+	_set_solid(berth < 0)                # a berth's hull stands in for its own
 
 
 func _set_solid(on: bool) -> void:
 	hull.collision_layer = 1 if on else 0
+
+
+# ------------------------------------------------------------------ on its pad
+
+## On its pad it is a ship you can take or shoot to pieces: a pilot berth, like an
+## outpost's (ShipPilot.add_outpost_berth), whose hull you bump into and shoot.
+## Taking it sounds the town garrison's alarm ("town_alarm", ShipPilot._steal).
+func _offer_berth() -> void:
+	if pilot == null:
+		return
+	if berth < 0:
+		berth = pilot.add_outpost_berth(visual, ship_id, BARRACKS)
+		pilot.berths[berth]["where"] = GameFlow.label("barracks_where")
+		pilot.berths[berth]["town_alarm"] = true
+	var b: Dictionary = pilot.berths[berth]
+	b.clearance = atmo.clearance
+	b.destroyed = false
+	b.erase("defense")                   # patched up with the rest of it
+	_berth_solid(b, true)
+
+
+## Taking off after you: not a berth while it flies (marked destroyed, so nobody
+## boards it; its own hull takes the hits in the air).
+func _withdraw_berth() -> void:
+	if berth >= 0:
+		var b: Dictionary = pilot.berths[berth]
+		b.destroyed = true
+		_berth_solid(b, false)
+
+
+func _berth_solid(b: Dictionary, on: bool) -> void:
+	var h: ShipHull = b.hull
+	if h != null and is_instance_valid(h):
+		h.dead = not on
+		h.collision_layer = 1 if on else 0
+		h.collision_mask = 1 if on else 0
+
+
+## You climbed into it on its pad.
+func _taken() -> bool:
+	return berth >= 0 and pilot.piloting and pilot.berth == berth
+
+
+## Another ship's guns shot it to pieces on its pad (ShipPilot._hit_parked).
+func _wrecked() -> bool:
+	return berth >= 0 and bool(pilot.berths[berth].get("destroyed", false))
+
+
+## You took it: that model is the pilot's now (it flies off as your stolen ship),
+## and a new one lands on the pad `replace_s` later, once the pad is clear, to
+## come after you as for any stolen ship.
+func _hand_over() -> void:
+	var taken := visual
+	hull.queue_free()
+	taken.reparent(demo)
+	berth = -1
+	times_taken += 1
+	_build_visual()
+	mode = Mode.DOWN
+	respawn_left = p("replace_s", 8.0)
+	hull.dead = true
+	visual.visible = false
+	_set_solid(false)
+
+
+## Shot to pieces on its pad: the Remnant notice, and a new one stands there
+## `respawn_s` later.
+func _wrecked_on_pad() -> void:
+	mode = Mode.DOWN
+	hull.dead = true
+	respawn_left = p("respawn_s", 120.0)
+	visual.visible = false
+	_set_solid(false)
+	times_wrecked += 1
+	WorldState.change_standing("imperial_remnant", int(sc.get("kill_standing", -10)), "A Remnant interceptor was shot to pieces on its pad.")
+	shot_down.emit()
+
+
+## Nothing on the pad for a new one to land on: your ship, or you on foot.
+func _pad_clear() -> bool:
+	if pilot == null:
+		return true
+	var r := p("pad_clear", 30.0)
+	if pilot.atmo.position().distance_to(home) < r:
+		return false
+	var you = demo._player if "_player" in demo else null
+	return pilot.piloting or you == null or you.global_position.distance_to(home) >= r
 
 
 func _sync_visual() -> void:

@@ -130,7 +130,69 @@ func test_the_barracks_interceptor_waits_on_its_pad() -> void:
 	var c := (WorldGround._v3(pad.min) + WorldGround._v3(pad.max)) * 0.5
 	assert_lt(Vector2(f.position().x - c.x, f.position().z - c.z).length(), 0.5, "on the pad")
 	assert_eq(str(f.ship_id), "remnant_interceptor")
-	assert_false(t.pilot.berths.any(func(b): return b.visual == f.visual), "not one you can board")
+	assert_gte(f.berth, 0, "one you can board")
+	assert_eq(t.pilot.berths[f.berth].visual, f.visual)
+
+
+## Walk up to the barracks pad's interceptor and climb in.
+func _take_barracks_ship(t) -> int:
+	WorldState.set_flag("ships_unlocked")
+	var f: AtmoFighter = t.interceptor
+	var i: int = f.berth
+	var v: Node3D = t.pilot.berths[i].visual
+	t._player.global_position = v.global_position + Vector3(6, -float(t.pilot.berths[i].clearance), 0)
+	assert_eq(t.pilot.nearest_berth(), i, "standing at the barracks pad's ship")
+	assert_true(t.pilot.board())
+	return i
+
+
+func test_taking_the_barracks_interceptor_sounds_the_alarm_and_another_comes_after_you() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var f: AtmoFighter = t.interceptor
+	var taken: Node3D = f.visual
+	assert_false(t.garrison.alarm.active())
+	var i := _take_barracks_ship(t)
+	assert_true(t.pilot.flying_stolen(), "a stolen ship")
+	assert_true(t.garrison.alarm.active(), "the barracks alarm goes up")
+	assert_eq(str(t.pilot.ship_id), "remnant_interceptor")
+	_fly(t, DT)
+	assert_eq(f.times_taken, 1)
+	assert_eq(t.pilot.berths[i].visual, taken, "you fly that one")
+	assert_ne(f.visual, taken, "a new one for the pad")
+	assert_false(f.visual.visible, "not there yet")
+	assert_lt(f.berth, 0, "and nothing to board meanwhile")
+	assert_true(t.pilot.takeoff())
+	for k in 40:
+		_fly(t, 0.5, { "throttle": 0.6, "pitch": 0.2 })
+		if f.launches > 0:
+			break
+	assert_eq(f.launches, 1, "the new one takes off after you")
+	assert_true(f.visual.visible)
+	assert_true(bool(t.pilot.berths[f.berth].destroyed), "and nobody boards it while it flies")
+	assert_true(bool(t.pilot.berths[i].stolen), "you still fly the one you took")
+
+
+func test_shot_on_its_pad_it_is_destroyed_and_comes_back() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var f: AtmoFighter = t.interceptor
+	var i: int = f.berth
+	var standing0 := int(WorldState.standing.get("imperial_remnant", 0))
+	var gun: ShipHull = t.pilot.berths[0].hull           # another ship's guns
+	t.pilot.berths[i].hull.apply_damage_from(9999.0, gun)
+	assert_true(bool(t.pilot.berths[i].destroyed), "shot to pieces")
+	_fly(t, DT)
+	assert_eq(f.mode, AtmoFighter.Mode.DOWN)
+	assert_eq(f.times_wrecked, 1)
+	assert_false(f.visual.visible, "gone from the pad")
+	assert_lt(int(WorldState.standing.get("imperial_remnant", 0)), standing0, "the Remnant notice")
+	f.respawn_left = 0.1
+	_fly(t, 0.2)
+	assert_eq(f.mode, AtmoFighter.Mode.PARKED, "a new one on the pad")
+	assert_true(f.visual.visible)
+	assert_eq(f.berth, i)
+	assert_false(bool(t.pilot.berths[i].destroyed), "yours to take again")
 
 
 func test_not_wanted_it_stays_down() -> void:
