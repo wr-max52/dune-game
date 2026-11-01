@@ -360,6 +360,7 @@ func _burst() -> void:
 	if riding:
 		dismount()
 	ExplosionFx.big(get_parent(), at + Vector3(0, 0.6, 0), 0.6)
+	Sound.play("vehicle_boom", at)
 	destroyed.emit(at)
 	queue_free()
 

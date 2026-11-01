@@ -384,7 +384,7 @@ func _go_down(at: Vector3, shot: bool) -> void:
 	_set_solid(false)
 	if pilot != null:
 		pilot._crash_fx(at)
-	Sound.play("ship_boom", at)
+	Sound.play("vehicle_boom", at)
 	if shot:
 		times_shot_down += 1
 		WorldState.change_standing("imperial_remnant", int(sc.get("kill_standing", -10)), "A Remnant interceptor was shot down.")

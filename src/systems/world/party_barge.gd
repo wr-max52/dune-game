@@ -1413,7 +1413,7 @@ func explode() -> void:
 	for k in 3:
 		var at := to_global(Vector3(_rng.randf_range(-2.0, 2.0), _y[1], lerpf(-_L * 0.35, _L * 0.35, k / 2.0)))
 		ExplosionFx.big(get_parent(), at, 2.4)
-		Sound.play("ship_boom", at)
+		Sound.play("vehicle_boom", at)
 	look.visible = false
 	for cs in _shapes:
 		(cs as CollisionShape3D).set_deferred("disabled", true)

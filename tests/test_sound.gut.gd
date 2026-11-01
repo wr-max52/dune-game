@@ -38,6 +38,15 @@ func test_the_issue_asks_for_these_sounds() -> void:
 	assert_eq(float(cfg.music.battle.start), 30.0, "battle starts 30 s in")
 
 
+## Ships and speeders share one explosion: a few CC0 booms, picked at random.
+func test_vehicles_share_an_explosion() -> void:
+	assert_true(cfg.sfx.has("vehicle_boom"), "sfx key: vehicle_boom")
+	assert_gt(cfg.sfx.vehicle_boom.stream.size(), 1, "more than one boom to pick from")
+	assert_false(cfg.sfx.has("ship_boom"), "ships use the shared key")
+	for f in ["res://src/systems/vehicles/speeder_node.gd", "res://src/systems/flight/ship_pilot.gd"]:
+		assert_true(FileAccess.get_file_as_string(f).contains("Sound.play(\"vehicle_boom\""), f + " plays the shared boom")
+
+
 func test_buses_exist() -> void:
 	assert_gt(AudioServer.get_bus_index(Sound.MUSIC_BUS), 0, "Music bus")
 	assert_gt(AudioServer.get_bus_index(Sound.SFX_BUS), 0, "SFX bus")

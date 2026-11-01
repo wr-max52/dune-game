@@ -2,6 +2,18 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Ships and speeders share an explosion sound (2026-11-01)
+
+- **Every ship and speeder that blows up now makes the same boom**, picked
+  at random from four real explosion recordings ("explosions 4" by
+  EZduzziteh, CC0 from OpenGameArt.org, nothing to license or credit). The
+  speeder used to go up in silence, and so did your own ship when it
+  crashed or was shot down; the Remnant fighters, dogfight kills, parked
+  ships, the party barge and seekers swap the old synthesized boom for the
+  new set. One key, `vehicle_boom` in `content/look/sound.json`; the old
+  `ship_boom.wav` is kept for the droid pop.
+- Test: tests/test_sound.gut.gd (vehicles share an explosion).
+
 ## More ambient music (2026-11-01)
 
 - **The ambient score has eight tracks now, not three.** Five calm, spacey
