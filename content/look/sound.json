@@ -1,5 +1,5 @@
 {
-  "note": "The sound library (issue #16): every sound a system asks for by key, and the music. SFX are synthesized by tools/audio/make_game_sfx.py (original, nothing to license). Music is free tracks from pixabay.com/music (Pixabay Content License, no attribution needed), re-encoded by tools/audio/rip_music.sh. A stream may be a list (one is picked at random). Volumes in dB, distances in metres; pitch is a random range.",
+  "note": "The sound library (issue #16): every sound a system asks for by key, and the music. SFX are synthesized by tools/audio/make_game_sfx.py (original, nothing to license), except vehicle_boom (CC0, see its note). Music is free tracks from pixabay.com/music (Pixabay Content License, no attribution needed), re-encoded by tools/audio/rip_music.sh. A stream may be a list (one is picked at random). Volumes in dB, distances in metres; pitch is a random range.",
   "sfx": {
     "coin_gain":    { "stream": "res://assets/audio/sfx/coin_gain.wav", "volume_db": -8.0, "pitch": [0.98, 1.04] },
     "coin_spend":   { "stream": "res://assets/audio/sfx/coin_spend.wav", "volume_db": -10.0, "pitch": [0.96, 1.02] },
@@ -9,7 +9,17 @@
     "ship_laser":   { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -10.0, "pitch": [0.92, 1.08], "unit_size": 30.0, "max_distance": 600.0 },
     "ship_missile": { "stream": "res://assets/audio/sfx/ship_missile.wav", "volume_db": -6.0, "pitch": [0.95, 1.05], "unit_size": 40.0, "max_distance": 800.0 },
     "ship_hit":     { "stream": "res://assets/audio/sfx/ship_hit.wav", "volume_db": -6.0, "pitch": [0.85, 1.1], "unit_size": 40.0, "max_distance": 800.0 },
-    "ship_boom":    { "stream": "res://assets/audio/sfx/ship_boom.wav", "volume_db": -2.0, "pitch": [0.85, 1.05], "unit_size": 80.0, "max_distance": 2000.0 },
+    "vehicle_boom": {
+      "note": "Every ship, speeder, barge and seeker that goes up (ExplosionFx.big) plays this. CC0 (public domain, no attribution needed): 'explosions 4' by EZduzziteh on OpenGameArt.org, mixed to mono, lead-in silence trimmed, peaks at -1 dB.",
+      "source": "https://opengameart.org/content/explosions-4",
+      "stream": [
+        "res://assets/audio/sfx/vehicle_boom_1.wav",
+        "res://assets/audio/sfx/vehicle_boom_2.wav",
+        "res://assets/audio/sfx/vehicle_boom_3.wav",
+        "res://assets/audio/sfx/vehicle_boom_4.wav"
+      ],
+      "volume_db": 0.0, "pitch": [0.88, 1.06], "unit_size": 80.0, "max_distance": 2000.0
+    },
     "droid_pop":    { "stream": "res://assets/audio/sfx/ship_boom.wav", "volume_db": -10.0, "pitch": [1.7, 2.1], "unit_size": 6.0, "max_distance": 90.0 },
     "speeder_laser": { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -12.0, "pitch": [1.1, 1.25], "unit_size": 10.0, "max_distance": 150.0 },
     "ship_cannon": { "stream": "res://assets/audio/sfx/ship_laser.wav", "volume_db": -10.0, "pitch": [0.8, 0.92], "unit_size": 14.0, "max_distance": 250.0 },
