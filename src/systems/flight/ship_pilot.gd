@@ -1770,10 +1770,14 @@ func _on_hull_hit(amount: float, shooter: Node, i: int) -> void:
 # ------------------------------------------------------------------ parked ships (issue #64)
 
 ## A parked ship shot by another ship (its guns: the shooter is a ship's hull)
-## takes the damage. Not the one you sit in.
+## takes the damage. Not the one you sit in. A "foot_target" berth (the barracks
+## pad's interceptor) takes your hand weapons too: your bolts, and a blade (no shooter).
 func _parked_target(i: int, shooter: Node) -> bool:
 	var b: Dictionary = berths[i]
-	if bool(b.get("destroyed", false)) or not (shooter is ShipHull) or shooter == b.hull:
+	if bool(b.get("destroyed", false)) or shooter == b.hull:
+		return false
+	var by_hand: bool = bool(b.get("foot_target", false)) and (shooter == null or shooter == player())
+	if not (shooter is ShipHull) and not by_hand:
 		return false
 	return not (i == berth and (piloting or atmo.state != AtmoFlight.State.PARKED))
 

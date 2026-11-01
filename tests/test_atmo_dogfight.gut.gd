@@ -195,6 +195,50 @@ func test_shot_on_its_pad_it_is_destroyed_and_comes_back() -> void:
 	assert_false(bool(t.pilot.berths[i].destroyed), "yours to take again")
 
 
+## The chase comes from the barracks' ship: with it wrecked nobody comes after a
+## stolen ship; once a new one stands on the pad it scrambles as usual.
+func test_with_its_ship_wrecked_nobody_chases_you() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var f: AtmoFighter = t.interceptor
+	t.pilot.berths[f.berth].hull.apply_damage_from(9999.0, t.pilot.berths[0].hull)
+	_fly(t, DT)
+	assert_eq(f.mode, AtmoFighter.Mode.DOWN, "wrecked on its pad")
+	_steal(t)
+	assert_true(t.pilot.takeoff())
+	_fly(t, 10.0, { "throttle": 0.6, "pitch": 0.2 })
+	assert_true(t.pilot.flying_stolen())
+	assert_eq(f.launches, 0, "no ship on the pad: no chase")
+	f.respawn_left = 0.1
+	_fly(t, 1.0, { "throttle": 0.6 })
+	assert_eq(f.launches, 1, "a new one on the pad comes after you")
+
+
+## On foot: your blaster bolts (you are the shooter) and a blade (no shooter) both
+## count; a Remnant trooper's stray bolt does not.
+func test_hand_weapons_destroy_it_on_its_pad() -> void:
+	var t = _town()
+	await wait_physics_frames(2)
+	var f: AtmoFighter = t.interceptor
+	var b: Dictionary = t.pilot.berths[f.berth]
+	var h: ShipHull = b.hull
+	h.apply_damage_from(500.0, t.npc("trooper_yard_a"))
+	assert_false(b.has("defense"), "the Remnant's own shots do not count")
+	h.apply_damage_from(24.0, t._player)
+	assert_true(b.has("defense"), "your bolt hurts it")
+	var hp: int = b.defense.hull_hp() + int(b.defense.shield)
+	h.apply_damage(24.0)
+	assert_lt(b.defense.hull_hp() + int(b.defense.shield), hp, "and so does a blade")
+	for k in 40:
+		if bool(b.destroyed):
+			break
+		h.apply_damage_from(24.0, t._player)
+	assert_true(bool(b.destroyed), "shot to pieces on foot")
+	_fly(t, DT)
+	assert_eq(f.mode, AtmoFighter.Mode.DOWN)
+	assert_eq(f.times_wrecked, 1)
+
+
 func test_not_wanted_it_stays_down() -> void:
 	var t = _town()
 	await wait_physics_frames(2)

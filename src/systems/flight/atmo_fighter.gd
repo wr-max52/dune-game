@@ -21,8 +21,8 @@ extends Node3D
 ##   - standing on its pad it is a ship you can take, like an outpost's (a pilot
 ##     berth): taking it sounds the barracks alarm, you fly that one away, and a
 ##     new one lands on the pad `replace_s` later (once the pad is clear) to come
-##     after you; another ship's guns can shoot it to pieces there (a new one
-##     `respawn_s` later).
+##     after you; another ship's guns or your hand weapons can shoot it to pieces
+##     there (a new one `respawn_s` later).
 ## Numbers: the ship's "scramble" block (content/core/ships/remnant_interceptor.json)
 ## and its pilot (content/core/pilots/remnant_hunter.json).
 ##
@@ -415,8 +415,9 @@ func _set_solid(on: bool) -> void:
 # ------------------------------------------------------------------ on its pad
 
 ## On its pad it is a ship you can take or shoot to pieces: a pilot berth, like an
-## outpost's (ShipPilot.add_outpost_berth), whose hull you bump into and shoot.
-## Taking it sounds the town garrison's alarm ("town_alarm", ShipPilot._steal).
+## outpost's (ShipPilot.add_outpost_berth), whose hull you bump into and shoot,
+## from a ship or on foot ("foot_target", ShipPilot._parked_target). Taking it
+## sounds the town garrison's alarm ("town_alarm", ShipPilot._steal).
 func _offer_berth() -> void:
 	if pilot == null:
 		return
@@ -424,6 +425,7 @@ func _offer_berth() -> void:
 		berth = pilot.add_outpost_berth(visual, ship_id, BARRACKS)
 		pilot.berths[berth]["where"] = GameFlow.label("barracks_where")
 		pilot.berths[berth]["town_alarm"] = true
+		pilot.berths[berth]["foot_target"] = true
 	var b: Dictionary = pilot.berths[berth]
 	b.clearance = atmo.clearance
 	b.destroyed = false
@@ -453,7 +455,7 @@ func _taken() -> bool:
 	return berth >= 0 and pilot.piloting and pilot.berth == berth
 
 
-## Another ship's guns shot it to pieces on its pad (ShipPilot._hit_parked).
+## Shot to pieces on its pad, by a ship or on foot (ShipPilot._hit_parked).
 func _wrecked() -> bool:
 	return berth >= 0 and bool(pilot.berths[berth].get("destroyed", false))
 
