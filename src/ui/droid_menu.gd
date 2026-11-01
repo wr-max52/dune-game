@@ -5,8 +5,8 @@ extends CanvasLayer
 ## options and a callback. Issue #58: an optional body (what T-89 is saying) sits
 ## between the title and the options.
 ##
-## Keys: W/S or the arrows move the cursor, Enter picks the row under it, 1-9 pick
-## a row straight off, Esc walks away. A shop that reopens the menu from its pick
+## Keys: W/S or the arrows move the cursor, Enter picks the row under it, Esc
+## walks away. A shop that reopens the menu from its pick
 ## callback (open with keep_cursor) stays where it was, so you can buy or sell
 ## again without starting over. Long lists scroll.
 
@@ -14,6 +14,7 @@ const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
 const PANEL_W := 600.0             ## narrower on a small screen (or a big text size)
 const LIST_MAX_H := 330.0          ## rows past this scroll (less on a short screen)
+const KEY_W := 20.0                ## the cursor mark's column
 
 var panel: PanelContainer
 var title_label: Label
@@ -95,7 +96,7 @@ func open(title: String, opts: Array, pick: Callable, body: String = "", keep_cu
 				break
 	selected = at if at >= 0 else (clampi(selected, 0, maxi(options.size() - 1, 0)) if keep_cursor else 0)
 	for i in options.size():
-		rows.append(("[%d]  " % (i + 1) if i < 9 else "     ") + str(options[i].text))
+		rows.append(str(options[i].text))
 	if panel == null:
 		return
 	title_label.text = title
@@ -109,12 +110,12 @@ func open(title: String, opts: Array, pick: Callable, body: String = "", keep_cu
 		box.set_meta("retro_off", true)     # the cursor bar is ours, not RetroSkin's glass
 		var line := HBoxContainer.new()
 		box.add_child(line)
-		var key := _row_label("[%d]" % (i + 1) if i < 9 else "")
-		key.custom_minimum_size.x = 48
+		var key := _row_label("")
+		key.custom_minimum_size.x = KEY_W
 		key.size_flags_vertical = Control.SIZE_SHRINK_BEGIN     # level with the first line
 		line.add_child(key)
 		var text := _row_label(str(options[i].text))
-		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART     # long offers wrap under the text, not the key
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART     # long offers wrap under the text, not the cursor
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(text)
 		list.add_child(box)
@@ -147,7 +148,7 @@ func _fit() -> void:
 	var widths := [inner, inner, inner]
 	for r in _rows:
 		wraps.append(r.text)
-		widths.append(inner - 16.0 - 48.0 - 12.0)     # less the scroll bar, the key, the gaps
+		widths.append(inner - 16.0 - KEY_W - 12.0)     # less the scroll bar, the cursor mark, the gaps
 	for i in wraps.size():
 		var l: Label = wraps[i]
 		l.custom_minimum_size.x = widths[i]
@@ -174,14 +175,14 @@ func move(step: int) -> void:
 
 
 ## The row under the cursor: a lit bar behind it in the HUD colour (RetroSkin
-## owns the text colours) and a ">" by its key.
+## owns the text colours) and a ">" in front of it.
 func _show_cursor() -> void:
 	_cursor_box.bg_color = Color(RetroUI.accent, 0.28)
 	_cursor_box.border_color = RetroUI.accent
 	for i in _rows.size():
 		var on := i == selected
 		_rows[i].box.add_theme_stylebox_override("panel", _cursor_box if on else _row_box)
-		_rows[i].key.text = (">" if on else " ") + ("[%d]" % (i + 1) if i < 9 else "")
+		_rows[i].key.text = ">" if on else ""
 	_scroll_to_cursor()
 
 
@@ -227,7 +228,4 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif k in [KEY_ENTER, KEY_KP_ENTER] and selected < options.size():
 		choose(str(options[selected].id))
-		get_viewport().set_input_as_handled()
-	elif k >= KEY_1 and k <= KEY_9 and k - KEY_1 < options.size():
-		choose(str(options[k - KEY_1].id))
 		get_viewport().set_input_as_handled()
