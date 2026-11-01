@@ -343,8 +343,8 @@ func _stone(part: String, c: Color, metal: float, rough: float) -> Material:
 	var m := ShaderMaterial.new()
 	m.shader = SHELL
 	m.set_shader_parameter("noise_tex", LookEnvironment.make_noise_texture(512, 7, 0.012))
-	m.set_shader_parameter("rock_a", c.darkened(0.12))
-	m.set_shader_parameter("rock_b", c.lerp(dust, 0.3))
+	m.set_shader_parameter("rock_a", c.darkened(0.25))
+	m.set_shader_parameter("rock_b", c.lerp(dust, 0.35))
 	m.set_shader_parameter("rock_dark", c.darkened(0.62))
 	m.set_shader_parameter("dust", dust)
 	m.set_shader_parameter("strata", float(p.get("strata", 3.0)))
@@ -358,10 +358,12 @@ func _stone(part: String, c: Color, metal: float, rough: float) -> Material:
 	return m
 
 
+## Lit, with a dark body: unshaded would drop the emission, so it would never
+## get bright enough for the glow to bloom.
 static func _glow_mat(c: Color, energy: float) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = c
+	m.albedo_color = c.darkened(0.7)
+	m.roughness = 0.25
 	m.emission_enabled = true
 	m.emission = c
 	m.emission_energy_multiplier = energy

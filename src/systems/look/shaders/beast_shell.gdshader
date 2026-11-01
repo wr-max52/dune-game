@@ -53,14 +53,18 @@ void fragment() {
 	float band = sin(band_ph) * 0.5 + 0.5;
 	float thin = sin(band_ph * 4.1) * 0.5 + 0.5;
 	vec3 alb = mix(rock_a.rgb, rock_b.rgb, band * 0.7 + thin * 0.3);
-	alb *= 0.78 + 0.44 * mid;
+	alb *= 0.7 + 0.6 * mid;
+	// Broad weathered patches, darker and lighter, so it isn't one even tan.
+	alb *= mix(0.72, 1.12, smoothstep(0.3, 0.7, big));
 
-	// Cracks: thin dark lines where the mid noise crosses its middle; pits where
-	// the fine noise dips.
-	float crack = (1.0 - smoothstep(0.0, 0.035, abs(mid - 0.5))) * cracks;
-	crack = max(crack, (1.0 - smoothstep(0.0, 0.02, abs(big - 0.48))) * cracks * 0.8);
-	float pit = smoothstep(0.38, 0.22, fine) * cracks;
-	alb = mix(alb, rock_dark.rgb, clamp(crack * 0.85 + pit * 0.45, 0.0, 1.0));
+	// Crevices: wide dark hollows where the mid noise dips (chunky stone, like
+	// the mesas'), a few sharp cracks only in some patches, pits in the grain.
+	float crev = smoothstep(0.46, 0.26, mid);
+	float patchy = smoothstep(0.42, 0.62, tri(p * 0.03 + 7.0, n));
+	float crack = (1.0 - smoothstep(0.0, 0.022, abs(mid - 0.56))) * patchy * cracks;
+	float pit = smoothstep(0.36, 0.2, fine) * cracks;
+	alb = mix(alb, rock_dark.rgb, clamp(crev * 0.7 * cracks + crack * 0.9 + pit * 0.4, 0.0, 1.0));
+	crack = max(crack, crev * 0.5 * cracks);
 
 	// Darker underneath (shade and wear), sand on its back and caught in cracks.
 	alb = mix(rock_dark.rgb * 1.3, alb, smoothstep(-0.75, 0.15, n.y));

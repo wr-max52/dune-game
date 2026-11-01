@@ -6,15 +6,17 @@ Honest list of what is broken or faked. Updated every milestone.
 
 **Checked:** `test_smoke`, a headless boot of the town, the beast trace (every
 beast line true, including the new TURNS_SMOOTHLY, UNSTUCK and WALKED_OUT; run
-with `-s`, so LOCAL_SPOKE_OF_IT is `no_locals` as before), a headless probe of
+with `-s`, so LOCAL_SPOKE_OF_IT is `no_locals` as before), rendered stills (golden hour, close up, night, noon), a headless probe of
 two game hours of wandering (no circling, no stalls, the unstick never needed),
 and a headless check that the stone materials, eye light and chase flare are
 built with the look on.
 
-- **Not seen rendered.** Windowed Godot crashed at launch on this Mac during the
-  work (an AppKit error before any game code ran, even for an empty project),
-  so there are no stills of the new shell and eyes. The shader has never been
-  compiled by a GPU; check it in game.
+- **Rendered on Vulkan only.** Godot's default Metal driver crashed at launch on
+  this Mac (inside the GPU driver, even for an empty project), so the stills
+  (docs/lookdev/hazards/desert_beast*.jpg) were rendered with
+  `--rendering-driver vulkan`. The shader hasn't been seen on Metal.
+- **The eyes bloom nearly white** at their default energy. Lower
+  `look.eyes.energy` if you want more of the purple to show.
 - **It still steps onto small rocks.** About once every half hour of game time
   its head pops up onto a rock (up to 2 m) and back off a moment later. The body
   still passes through rocks and buildings.
