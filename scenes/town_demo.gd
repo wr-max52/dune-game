@@ -103,6 +103,7 @@ var droids: DroidController
 var droid_merchant_outposts: DroidMerchantOutposts
 @export var with_salesman := true     ## issue #58: T-89 in the pit (hello + tutorial, sells ships onto the spare pad)
 var salesman: ShipSalesman
+@export var resume_saved := true       ## issue #113: open on the save's planet and spot (the real game only, not headless)
 @export var with_barge := true        ## issue #269: the planet's party barge (band, boss, steerage), if it has one
 @export var with_beast := true        ## issue #220: the planet's beast that rolls about the desert (touch = death)
 var general_post: GeneralPost         ## issue #203: the Remnant general (story saves)
@@ -120,6 +121,10 @@ var _respawned := 0
 
 func _ready() -> void:
 	var t0 := Time.get_ticks_usec()
+	# Issue #113: the first town of a run opened from a save is the save's planet.
+	if resume_saved and not lookdev_mode and DisplayServer.get_name() != "headless" \
+			and GameFlow.arrival.is_empty() and GameFlow.planet_id == "":
+		GameFlow.resume_from_save("user://save.json")
 	# Issue #45: the planet decides the town, the world, the ground and the look.
 	planet = GameFlow.planet()
 	PlanetSphere.current = null       # issue #77: only a ball planet sets it again (_build_desert)
@@ -585,6 +590,10 @@ func _spawn_player() -> void:
 		_player.position = from_pad.arrive
 		var c: Vector3 = from_pad.center
 		yaw = atan2(c.x - from_pad.arrive.x, c.z - from_pad.arrive.z)
+	elif _arrival.is_empty():
+		var at := GameFlow.take_resume_pos()        # issue #113: where the save left you
+		if at != Vector3.INF:
+			_player.position = at + Vector3(0, 0.05, 0)
 	add_child(_player)
 	_player.call("align_to_ground", true)
 	_rig = CameraRigNode.new()

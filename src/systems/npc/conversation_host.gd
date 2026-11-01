@@ -622,7 +622,25 @@ func _save_memory() -> void:
 		save.set_relationship(s.id(), s.brain.rel.to_save())
 	save.set_world(WorldState.to_save())
 	save.data["credits"] = WorldState.credits
+	_save_where()
 	save.save_to(save_path)
+
+
+## Issue #113: the planet you are on, and your spot on it when you are standing
+## on your own feet (not flying, riding, falling or down). Otherwise the last
+## good spot on this planet is kept; a different planet's spot is dropped.
+func _save_where() -> void:
+	var id := GameFlow.current_planet_id()
+	var p = demo._player if demo != null else null
+	var standing: bool = p != null and is_instance_valid(p) and p.is_inside_tree() and not bool(p.get("piloting")) \
+		and not bool(p.get("is_downed")) and not GameFlow.in_flight and p.is_on_floor()
+	if standing:
+		save.set_where(id, (p as Node3D).global_position, true)
+		return
+	var old := save.get_where()
+	if str(old.get("planet", "")) == id and old.has("pos"):
+		return
+	save.set_where(id, Vector3.ZERO, false)
 
 
 func _on_checkpoint(_why: String) -> void:
