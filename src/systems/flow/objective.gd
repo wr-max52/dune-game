@@ -10,7 +10,7 @@ extends RefCounted
 ##
 ## A target is a word the town scene turns into a place (ObjectiveHud.where):
 ## npc:<marker>, marker:<marker>, drop:<marker>, range, remote, pad, outpost:<location
-## id>, cruiser, droid_post.
+## id>, cruiser, droid_post, and the F11 map's map:<x>,<z> and planet:<id>.
 ## Issue #251: the drop's target is a spot near it (within WorldState.DROP_NEAR,
 ## its area's marker until the drop is placed), not the exact spot: the last few
 ## metres are still a search. The general's run takes its goods to him, not the fence.
@@ -35,8 +35,12 @@ static func home() -> bool:
 
 
 ## { text, target } for the pointer, or {} when there is nothing to point at.
-## Issue #201: an optional quest whose waypoint the player switched on comes first.
+## Issue #201: an optional quest whose waypoint the player switched on comes first,
+## and before it a waypoint set on the F11 map (GlobeMap; only one is ever on).
 static func current() -> Dictionary:
+	var mark := GlobeMap.waypoint()
+	if not mark.is_empty():
+		return mark
 	var quest := Quests.waypoint()
 	if not quest.is_empty():
 		return quest

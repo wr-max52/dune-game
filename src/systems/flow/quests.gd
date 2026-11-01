@@ -84,6 +84,8 @@ static func toggle_waypoint(id: String) -> bool:
 	for k in WorldState.quests:
 		WorldState.quests[k].waypoint = false
 	WorldState.quests[id].waypoint = on
+	if on:
+		GlobeMap.clear_waypoint()      # one pointer at a time: the F11 map's goes
 	return on
 
 

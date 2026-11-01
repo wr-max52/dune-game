@@ -1,16 +1,17 @@
 class_name DevSettingsPanel
 extends CanvasLayer
-## F11 in the town: demo settings for dev and playtests. Opening it pauses the
-## game and frees the mouse; closing it resumes and saves (when the bar saves).
-## Tabs, so the real settings can move in later:
-##   World     time of day (hour slider + presets), game speed, credits
-##   Standing  faction standing, and each individual's trust / mood / tab
-##   Player    god mode, heal, jetpack (give, endless fuel), teleport, guard debug
-##   Character the player's outfit from the kit pieces (CharacterBuilder, issue #48)
-##   Flags     every world flag the content reads, on or off, plus custom ones
-##   HUD       the 80s HUD's colour (issue #52) and every function key
-##   Sound     music and effects volume (issue #16)
-##   Story     the main story's chapter, skip to one, and "Reset story" (issue #64)
+## F11 in the town: the game's settings. Opening it pauses the game and frees
+## the mouse; closing it resumes and saves (when the bar saves). Five pages:
+##   Map       a globe of the planet with every place that stays put, click one
+##             for a waypoint; the places off planet beside it (GlobeMap; M opens it)
+##   Game      the main story's chapter (issue #64), time of day, game speed,
+##             credits, the space fight switch, the home town's layout, new game
+##   Player    the outfit from the kit pieces (CharacterBuilder, issue #48), then
+##             god mode, heal, jetpack, teleport and guard debug
+##   Standing  faction standing, each individual's trust / mood / tab, and every
+##             world flag the content reads
+##   Options   the HUD's colour (issue #52) and text size (issue #71), volume
+##             (issue #16), the AI characters' brain (issue #80) and every key
 ##
 ## Everything writes to the same places the game does (WorldState, the npc's
 ## Relationship, the look), so the cantina owner, rumors and checkpoint react as if
@@ -42,6 +43,12 @@ var _cheats: Array[Control] = []       ## greyed out in a story save (_lock_for_
 var _story_notes: Array[Control] = []  ## shown only in a story save
 var skip_confirm: ConfirmationDialog   ## a story save asks before skipping a chapter
 var _skip_to := ""
+var _anchors: Dictionary = {}          ## a name open_tab knows -> the section label it scrolls to
+var globe: GlobeView                   ## the Map page's globe
+var _off_planet: Array = []            ## GlobeMap.off_planet, last refresh
+var _off_box: VBoxContainer
+var _map_note: Label
+var _no_globe: Label
 
 const STUCK_WARNING := "If you are stuck, ask the interactive NPCs for advice, they may have a hint.\n\nAre you sure?"
 
@@ -51,10 +58,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_panel = PanelContainer.new()
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.offset_left = -340
-	_panel.offset_right = 340
-	_panel.offset_top = -300
-	_panel.offset_bottom = 300
+	_fit()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.06, 0.06, 0.96)
 	sb.border_color = Color("#b08e50")
@@ -67,7 +71,7 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 8)
 	_panel.add_child(v)
 	var title := Label.new()
-	title.text = "Demo settings  (F11)"
+	title.text = "Settings  (F11)"
 	title.add_theme_font_size_override("font_size", 18)
 	v.add_child(title)
 	tabs = TabContainer.new()
@@ -92,15 +96,26 @@ func _build_tabs() -> void:
 	if tabs_built:
 		return
 	tabs_built = true
-	tabs.add_child(_world_tab())
-	tabs.add_child(_standing_tab())
-	tabs.add_child(_player_tab())
-	tabs.add_child(_character_tab())
-	tabs.add_child(_flags_tab())
-	tabs.add_child(_hud_tab())
-	tabs.add_child(_sound_tab())
-	tabs.add_child(_story_tab())
-	tabs.add_child(_llm_tab())
+	tabs.add_child(_map_tab())
+	var game := _tab("Game")
+	_story_page(game)
+	_world_page(game)
+	_new_game_page(game)
+	tabs.add_child(game.get_parent())
+	var player := _tab("Player")
+	_character_page(player)
+	_player_page(player)
+	tabs.add_child(player.get_parent())
+	var standing := _tab("Standing")
+	_standing_page(standing)
+	_flags_page(standing)
+	tabs.add_child(standing.get_parent())
+	var options := _tab("Options")
+	_hud_page(options)
+	_sound_page(options)
+	_llm_page(options)
+	_keys_page(options)
+	tabs.add_child(options.get_parent())
 
 
 ## _input, not _unhandled_input: a focused slider or text field must not swallow F11.
@@ -112,6 +127,16 @@ func _input(event: InputEvent) -> void:
 		elif event.keycode == KEY_ESCAPE and visible:
 			close()
 			get_viewport().set_input_as_handled()
+
+
+## M opens (or shuts) the Map page. Unhandled: typing an M in a text box is not this.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_M:
+		if visible and tabs.current_tab == 0:
+			close()
+		else:
+			open_tab("Map")
+		get_viewport().set_input_as_handled()
 
 
 ## Issue #80: the cursor shows on every page while the settings are open, whatever
@@ -140,18 +165,28 @@ func toggle() -> void:
 		open()
 
 
-## Issue #80: open on a tab by its title ("LLM": F10 lands here).
+## Issue #80: open on a page by its title, or on the page holding a section
+## anchored by that name ("LLM": F10 lands on Options, scrolled to the AI brain).
 func open_tab(title: String) -> void:
 	open()
+	var at: Control = _anchors.get(title, null)
 	for i in tabs.get_tab_count():
-		if tabs.get_tab_title(i) == title:
+		var page := tabs.get_tab_control(i)
+		if tabs.get_tab_title(i) == title or (at != null and page.is_ancestor_of(at)):
 			tabs.current_tab = i
+			if at != null and page is ScrollContainer:
+				var scroll := page as ScrollContainer
+				(func():
+					if is_instance_valid(scroll) and is_instance_valid(at):
+						scroll.ensure_control_visible(at)).call_deferred()
+			return
 
 
 func open() -> void:
 	if visible:
 		return
 	_build_tabs()
+	_fit()
 	visible = true
 	_was_mouse = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -166,6 +201,20 @@ func close() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = _was_mouse
 	_save()
+
+
+## The panel's size: SIZE, or the window less a margin when that is smaller (a
+## big text size on a small window), so the tabs and the buttons stay on screen.
+const SIZE := Vector2(760, 620)
+
+
+func _fit() -> void:
+	var vp := get_viewport().get_visible_rect().size if is_inside_tree() else SIZE
+	var half := Vector2(minf(SIZE.x, vp.x - 24.0), minf(SIZE.y, vp.y - 24.0)) * 0.5
+	_panel.offset_left = -half.x
+	_panel.offset_right = half.x
+	_panel.offset_top = -half.y
+	_panel.offset_bottom = half.y
 
 
 ## Pull every control back from the live game (it changes while the panel is shut).
@@ -208,10 +257,143 @@ func _story_note(v: VBoxContainer, text: String) -> void:
 	_story_notes.append(l)
 
 
+# ------------------------------------------------------------------ map
+
+## The globe (GlobeView) with the places that stay put, and beside it the places
+## off planet, a legend, and the waypoint's own buttons. Not a scroll page: the
+## wheel zooms the globe.
+func _map_tab() -> Control:
+	var page := VBoxContainer.new()
+	page.name = "Map"
+	page.add_theme_constant_override("separation", 6)
+	var h := HBoxContainer.new()
+	h.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	h.add_theme_constant_override("separation", 12)
+	page.add_child(h)
+	var left := VBoxContainer.new()
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(left)
+	globe = GlobeView.new()
+	globe.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	globe.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	globe.town_zoom = float(GlobeMap.cfg().get("town_zoom", 14.0))
+	globe.pin_clicked.connect(map_pick)
+	globe.spot_clicked.connect(func(m): map_pick(GlobeMap.spot_pin(m)))
+	left.add_child(globe)
+	_no_globe = Label.new()
+	_no_globe.text = GlobeMap.line("no_globe")
+	_no_globe.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_no_globe.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_no_globe.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_no_globe.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	left.add_child(_no_globe)
+	_map_note = Label.new()
+	_map_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_map_note.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+	page.add_child(_map_note)
+
+	var side_scroll := ScrollContainer.new()
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side_scroll.custom_minimum_size = Vector2(200, 0)
+	h.add_child(side_scroll)
+	var side := VBoxContainer.new()
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side.add_theme_constant_override("separation", 6)
+	side_scroll.add_child(side)
+	_section(side, GlobeMap.line("off_planet"))
+	_off_box = VBoxContainer.new()
+	side.add_child(_off_box)
+	_section(side, GlobeMap.line("legend"))
+	var pins_look: Dictionary = GlobeMap.look().get("pins", {})
+	for kind in ["port", "remnant_outpost", "droid_merchant_outpost", "post", "camp", "wreck", "outpost", "spot"]:
+		var legend := str(GlobeMap.kind_cfg(kind).get("legend", GlobeMap.kind_cfg(kind).get("label", kind)))
+		side.add_child(_legend_row(pins_look.get(kind, {}), legend))
+	var gap := Control.new()
+	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side.add_child(gap)
+	var home := Button.new()
+	home.text = GlobeMap.line("home")
+	home.pressed.connect(func():
+		globe.zoom = 1.0
+		globe.focus(Vector2.ZERO))
+	side.add_child(home)
+	var clear := Button.new()
+	clear.text = GlobeMap.line("clear")
+	clear.pressed.connect(func():
+		GlobeMap.clear_waypoint()
+		_refresh_map())
+	side.add_child(clear)
+	_refreshers.append(_refresh_map)
+	return page
+
+
+## One legend line: the pin's shape, drawn the way the globe draws it, and its name.
+func _legend_row(look: Dictionary, text: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2(18, 18)
+	icon.draw.connect(func(): GlobeView.draw_shape(icon, icon.size * 0.5, str(look.get("shape", "circle")),
+		Color(str(look.get("color", "#f2e2b0"))), 5.0))
+	row.add_child(icon)
+	var l := Label.new()
+	l.text = text
+	row.add_child(l)
+	return row
+
+
+## Rebuild the map's pins and off-planet list from the scene (the town's stops
+## and the planets in the sky only exist once it is built) and the waypoint.
+func _refresh_map() -> void:
+	var sphere := PlanetSphere.current
+	var world: Dictionary = demo.world if demo != null else {}
+	var planet: Dictionary = demo.planet if demo != null else {}
+	globe.visible = sphere != null
+	_no_globe.visible = sphere == null
+	if sphere != null:
+		globe.radius_m = sphere.radius
+		var town: Array = GlobeMap.town_pins(demo.town, WorldState.current_town_id(), sphere.world_to_map) if demo != null else []
+		globe.pins = GlobeMap.pins(world, planet, town)
+	var w := WorldState.map_waypoint
+	globe.selected = GlobeMap.waypoint_id() if str(w.get("planet", "")) == GameFlow.current_planet_id() else ""
+	var t := str(w.get("target", ""))
+	globe.spot = Vector2(float(t.get_slice(":", 1).get_slice(",", 0)), float(t.get_slice(",", 1))) \
+		if globe.selected == "spot" and t.begins_with("map:") else Vector2.INF
+	globe.queue_redraw()
+	var travel = demo.pilot.travel if demo != null and demo.get("pilot") != null and demo.pilot.travel != null else null
+	_off_planet = GlobeMap.off_planet(travel.bodies if travel != null else [], world)
+	for c in _off_box.get_children():
+		c.queue_free()
+	for o in _off_planet:
+		var b := Button.new()
+		b.text = str(o.label)
+		b.toggle_mode = true
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.set_pressed_no_signal(GlobeMap.waypoint_id() == str(o.id))
+		b.pressed.connect(func(): map_pick(o))
+		_off_box.add_child(b)
+	if _off_planet.is_empty():
+		var l := Label.new()
+		l.text = "-"
+		_off_box.add_child(l)
+	var now := GlobeMap.waypoint()
+	_map_note.text = str(now.text) if not now.is_empty() else GlobeMap.line("none")
+
+
+## Set the waypoint on a pin or an off-planet place; the one already set clears.
+func map_pick(pin: Dictionary) -> void:
+	if GlobeMap.waypoint_id() == str(pin.id) and str(pin.id) != "spot":
+		GlobeMap.clear_waypoint()
+	else:
+		GlobeMap.set_waypoint(pin, GameFlow.current_planet_id())
+	_refresh_map()
+	if demo != null and demo.get("objective_hud") != null:
+		demo.objective_hud.refresh()
+
+
 # ------------------------------------------------------------------ world
 
-func _world_tab() -> Control:
-	var v := _tab("World")
+func _world_page(v: VBoxContainer) -> void:
 	_section(v, "Time of day")
 	_hour = HSlider.new()
 	_hour.min_value = 0.0
@@ -272,7 +454,6 @@ func _world_tab() -> Control:
 		var here := str(demo.planet.get("town", {}).get("layout", "")) if demo != null and "planet" in demo else ""
 		layout.select(ids.find(here))
 		layout.disabled = demo == null or str(demo.planet.get("id", "")) != PlanetGen.home_id())
-	return v.get_parent()
 
 
 ## Issue #237: build the home town to `layout` (content/core/towns/) and reload it.
@@ -294,10 +475,9 @@ func _show_hour() -> void:
 
 # ------------------------------------------------------------------ standing
 
-func _standing_tab() -> Control:
-	var v := _tab("Standing")
-	_story_note(v, "where you stand with each faction and person is earned in play. Shown here, not set.")
+func _standing_page(v: VBoxContainer) -> void:
 	_section(v, "Factions  (-100 hostile .. 100 allied)")
+	_story_note(v, "where you stand with each faction and person is earned in play. Shown here, not set.")
 	for fac in WorldState.FACTIONS:
 		var s: HSlider = _cheat(_slider(-100, 100))
 		var lab := Label.new()
@@ -320,7 +500,6 @@ func _standing_tab() -> Control:
 
 	for who in _individuals():
 		_individual(v, who.label, who.rel)
-	return v.get_parent()
 
 
 ## Named people the player has a Relationship with. Only the cantina owner so far;
@@ -372,10 +551,9 @@ func _faction_label(id: String) -> String:
 
 # ------------------------------------------------------------------ player
 
-func _player_tab() -> Control:
-	var v := _tab("Player")
-	_story_note(v, "no god mode, free gear, teleports or guard x-ray; you live by your wits. How you look is on the Character page.")
+func _player_page(v: VBoxContainer) -> void:
 	_section(v, "Body")
+	_story_note(v, "no god mode, free gear, teleports or guard x-ray; you live by your wits.")
 	var god: CheckBox = _cheat(CheckBox.new())
 	god.text = "God mode (no damage)"
 	god.toggled.connect(func(on):
@@ -426,7 +604,6 @@ func _player_tab() -> Control:
 		god.set_pressed_no_signal(_god)
 		fuel.set_pressed_no_signal(_endless_fuel)
 		npc_dbg.set_pressed_no_signal(NpcBody.show_debug))
-	return v.get_parent()
 
 
 func _player():
@@ -436,8 +613,8 @@ func _player():
 # ------------------------------------------------------------------ character
 
 ## The builder saves each pick itself; the player's body wears it at once.
-func _character_tab() -> Control:
-	var v := _tab("Character")
+func _character_page(v: VBoxContainer) -> void:
+	_section(v, "Outfit")
 	_story_note(v, "you play the smuggler; every piece and colour of their own kit is yours to pick.")
 	builder = CharacterBuilder.new()
 	builder.outfit_changed.connect(func(o):
@@ -448,7 +625,6 @@ func _character_tab() -> Control:
 	_refreshers.append(func():
 		var a = _avatar()
 		builder.show_outfit(a.worn_outfit() if a != null else PlayerOutfit.load_outfit()))
-	return v.get_parent()
 
 
 func _avatar() -> PlayerAvatar:
@@ -484,8 +660,8 @@ func teleport(marker_id: String) -> bool:
 
 # ------------------------------------------------------------------ flags
 
-func _flags_tab() -> Control:
-	var v := _tab("Flags")
+func _flags_page(v: VBoxContainer) -> void:
+	_section(v, "World flags")
 	var note := Label.new()
 	note.text = "World flags the content reads (rumors, jobs, moods). Changes apply at once."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -505,7 +681,6 @@ func _flags_tab() -> Control:
 			_flag_new.text = ""
 			_rebuild_flags())
 	_row(v, "Add", _flag_new).add_child(add)
-	return v.get_parent()
 
 
 func _rebuild_flags() -> void:
@@ -544,8 +719,7 @@ func known_flags() -> Array:
 
 # ------------------------------------------------------------------ story (issue #64)
 
-func _story_tab() -> Control:
-	var v := _tab("Story")
+func _story_page(v: VBoxContainer) -> void:
 	_section(v, "Main story")
 	var now := Label.new()
 	now.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -570,6 +744,19 @@ func _story_tab() -> Control:
 		Story.skip_to(_skip_to)
 		refresh())
 	v.add_child(skip_confirm)
+	_refreshers.append(func():
+		var b := WorldState.bounty
+		now.text = "Now: %s save, %s%s" % ["story" if WorldState.story_mode() else "free roam", Story.chapter().replace("_", " "),
+			("   ·   bounty on %s (%s)" % [b.name, b.state]) if str(b.get("state", "")) in ["out", "dead"] else ""]
+		var at := Story.index(Story.chapter())
+		pick.select(maxi(0, at))
+		for i in pick.item_count:
+			pick.set_item_disabled(i, WorldState.story_mode() and (i <= at or not Story.applies(Story.chapters()[i])))
+		go.text = "Skip ahead" if WorldState.story_mode() else "Skip to it")
+
+
+## Issue #64: start again, as a story or as free roam.
+func _new_game_page(v: VBoxContainer) -> void:
 	_section(v, "New game")
 	var note := Label.new()
 	note.text = "Starts again as on a first play: credits, gear, droids, ships, every flag, faction standing and what each character thinks of you. Names are kept. The town reloads.\nStory: the story from the start, every faction neutral, the pistol only, locked to the smuggler.\nFree roam: drops and bounties on repeat, any character."
@@ -582,16 +769,6 @@ func _story_tab() -> Control:
 		b.pressed.connect(func(): new_game(m[0]))
 		row.add_child(b)
 	_row(v, "", row)
-	_refreshers.append(func():
-		var b := WorldState.bounty
-		now.text = "Now: %s save, %s%s" % ["story" if WorldState.story_mode() else "free roam", Story.chapter().replace("_", " "),
-			("   ·   bounty on %s (%s)" % [b.name, b.state]) if str(b.get("state", "")) in ["out", "dead"] else ""]
-		var at := Story.index(Story.chapter())
-		pick.select(maxi(0, at))
-		for i in pick.item_count:
-			pick.set_item_disabled(i, WorldState.story_mode() and (i <= at or not Story.applies(Story.chapters()[i])))
-		go.text = "Skip ahead" if WorldState.story_mode() else "Skip to it")
-	return v.get_parent()
 
 
 ## Move the main story to chapter `id`. Free roam: at once, any chapter. A story
@@ -648,18 +825,16 @@ func _save() -> void:
 
 ## The AI brain settings (they were a separate F10 panel): where the cantina
 ## owner's brain runs, its URLs, models and key, Test and Save.
-func _llm_tab() -> Control:
-	var v := _tab("LLM")
+func _llm_page(v: VBoxContainer) -> void:
+	_anchors["LLM"] = _section(v, "AI characters' brain  (F10 jumps here)")
 	var bar = demo.bar if demo != null and "bar" in demo else null
 	if bar != null and bar.settings != null:
-		_section(v, "AI CHARACTERS' BRAIN  (F10 opens this tab)")
 		bar.settings.embed_into(v, self)
 		_refreshers.append(func(): bar.settings._load())
 	else:
 		var l := Label.new()
 		l.text = "No AI characters in this scene."
 		v.add_child(l)
-	return v.get_parent()
 
 
 # ------------------------------------------------------------------ HUD (issue #52)
@@ -668,8 +843,9 @@ const KEYS := [
 	["F1", "Info: planet, town, time, credits, standing"],
 	["F3", "AI debug overlay"],
 	["F4", "Guard debug (what each guard sees and hears; free roam only)"],
-	["F10", "AI model settings: the LLM tab here (Shift+F10: next model)"],
+	["F10", "AI model settings: the AI brain under Options here (Shift+F10: next model)"],
 	["F11", "These settings"],
+	["M", "The map: click a place for a waypoint"],
 	["E", "Interact: talk, board, ride, pick up"],
 	["L", "Cycle the lighting"],
 	["V", "First / third person"],
@@ -677,9 +853,8 @@ const KEYS := [
 ]
 
 
-func _hud_tab() -> Control:
-	var v := _tab("HUD")
-	_section(v, "HUD COLOUR")
+func _hud_page(v: VBoxContainer) -> void:
+	_section(v, "HUD colour")
 	var grid := GridContainer.new()
 	grid.columns = 3
 	for name in RetroUI.PRESETS:
@@ -697,7 +872,7 @@ func _hud_tab() -> Control:
 	_row(v, "Your own", pick)
 	_refreshers.append(func(): pick.color = RetroUI.accent)
 	# Issue #71: one number sizes every UI element; saved per machine.
-	_section(v, "TEXT SIZE")
+	_section(v, "Text size")
 	RetroUI.load_settings()
 	var ui := RetroUI.ui()
 	var size := _slider(int(round(float(ui.get("min", 0.75)) * 100.0)), int(round(float(ui.get("max", 2.0)) * 100.0)))
@@ -717,7 +892,10 @@ func _hud_tab() -> Control:
 	reset.pressed.connect(func(): size.value = roundf(float(ui.get("text_scale", 1.75)) * 100.0); RetroUI.set_text_scale(get_tree(), size.value / 100.0))
 	row.add_child(reset)
 	_refreshers.append(func(): size.set_value_no_signal(roundf(RetroUI.text_scale * 100.0)); shown.text = "%d%%" % int(size.value))
-	_section(v, "KEYS")
+
+
+func _keys_page(v: VBoxContainer) -> void:
+	_section(v, "Keys")
 	for k in KEYS:
 		var l := Label.new()
 		l.text = "[%s]" % k[0]
@@ -727,20 +905,17 @@ func _hud_tab() -> Control:
 		var what := Label.new()
 		what.text = k[1]
 		h.add_child(what)
-	return v.get_parent()
 
 
 ## Issue #16: the music and the effects each get a volume, saved per machine.
-func _sound_tab() -> Control:
-	var v := _tab("Sound")
-	_section(v, "VOLUME  (0 .. 100)")
+func _sound_page(v: VBoxContainer) -> void:
+	_section(v, "Volume  (0 .. 100)")
 	for bus in [[Sound.MUSIC_BUS, "Music"], [Sound.SFX_BUS, "Effects"]]:
 		var s := _slider(0, 100)
 		s.value = roundf(Sound.volume(bus[0]) * 100.0)
 		s.value_changed.connect(func(x): Sound.set_volume(bus[0], x / 100.0))
 		_row(v, bus[1], s)
 		_refreshers.append(func(): s.set_value_no_signal(roundf(Sound.volume(bus[0]) * 100.0)))
-	return v.get_parent()
 
 
 func _set_hud_color(c: Color) -> void:
@@ -765,11 +940,13 @@ func _tab(title: String) -> VBoxContainer:
 	return v
 
 
-func _section(v: VBoxContainer, text: String) -> void:
+## A section's heading (upper case, gold). Returns it (open_tab can scroll to it).
+func _section(v: VBoxContainer, text: String) -> Label:
 	var l := Label.new()
-	l.text = text
+	l.text = text.to_upper()
 	l.add_theme_color_override("font_color", Color("#d8b878"))
 	v.add_child(l)
+	return l
 
 
 func _row(v: VBoxContainer, label: String, c: Control) -> HBoxContainer:

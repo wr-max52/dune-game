@@ -2,6 +2,30 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## A globe map in F11, and five settings pages (2026-10-31)
+
+- **Map page.** F11 (or M) opens on a small globe of the home planet with an
+  icon at every place that stays put: the port, the Remnant outposts, the
+  droid relays, the traders (speeder stall, mechanic's yard), the cruiser
+  wrecks, the old outpost and the two native camps. Zoomed in on the port it
+  opens into its own stops (cantina, ship dealer, droid merchant, the stalls).
+  Nothing that moves is on it. Drag to turn, wheel to zoom.
+- **Click to set a waypoint.** A click on an icon points the HUD's objective
+  arrow at it ("Waypoint: Drywash Droid Relay 1.3 km"); a click on bare sand
+  marks that spot. It clears itself when you get there, is kept in the save,
+  and is the only pointer on: switching on a quest's waypoint turns it off and
+  the other way round.
+- **Off planet.** Beside the globe: the station you can fly to and the Remnant
+  cruiser, each a waypoint too (the station's clears when you land there).
+- **Five pages instead of nine:** Map, Game (story chapter, time of day, speed,
+  credits, space fights, town layout, new game), Player (outfit, then the
+  cheats), Standing (factions, people, world flags) and Options (HUD colour,
+  text size, volume, the AI brain, keys). F10 still jumps to the AI brain.
+- The panel now shrinks to fit the window, so at a big text size the tabs and
+  the Save/Close buttons stay on screen.
+- Data: content/core/flow/map.json (what is on the map, labels, lines),
+  content/look/map.json (icons and colours).
+
 ## The Albatross is a black Lanner gunship (2026-10-31)
 
 - **New look for the pit's gunship.** The Ashford Albatross Mk VI in bay 4 was

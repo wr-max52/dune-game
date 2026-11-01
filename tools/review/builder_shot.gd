@@ -36,7 +36,7 @@ func _process(_d: float) -> bool:
 	var ds: DevSettingsPanel = demo.dev_settings
 	if f == 120:
 		ds.open()
-		(ds._panel.find_children("*", "TabContainer", true, false)[0] as TabContainer).current_tab = 3
+		(ds._panel.find_children("*", "TabContainer", true, false)[0] as TabContainer).current_tab = 2   # Player: the outfit
 	for i in MIXES.size():
 		if f == 140 + i * 90:
 			if i > 0:

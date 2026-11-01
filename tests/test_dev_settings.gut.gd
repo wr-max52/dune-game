@@ -102,10 +102,14 @@ func test_pages_are_built_on_first_open_only() -> void:
 	assert_eq(p.tabs.get_tab_count(), 0)
 	p.open()
 	assert_true(p.tabs_built)
-	assert_eq(p.tabs.get_tab_count(), 9, "every page is there once it opens")
+	assert_eq(p.tabs.get_tab_count(), 5, "five pages once it opens")
+	var titles: Array = []
+	for i in p.tabs.get_tab_count():
+		titles.append(p.tabs.get_tab_title(i))
+	assert_eq(titles, ["Map", "Game", "Player", "Standing", "Options"])
 	p.close()
 	p.open_tab("LLM")
-	assert_eq(p.tabs.get_tab_title(p.tabs.current_tab), "LLM", "F10 still lands on the LLM page")
+	assert_eq(p.tabs.get_tab_title(p.tabs.current_tab), "Options", "F10 lands on the AI brain, under Options")
 	p.close()
 
 
