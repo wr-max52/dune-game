@@ -20,6 +20,9 @@ and cross-faded end into start, so they repeat without a click.
   droid_wake.wav    a rising boot-up sweep: a fixed droid wakes
   droid_shot.wav    a droid's pistol bolt
   slide_scuff.wav   boots and cloth skidding on the ground: the sprint slide
+  quest_start.wav   a rising two-note bell over a soft swell: a new quest or job
+  quest_success.wav a four-note bell run up: cargo found, a target down, a job done
+  quest_fail.wav    two muffled notes falling: a quest failed
 
 Run: python3 tools/audio/make_game_sfx.py
 Writes 16-bit mono WAVs to assets/audio/sfx/. Mapping in content/look/sound.json.
@@ -294,6 +297,48 @@ def slide_scuff():
     save("slide_scuff.wav", mix(apply(hiss, swell), scale(thump, 0.5)), 0.6)
 
 
+def bell(freq, secs, decay):
+    # A softer, rounder strike than ping(): near-harmonic partials and a slow tail.
+    n = n_of(secs)
+    out = [0.0] * n
+    for ratio, amp, d in [(1.0, 1.0, 1.0), (2.0, 0.35, 1.6), (3.01, 0.15, 2.4), (4.2, 0.06, 3.5)]:
+        f = freq * ratio
+        for i in range(n):
+            out[i] += amp * math.sin(TAU * f * i / SR) * math.exp(-decay * d * i / SR)
+    return apply(out, env(n, 0.004, 0.0))
+
+
+def swell(freq, secs, rate):
+    # A quiet sine pad under the bells, for body.
+    n = n_of(secs)
+    return apply([math.sin(TAU * freq * i / SR) + 0.3 * math.sin(TAU * freq * 2.003 * i / SR) for i in range(n)],
+                 [min(1.0, i / n_of(0.12)) * math.exp(-rate * i / SR) for i in range(n)])
+
+
+def at(secs, x):
+    return [0.0] * n_of(secs) + x
+
+
+def quest_start():
+    out = mix(bell(880.0, 1.0, 4.0), at(0.13, bell(1318.5, 1.1, 3.2)), scale(swell(440.0, 1.2, 3.0), 0.35))
+    save("quest_start.wav", out, 0.75)
+
+
+def quest_success():
+    notes = [1046.5, 1318.5, 1568.0, 2093.0]
+    parts = [at(k * 0.085, scale(bell(f, 0.7 if k < 3 else 1.3, 5.0 if k < 3 else 2.6), 0.8 if k < 3 else 1.0))
+             for k, f in enumerate(notes)]
+    save("quest_success.wav", mix(*parts, at(0.25, scale(swell(523.25, 1.2, 2.5), 0.3))), 0.75)
+
+
+def quest_fail():
+    def dull(freq, secs):
+        n = n_of(secs)
+        tone = [math.sin(TAU * freq * i / SR) + 0.4 * math.sin(TAU * freq * 3 * i / SR) for i in range(n)]
+        return apply(lowpass(tone, 1400), env(n, 0.01, 4.5))
+    save("quest_fail.wav", mix(dull(587.3, 0.6), at(0.22, dull(440.0, 0.9))), 0.7)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     coin_gain()
@@ -314,3 +359,6 @@ if __name__ == "__main__":
     droid_wake()
     droid_shot()
     slide_scuff()
+    quest_start()
+    quest_success()
+    quest_fail()

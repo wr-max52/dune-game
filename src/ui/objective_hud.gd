@@ -10,8 +10,8 @@ extends CanvasLayer
 ## the range, the pit, the desert outposts, the crashed cruiser ("wreck", issue #205),
 ## and a waypoint set on the F11 map (a ground spot, or another planet's port).
 ##
-## Issue #201: a new optional quest (Quests.take_news) shows a toast in the top
-## right for TOAST_TIME seconds.
+## Quest news (QuestNews: a quest or job started, cargo found, a target killed)
+## goes up big in the upper middle, with a sound: the QuestBanner it carries.
 
 const REFRESH := 0.25                 ## seconds between re-reading the objective
 const AMBER := Color("#e0a050")
@@ -19,16 +19,14 @@ const INK := Color(0.95, 0.92, 0.85, 0.95)
 const TOP := 48.0                     ## below RetroHud's 40 px banner
 const EDGE := 36.0                    ## the diamond stays this far inside the screen
 const LEFT := 26.0                    ## the arrow's centre from the left edge; the text starts after it
-const TOAST_TIME := 5.0
 
 var demo                              ## town_demo.gd
 var label: Label
 var marks: Control                    ## draws the arrow and the diamond
 var objective: Dictionary = {}        ## the last Objective.current()
 var target_pos := Vector3.INF         ## where it points, INF = nowhere (text only)
-var quest_toast: Label                ## issue #201: "Press "I" to see new quest"
+var banner: QuestBanner               ## quest news, big, one at a time
 var _left := 0.0
-var _toast_left := 0.0
 
 
 func _init() -> void:
@@ -55,27 +53,12 @@ func _ready() -> void:
 	label.add_theme_constant_override("outline_size", 5)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(label)
-	quest_toast = Label.new()
-	quest_toast.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	quest_toast.offset_left = -460.0
-	quest_toast.offset_right = -24.0
-	quest_toast.offset_top = TOP
-	quest_toast.offset_bottom = TOP + 28
-	quest_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	quest_toast.add_theme_font_size_override("font_size", 18)
-	quest_toast.add_theme_color_override("font_color", AMBER)
-	quest_toast.add_theme_color_override("font_outline_color", Color.BLACK)
-	quest_toast.add_theme_constant_override("outline_size", 5)
-	quest_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	quest_toast.visible = false
-	add_child(quest_toast)
+	banner = QuestBanner.new()
+	add_child(banner)
 	refresh()
 
 
 func _process(dt: float) -> void:
-	if _toast_left > 0.0:
-		_toast_left -= dt
-		quest_toast.visible = _toast_left > 0.0
 	_left -= dt
 	if _left <= 0.0:
 		_left = REFRESH
@@ -98,10 +81,6 @@ func refresh() -> void:
 			target_pos = where(str(objective.get("target", "")))
 	label.text = text_line()
 	label.visible = not objective.is_empty()
-	if not Quests.take_news().is_empty():
-		quest_toast.text = Objective.line("quest_toast")
-		quest_toast.visible = true
-		_toast_left = TOAST_TIME
 
 
 ## "Find Oda Vell at the cantina   84 m"

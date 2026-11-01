@@ -459,6 +459,7 @@ func _take(node) -> String:
 	pickups.erase(node)
 	if node == drop:
 		drop = null
+		QuestNews.push("cargo_found", WorldState.smuggle_goods_text())
 	node.queue_free()
 	focus = {}
 	var msg := _l("picked_up") % str(item.get("label", id))
