@@ -30,6 +30,8 @@
   },
   "wake_distance": 2600.0,
   "sleep_distance": 460.0,
+  "aboard_shadow_distance": 150.0,
+  "aboard_shadow_note": "While you are aboard, the sun's shadows reach this many metres instead of the time of day's 700-900: a low sun through the bridge windows otherwise lays stair-stepped shadow edges across the floor.",
   "detail_altitude": 600.0,
   "escort": "cruiser_escort",
   "reward": { "credits": 20000, "locals": 60, "remnant": -40, "smuggler": 15 },

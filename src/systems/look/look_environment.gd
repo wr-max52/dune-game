@@ -22,6 +22,8 @@ var sun_dir := Vector3(0, 0.15, -1)
 var lamp_level := 0.0
 var ambient_energy_scale := 1.0
 var suppressed := {}                 ## issue #46: feature -> true, held off (set_suppressed)
+var shadow_cap := 0.0                ## the sun's shadow range held to this many metres (0: the preset's)
+var _shadow_distance := 0.0          ## what the preset asks for
 var _wanted := {}                    ## what the preset asks for: ssao, ssil, sdfgi, volumetric, shadows
 var _ambient_energy_base := 1.0
 ## Up in space every planet is lit alike (moon handoff): the ambient fill eases from
@@ -264,7 +266,8 @@ func _apply_values(p: Dictionary) -> void:
 	sun.light_color = Color.html(s["color"])
 	sun.light_energy = float(s["energy"])
 	sun.light_angular_distance = float(s["angular_size"])
-	sun.directional_shadow_max_distance = float(s["shadow_distance"])
+	_shadow_distance = float(s["shadow_distance"])
+	_apply_shadow_range()
 	sun.light_volumetric_fog_energy = float(s["fog_energy"])
 
 	sky_mat.set_shader_parameter("sun_dir", sun_dir)
@@ -333,6 +336,23 @@ func set_suppressed(features: Array) -> void:
 		return
 	suppressed = next
 	_apply_quality()
+
+
+## Hold the sun's shadows to `metres` (0 gives the preset's range back). Indoors
+## under a low sun the preset's 700-900 m spreads the shadow map so thin that a
+## window frame's shadow comes out in stair-steps across the floor; the cruiser
+## asks for a short range while you are aboard.
+func set_shadow_cap(metres: float) -> void:
+	if is_equal_approx(metres, shadow_cap):
+		return
+	shadow_cap = metres
+	_apply_shadow_range()
+
+
+func _apply_shadow_range() -> void:
+	if sun == null or _shadow_distance <= 0.0:
+		return
+	sun.directional_shadow_max_distance = minf(_shadow_distance, shadow_cap) if shadow_cap > 0.0 else _shadow_distance
 
 
 func _apply_quality() -> void:
