@@ -331,15 +331,22 @@ func _map_tab() -> Control:
 ## One legend line: the pin's shape, drawn the way the globe draws it, and its name.
 func _legend_row(look: Dictionary, text: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
-	var icon := Control.new()
-	icon.custom_minimum_size = Vector2(18, 18)
-	icon.draw.connect(func(): GlobeView.draw_shape(icon, icon.size * 0.5, str(look.get("shape", "circle")),
-		Color(str(look.get("color", "#f2e2b0"))), 5.0))
-	row.add_child(icon)
+	row.add_child(_pin_icon(look))
 	var l := Label.new()
 	l.text = text
 	row.add_child(l)
 	return row
+
+
+## A pin's shape (content/look/map.json) as a small control, for the legend and
+## the off-planet list.
+func _pin_icon(look: Dictionary, r := 5.0) -> Control:
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * ceilf(r * 3.6)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.draw.connect(func(): GlobeView.draw_shape(icon, icon.size * 0.5, str(look.get("shape", "circle")),
+		Color(str(look.get("color", "#f2e2b0"))), r))
+	return icon
 
 
 ## Rebuild the map's pins and off-planet list from the scene (the town's stops
@@ -364,14 +371,19 @@ func _refresh_map() -> void:
 	_off_planet = GlobeMap.off_planet(travel.bodies if travel != null else [], world)
 	for c in _off_box.get_children():
 		c.queue_free()
+	var pins_look: Dictionary = GlobeMap.look().get("pins", {})
 	for o in _off_planet:
+		var row := HBoxContainer.new()
+		row.add_child(_pin_icon(pins_look.get(str(o.kind), {}), 7.0))
 		var b := Button.new()
 		b.text = str(o.label)
 		b.toggle_mode = true
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.set_pressed_no_signal(GlobeMap.waypoint_id() == str(o.id))
 		b.pressed.connect(func(): map_pick(o))
-		_off_box.add_child(b)
+		row.add_child(b)
+		_off_box.add_child(row)
 	if _off_planet.is_empty():
 		var l := Label.new()
 		l.text = "-"
