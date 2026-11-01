@@ -91,6 +91,23 @@ func test_ambient_cycles() -> void:
 	assert_eq(seen.size(), cfg.music.ambient.size(), "each ambient track in turn")
 
 
+## Issue #291: the ambient order is shuffled, so a new game does not always open
+## on the same track, and a reshuffle never plays the last track again at once.
+func test_ambient_shuffles() -> void:
+	var firsts := {}
+	for i in 30:
+		var s: Sound = add_child_autofree(Sound.new())
+		s._switch("ambient")
+		firsts[s.ambient_track] = true
+	assert_gt(firsts.size(), 1, "games open on different tracks")
+	var s: Sound = add_child_autofree(Sound.new())
+	var last := ""
+	for i in cfg.music.ambient.size() * 6:
+		s._switch("ambient")
+		assert_ne(s.ambient_track, last, "not the same track twice in a row")
+		last = s.ambient_track
+
+
 func test_credits_make_coin_noises() -> void:
 	var s := Sound.lib()
 	var before := s.one_shots
@@ -211,3 +228,43 @@ func test_dead_band_stops_the_music() -> void:
 	s._process(0.1)
 	assert_eq(s._club_playing, "", "the music stops")
 	assert_false(s._club_next(), "and nothing new starts")
+
+
+# ------------------------------------------------------------------ issue #291: the ship's radio
+
+func test_radio_steps_through_the_stations() -> void:
+	assert_eq(cfg.club.radio, ["dust_lounge", "salvage_rave"], "the desert cantina mix, then the moon rave mix")
+	var s := Sound.lib()
+	s.set_radio("")
+	assert_eq(Sound.radio_next(), "dust_lounge", "first J: the desert cantina mix")
+	assert_eq(Sound.radio_next(), "salvage_rave", "second J: the moon rave mix")
+	assert_eq(Sound.radio_next(), "", "third J: off, back to the score")
+	assert_eq(s.radio, "")
+	for id in cfg.club.radio + [""]:
+		assert_ne(ShipPilot.radio_line(id), "", "a HUD line for " + (id if id != "" else "off"))
+	assert_true(InputMap.has_action("flight_radio"), "J is bound")
+
+
+func test_radio_plays_anywhere_and_ducks_the_score() -> void:
+	var s := _club_sound()
+	s.in_space = true
+	s.battle_left = 10.0
+	s.club_live = false                  # the radio has no band to kill
+	s.set_radio("test")
+	for i in 30:
+		s._process(0.1)
+	assert_true(s._club_deck.playing, "the radio plays in space, in a fight")
+	assert_true(s.club_tracks("test").has(s.club_track), "from the station's playlist")
+	assert_gt(s.club_level, 0.9, "full volume")
+	assert_gt(s.club_open, 0.9, "not muffled")
+	var si := AudioServer.get_bus_index(Sound.SCORE_BUS)
+	assert_lt(AudioServer.get_bus_volume_db(si), -20.0, "the score ducks under it")
+	var last := s.club_track
+	assert_true(s._club_next(), "next song")
+	assert_ne(s.club_track, last, "shuffled, not the same twice in a row")
+	s.set_radio("")
+	for i in 60:
+		s._process(0.1)
+	assert_eq(s.club_level, 0.0, "off")
+	assert_false(s._club_deck.playing, "stopped")
+	assert_gt(AudioServer.get_bus_volume_db(si), -0.1, "the score is back")

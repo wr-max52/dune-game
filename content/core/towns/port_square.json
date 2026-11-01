@@ -4502,7 +4502,20 @@
    "fled_standing": -5,
    "raise_standing": -10
   },
-  "klaxon_marker": "trooper_tower"
+  "klaxon_marker": "trooper_tower",
+  "checkpoints": [
+   {
+    "id": "barracks",
+    "note": "Issue #308: the barracks yard is a checkpoint zone. Below the wave band the nearest barracks trooper (a role below) who sees you walks up and the gate's card opens, on the gate's rules (content/core/soldiers/gate_guard.json checkpoint block; anything in this checkpoint block wins). The zone is the ground under the boxes in around (yard walls to the hall), so it follows the barracks in either layout. Leave it and the card closes; cleared, the yard leaves you alone for cleared_s.",
+    "place": "the barracks",
+    "zone": "barracks",
+    "around": ["yard_wall_w", "yard_wall_e", "barracks_hall"],
+    "roles": ["yard"],
+    "checkpoint": {
+     "cleared_s": 240.0
+    }
+   }
+  ]
  },
  "locals": {
   "note": "The port's own people. They mind their business until you hurt one; then every local in town fights you (merchants and the fence from behind their counters, never leaving the stall). Same alarm rules as the garrison, its own alarm: shooting a local does not call the Remnant, and the other way round.",

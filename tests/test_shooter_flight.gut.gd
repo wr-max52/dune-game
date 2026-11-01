@@ -205,34 +205,90 @@ func test_straight_up_still_has_a_heading() -> void:
 
 func test_clip_keeps_the_half_past_the_line() -> void:
 	var sq := PackedVector2Array([Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)])
-	var bottom := CockpitView.clip_half_plane(sq, Vector2(0, 1), 0.0)
+	var bottom := CockpitDash.clip_half_plane(sq, Vector2(0, 1), 0.0)
 	assert_almost_eq(_area(bottom), 2.0, 0.001, "half the square")
 	for p in bottom:
 		assert_true(p.y >= -0.0001)
-	assert_almost_eq(_area(CockpitView.clip_half_plane(sq, Vector2(0, 1), 0.5)), 1.0, 0.001)
-	assert_eq(CockpitView.clip_half_plane(sq, Vector2(0, 1), 2.0).size(), 0, "all sky")
-	assert_almost_eq(_area(CockpitView.clip_half_plane(sq, Vector2(0, 1), -2.0)), 4.0, 0.001, "all ground")
+	assert_almost_eq(_area(CockpitDash.clip_half_plane(sq, Vector2(0, 1), 0.5)), 1.0, 0.001)
+	assert_eq(CockpitDash.clip_half_plane(sq, Vector2(0, 1), 2.0).size(), 0, "all sky")
+	assert_almost_eq(_area(CockpitDash.clip_half_plane(sq, Vector2(0, 1), -2.0)), 4.0, 0.001, "all ground")
 
 
 func test_horizon_drops_as_the_nose_comes_up_and_turns_against_the_roll() -> void:
 	var r := 100.0
-	var circle := CockpitView.circle_points(r, 64)
+	var circle := CockpitDash.circle_points(r, 64)
 	var full := _area(circle)
-	var level := CockpitView.horizon(r, 0.0, 0.0)
-	assert_almost_eq(_area(CockpitView.clip_half_plane(circle, level.normal, level.offset)), full * 0.5, full * 0.01,
+	var level := CockpitDash.horizon(r, 0.0, 0.0)
+	assert_almost_eq(_area(CockpitDash.clip_half_plane(circle, level.normal, level.offset)), full * 0.5, full * 0.01,
 		"level: half ground")
-	var climb := CockpitView.horizon(r, 20.0, 0.0)
+	var climb := CockpitDash.horizon(r, 20.0, 0.0)
 	assert_gt(float(climb.offset), 0.0, "nose up: the horizon is lower on the ball")
-	assert_lt(_area(CockpitView.clip_half_plane(circle, climb.normal, climb.offset)), full * 0.5, "less ground")
-	var bank := CockpitView.horizon(r, 0.0, 30.0)
+	assert_lt(_area(CockpitDash.clip_half_plane(circle, climb.normal, climb.offset)), full * 0.5, "less ground")
+	var bank := CockpitDash.horizon(r, 0.0, 30.0)
 	var n: Vector2 = bank.normal
 	assert_gt(n.x, 0.0, "rolled right: the world turns the other way, the ground swings to the right")
 
 
 func test_dash_rises_toward_the_middle() -> void:
 	var vp := Vector2(1920, 1080)
-	assert_lt(CockpitView.dash_top(vp, 960.0), CockpitView.dash_top(vp, 0.0))
-	assert_almost_eq(CockpitView.dash_top(vp, 0.0), CockpitView.dash_top(vp, 1920.0), 0.01)
+	assert_lt(CockpitDash.dash_top(vp, 960.0), CockpitDash.dash_top(vp, 0.0))
+	assert_almost_eq(CockpitDash.dash_top(vp, 0.0), CockpitDash.dash_top(vp, 1920.0), 0.01)
+
+
+func test_dash_leans_away() -> void:
+	var vp := Vector2(1920, 1080)
+	var foot := CockpitView.project(vp, Vector2(100, 1080))
+	assert_almost_eq(foot.x, 100.0, 0.01, "the bottom edge stays put")
+	assert_almost_eq(foot.y, 1080.0, 0.01)
+	var high := CockpitView.project(vp, Vector2(100, 760))
+	var low := CockpitView.project(vp, Vector2(100, 1000))
+	assert_gt(high.x, low.x, "higher up the panel is further off: it closes toward the middle")
+	assert_gt(high.y, 760.0, "and rises less")
+	assert_lt(low.y - high.y, 1000.0 - 760.0, "rows crowd together going up")
+	var line := CockpitView.rim(vp)
+	assert_lt(line[0].x, 0.0, "the leaning dash still reaches the screen's edges")
+	assert_gt(line[line.size() - 1].x, vp.x)
+
+
+func test_canopy_frame_comes_over_you() -> void:
+	var vp := Vector2(1920, 1080)
+	var line := CockpitView.rim(vp)
+	var path := CockpitView.strut_path(vp, line, 1.0)
+	var foot := CockpitView.frame_project(vp, path[0])
+	assert_almost_eq(foot.y, CockpitView.rim_y(line, foot.x) + 2.0, 0.5, "the strut stands on the dash's edge")
+	var up := CockpitView.frame_project(vp, path[16])
+	assert_lt(up.y, foot.y, "it rises")
+	assert_gt(up.x, foot.x, "and sweeps out toward the corner, not in")
+	assert_gt(-path[0].z, -path[16].z, "because it is coming nearer")
+	assert_gt(path[path.size() - 1].z, 0.0, "it ends up behind your head")
+	assert_lt(CockpitView.frame_project(vp, Vector3(0, CockpitView.BOW_TOP - CockpitView.FRAME_THICK * 0.5, -CockpitView.BOW_AHEAD)).y, vp.y * 0.1,
+		"the bow over the glass keeps to the top of the screen")
+
+
+func test_canopy_frame_shines_where_the_light_reflects() -> void:
+	var view := Vector3(0, 0, 1)
+	var sun := [{"dir": Vector3(-0.6, 0.3, 0.74).normalized(), "color": Color.WHITE, "power": CockpitView.SUN_GLINT, "sun": true}]
+	var toward := (Vector3(-0.6, 0.3, 0.74).normalized() + view).normalized()
+	var lit := CockpitView.metal_shade(toward, view, sun)
+	var away := CockpitView.metal_shade(Vector3(0.7, 0, 0.7).normalized(), view, sun)
+	assert_gt(lit.v, away.v + 0.4, "the metal glares where it reflects the sun at you")
+	var dark := CockpitView.metal_shade(toward, view, [])
+	assert_lt(dark.v, 0.3, "and with no light on it, it is dull")
+	var bolt := CockpitView.metal_shade(toward, view, [{"dir": sun[0].dir, "color": Color(1, 0.2, 0.1), "power": 1.0}])
+	assert_gt(bolt.r, bolt.b + 0.3, "a bolt's glare is its own colour")
+
+
+func test_glass_glints_where_the_light_reflects() -> void:
+	var behind := CockpitDash.glint(Vector3(0, 0.2, 1))
+	assert_gt(behind.z, 0.0, "the sun behind you glints on the dials")
+	assert_lt(Vector2(behind.x, behind.y).length(), 0.5, "near their middles")
+	var left := CockpitDash.glint(Vector3(-1, 0.6, 0.3))
+	assert_lt(left.x, 0.0, "a light to the left glints on the left of the glass")
+	var high := CockpitDash.glint(Vector3(0, 1, -0.2))
+	assert_lt(high.y, behind.y, "a light overhead glints further up")
+	assert_gt(CockpitDash.glint(Vector3(-0.4, 0.2, -0.9)).z, 0.0, "a bolt ahead and up a little catches the far edge")
+	assert_almost_eq(CockpitDash.glint(Vector3(0, -1, 0)).z, 0.0, 0.001, "nothing from under the dash")
+	assert_almost_eq(CockpitDash.glint(Vector3(0, 0, -1)).z, 0.0, 0.001, "nor from dead ahead")
 
 
 # ---- ShipPilot wires it up ---------------------------------------------------------

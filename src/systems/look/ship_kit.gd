@@ -261,6 +261,9 @@ func build_bolt(style: String) -> Node3D:
 	cyl.rings = 1
 	var mi := _mi(pivot, cyl, _glow(col, 6.0), Vector3.ZERO, TIP_FORWARD, Vector3.ONE, "Glow")
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# The cockpit's glass catches it going by (CockpitView.gather_lights).
+	pivot.add_to_group("glints")
+	pivot.set_meta("glint_color", col)
 	return pivot
 
 

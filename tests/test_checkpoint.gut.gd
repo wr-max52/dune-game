@@ -344,3 +344,39 @@ func test_cleared_lasts_then_lapses() -> void:
 	c.cleared_left = 0.01
 	_tick(c, DT, { "noticed": false })
 	assert_eq(c.state, Checkpoint.State.IDLE)
+
+
+# ---- issue #308: a zone instead of a gate ----------------------------------------
+
+func test_a_zone_challenges_inside_and_not_outside() -> void:
+	var c := _cp()
+	assert_false(_types(_tick(c, DT, { "zone_out": 5.0 })).has("card"), "outside the zone: nothing")
+	var ev := _tick(c, DT, { "zone_out": -4.0 })
+	assert_true(_types(ev).has("card"), "inside it: the card")
+	assert_eq(c.band, "papers")
+
+
+func test_a_zone_has_no_line_to_push_across() -> void:
+	var c := _cp()
+	_tick(c, DT, { "zone_out": 0.0, "player_pos": Vector3(80, 0, 0) })
+	var ev := _tick(c, 1.0, { "zone_out": -2.0, "player_pos": Vector3(120, 0, 0) })
+	assert_false(_barks(ev).has("warn"), "no gate line, no warning for crossing it")
+	assert_eq(c.state, Checkpoint.State.CHALLENGE)
+
+
+func test_leaving_a_zone_closes_its_card() -> void:
+	var c := _cp()
+	_tick(c, DT, { "zone_out": -1.0 })
+	var ev := _tick(c, DT, { "zone_out": 4.0 })
+	assert_true(_types(ev).has("card_close"))
+	assert_eq(c.state, Checkpoint.State.IDLE)
+
+
+func test_a_zone_names_itself_in_the_log() -> void:
+	var zc := cfg.duplicate(true)
+	zc["place"] = "the barracks"
+	var c := Checkpoint.new(zc)
+	_tick(c, DT, { "zone_out": -1.0, "standing": -60 })
+	var ev := _tick(c, float(zc.get("warn_s", 3.0)) + 0.5, { "zone_out": -1.0, "standing": -60 })
+	var why: Array = ev.filter(func(e): return e.type == "standing").map(func(e): return str(e.why))
+	assert_has(why, "A firefight broke out at the barracks.")

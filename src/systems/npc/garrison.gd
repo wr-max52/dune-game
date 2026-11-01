@@ -19,6 +19,11 @@ extends Node
 ## Issue #55: a speeder ridden into town, or a ship lifting off in it, is hostile:
 ## the first trooper to notice it sounds the alarm and the garrison shoots its hull.
 ##
+## Issue #308: checkpoint zones. The barracks yard (the town's "garrison"
+## "checkpoints") and the ring round each outpost (its location's "zone") each run
+## a Checkpoint of their own, in zone mode, with the troopers there: walk in below
+## the wave band and the nearest one walks up and the same card opens.
+##
 ## It also owns: the choice card, subtitles and health bar (CheckpointHud), the
 ## alarm klaxon, confiscating what a search turns up, and what happens when the
 ## player is downed (knocked out, dragged to the pit, robbed a little).
@@ -73,6 +78,12 @@ var always_hostile := false       ## issue #193: the Remnant cruiser's crew shoo
 ## before setup). Out there the vehicle is no offence by itself: no "vehicle" alarm.
 var vehicles_anywhere := false
 var knockout_s := 1.6             ## black screen before you wake in the pit
+## Issue #308: checkpoint zones, set before setup: [{ id, place, roles, and either
+## center (Vector3) + radius or min + max ([x, z]), checkpoint: { what differs
+## from the troopers' checkpoint block } }]. setup makes `zones` from them:
+## [{ spec, checkpoint, guards }], guards = the members with one of its roles.
+var zone_specs: Array = []
+var zones: Array = []
 
 ## Numbers the traces read.
 var barks_said: Array = []        ## [key, ...] in order
@@ -122,6 +133,8 @@ func setup(town_demo, all: Array) -> void:
 	alarm = TownAlarm.new(gcfg.get("alarm", {}))
 	lines = CharacterKit._read_json(LINES_PATH).get("lines", {})
 	gate_pos = town.marker_pos("gate")
+	for spec in zone_specs:
+		_add_zone(spec)
 	for g in members:
 		_adopt(g)
 	# Cover anywhere in town: the yard troopers fight wherever the alarm takes them.
@@ -136,6 +149,37 @@ func setup(town_demo, all: Array) -> void:
 		player.hurt.connect(func(_a): _hp_hud(true))
 
 
+## Issue #308: a zone's own checkpoint, on the troopers' rules with the zone's changes.
+func _add_zone(spec: Dictionary) -> void:
+	var cfg := CoreContent._merge(profile.get("checkpoint", {}), spec.get("checkpoint", {}))
+	cfg["place"] = str(spec.get("place", spec.get("id", "the checkpoint")))
+	zones.append({ "spec": spec, "checkpoint": Checkpoint.new(cfg, 23 + zones.size() * 13), "guards": [] })
+
+
+## The zones trooper `g` stands in (by its role).
+func _zones_for(g: NpcBody) -> Array:
+	var role := str(g.profile.get("role", "gate"))
+	return zones.filter(func(z): return (z.spec.get("roles", []) as Array).has(role))
+
+
+## How far `p` is outside a zone's edge: 0 or less inside, INF for nowhere.
+static func zone_out(spec: Dictionary, p: Vector3) -> float:
+	if p == Vector3.INF:
+		return INF
+	if spec.has("radius"):
+		return p.distance_to(spec.center) - float(spec.radius)
+	var lo: Array = spec.get("min", [0, 0])
+	var hi: Array = spec.get("max", [0, 0])
+	var dx := maxf(maxf(float(lo[0]) - p.x, p.x - float(hi[0])), 0.0)
+	var dz := maxf(maxf(float(lo[1]) - p.z, p.z - float(hi[1])), 0.0)
+	return Vector2(dx, dz).length()
+
+
+## The gate and every zone: [{ checkpoint, guards }, ...], the gate first.
+func _posts() -> Array:
+	return [{ "checkpoint": checkpoint, "guards": guards }] + zones
+
+
 ## A brain for one trooper: its patrol (its marker's route, else its post), its
 ## senses on vehicles, and its death and hits wired to the garrison.
 func _adopt(g: NpcBody) -> void:
@@ -145,6 +189,9 @@ func _adopt(g: NpcBody) -> void:
 	b.patrol_points = pts if pts.size() >= 2 else [g.post_pos]
 	b.post_facing = g.post_facing
 	brains[g] = b
+	for z in _zones_for(g):
+		if not z.guards.has(g):
+			z.guards.append(g)
 	g.sees_vehicles = true
 	g.vehicles_anywhere = vehicles_anywhere
 	g.died.connect(_on_guard_died.bind(g))
@@ -170,6 +217,8 @@ func remove_member(g: NpcBody) -> void:
 	brains.erase(g)
 	claimed.erase(g)
 	_warn_left.erase(g)
+	for z in zones:
+		z.guards.erase(g)
 
 
 ## A trooper comes back as a new face: not while the alarm is up (they wait for
@@ -246,6 +295,7 @@ func _physics_process(dt: float) -> void:
 		"guards_alive": gate_alive.size(), "contraband": contraband(),
 	})
 	_handle(checkpoint.drain())
+	_tick_zones(dt, alive, ppos, night, recent_shot, vehicle)
 
 	# The rest of the garrison: a remembered face, or a wanted one by daylight.
 	if not alarm.active() and ppos != Vector3.INF and _ko_left <= 0.0:
@@ -264,7 +314,8 @@ func _physics_process(dt: float) -> void:
 		"nearest_dist": nearest, "alive": alive.size() })
 	_handle(alarm.drain())
 	if alarm.active():
-		checkpoint.set_alarm(true)
+		for post in _posts():
+			post.checkpoint.set_alarm(true)
 
 	_order_brains()
 	for g in alive:
@@ -272,6 +323,32 @@ func _physics_process(dt: float) -> void:
 	_tick_card(dt)
 	_tick_face(dt)
 	_hp_hud(false)
+
+
+## Issue #308: each zone's checkpoint, on what its own troopers see. Nobody asks
+## for papers from a speeder or ship, or once the Remnant shoot on sight anyway.
+func _tick_zones(dt: float, alive: Array, ppos: Vector3, night: bool, recent_shot: bool, vehicle: Node) -> void:
+	if zones.is_empty():
+		return
+	var asks: bool = _ko_left <= 0.0 and vehicle == null and player.get("piloting") != true \
+		and not (Story.remnant_hostile() or always_hostile)
+	for z in zones:
+		var mine := alive.filter(func(g): return z.guards.has(g))
+		var noticed := false
+		for g in mine:
+			noticed = noticed or g.perception.noticed
+		var cp: Checkpoint = z.checkpoint
+		cp.strict = Territory.gate_strict()
+		cp.bribe_mult = Territory.bribe_mult()
+		cp.update(dt, {
+			"standing": int(WorldState.standing.get("imperial_remnant", 0)), "night": night,
+			"credits": WorldState.credits, "player_pos": ppos, "zone_out": zone_out(z.spec, ppos),
+			"noticed": noticed and asks,
+			"armed": player_armed.call() if player_armed.is_valid() else false,
+			"recent_shot": recent_shot, "attacked": false,
+			"guards_alive": mine.size(), "contraband": contraband(),
+		})
+		_handle(cp.drain(), z)
 
 
 ## Sentries and barracks troopers do not run the checkpoint, but they know a face
@@ -314,8 +391,8 @@ func _raise(why: String) -> void:
 
 
 func _order_brains() -> void:
-	var lead := _lead(guards)
-	var talk := float(profile.get("checkpoint", {}).get("talk_dist", 2.2))
+	var posts := _posts()
+	var leads := posts.map(func(post): return _lead(post.guards))
 	for g in brains:
 		if g.dead:
 			continue
@@ -326,15 +403,19 @@ func _order_brains() -> void:
 			b.alarm_pos = alarm.last_known
 			continue
 		b.alarm_pos = Vector3.INF
-		if guards.has(g):
-			match checkpoint.state:
+		var asking := false
+		for i in posts.size():
+			var cp: Checkpoint = posts[i].checkpoint
+			if not posts[i].guards.has(g):
+				continue
+			match cp.state:
 				Checkpoint.State.CHALLENGE, Checkpoint.State.SEARCHING, Checkpoint.State.WARN, Checkpoint.State.FOUND:
 					b.attend()
+					asking = true
 					# The nearest one comes over to ask (not to chase a man pushing through).
-					if g == lead and checkpoint.state != Checkpoint.State.WARN:
-						b.walk_up = talk
-					continue
-		if b.state == GuardBrain.State.ATTEND:
+					if g == leads[i] and cp.state != Checkpoint.State.WARN:
+						b.walk_up = cp.n("talk_dist", 2.2)
+		if not asking and b.state == GuardBrain.State.ATTEND:
 			b.patrol()
 
 
@@ -473,17 +554,20 @@ func contraband() -> Array:
 
 # ------------------------------------------------------------------ events
 
-func _handle(events: Array) -> void:
+## `post`: the zone the events came from ({} = the gate, or the alarm).
+func _handle(events: Array, post: Dictionary = {}) -> void:
+	var who: Array = post.get("guards", guards)
+	var cp: Checkpoint = post.get("checkpoint", checkpoint)
 	for e in events:
 		match str(e.type):
 			"bark":
-				_say(_lead(guards), str(e.key))
+				_say(_lead(who), str(e.key))
 			"card":
 				var title: String = BAND_TITLES.get(str(e.band), "CHECKPOINT")
 				if str(e.band) == "found":
 					title += ":  " + ", ".join((e.get("found", []) as Array).map(func(it): return "%s x%d" % [it.label, int(it.count)]))
 				# Held until the guard asking has walked up (_tick_card).
-				_card = { "title": title, "choices": e.choices }
+				_card = { "title": title, "choices": e.choices, "guards": who, "checkpoint": cp }
 				_card_wait = 0.0
 			"card_close":
 				_card = {}
@@ -509,7 +593,7 @@ func _handle(events: Array) -> void:
 					WorldState.inventory.remove(str(id), n)
 					confiscated.append(str(id))
 					names.append(str(content.get_item(str(id)).get("label", id)))
-				WorldState.log_event("The front gate confiscated %s." % ", ".join(names).to_lower())
+				WorldState.log_event("%s confiscated %s." % [cp.place(), ", ".join(names).to_lower()])
 				hud.toast("Confiscated: " + ", ".join(names), 3.0)
 			"hostile":
 				_raise("gate")
@@ -525,7 +609,8 @@ func _handle(events: Array) -> void:
 					klaxon.play()
 				hud.toast("ALARM", 2.5)
 			"calm":
-				checkpoint.set_alarm(false)
+				for p in _posts():
+					p.checkpoint.set_alarm(false)
 				_warn_left.clear()
 				for g in _alive():
 					var b: GuardBrain = brains[g]
@@ -542,8 +627,8 @@ func _tick_card(dt: float) -> void:
 	if _card.is_empty():
 		return
 	_card_wait += dt
-	var cfg: Dictionary = profile.get("checkpoint", {})
-	var g := _lead(guards)
+	var cfg: Dictionary = (_card.checkpoint as Checkpoint).cfg
+	var g := _lead(_card.guards)
 	var off := g.global_position - player.global_position if g != null else Vector3.ZERO
 	var close := g == null or Vector2(off.x, off.z).length() <= float(cfg.get("talk_dist", 2.2)) + 0.5
 	if not close and _card_wait < float(cfg.get("card_wait_s", 6.0)):
@@ -603,9 +688,12 @@ func first_said(key: String) -> float:
 
 ## Pick a card choice from code (traces, tests). Same path as the card.
 func choose(id: String) -> bool:
-	var ok := checkpoint.answer(id)
-	_handle(checkpoint.drain())
-	return ok
+	for post in _posts():
+		if post.checkpoint.card_open:
+			var ok: bool = post.checkpoint.answer(id)
+			_handle(post.checkpoint.drain(), post)
+			return ok
+	return false
 
 
 # ------------------------------------------------------------------ troopers
@@ -723,6 +811,9 @@ func forgive_player() -> void:
 	alarm.stand_down()
 	checkpoint.on_player_downed()
 	_handle(checkpoint.drain())
+	for z in zones:
+		z.checkpoint.on_player_downed()
+		_handle(z.checkpoint.drain(), z)
 	_handle(alarm.drain())
 	_attacked = false
 	_warn_left.clear()

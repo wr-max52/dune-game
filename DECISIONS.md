@@ -1268,3 +1268,34 @@ Every significant technical choice, the alternative, and why. Newest on top.
   licence of every file is on record. Re-encoded like the score (160 kb/s MP3,
   one loudness) by `tools/audio/rip_club.py`, which finds downloads by the
   Pixabay id in their file names.
+
+## 2026-10-31 — The cockpit's dash leans away, and its glass catches the light
+
+- **The dash is painted flat, then warped into perspective.** CockpitDash draws
+  the dash and instruments as before, into a SubViewport (1.5x, so it stays
+  crisp), and `cockpit_tilt.gdshader` draws that texture back behind CockpitView
+  with a one-parameter perspective (`CockpitView.TILT`): the bottom edge stays
+  put, and higher up the panel shrinks toward the middle and its rows crowd
+  together. The dials go oval and the plates' sides lean in, which a flat drawing
+  could not show. The cockpit is still painted (see issue #181 above); only the
+  dash is warped. `CockpitView.project()` is the same map forward, for the struts'
+  feet and tests. Alternative: projecting every draw call by hand. Rejected:
+  circles, arcs and text would each need their own warped version.
+- **Glints come from the real lights.** Each frame CockpitView finds the scene's
+  brightest DirectionalLight3D and the nearest nodes in the `glints` group (bolt.gd
+  joins it unless it is a thrown rock; ShipKit.build_bolt's space bolts join too),
+  in the camera's frame. `CockpitDash.glint()` reflects each one off a domed glass
+  in the leaning panel to place its highlight on every dial, and the chamfer and the
+  canopy pick them up too. The strength stays low (`SUN_GLINT`, `BOLT_FALLOFF`): it
+  should read as glass, not as a light show.
+- **The canopy frame is modelled, then projected.** The struts and the bow over the
+  glass are centre lines in metres round your eye (`CockpitView.strut_path`),
+  drawn through a 70° lens (`frame_project`) at a fixed thickness, so the nearer
+  a part is the wider it draws. The struts stand on the dash, then swell and sweep
+  out to the top corners as they pass over and behind your head; straight struts
+  narrowing upward read as leaning away from you, not over you.
+  The frame is lit like the dash, not shaded once: each member is drawn as a
+  metal tube in strips across its width, and `metal_shade()` lights each strip
+  from the same lights as the glints (a little sky, a wash, and a tight glare
+  where it reflects a light at you), so the glare slides round it as the sun and
+  bolts move.

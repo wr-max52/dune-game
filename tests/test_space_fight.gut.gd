@@ -172,6 +172,75 @@ func test_diving_out_breaks_off_and_rearms() -> void:
 	assert_false(pilot.atmo.reached_space, "the next climb out is a new sortie")
 
 
+# ---- the throttle across the switches ---------------------------------------------
+
+func test_zero_throttle_stops_her_in_the_fight_as_in_normal_flight() -> void:
+	var t = _town()
+	var pilot := _in_space(t)
+	_step(pilot, 120)
+	assert_not_null(pilot.fight)
+	var me = pilot.fight.player_flight()
+	pilot.set_external_command({ "throttle": 0.0 })
+	_step(pilot, 1)
+	assert_eq(me.target_speed(), 0.0, "zero throttle is a stop, not the fight's floor")
+	var before: float = me.speed
+	_step(pilot, 30)
+	assert_lt(me.speed, before, "and she slows toward it")
+	for s in pilot.fight.df.ships:
+		if not s.is_player:
+			assert_gt(s.flight.min_speed(), 0.0, "the fight's own ships keep their floor")
+			break
+
+
+func test_the_fight_lets_go_of_her_by_the_cruiser() -> void:
+	var t = _town()
+	var pilot := _in_space(t)
+	var c = t.cruiser
+	assert_not_null(c, "the home world has its cruiser")
+	var ap: Dictionary = c.cfg.approach
+	var off := float(ap.fight_off_radius)
+	var back := float(ap.fight_back_radius)
+	var out_dir: Vector3 = c.frame.basis * Vector3.RIGHT          # the bay's side
+	var at := func(d: float) -> void:
+		pilot.atmo.place_flying(c.frame.origin + out_dir * d, -out_dir, 100.0, 0.3)
+		if pilot.fight != null and pilot.fight.player_flight() != null:
+			pilot.fight.player_flight().position = pilot.atmo.position()
+	at.call(off + 100.0)
+	pilot.atmo.reached_space = true
+	assert_true(pilot.start_fight())
+	_step(pilot, 2)
+	assert_false(pilot.fight.sheltered, "past fight_off_radius the fight flies her")
+	at.call(off - 100.0)
+	_step(pilot, 2)
+	assert_true(pilot.fight.sheltered, "inside it normal flight has her for the bay")
+	at.call((off + back) * 0.5)
+	_step(pilot, 2)
+	assert_true(pilot.fight.sheltered, "and keeps her between the two radii, no flicker")
+	at.call(back + 100.0)
+	_step(pilot, 2)
+	assert_false(pilot.fight.sheltered, "past fight_back_radius she is back in it")
+
+
+func test_the_throttle_key_lifts_her_off_at_zero_throttle() -> void:
+	var t = _town()
+	var pilot: ShipPilot = t.pilot
+	t._player.global_position = t.town.spawn_pos()
+	assert_true(pilot.board(), "boards from the spawn")
+	pilot._throttle = 0.8                  # left over from before she landed
+	_step(pilot, 1)
+	assert_eq(pilot._throttle, 0.0, "parked is zero throttle")
+	Input.action_press("flight_throttle_up")
+	for i in 60 * 10:
+		_step(pilot, 1)
+		if pilot.atmo.state == AtmoFlight.State.FLYING:
+			break
+	Input.action_release("flight_throttle_up")
+	assert_eq(pilot.atmo.state, AtmoFlight.State.FLYING, "airborne")
+	_step(pilot, 1)
+	assert_eq(pilot._throttle, 0.0, "holding the key through the lift-off did not wind it up")
+	assert_eq(float(pilot.atmo._command.throttle), 0.0, "and the ship flies the throttle the HUD shows")
+
+
 # ---- detail by altitude --------------------------------------------------------------
 
 func test_detail_tiers_climb_and_come_back_with_hysteresis() -> void:

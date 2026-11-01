@@ -110,6 +110,26 @@ func test_docking_from_the_far_side_goes_over_the_hull_and_ends_over_the_pad() -
 	assert_between(last.y - pad.y, 5.0, 40.0, "low enough to set down, under the bay's ceiling")
 
 
+func test_the_docking_curve_leaves_along_her_heading_and_comes_in_straight_through_the_shield() -> void:
+	var from := Vector3(-400, 120, -60)
+	var pts := CruiserHull.dock_path(from)
+	var curve := ShipPilot.dock_curve(from, Vector3.FORWARD, pts)
+	var length := curve.get_baked_length()
+	assert_almost_eq(curve.sample_baked(0.0).distance_to(from), 0.0, 0.01, "starts where she is")
+	var lead := curve.sample_baked(1.0) - from
+	assert_gt(lead.normalized().dot(Vector3.FORWARD), 0.95, "and carries on the way she was going")
+	var last: Vector3 = pts[pts.size() - 1]
+	assert_almost_eq(curve.sample_baked(length).distance_to(last), 0.0, 0.01, "ends over the pad")
+	var pz: float = CruiserHull.dock_pad().at.z
+	var through := curve.get_closest_offset(Vector3(CruiserHull.BAY_X.y + 0.5, last.y, pz))
+	var s := through - 120.0
+	while s < length:
+		var w := curve.sample_baked(s, true)
+		assert_almost_eq(w.z, pz, 0.5, "in line with the pad from off the mouth: %s" % w)
+		assert_almost_eq(w.y, last.y, 0.5, "at the shield's height: %s" % w)
+		s += 10.0
+
+
 func test_the_general_ends_the_fleet_chapter_and_the_dogfight_does_not() -> void:
 	var ids := Story.chapter_ids()
 	assert_eq(ids.find("cruiser"), -1, "one chapter: the fleet is the general on the cruiser")

@@ -108,6 +108,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		chase.toggle_mode()
 	if _action_pressed(event, "flight_next_target"):
 		df.cycle_player_target()
+	if _action_pressed(event, "flight_radio"):
+		Sound.radio_next()                # issue #291: the ship's radio
 
 
 func _action_pressed(event: InputEvent, action: String) -> bool:

@@ -23,6 +23,21 @@ Plain English, newest on top. One entry per milestone.
 - Numbers are in content/core/hazards/beast.json: `turn_radius_m`,
   `min_turn_radius_m`, `chase_turn_radius_m`, `stuck_window_s`,
   `stuck_net_frac`, `unstick_s`, and the `look.stone` and `look.eyes` blocks.
+## Barracks and outposts stop you like the gate (2026-10-31, issue #308)
+
+- **Walk into the barracks yard or up to a Remnant outpost below 40 standing**
+  and the nearest trooper there walks over, asks for your papers, and the
+  gate's card opens: papers, a search (pockets and contraband), a bribe, mouth
+  off or walk away. The gate's rules all apply: a warning then shots when
+  you're wanted by day, one band softer at night, and bribes that go up as the
+  Remnant lose outposts.
+- **40 and up you just walk in.** A "move along" at most.
+- **Walk out before you answer and the card closes,** like walking away from
+  the gate. Once you're cleared, that place leaves you alone for a few minutes.
+- **Tunable in the data:** the yard is the town's `garrison` `checkpoints`
+  (the ground from the yard walls to the hall), and each outpost's ring is the
+  `zone` block in its location file (radius, who asks, how long a clearance
+  lasts).
 
 ## Outposts shoot back at speeders and ships (2026-10-31)
 
