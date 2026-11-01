@@ -271,7 +271,21 @@ func test_armour_after_the_bounty_triples_health() -> void:
 	gear.free()
 	WorldState.from_save(WorldState.to_save())
 	assert_true(WorldState.inventory.has("quantonium_armour"))
-	assert_eq(GearUpgrades.buy("quantonium_armour"), "", "sold once")
+	# He never runs out: sell it back to him and buy it again, as often as you like.
+	var fence: Dictionary = content.get_vendor("fence")
+	var it: Dictionary = content.get_item("quantonium_armour")
+	for i in 2:
+		assert_true(GearUpgrades.open_offers().has(GearUpgrades.offer("quantonium_armour")), "still on his stall")
+		var paid := WorldState.inventory.sell("quantonium_armour", it, fence)
+		assert_eq(paid, int(round(float(it.value) * float(fence.any_rate))), "he buys it back")
+		assert_false(WorldState.inventory.has("quantonium_armour"))
+		WorldState.credits = 1000
+		assert_eq(GearUpgrades.buy("quantonium_armour"), "bought", "and sells it again")
+		assert_true(WorldState.inventory.has("quantonium_armour"))
+	assert_lt(Inventory.sell_price(it, fence), int(GearUpgrades.offer("quantonium_armour").price), "no profit in the loop")
+	# An old save that marked it bought still sees it on sale.
+	WorldState.gear_fits.append("quantonium_armour")
+	assert_false(GearUpgrades.bought("quantonium_armour"))
 
 
 # ---- #213: who the first bounty is on ---------------------------------------------------------

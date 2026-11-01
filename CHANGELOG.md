@@ -9,6 +9,10 @@ Plain English, newest on top. One entry per milestone.
   else half, the gear trader's rate, so nothing bought in town sells there at a
   profit. Same for the station's fence. (`"*"` in a vendor's `buys`, paid at its
   `any_rate`.)
+- **The fence never runs out of quantonium armour.** Once your first bounty
+  unlocks it, it stays on his stall: buy it, sell it back to him (250), buy it
+  again (500), as often as you like. (An offer can be `"endless"` in fence.json;
+  the gun and jetpack upgrades are still once each.)
 - **A droid merchant you can see from town.** The Drywash Droid Relay moved a
   kilometre closer, to about 310 m straight out from the front gate. Its hut and
   tall mast show through the gate from the street, and its counter faces the town.
