@@ -1235,9 +1235,9 @@ func _read_keys(dt: float) -> void:
 			return
 	else:
 		_eject_hold = 0.0
-	if st == AtmoFlight.State.FLYING and _just("crouch_act"):
-		bay_landing = false
-		docking = false
+	# C lands from where she is; with Z's autopilot flying her in it does nothing (it
+	# used to drop the autopilot, and from any height land() refuses: dead stop, free).
+	if st == AtmoFlight.State.FLYING and _just("crouch_act") and not bay_landing and not docking:
 		land()
 	if st == AtmoFlight.State.FLYING and _just("bay_land"):
 		if bay_landing or docking:
