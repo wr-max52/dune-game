@@ -31,7 +31,9 @@ Every new id also goes in `content/core/manifest.json` under `ships`, `weapons`,
      interceptor's 48 m/s cruise 480 m/s, its edge-of-space speed. Write the numbers
      at the old slow scale and keep them in proportion to the other ships.
    - `hardpoints`: each is a weapon id and a `mount` point in the ship's own space
-     (metres; forward is -Z, up is +Y, right is +X).
+     (metres; forward is -Z, up is +Y, right is +X). Every ship carries a
+     secondary weapon: for now that is one `ship_missile` (the seeker rack) under
+     the nose (`tests/test_ship_combat.gut.gd` checks it).
    - `convergence`: how far ahead the fixed guns cross.
    - `blaster_power`: multiplies every gun's damage (1.0 = as the weapon data says).
    - `flight.ability`: what Shift does. `{ "kind": "boost" }` (default),

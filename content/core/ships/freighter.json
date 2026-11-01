@@ -61,6 +61,14 @@
         -1.0,
         -1.0
       ]
+    },
+    {
+      "weapon": "ship_missile",
+      "mount": [
+        0.0,
+        -1.4,
+        -1.2
+      ]
     }
   ],
   "atmosphere": {
@@ -86,7 +94,7 @@
     "body_radius": 3.8,
     "clearance": 1.0
   },
-  "note": "IP-neutral (issue #43). A round industrial disc hauler: tough and slow, four guns on a centre turret, and Shift drifts: it keeps sliding while the nose swings round, so it can fire behind itself.",
+  "note": "IP-neutral (issue #43). A round industrial disc hauler: tough and slow, four guns on a centre turret and a seeker rack, and Shift drifts: it keeps sliding while the nose swings round, so it can fire behind itself.",
   "naming": {
     "kind": "person_drift",
     "callsign": true,

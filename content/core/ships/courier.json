@@ -44,6 +44,14 @@
         0.0,
         -1.5
       ]
+    },
+    {
+      "weapon": "ship_missile",
+      "mount": [
+        0.0,
+        -0.6,
+        -1.8
+      ]
     }
   ],
   "atmosphere": {
@@ -69,7 +77,7 @@
     "body_radius": 2.0,
     "clearance": 1.0
   },
-  "note": "IP-neutral (issue #43). A rocket with wings for private travel and fast executive deliveries: the fastest small ship in the port and the lightest, two small cannons, and a long boost on Shift.",
+  "note": "IP-neutral (issue #43). A rocket with wings for private travel and fast executive deliveries: the fastest small ship in the port and the lightest, two small cannons and a seeker rack, and a long boost on Shift.",
   "naming": {
     "kind": "person_drift",
     "callsign": true,
