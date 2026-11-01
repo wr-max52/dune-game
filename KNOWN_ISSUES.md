@@ -2,6 +2,16 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #307, silent sword kills (2026-10-31)
+
+**Checked:** compiles; not playtested. As the issue asked, there is no new
+test. Headless `-s` runs can't build NPC bodies right now (NpcVoice isn't
+loaded in that mode), so it can't be traced either.
+
+- **Finding a body has no wall check.** A guard "sees" a body within 16 m in
+  their sight cone, even through a wall.
+- **Hiding bodies isn't possible.** They stay where they fall.
+
 ## After the beast's rock shell and unstick pass (2026-11-01)
 
 **Checked:** `test_smoke`, a headless boot of the town, the beast trace (every

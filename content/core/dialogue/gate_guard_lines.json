@@ -95,6 +95,10 @@
       "Back to the gate.",
       "Forget it. Back on post."
     ],
+    "found_body": [
+      "Hey! Who did this?",
+      "Body here! We've got a killer loose!"
+    ],
     "man_down": [
       "Man down!",
       "They got him!"

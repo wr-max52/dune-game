@@ -99,6 +99,8 @@ var confiscated: Array = []       ## item ids taken by searches
 var _rng := RandomNumberGenerator.new()
 var _had_gate := false
 var _attacked := false
+var unfound: Array = []         ## issue #307: bodies of silent sword kills nobody has found yet
+var silent_kills := 0           ## (traces)
 var _lock_left := 0.0
 var _ko_left := 0.0
 var _ko_done := false
@@ -306,6 +308,8 @@ func _physics_process(dt: float) -> void:
 				_say(g, "contact")
 				_raise("vehicle")
 				break
+	if not alarm.active():
+		_find_bodies(alive)
 	if _attacked:
 		_raise("attacked")
 	_attacked = false
@@ -700,6 +704,9 @@ func choose(id: String) -> bool:
 
 func _on_guard_hit(shooter: Node, _amount: float, g: NpcBody) -> void:
 	if _is_player(shooter):
+		if SilentKill.unaware_cut(g):
+			_check_cut.call_deferred(g)        # issue #307: silent if the cut killed him unseen
+			return
 		_attacked = true
 		brains[g].notify_hit()
 	elif shooter != null:
@@ -724,9 +731,36 @@ func _on_guard_died(g: NpcBody) -> void:
 		WorldState.on_guard_reward(reward)
 		rewards_paid += reward
 		hud.toast("+%d cr" % reward, 2.0)
+	if SilentKill.unaware_cut(g) and not SilentKill.witnessed(g, left):
+		silent_kills += 1                  # issue #307: cut down unseen; the body waits to be found
+		unfound.append(g)
+		return
 	if not left.is_empty():
 		_say(_nearest(left, g.global_position), "man_down")
 		_attacked = true      # a trooper dropping is a fight, whoever started it
+
+
+## Issue #307: an unaware trooper was cut. Dead and unseen: nobody knows. Still
+## standing, or someone saw: it is a fight.
+func _check_cut(g: NpcBody) -> void:
+	if is_instance_valid(g) and g.dead and not SilentKill.witnessed(g, _alive()):
+		return
+	_attacked = true
+	if is_instance_valid(g) and brains.has(g):
+		brains[g].notify_hit()
+
+
+## Issue #307: a trooper who walks within sight of a silent kill finds the body.
+func _find_bodies(alive: Array) -> void:
+	if unfound.is_empty():
+		return
+	unfound = unfound.filter(func(b): return is_instance_valid(b))
+	var f := SilentKill.finder(alive, unfound)
+	if f.is_empty():
+		return
+	unfound.erase(f[1])
+	_say(f[0], "found_body" if lines.has("found_body") else "man_down")
+	_attacked = true
 
 
 # ------------------------------------------------------------------ the player
