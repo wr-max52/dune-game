@@ -89,6 +89,7 @@ var dev_settings: DevSettingsPanel    ## F11: time of day, standing, trust, play
 var detail: AltitudeDetail            ## issue #46: less to draw and run the higher you fly
 var speeder_post: SpeederPost         ## issue #42: Skrugs's stall outside the back gate, and the speeders
 var mechanic: MechanicYard            ## issue #95: Dorrin's speeder yard out in the desert
+var harmful_surface: HarmfulSurface    ## issue #298: no air outside without armour (the asteroid)
 var barge: PartyBarge                 ## issue #269: the planet's party barge, if it has one
 var beast: PlanetBeast                ## issue #220: the planet's beast (a deadly purple blob), if it has one
 var natives: NativesDirector          ## issue #96: the planet's native packs and wild animals
@@ -302,6 +303,11 @@ func build_plan(staged_build: bool) -> Array:
 			add_child(barge)
 			if player_kit != null:
 				player_kit.weapons.off_record_zone = barge.off_record
+		return true)
+	add.call("surface", LATER, func():
+		if not HarmfulSurface.config(planet).is_empty() and _player != null:
+			harmful_surface = HarmfulSurface.new().setup(self, HarmfulSurface.config(planet))
+			add_child(harmful_surface)
 		return true)
 	add.call("beast", LATER, func():
 		if with_beast and pilot != null and terrain != null and PlanetBeast.lives_on(planet):
