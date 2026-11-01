@@ -13,6 +13,13 @@ Plain English, newest on top. One entry per milestone.
   before he comes again. He runs in from far away and walks in from close up.
   Step into his reach while he circles and he cuts at you once, then backs off
   again. After you parry him he staggers, then backs off.
+## Map zoom buttons and off-planet icons (2026-11-01)
+
+- **Zoom buttons.** The F11 map's globe has + and - buttons in its top-left
+  corner. Each press zooms twice as far in or out, alongside the mouse wheel.
+- **Off-planet icons.** Each place in the sky has an icon beside it: a ringed
+  planet for a planet you can fly to, a red wedge for the Remnant cruiser.
+  Looks: content/look/map.json.
 
 ## The barracks change hands back and forth (2026-11-01)
 

@@ -101,3 +101,23 @@ func test_surface_waypoint_only_on_its_planet() -> void:
 	assert_true(GlobeMap.waypoint().is_empty())
 	GameFlow.planet_id = PlanetGen.home_id()
 	assert_false(GlobeMap.waypoint().is_empty())
+
+
+func test_zoom_buttons_zoom_the_globe() -> void:
+	var g := GlobeView.new()
+	add_child_autofree(g)
+	var zin: Button = g.find_child("ZoomIn", true, false)
+	var zout: Button = g.find_child("ZoomOut", true, false)
+	assert_not_null(zin)
+	assert_not_null(zout)
+	zin.pressed.emit()
+	assert_almost_eq(g.zoom, GlobeView.BUTTON_STEP, 0.001)
+	zout.pressed.emit()
+	zout.pressed.emit()
+	assert_almost_eq(g.zoom, GlobeView.ZOOM_MIN, 0.001, "never past all the way out")
+
+
+func test_off_planet_kinds_have_icons() -> void:
+	var pins: Dictionary = GlobeMap.look().get("pins", {})
+	for kind in ["planet", "cruiser"]:
+		assert_true(pins.has(kind), "an icon for " + kind)
