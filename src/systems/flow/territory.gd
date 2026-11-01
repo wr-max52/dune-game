@@ -15,6 +15,11 @@ extends RefCounted
 ##                 every local guard on its posts is dead, the Remnant take it
 ##                 back (town_retaken), hostile or (on the dark master's oath) not.
 ##                 Driving them off every outpost again gives it back to the locals.
+##                 Once the fleet is beaten, a dead Remnant trooper at the
+##                 barracks stays dead (control.remnant_dead); the last one hands
+##                 the town to the locals (free_town). Driven off, the Remnant come
+##                 back only this way: kill every local guard at the barracks.
+##                 The town scene swaps the people over once you are out of sight.
 ##
 ## What it changes: who stands at each place (RemnantOutposts, the town scene and
 ## DroidController ask owner()), the gate checkpoint (gate_strict, bribe_mult),
@@ -98,6 +103,7 @@ static func take(id: String) -> void:
 	if lost() == Story.OUTPOSTS.size():
 		WorldState.set_flag(DRIVEN_OFF)
 		WorldState.set_flag(RETAKEN, false)
+		WorldState.control.erase("remnant_dead")
 		_cancel_supply()
 		WorldState.log_event(line("driven_off"))
 	_sync_flags()
@@ -170,15 +176,53 @@ static func barracks_guard_died(post: String) -> void:
 		retake_town()
 
 
-## The Remnant hold the town's barracks again.
+## The Remnant hold the town's barracks again. Driven off, this is how they come
+## back: the outposts the locals hold start running down again from a full hold.
 static func retake_town() -> void:
-	if WorldState.has_flag(RETAKEN) or WorldState.has_flag(DRIVEN_OFF):
+	if owner(BARRACKS) != LOCALS:
 		return
+	if WorldState.has_flag(DRIVEN_OFF):
+		WorldState.set_flag(DRIVEN_OFF, false)
+		for id in held():
+			WorldState.control[id].hold = n("hold_s", 900.0)
 	WorldState.set_flag(RETAKEN)
 	WorldState.control.erase("barracks_dead")
+	WorldState.control.erase("remnant_dead")
 	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("town_retaken", -20)), line("town_retaken"))
 	DarkPact.on_town_retaken()
+	_sync_flags()
 	WorldState.checkpoint("town_retaken")
+
+
+## Remnant trooper posts at the barracks whose trooper is dead. Once the fleet is
+## beaten they do not come back: the last one hands the town to the locals.
+static func remnant_dead() -> Array:
+	var d = WorldState.control.get("remnant_dead", [])
+	return d if d is Array else []
+
+
+## A Remnant trooper on barracks post `post` died; `posts` are all the town's
+## trooper posts. Before the fleet is beaten they respawn and nothing changes.
+static func remnant_guard_died(post: String, posts: Array) -> void:
+	if not Story.remnant_gone() or owner(BARRACKS) != REMNANT or not posts.has(post):
+		return
+	var dead := remnant_dead()
+	if not dead.has(post):
+		dead.append(post)
+	WorldState.control["remnant_dead"] = dead
+	if posts.all(func(p): return dead.has(p)):
+		free_town()
+
+
+## The locals hold the town's barracks again (every Remnant trooper there dead).
+static func free_town() -> void:
+	if not WorldState.has_flag(RETAKEN) or WorldState.has_flag(DRIVEN_OFF):
+		return
+	WorldState.set_flag(RETAKEN, false)
+	WorldState.control.erase("remnant_dead")
+	WorldState.control.erase("barracks_dead")
+	WorldState.change_standing("locals", int(cfg().get("standing", {}).get("town_freed", 10)), line("town_freed"))
+	WorldState.checkpoint("town_freed")
 
 
 ## The Remnant hold the whole planet: the town's barracks, and not one outpost lost.
