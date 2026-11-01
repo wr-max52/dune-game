@@ -125,8 +125,8 @@ func material_for(town, b: Dictionary) -> Material:
 				return mats.plaster(0.0, 2.0, LookMaterials.REMNANT_OXBLOOD)
 		"ship":
 			return mats.hull(-6.0, 4.0)
-		"pad":
-			return mats.flat(Color("#4a4642"), 0.85)    # issue #58: the empty pad's plate
+		"pad":                                       # issue #58: the empty pad's plate
+			return mats.pad_metal(minf(float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2])) * 0.5, _pad_dust())
 		"bowl":
 			return mats.plaster(-6.0, -1.0, LookMaterials.CLOTH_SAFFRON)
 		"spiral", "lookout":
@@ -150,6 +150,32 @@ func _apply_materials(town) -> void:
 				push_warning("TownDecor: no decor material for kind '%s' (keeps greybox)" % key)
 			continue
 		mi.material_override = m
+
+
+## How much sand has blown onto the pads: the port's own look is the desert's; a
+## styled town with metal walls is a sealed station.
+func _pad_dust() -> float:
+	if style == null or style.is_identity():
+		return 0.45
+	return 0.0 if style.metal_walls else 0.25
+
+
+## A round steel plate on the floor at `at` (its own mesh, not batched: the shader
+## lays its rings out from the mesh's centre). Visual only, like the empty pads'.
+func _pad_plate(at: Vector3, radius := 6.0, height := 0.03) -> void:
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius
+	cm.bottom_radius = radius
+	cm.height = height
+	cm.radial_segments = 48
+	cm.rings = 1
+	var mi := MeshInstance3D.new()
+	mi.name = "PadPlate"
+	mi.mesh = cm
+	mi.material_override = mats.pad_metal(radius, _pad_dust())
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = at + Vector3(0, height * 0.5, 0)
+	add_child(mi)
 
 
 # ---------------------------------------------------------------- buildings
@@ -390,6 +416,8 @@ func _dress_spaceport(town) -> void:
 			continue
 		var bc := (_v3(b.min) + _v3(b.max)) * 0.5
 		var fy := float(b.max[1] if str(b.kind) == "pad" else b.min[1]) + 0.01
+		if str(b.kind) == "ship":
+			_pad_plate(Vector3(bc.x, float(b.min[1]), bc.z))    # the same steel plate under a parked ship
 		kit.put(LookMeshKit.ring_segment(6.0, 6.35, fy, fy + 0.02, 0.0, TAU, 48), paint, Transform3D(Basis.IDENTITY, Vector3(bc.x, 0, bc.z)))
 		kit.solid = true
 		for k in 4:
