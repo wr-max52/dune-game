@@ -112,3 +112,75 @@ func test_control_is_saved() -> void:
 	WorldState.from_save(JSON.parse_string(JSON.stringify(d)))
 	assert_eq(Territory.owner(NEAR), Territory.LOCALS)
 	assert_almost_eq(Territory.hold_left(NEAR), Territory.n("hold_s", 900.0) - 100.0, 0.01)
+
+
+# ------------------------------------------------------------------ the barracks back and forth
+
+const POSTS := ["trooper_gate_n", "trooper_gate_s", "trooper_tower", "trooper_yard_a", "trooper_yard_b", "trooper_roof_w"]
+
+
+func _kill_locals() -> void:
+	for post in Territory.barracks_posts():
+		Territory.barracks_guard_died(str(post))
+
+
+func _kill_remnant(posts: Array = POSTS) -> void:
+	for post in posts:
+		Territory.remnant_guard_died(str(post), POSTS)
+
+
+func test_before_the_fleet_is_beaten_dead_troopers_change_nothing() -> void:
+	_kill_remnant()
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.REMNANT)
+	assert_true(Territory.remnant_dead().is_empty(), "they respawn as before")
+
+
+func test_the_barracks_change_hands_back_and_forth() -> void:
+	WorldState.set_flag("remnant_fleet_beaten")
+	for round in 3:
+		_kill_locals()
+		assert_eq(Territory.owner(Territory.BARRACKS), Territory.REMNANT, "the Remnant back, round %d" % round)
+		var before := int(WorldState.standing.locals)
+		_kill_remnant()
+		assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS, "the locals back, round %d" % round)
+		assert_gt(int(WorldState.standing.locals), before, "the locals like it")
+		assert_true(Territory.barracks_dead().is_empty() and Territory.remnant_dead().is_empty(), "fresh guards each time")
+
+
+func test_every_trooper_must_die_and_the_dead_stay_dead_through_a_save() -> void:
+	WorldState.set_flag("remnant_fleet_beaten")
+	_kill_locals()
+	_kill_remnant(POSTS.slice(0, POSTS.size() - 1))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.REMNANT, "one trooper left")
+	var d := WorldState.to_save()
+	WorldState.reset()
+	WorldState.from_save(JSON.parse_string(JSON.stringify(d)))
+	assert_eq(Territory.remnant_dead().size(), POSTS.size() - 1, "the dead are saved")
+	_kill_remnant([POSTS.back()])
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS)
+
+
+func test_driven_off_the_remnant_come_back_only_through_the_barracks() -> void:
+	WorldState.set_flag("remnant_fleet_beaten")
+	for id in Story.OUTPOSTS:
+		Territory.take(str(id))
+	Territory.tick(100000.0)
+	assert_eq(Territory.lost(), Story.OUTPOSTS.size(), "not on their own")
+	_kill_locals()
+	assert_false(WorldState.has_flag(Territory.DRIVEN_OFF))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.REMNANT, "they retake the town")
+	assert_eq(Territory.lost(), Story.OUTPOSTS.size(), "the outposts stay the locals' for now")
+	assert_almost_eq(Territory.hold_left(NEAR), Territory.n("hold_s", 900.0), 0.01, "from a full hold")
+	Territory.tick(Territory.n("hold_s", 900.0) + 1.0)
+	assert_eq(Territory.lost(), 0, "then they fall to the Remnant unless supplied")
+	assert_true(Territory.remnant_planet())
+
+
+func test_driving_them_off_again_still_hands_the_locals_the_town() -> void:
+	WorldState.set_flag("remnant_fleet_beaten")
+	_kill_locals()
+	_kill_remnant(POSTS.slice(0, 2))
+	for id in Story.OUTPOSTS:
+		Territory.take(str(id))
+	assert_eq(Territory.owner(Territory.BARRACKS), Territory.LOCALS)
+	assert_true(Territory.remnant_dead().is_empty(), "the tally goes with them")

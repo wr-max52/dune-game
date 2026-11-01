@@ -2,6 +2,24 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The barracks change hands back and forth (2026-11-01)
+
+- **Kill every Remnant trooper at the barracks and the locals take the town
+  back.** Once the fleet is beaten (after the general's death, in story or free
+  roam), a trooper you kill at the barracks stays dead, through a reload too.
+  When the last one is down, the locals move in and like you a little more.
+  Before the fleet is beaten nothing changes: they come back after a minute.
+- **It goes on as long as you like.** Kill the locals' guards there and the
+  Remnant come back; kill the Remnant and the locals come back.
+- **Nobody moves in while you watch.** The new side takes the barracks once no
+  post is on screen and you are 40 m away, or once you are 110 m away. Until
+  then the barracks stand empty.
+- **Driving the Remnant off is no longer for ever.** Holding all seven outposts
+  still hands the locals the town, and the outposts still never fall on their
+  own. But kill every local guard at the barracks and the Remnant retake the
+  town; the outposts the locals hold start running down again from a full
+  hold, and fall one by one unless Oda's supply runs keep them.
+
 ## A globe map in F11, and five settings pages (2026-10-31)
 
 - **Map page.** F11 (or M) opens on a small globe of the home planet with an

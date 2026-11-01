@@ -2,6 +2,24 @@
 
 Every significant technical choice, the alternative, and why. Newest on top.
 
+## 2026-11-01 — The barracks change hands back and forth
+
+- **Dead troopers at the barracks stay dead once the fleet is beaten.** The
+  town's troopers came back after 60 s, so the locals could never win the
+  barracks by fighting for it. A tally per post in `WorldState.control`
+  (`remnant_dead`, like the locals' `barracks_dead`) and no respawn after the
+  fleet is beaten make "kill them all" possible and keep it over a reload.
+  Alternative: pause the respawn only while you are fighting there. Rejected:
+  leaving and coming back would undo the fight.
+- **The swap waits until you can't see the barracks.** Same idea as the
+  outposts (`RemnantOutposts._tick_control`), but stricter: the locals don't
+  walk in after `move_in_s` while you watch. The first look at load is free,
+  so a save loads with the right side already there.
+- **Driven off, the Remnant come back only through the barracks.** The
+  player's choice: no slow return on their own. Killing every local guard at
+  the barracks clears `remnant_driven_off`, and the locals' outposts start
+  again from a full hold so they don't all fall on the next tick.
+
 ## 2026-10-31 — AI characters off by default; the cloud picks its provider from the key (issue #328)
 
 - **AI characters are one switch, off on a fresh install** (`ai_enabled` in
