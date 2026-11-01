@@ -396,18 +396,32 @@ func _sellable(v: Dictionary) -> Array:
 
 
 ## A stall's menu: talk (a keeper with a brain), what it buys from you, what it
-## sells, and the fence's offers. [{ id, text }]; empty = nothing to trade.
+## sells, and the fence's offers. [{ id, text, job? }]; empty = nothing to trade.
+## While a smuggling run for this stall waits on the sale, the goods that close it
+## come first, marked "job" (the menu shows them green, the cursor on them), the
+## drop's own goods at the very top.
 func trade_options(v: Dictionary) -> Array:
 	var out: Array = []
 	if v.has("offers") and vendor_talk.has(str(v.get("id", ""))):
 		out.append({ "id": "talk", "text": _l("talk") })     # issue #188: the fence is an AI character
+	var run := bool(v.get("buys", []).has("contraband")) and WorldState.fence_run_open(str(v.get("location", "")))
+	var job_rows: Array = []
 	for id in _sellable(v):
 		var it: Dictionary = content.get_item(str(id))
 		var shown := _shown(it, str(id)) + (_l("worn") if inv().in_slot(str(it.get("slot", ""))) == str(id) else "")
 		var n := inv().count(str(id))
 		var price := Inventory.sell_price(it, v)
-		out.append({ "id": "sell:" + str(id),
-			"text": _l("sell_row_many") % [shown, n, price] if n > 1 else _l("sell_row") % [shown, price] })
+		var row := { "id": "sell:" + str(id),
+			"text": _l("sell_row_many") % [shown, n, price] if n > 1 else _l("sell_row") % [shown, price] }
+		if run and bool(it.get("contraband", false)):
+			row["job"] = true
+			if str(id) == str(WorldState.smuggle.get("item", "")):
+				job_rows.push_front(row)
+			else:
+				job_rows.append(row)
+		else:
+			out.append(row)
+	out = job_rows + out
 	var stock := inv().vendor_stock(v)
 	var seen := {}
 	for id in stock:

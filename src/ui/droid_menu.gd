@@ -9,9 +9,13 @@ extends CanvasLayer
 ## walks away. A shop that reopens the menu from its pick
 ## callback (open with keep_cursor) stays where it was, so you can buy or sell
 ## again without starting over. Long lists scroll.
+##
+## A row marked "job" (what you are delivering for a job you have open) is green,
+## and a fresh menu opens with the cursor on the first one.
 
 const INK := Color(0.95, 0.92, 0.85, 0.95)
 const AMBER := Color("#e0a050")
+const JOB_GREEN := Color("#6ee07a")   ## coloured, so RetroSkin leaves it be
 const PANEL_W := 600.0             ## narrower on a small screen (or a big text size)
 const LIST_MAX_H := 330.0          ## rows past this scroll (less on a short screen)
 const KEY_W := 20.0                ## the cursor mark's column
@@ -94,7 +98,7 @@ func open(title: String, opts: Array, pick: Callable, body: String = "", keep_cu
 			if str(options[i].id) == was:
 				at = i
 				break
-	selected = at if at >= 0 else (clampi(selected, 0, maxi(options.size() - 1, 0)) if keep_cursor else 0)
+	selected = at if at >= 0 else (clampi(selected, 0, maxi(options.size() - 1, 0)) if keep_cursor else first_job())
 	for i in options.size():
 		rows.append(str(options[i].text))
 	if panel == null:
@@ -115,6 +119,8 @@ func open(title: String, opts: Array, pick: Callable, body: String = "", keep_cu
 		key.size_flags_vertical = Control.SIZE_SHRINK_BEGIN     # level with the first line
 		line.add_child(key)
 		var text := _row_label(str(options[i].text))
+		if bool(options[i].get("job", false)):
+			text.add_theme_color_override("font_color", JOB_GREEN)
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART     # long offers wrap under the text, not the cursor
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(text)
@@ -124,6 +130,14 @@ func open(title: String, opts: Array, pick: Callable, body: String = "", keep_cu
 	_show_cursor()
 	panel.visible = true
 	_fit.call_deferred()     # again once RetroSkin has swapped the font in
+
+
+## The first row marked "job", or 0 when there is none.
+func first_job() -> int:
+	for i in options.size():
+		if bool(options[i].get("job", false)):
+			return i
+	return 0
 
 
 func _row_label(t: String) -> Label:
