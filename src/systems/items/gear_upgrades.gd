@@ -10,7 +10,9 @@ extends RefCounted
 ##       on paths in the target's data (a weapon file, or the jetpack item's
 ##       "jetpack.fuel"), put on by apply() where that data is used,
 ##   { id, label, price, item, requires }  an item, sold once (requires: WorldState's
-##       conditions, e.g. a bounty paid).
+##       conditions, e.g. a bounty paid). "endless": true = he never runs out: on
+##       sale whenever its conditions hold, bought and sold back as often as you like
+##       (the quantonium armour, like the nomads' stock).
 ## An offer with a "locked" hint shows on the menu before its conditions hold
 ## (locked_offers), so the player knows it is there and what opens it.
 
@@ -34,8 +36,10 @@ static func offer(id: String) -> Dictionary:
 	return {}
 
 
+## Bought for good: off the stall. Never true for an endless offer (an old save may
+## still list one in gear_fits).
 static func bought(id: String) -> bool:
-	return WorldState.gear_fits.has(id)
+	return WorldState.gear_fits.has(id) and not bool(offer(id).get("endless", false))
 
 
 ## The offers on the stall now: not bought yet, and their conditions hold.
@@ -62,7 +66,8 @@ static func buy(id: String) -> String:
 	if o.has("item") and not WorldState.inventory.room_for(str(o.item)):
 		return "full"
 	WorldState.credits -= int(o.get("price", 0))
-	WorldState.gear_fits.append(id)
+	if not bool(o.get("endless", false)):
+		WorldState.gear_fits.append(id)
 	if o.has("item"):
 		WorldState.inventory.add(str(o.item))
 	WorldState.log_event("Bought %s from the fence." % str(o.get("label", id)).to_lower())

@@ -64,10 +64,11 @@ func test_waypoint_drives_the_objective_and_saves() -> void:
 	GlobeMap.set_waypoint(pin, PlanetGen.home_id())
 	var o := Objective.current()
 	assert_eq(str(o.text), "Waypoint: Drywash Droid Relay")
-	assert_eq(str(o.target), "map:1000.0,850.0")
+	var at: Vector2 = pin.map
+	assert_eq(str(o.target), "map:%.1f,%.1f" % [at.x, at.y])
 	var saved := WorldState.to_save()
 	WorldState.reset()
-	assert_true(Objective.current().get("target", "") != "map:1000.0,850.0", "reset clears it")
+	assert_eq(GlobeMap.waypoint_id(), "", "reset clears it")
 	WorldState.from_save(saved)
 	assert_eq(GlobeMap.waypoint_id(), "droid_post_wash", "kept in the save")
 
