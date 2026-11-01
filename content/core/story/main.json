@@ -52,9 +52,9 @@
       "done_on": "smuggle_sold",
       "job": "j_smuggle_run",
       "skipped": { "counters": { "smuggle_sold": 1 } },
-      "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it. And a tip: that old cargo droid rolling round the pit has a jetpack inside it. Open it up. Nobody's going to miss it.",
-      "remind": "The drop's still out there, or still in your pockets. Get it to the fence. And open that cargo droid in the pit, if you haven't: there's a jetpack in it.",
-      "jetpack_hint": "And if a wall is in your way, that old cargo droid down in the pit has a jetpack inside it."
+      "intro": "Not bad. Here's real work: a drop for the fence in the market. Find it, keep it away from the Remnant at the front gate, sell it. And a tip: somebody hid a jetpack up on top of this cantina's tower. Take the stairs up and help yourself. Nobody's going to miss it.",
+      "remind": "The drop's still out there, or still in your pockets. Get it to the fence. And climb the cantina tower, if you haven't: there's a jetpack up top.",
+      "jetpack_hint": "And if a wall is in your way, there's a jetpack hidden up on top of this cantina's tower."
     },
     {
       "id": "droid_merchant",

@@ -215,19 +215,26 @@ func get_vendor(id: String) -> Dictionary:
 ## Pickups placed in a location (an empty list when there are none). Issue #237:
 ## in a town built to `layout`, an entry's "layouts": { <layout>: {...} } block
 ## (where it lies in that layout: marker, offset) is laid over it. Same id and
-## taken flag in every layout, so a pickup taken stays taken.
-func get_pickups(location_id: String, layout: String = "") -> Array:
+## taken flag in every layout, so a pickup taken stays taken. In a save of
+## `mode` (WorldState.mode), an entry's "modes": { <mode>: {...} } block is laid
+## over it first, the same way.
+func get_pickups(location_id: String, layout: String = "", mode: String = "") -> Array:
 	var list: Array = pickups.get(location_id, {}).get("pickups", [])
-	if layout == "":
+	if layout == "" and mode == "":
 		return list
 	var out: Array = []
 	for e in list:
-		var over: Dictionary = e.get("layouts", {}).get(layout, {})
-		if over.is_empty():
-			out.append(e)
-			continue
-		var d: Dictionary = e.duplicate(true)
-		d.merge(over, true)
+		var d: Dictionary = e
+		# A save mode's override ("modes": { "story": {..} }) goes first; it brings
+		# its own "layouts" when it moves the pickup somewhere else.
+		var by_mode: Dictionary = e.get("modes", {}).get(mode, {})
+		if not by_mode.is_empty():
+			d = e.duplicate(true)
+			d.merge(by_mode, true)
+		var over: Dictionary = d.get("layouts", {}).get(layout, {})
+		if not over.is_empty():
+			d = d.duplicate(true)
+			d.merge(over, true)
 		out.append(d)
 	return out
 

@@ -298,7 +298,7 @@ static func on_droid_delivered() -> void:
 ## Oda's mood after a line (or when the player takes her job). In the first
 ## smuggling run, amused or warm, she lent the player her jetpack, once, while
 ## the chapter had a "jetpack_line". Issue #210: it has none now (she tells you
-## about the one in the pit's cargo droid). Returns her line about it, or "".
+## about the one hidden on top of the cantina tower). Returns her line about it, or "".
 static func on_owner_mood(mood: String) -> String:
 	if chapter() != "smuggle_1" or WorldState.has_flag("story_jetpack_given") or not mood in ["amused", "warm"] \
 			or str(chapter_cfg().get("jetpack_line", "")) == "":

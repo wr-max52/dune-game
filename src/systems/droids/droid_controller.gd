@@ -1104,7 +1104,10 @@ func _haul(u: DroidUnit, hc: Dictionary, pause: float, dt: float) -> float:
 			moving = true
 	u.walk(dt, moving, float(hc.get("walk_speed", 1.3)) if moving else 0.0)
 	var load = gear.pickup_node(str(hc.get("carries", ""))) if gear != null else null
-	if load != null and is_instance_valid(load):
+	# Only while the pickup is its load: a story save puts the pit jetpack on the
+	# cantina tower instead (pickups/port_town.json, "modes"), and the hauler roams empty.
+	if load != null and is_instance_valid(load) \
+			and (str(load.pickup.get("inside", "")) != "" or bool(load.pickup.get("carried", false))):
 		var at := u.global_position + _up(u.global_position) * float(hc.get("load_lift", 1.05))
 		load.base = at
 		load.global_position = at
