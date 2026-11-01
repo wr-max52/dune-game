@@ -78,13 +78,13 @@ camera behind the ship.
 
 | Action | Key |
 |---|---|
-| Take off (straight up out of the pit) | Space (or R) when parked |
+| Take off (straight up out of the pit) | C (or R) when parked |
 | Throttle up / down (zero = hover) | R / F |
 | Pitch (W pushes the nose down) | W / S, or the mouse |
 | Turn | A / D, or the mouse |
 | Roll | Q / E |
 | Boost | Shift |
-| Land on whatever is below (under 150 m) | C |
+| Land on whatever is below (under 150 m) | C again |
 | Get out (once landed) | E |
 | Chase / cockpit view | V |
 
