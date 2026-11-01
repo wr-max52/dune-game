@@ -17,6 +17,29 @@ class FakePlayer extends CharacterBody3D:
 	var locked := false
 
 
+## Just enough of the town's ConversationHost for the pit meeting.
+class FakeHost extends ConversationHost:
+	func add_spot(s: TalkSpot) -> void:
+		spots.append(s)
+	func start_talk(s: TalkSpot = null) -> void:
+		talking = true
+		active = s
+	func end_talk() -> void:
+		talking = false
+		active = null
+
+
+## Just enough of the town for the general's walk out of the pit.
+class FakeDemo extends Node:
+	var nav = FakeNav.new()
+	var town = null
+
+
+class FakeNav extends RefCounted:
+	func path(from: Vector3, to: Vector3) -> PackedVector3Array:
+		return PackedVector3Array([from, from + Vector3(0, 0, 6), to])
+
+
 func before_each() -> void:
 	WorldState.new_game(WorldState.STORY)
 	content = CoreContent.new()
@@ -89,11 +112,11 @@ func test_the_pit_meeting_ends_in_a_search_and_a_hint_at_work() -> void:
 	Story.event("landed")
 	var g := _general()
 	g._begin_meeting()
+	for i in 3:
+		g._on_line({ "applied": [] })
+	assert_eq(g.verdict, "", "three lines: still talking")
 	g._on_line({ "applied": [] })
-	g._on_line({ "applied": [] })
-	assert_eq(g.verdict, "", "two lines: still talking")
-	g._on_line({ "applied": [] })
-	assert_eq(g.verdict, "search", "three lines: newcomers are searched")
+	assert_eq(g.verdict, "search", "four lines: newcomers are searched")
 	assert_eq(int(WorldState.standing.imperial_remnant), 0, "a routine search costs nothing")
 	assert_eq(g.said, g._line("droid_hint"), "he closes with the hint")
 	assert_eq(Quests.state("general_droids"), "open")
@@ -104,12 +127,66 @@ func test_the_pit_meeting_ends_in_a_search_and_a_hint_at_work() -> void:
 	assert_eq(Quests.state("general_droids"), "done", "the first droid finishes it")
 
 
+func test_the_meeting_opens_the_moment_you_climb_out_wherever_you_stand() -> void:
+	Story.event("landed")
+	var g := _general()
+	var h := FakeHost.new()
+	h.autosave = false                  # never the real save
+	add_child_autofree(h)
+	var p := FakePlayer.new()
+	add_child_autofree(p)
+	p.global_position = g.body.global_position + Vector3(14, 0, -8)
+	g.player = p
+	g.attach_host(h)
+	g._physics_process(0.016)
+	assert_true(g.meeting, "out of the ship, 16 m off: he is on you")
+	assert_eq(h.active, g.spot, "the talk is open")
+	assert_ne(g.spot.hold_line, "", "and you can't walk away")
+
+
+func test_after_the_search_he_walks_out_and_you_stay_put() -> void:
+	Story.event("landed")
+	var demo := FakeDemo.new()
+	add_child_autofree(demo)
+	var g := GeneralPost.new()
+	g.demo = demo
+	add_child_autofree(g)
+	var p := FakePlayer.new()
+	add_child_autofree(p)
+	p.global_position = Vector3(10, 0, 5)
+	g.player = p
+	g._begin_meeting()
+	for i in 4:
+		g._on_line({ "applied": [] })
+	assert_eq(g.verdict, "search")
+	var tod := WorldState.time_of_day
+	var pit: Vector3 = g.body.global_position
+	var him := g.body
+	g.talk_ended()
+	assert_eq(Story.chapter(), "t89")
+	assert_true(g.leaving(), "he walks out, no cut")
+	assert_eq(g.body, him, "the same man, not one at the barracks")
+	for i in 30:
+		g._physics_process(0.1)
+	assert_gt(him.global_position.distance_to(pit), 2.0, "on his way")
+	assert_almost_eq((him as MerchantNPC).move_speed, 1.6, 0.01, "walking legs")
+	for i in 2000:
+		if not g.leaving():
+			break
+		g._physics_process(0.1)
+	assert_false(g.leaving(), "in at the barracks")
+	assert_eq(g._where, "barracks")
+	assert_almost_eq(g.body.global_position.distance_to(g._spot(g.cfg.barracks)), 0.0, 0.01, "stood where he walked to")
+	assert_eq(p.global_position, Vector3(10, 0, 5), "you stand where you stood")
+	assert_eq(WorldState.time_of_day, tod, "the same time of day")
+
+
 func test_an_insolent_newcomer_is_searched_at_a_cost() -> void:
 	Story.event("landed")
 	var g := _general()
 	g._begin_meeting()
 	g.on_insult()
-	for i in 3:
+	for i in 4:
 		g._on_line({ "applied": [] })
 	assert_eq(g.verdict, "search")
 	assert_eq(int(WorldState.standing.imperial_remnant), -15, "the insult and the search")

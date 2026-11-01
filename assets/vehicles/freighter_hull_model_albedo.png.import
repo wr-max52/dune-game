@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bab282h0fndv2"
 path.s3tc="res://.godot/imported/freighter_hull_model_albedo.png-bce01625b5c5c4ff93328d736be91d4f.s3tc.ctex"
+path.etc2="res://.godot/imported/freighter_hull_model_albedo.png-bce01625b5c5c4ff93328d736be91d4f.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/vehicles/freighter_hull_model_albedo.png"
-dest_files=["res://.godot/imported/freighter_hull_model_albedo.png-bce01625b5c5c4ff93328d736be91d4f.s3tc.ctex"]
+dest_files=["res://.godot/imported/freighter_hull_model_albedo.png-bce01625b5c5c4ff93328d736be91d4f.s3tc.ctex", "res://.godot/imported/freighter_hull_model_albedo.png-bce01625b5c5c4ff93328d736be91d4f.etc2.ctex"]
 
 [params]
 

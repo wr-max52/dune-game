@@ -2,6 +2,22 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The general's pit meeting opens as you climb out (2026-11-01)
+
+- **Story mode: General Vask's talk opens the moment you step out of your
+  ship**, wherever you stand. Before, it only opened within 9 m of him, and
+  the ship's exit spot is about 14 m away, so nothing happened until you
+  walked over.
+- **The meeting lasts at most four of his lines.** If he gives no verdict (the
+  model calls neither let_go nor search), or no model answers (AI characters
+  off), his guards search you after the fourth. It was three lines with the AI
+  on and two with it off.
+- **Then he leaves.** He, his guard and his droid walk out of the pit to the
+  barracks on the town's navmesh in single file, instead of vanishing on the
+  spot. There's no cut: you stay where you stood and the time of day doesn't
+  change. Settings are under `meeting.leave` in content/core/npcs/general.json.
+- Test: tests/test_plot_buildout.gut.gd (opens from 16 m, four lines then
+  the search, the walk out with you and the time of day unchanged).
 ## Ships and speeders share an explosion sound (2026-11-01)
 
 - **Every ship and speeder that blows up now makes the same boom**, picked

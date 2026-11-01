@@ -15,6 +15,7 @@ var joints: Dictionary = {}
 var anim := BodyAnimator.new()
 var look_at_target: Node3D
 var mood_act := "idle"                ## "idle" | "thinking" | "talking"
+var move_speed := 0.0                 ## m/s while someone walks him (the general leaving the pit): his legs walk
 var _act_left := 0.0
 var _talk_energy := 0.0
 var _t := 0.0
@@ -62,7 +63,7 @@ func _process(dt: float) -> void:
 	_talk_energy = maxf(0.0, _talk_energy - dt * 2.5)
 	if joints.is_empty():
 		return
-	var out := anim.step(dt, { "speed": 0.0, "grounded": true, "upper": BodyAnimator.UPPER_HOLSTER })
+	var out := anim.step(dt, { "speed": move_speed, "grounded": true, "upper": BodyAnimator.UPPER_HOLSTER })
 	for jn in out.joints:
 		if joints.has(jn):
 			(joints[jn] as Node3D).rotation_degrees = out.joints[jn]

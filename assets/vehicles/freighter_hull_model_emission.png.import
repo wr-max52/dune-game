@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bf7r11sc0jrhg"
 path.s3tc="res://.godot/imported/freighter_hull_model_emission.png-1a341f2ff0b73b18e220b4e8e0a18521.s3tc.ctex"
+path.etc2="res://.godot/imported/freighter_hull_model_emission.png-1a341f2ff0b73b18e220b4e8e0a18521.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/vehicles/freighter_hull_model_emission.png"
-dest_files=["res://.godot/imported/freighter_hull_model_emission.png-1a341f2ff0b73b18e220b4e8e0a18521.s3tc.ctex"]
+dest_files=["res://.godot/imported/freighter_hull_model_emission.png-1a341f2ff0b73b18e220b4e8e0a18521.s3tc.ctex", "res://.godot/imported/freighter_hull_model_emission.png-1a341f2ff0b73b18e220b4e8e0a18521.etc2.ctex"]
 
 [params]
 
