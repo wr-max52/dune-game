@@ -2,6 +2,19 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Settings: set up an AI brain with a link or a prompt (2026-11-01)
+
+- **Ollama, the local server (llama.cpp) and the cloud each get two buttons** in
+  the AI settings (F10): **Link** opens the page to download it (ollama.com,
+  the llama.cpp project, platform.claude.com), and **Prompt** copies a set-up
+  prompt and shows it, headed "Give this to a coding agent with access to the
+  internet and your computer, in a trusted location (e.g.
+  ~/projects/desert-spaceport)."
+- The prompts name this machine's real game and settings folders, pick a model
+  by how much memory you have, and for the cloud leave the account, billing and
+  key to you (the key goes in the game's key box, never in a file in the project).
+  Text is in `content/core/llm/setup_help.json`.
+
 ## The general's pit meeting opens as you climb out (2026-11-01)
 
 - **Story mode: General Vask's talk opens the moment you step out of your

@@ -176,6 +176,9 @@ a cloud profile in F10 (any OpenAI-compatible URL + key, or Anthropic), or run
 Ollama; with nothing at all she answers from canned lines. Keys are stored in
 `user://llm/keys.cfg` or read from `DUNE_LLM_KEY`, never in the project.
 
+Under each of Ollama, the local server and cloud in F10 there is a **Link** (the
+download page) and a **Prompt** (copies a set-up prompt to give to a coding agent).
+
 Test her without playing:
 
 ```sh

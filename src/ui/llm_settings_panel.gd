@@ -22,6 +22,9 @@ var _elevenlabs_key: LineEdit
 var _elevenlabs_key_now: Label
 var _speech_speed: SpinBox
 var _result: Label
+var _prompt_box: VBoxContainer
+var _prompt_intro: Label
+var _prompt_text: TextEdit
 var _test_id := -1
 var _voice_settings_saved := true
 var _content: VBoxContainer
@@ -68,6 +71,30 @@ func _ready() -> void:
 		e.custom_minimum_size = Vector2(380, 0)
 		_fields[f[0]] = e
 		v.add_child(_row(f[1], e))
+		if (f[0] as String).ends_with("/model"):
+			v.add_child(_help_row((f[0] as String).get_slice("/", 0)))
+	_prompt_box = VBoxContainer.new()
+	_prompt_box.visible = false
+	v.add_child(_prompt_box)
+	_prompt_intro = Label.new()
+	_prompt_intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prompt_intro.custom_minimum_size = Vector2(600, 0)
+	_prompt_box.add_child(_prompt_intro)
+	_prompt_text = TextEdit.new()
+	_prompt_text.editable = false
+	_prompt_text.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	_prompt_text.custom_minimum_size = Vector2(600, 120)
+	_prompt_box.add_child(_prompt_text)
+	var pb := HBoxContainer.new()
+	_prompt_box.add_child(pb)
+	var copy := Button.new()
+	copy.text = "Copy prompt"
+	copy.pressed.connect(func(): _copy_prompt(_prompt_text.text))
+	pb.add_child(copy)
+	var hide_btn := Button.new()
+	hide_btn.text = "Hide"
+	hide_btn.pressed.connect(func(): _prompt_box.visible = false)
+	pb.add_child(hide_btn)
 	_cloud_type = OptionButton.new()
 	_cloud_type.add_item("openai_compat")
 	_cloud_type.add_item("anthropic")
@@ -117,6 +144,39 @@ func _row(label: String, c: Control) -> HBoxContainer:
 	h.add_child(l)
 	h.add_child(c)
 	return h
+
+
+## Under a provider's model: Link (its download page) and Prompt (set-up text for a
+## coding agent, copied and shown).
+func _help_row(id: String) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(130, 0)
+	h.add_child(spacer)
+	var link := Button.new()
+	link.text = "Link"
+	link.tooltip_text = "Open " + LLMSetupHelp.link(id)
+	link.pressed.connect(func(): OS.shell_open(LLMSetupHelp.link(id)))
+	h.add_child(link)
+	var prompt := Button.new()
+	prompt.text = "Prompt"
+	prompt.tooltip_text = "Copy a set-up prompt for a coding agent"
+	prompt.pressed.connect(func(): show_prompt(id))
+	h.add_child(prompt)
+	return h
+
+
+## Show the set-up prompt for `id` and put it on the clipboard.
+func show_prompt(id: String) -> void:
+	_prompt_intro.text = "%s: %s" % [str(LLMSetupHelp.provider(id).get("title", id)), LLMSetupHelp.intro()]
+	_prompt_text.text = LLMSetupHelp.prompt(id)
+	_prompt_box.visible = true
+	_copy_prompt(_prompt_text.text)
+
+
+func _copy_prompt(text: String) -> void:
+	DisplayServer.clipboard_set(text)
+	_result.text = "Prompt copied. " + LLMSetupHelp.intro()
 
 
 func toggle() -> void:
