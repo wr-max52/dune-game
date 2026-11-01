@@ -57,6 +57,7 @@
     "edge_speed_mult": 2.8,
     "speed_curve": 1.0,
     "climb_drag": 0.3,
+    "overspeed_brake": 1.0,
     "liftoff_height": 18.0,
     "liftoff_speed": 7.0,
     "land_max_agl": 150.0,
