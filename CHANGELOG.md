@@ -2,6 +2,18 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## Every ship has a seeker rack (2026-11-01)
+
+- **Every spaceship now carries a secondary weapon**, and for now that is
+  the seeker rack (four seekers, one back every 1.5 s). The Lanner courier,
+  the Frigatebird freighter, the Remnant's dark Frigatebird and the Remnant
+  fighter get one under the nose; the Kestrel, the Albatross and the
+  Remnant's Kestrel and heavy fighter already had one. T-89's stats for the
+  courier and the freighter now read "... and a seeker rack".
+- AI pilots still only fire seekers when their pilot profile says so
+  (`missile_use`), so rookie Remnant fighters carry the rack without using it.
+- Test: tests/test_ship_combat.gut.gd (every ship has a secondary, the seeker).
+
 ## T-89's menu, tidied (2026-11-01)
 
 - **[E] by T-89 is a short menu now**: Talk, "Buy or sell a ship", "Upgrade

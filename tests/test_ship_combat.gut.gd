@@ -135,8 +135,14 @@ func test_loadout_builds_hardpoints_from_data() -> void:
 	assert_eq(lo.hardpoints.size(), 3, "two cannons and a seeker rack")
 	assert_true(lo.has_group("primary"), "cannons are the primary group")
 	assert_true(lo.has_group("secondary"), "the seeker is the secondary group")
-	var fighter = ShipLoadout.new(content.get_ship("remnant_fighter"), content)
-	assert_false(fighter.has_group("secondary"), "the remnant fighter carries no seekers")
+
+
+func test_every_ship_carries_a_secondary_weapon() -> void:
+	for id in content.ships.keys():
+		var lo = ShipLoadout.new(content.get_ship(id), content)
+		assert_true(lo.has_group("secondary"), "%s has a secondary weapon" % id)
+		assert_eq(str(lo.group_config("secondary").get("id", "")), "ship_missile",
+			"%s's secondary is the seeker rack, for now" % id)
 
 
 func test_cannons_fire_linked_bolts_that_inherit_velocity() -> void:
