@@ -101,7 +101,7 @@ static func reset() -> void:
 	control = {}
 	map_waypoint = {}
 	objective_pin = ""
-	Quests.news.clear()
+	QuestNews.clear()
 	ship_fits = {}
 	wreck_ship = ""
 	kept_ships = []
@@ -308,6 +308,8 @@ static func on_range_cleared() -> void:
 static func on_contraband_sold() -> void:
 	if smuggle_drop().is_empty() and not carrying_contraband():
 		bump("smuggle_sold")
+		if smuggle_to() == "fence":
+			_cargo_delivered()
 		if bool(story.get("took_run", false)):
 			Story.event("smuggle_sold")
 
@@ -390,18 +392,27 @@ static func current_town_id() -> String:
 	return str(GameFlow.planet().get("town_id", "port_town"))
 
 
+## Takes job `id`, with a banner (QuestNews): "New Job", or "New Target" for a bounty.
 static func accept_job(id: String) -> bool:
-	if str(job(id).get("kind", "")) == "smuggle":
-		return _start_smuggle(job(id))
-	if str(job(id).get("kind", "")) == "bounty":
-		return _start_bounty(job(id))
-	if str(job(id).get("kind", "")) == "supply":
-		return Territory.start_supply()
-	if job(id).is_empty() or jobs_taken.has(id):
-		return false
-	jobs_taken[id] = "active"
-	log_event("Took the job: " + str(job(id).get("title", id)))
-	return true
+	var j := job(id)
+	var ok := false
+	match str(j.get("kind", "")):
+		"smuggle":
+			ok = _start_smuggle(j)
+		"bounty":
+			ok = _start_bounty(j)
+		"supply":
+			ok = Territory.start_supply()
+		_:
+			ok = not j.is_empty() and not jobs_taken.has(id)
+			if ok:
+				jobs_taken[id] = "active"
+				log_event("Took the job: " + str(j.get("title", id)))
+	if ok and str(j.get("kind", "")) == "bounty":
+		QuestNews.push("target_new", str(bounty.name))
+	elif ok:
+		QuestNews.push("job_taken", str(j.get("title", id)))
+	return ok
 
 
 static func _complete_jobs(trigger: String) -> void:
@@ -412,6 +423,7 @@ static func _complete_jobs(trigger: String) -> void:
 			credits += int(j.get("pays", 0))
 			set_flag("job_done_" + id)
 			log_event("Finished the job: " + str(j.get("title", id)))
+			QuestNews.push("job_done", str(j.get("title", id)))
 
 
 ## Issue #187: Oda's supply run, its text naming the outpost short of supplies
@@ -647,7 +659,18 @@ static func hand_over_contraband(standing_gain: int) -> int:
 	change_standing("imperial_remnant", standing_gain, "Someone handed the Remnant general a smuggler's stash.")
 	bump("repossessions")
 	log_event("Handed the general the contraband for %d cr." % pay)
+	if not carrying_contraband():
+		_cargo_delivered()
 	return pay
+
+
+## The drop put out reached whoever takes it: its banner, once per drop (the
+## next drop is a fresh `smuggle`). Loose contraband sold later is not news.
+static func _cargo_delivered() -> void:
+	if not bool(smuggle.get("out", false)) or bool(smuggle.get("delivered", false)):
+		return
+	smuggle["delivered"] = true
+	QuestNews.push("cargo_delivered", smuggle_goods_text())
 
 
 static func _item(id: String) -> Dictionary:
@@ -689,6 +712,7 @@ static func on_bounty_killed() -> void:
 	change_standing("imperial_remnant", -5)
 	change_standing("locals", 3)
 	log_event(str(Story.bounty_cfg().get("event_killed", "%s was found dead.")) % str(bounty.name))
+	QuestNews.push("target_killed", str(bounty.name))
 
 
 ## The Remnant general was shot dead in the barracks yard (not as Oda's bounty):
@@ -720,6 +744,7 @@ static func on_cruiser_taken(general: String, reward: Dictionary, line: String =
 	change_standing("smuggler", int(reward.get("smuggler", 0)))
 	set_flag("locals_hero")
 	log_event(line % general if line.contains("%s") else ("%s was killed aboard the Remnant cruiser." % general))
+	QuestNews.push("target_killed", general)
 	Story.event("cruiser_taken")
 	if not Story.remnant_gone():
 		# Issue #303: free roam too (no story chapter waits for it): the fleet is broken.
@@ -756,6 +781,7 @@ static func collect_bounty() -> int:
 	credits += pay
 	bump("bounties_paid")
 	bounty = { "run": int(bounty.run), "outpost": str(bounty.outpost), "state": "" }
+	QuestNews.push("bounty_paid", "+%d cr" % pay)
 	Story.event("bounty_paid")
 	return pay
 
