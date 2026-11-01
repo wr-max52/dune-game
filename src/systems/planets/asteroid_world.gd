@@ -99,6 +99,20 @@ func _ready() -> void:
 	_build_colliders()
 
 
+## Issue #298: is `p` under cover: inside the dome's ring, the hallway or the
+## landing pit (whose liner and shield close it)? Outside on the rock you can't
+## breathe (HarmfulSurface).
+func sheltered(p: Vector3) -> bool:
+	if st.is_empty():
+		return true
+	if Vector2(p.x - rc.x, p.z - rc.z).length() <= rw + 0.5:
+		return true
+	if not hall.is_empty() and p.x >= rc.x + rw - 1.0 and p.x <= float(hall.end) + 1.0 \
+			and absf(p.z) <= float(hall.half) + 0.5:
+		return true
+	return Vector2(p.x - pit_c.x, p.z - pit_c.z).length() <= pit_r + 0.5
+
+
 static func _v(a) -> Vector3:
 	return Vector3(float(a[0]), float(a[1]), float(a[2]))
 

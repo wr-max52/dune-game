@@ -41,6 +41,10 @@ static var dogfight_override: Variant = null
 ## the player flew in on from another planet ("" = none: the pad's own ship).
 static var planet_id := ""
 static var flown_ship := ""
+## Issue #113: the game opened from a save resumes where it was: the planet, then
+## the spot (resume_pos, taken once by the town's spawn). Once per run.
+static var resumed := false
+static var resume_pos := Vector3.INF
 
 static var _data: Dictionary = {}
 
@@ -166,6 +170,32 @@ static func reset() -> void:
 	dogfight_override = null
 	planet_id = ""
 	flown_ship = ""
+
+
+# ------------------------------------------------------------------ resume (issue #113)
+
+## Once per run, before the first town is built: the save's planet becomes the
+## one to build, and its spot the one to stand on. A planet that no longer exists
+## (or a save with no "where") leaves the home planet's spawn, as before.
+static func resume_from_save(path: String) -> bool:
+	if resumed:
+		return false
+	resumed = true
+	var w: Dictionary = load("res://src/systems/save/save_system.gd").where_in(path)
+	var id := str(w.get("planet", ""))
+	if id == "" or PlanetGen.build(id).is_empty():
+		return false
+	planet_id = "" if id == PlanetGen.home_id() else id
+	var p = w.get("pos", null)
+	resume_pos = Vector3(float(p[0]), float(p[1]), float(p[2])) if p is Array and (p as Array).size() == 3 else Vector3.INF
+	return true
+
+
+## The spot to stand on after a resume (INF = none), taken once.
+static func take_resume_pos() -> Vector3:
+	var p := resume_pos
+	resume_pos = Vector3.INF
+	return p
 
 
 # ------------------------------------------------------------------ planets (issue #45)

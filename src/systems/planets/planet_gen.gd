@@ -18,6 +18,8 @@ extends RefCounted
 ##   natives   -- issue #96: its native packs and wild animals (NativesData.resolve)
 ##   beast     -- its beast, if it has one: the "beast" block of its file ({} if none;
 ##                PlanetBeast.config lays it over content/core/hazards/beast.json)
+##   harmful_surface -- issue #298: you can't breathe on its surface without
+##                armour ({} = fine): the planet's own block, else its type's
 ##   barge     -- issue #269: its party barge, if it has one: the "barge" block of its
 ##                file ({} if none; PartyBarge.config lays it over
 ##                content/core/barges/party_barge.json)
@@ -158,6 +160,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 		"natives": natives,
 		"beast": cfg.get("beast", {}),
 		"barge": cfg.get("barge", {}),
+		"harmful_surface": cfg.get("harmful_surface", tcfg.get("harmful_surface", {})),
 	}
 
 

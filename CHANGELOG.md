@@ -20,6 +20,34 @@ Plain English, newest on top. One entry per milestone.
   crates behind each stall are plank crates with iron bands. The stall crates
   now collide (the others already did).
 
+## No air on the asteroid without armour (issue #298, 2026-10-31)
+
+- **The asteroid's rock has no air.** Step outside the station (past the dome,
+  the hallway and the landing pit) without armour on and you lose 5 health a
+  second, a straight line to death. A message says "Put on armour to roam this
+  planet's surface." every few seconds. Die out there and you wake as from any
+  other death.
+- **Armour keeps you breathing** (anything worn in the armour slot, e.g. the
+  Quantonium armour). Flying a ship is safe too.
+- **Any planet can be harmful**: a `harmful_surface` block on its type
+  (types.json; the asteroid has one) or on its own file, which wins. PlanetGen
+  passes it through and the town adds the hazard (HarmfulSurface). Shelter is
+  AsteroidWorld.sheltered(): the dome's ring, the hallway or the pit.
+- Test: tests/test_harmful_surface.gut.gd.
+## Saves remember where you were (issue #113, 2026-10-31)
+
+- **Quit on the station, load on the station.** The save now remembers which
+  planet you were on and where you stood on it (that planet's own coordinates).
+  Opening the game from that save builds that planet first and puts you back
+  on that spot.
+- The spot is only taken when you're standing on your own feet (not flying,
+  riding, falling or down). Otherwise the last good spot on that planet is
+  kept, or you get the planet's spawn.
+- Older saves, saves on a planet that no longer exists, a flight back from a
+  pad, and headless runs all start as before (the home planet's spawn).
+- Save: a `where` block ({ planet, pos }) via SaveSystem.set_where/get_where;
+  resume: GameFlow.resume_from_save / take_resume_pos (once per run).
+- Test: tests/test_save_where.gut.gd.
 
 ## Silent sword kills (issue #307, 2026-10-31)
 
