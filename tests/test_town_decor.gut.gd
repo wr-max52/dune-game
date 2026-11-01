@@ -184,6 +184,22 @@ func test_market_stalls_have_shade_and_wares_and_differ() -> void:
 		assert_gt((a as Node3D).global_position.y, 2.2, "canopies clear a standing head")
 
 
+## Issue #355: the stall each trader works from shows its trade and its items, and
+## the stalls are textured.
+func test_trader_stalls_show_their_trade() -> void:
+	var d = _demo(true)
+	var market = d.decor.market
+	var shows := {}
+	for id in market.wares:
+		shows[market.wares[id]] = id
+	for kind in ["food", "gear", "contraband", "droids"]:
+		assert_true(shows.has(kind), "a trader's stall shows %s" % kind)
+	if shows.has("gear"):
+		assert_true(market.items.has(shows.gear), "the gear trader's items are on its counter")
+		assert_gt(market.items.get(shows.gear, []).size(), 1, "more than one of them")
+	assert_not_null((market._wood as StandardMaterial3D).albedo_texture, "planks have a texture")
+
+
 func test_presets_switch() -> void:
 	var d = _demo(true)
 	var ys: Array = []

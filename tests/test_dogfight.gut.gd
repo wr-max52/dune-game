@@ -101,12 +101,36 @@ func test_player_guns_fire_on_the_trigger() -> void:
 	assert_eq(df.stats.shots, 2, "the trigger fires both cannons")
 
 
-func test_player_seekers_need_a_lock() -> void:
+func test_player_seekers_fire_without_a_lock_and_fly_straight() -> void:
 	var df = _start()
 	df.set_player_command(0, 0, 0, 0.5, false, false, true)
-	for i in 10:
-		df.step(1.0 / 60.0)
-	assert_eq(df.stats.missiles, 0, "no lock, no launch")
+	df.step(1.0 / 60.0)
+	assert_eq(df.stats.missiles, 1, "no lock still launches, like a bolt")
+	var p: Dictionary = df.projectiles.items.filter(func(x): return x.kind == "missile")[0]
+	assert_eq(int(p.target_id), -1, "an unlocked seeker chases nothing: it flies straight")
+
+
+func test_a_seeker_bursts_on_every_enemy_ship_near_its_hit() -> void:
+	var df = _start(1, true)
+	var me: Dictionary = df.get_ship(df.player_id)
+	var at: Vector3 = me.flight.position + Vector3(0, 0, -200)
+	var a: int = df.spawn_ship("remnant_fighter", Dogfight.TEAM_HOSTILE, at, Vector3(0, 0, 1))
+	var b: int = df.spawn_ship("remnant_fighter", Dogfight.TEAM_HOSTILE, at + Vector3(6, 0, 0), Vector3(0, 0, 1))
+	var far: int = df.spawn_ship("remnant_fighter", Dogfight.TEAM_HOSTILE, at + Vector3(400, 0, 0), Vector3(0, 0, 1))
+	var w: Dictionary = content.get_weapon("ship_missile")
+	df.events = []
+	df._resolve_hits([{ "uid": 1, "kind": "missile", "weapon_id": "ship_missile", "owner": df.player_id,
+		"team": Dogfight.TEAM_PLAYER, "target_id": a, "damage": float(w.damage), "point": at,
+		"splash_radius": float(w.splash_radius), "splash_damage": float(w.splash_damage),
+		"blast_size": float(w.blast_size) }])
+	var hit_ids := {}
+	for e in df.events:
+		if e.type == "hit":
+			hit_ids[int(e.id)] = str(e.kind)
+	assert_eq(hit_ids.get(a), "missile", "the ship it struck takes the seeker")
+	assert_eq(hit_ids.get(b), "splash", "a ship beside it takes the splash")
+	assert_false(hit_ids.has(far), "one far off does not")
+	assert_false(hit_ids.has(df.player_id), "nor does the shooter")
 
 
 func test_hits_damage_and_kills_are_reported() -> void:

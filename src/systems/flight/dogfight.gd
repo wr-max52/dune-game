@@ -186,7 +186,7 @@ func scale(key: String) -> float:
 ## A copy of a gun's or seeker's data blown up to the fight's speeds and distances.
 func _space_weapon(cfg: Dictionary) -> Dictionary:
 	var out := cfg.duplicate()
-	for k in ["range", "lock_range"]:
+	for k in ["range", "lock_range", "splash_radius"]:
 		if out.has(k):
 			out[k] = float(out[k]) * scale("range_scale")
 	if out.has("bolt_speed"):
@@ -324,13 +324,14 @@ func step(dt: float) -> Array:
 		elif s.is_player:
 			flight.set_command_dict(_player_cmd)
 			primary = _player_primary
-			secondary = _player_secondary and s.lock.is_locked()
+			# Seekers launch on the key, locked or not: unlocked they fly straight.
+			secondary = _player_secondary
 
 		flight.step(dt)
 		s.defense.step(dt)
 
 		var spawns: Array = s.loadout.fire(dt, flight.transform(), flight.velocity(), primary,
-			secondary, s.lock.target_id)
+			secondary, s.lock.target_id if s.lock.is_locked() else -1)
 		for sp in spawns:
 			var uid: int = projectiles.add(sp, s.id, s.team)
 			if sp.kind == "missile":
@@ -434,25 +435,42 @@ func _resolve_hits(hits: Array) -> void:
 		var victim = get_ship(h.target_id)
 		if victim.is_empty() or not victim.alive:
 			continue
-		var absorbed: Dictionary = victim.defense.apply_damage(h.damage)
 		stats.hits += 1
 		if h.kind == "missile":
 			stats.missile_hits += 1
-		if victim.brain != null:
-			victim.brain.notify_hit()
-		events.append({ "type": "hit", "id": victim.id, "by": h.owner, "kind": h.kind,
-			"damage": h.damage, "shield": absorbed.shield, "hull": absorbed.hull, "point": h.point })
-		if not victim.defense.is_alive():
-			victim.alive = false
-			stats.kills += 1
-			var killer = get_ship(h.owner)
-			if not killer.is_empty():
-				killer.kills += 1
-				if killer.is_player:
-					stats.player_kills += 1
-			events.append({ "type": "kill", "id": victim.id, "ship_id": victim.ship_id,
-				"by": h.owner, "team": victim.team, "point": victim.flight.position,
-				"who": who(victim) })
+		_damage(victim, h, h.kind, h.damage, h.point)
+		# A seeker's burst hurts every other enemy ship within its splash.
+		var r := float(h.get("splash_radius", 0.0))
+		if r <= 0.0:
+			continue
+		for o in ships:
+			if o == victim or not o.alive or o.team == h.team or o.id == h.owner \
+					or (o.is_player and player_sheltered):
+				continue
+			if o.flight.position.distance_to(h.point) <= r + float(o.radius):
+				_damage(o, h, "splash", float(h.splash_damage), o.flight.position)
+
+
+## One ship takes `amount` from hit `h` (kind "bolt", "missile" or "splash"): a hit
+## event, and a kill event if that finished it.
+func _damage(victim: Dictionary, h: Dictionary, kind: String, amount: float, point: Vector3) -> void:
+	var absorbed: Dictionary = victim.defense.apply_damage(amount)
+	if victim.brain != null:
+		victim.brain.notify_hit()
+	events.append({ "type": "hit", "id": victim.id, "by": h.owner, "kind": kind,
+		"damage": amount, "shield": absorbed.shield, "hull": absorbed.hull, "point": point,
+		"blast_size": float(h.get("blast_size", 0.0)) if kind == "missile" else 0.0 })
+	if not victim.defense.is_alive():
+		victim.alive = false
+		stats.kills += 1
+		var killer = get_ship(h.owner)
+		if not killer.is_empty():
+			killer.kills += 1
+			if killer.is_player:
+				stats.player_kills += 1
+		events.append({ "type": "kill", "id": victim.id, "ship_id": victim.ship_id,
+			"by": h.owner, "team": victim.team, "point": victim.flight.position,
+			"who": who(victim) })
 
 
 ## How a ship's pilot is called out: '"Cinder" Lieutenant Varo Kesh', or just the

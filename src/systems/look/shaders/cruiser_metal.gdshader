@@ -16,7 +16,8 @@ shader_type spatial;
 //              on top; racks of drive bays with blinking lights on the sides
 //   8 rail     dark rails, a hazard band along them and a lit strip on top
 //   9 bridge   polished dark floor with inlaid light lines
-//  10 pad      a landing pad: painted ring and cross, edge lights (plate_half)
+//  10 pad      a landing pad: welded steel (pad_metal.gdshaderinc) under a
+//              painted ring and cross, edge lights (plate_half)
 //  11 beacon   a red light that blinks
 //  12 screen   a live display, one of four per screen: scrolling readouts, a
 //              bar chart, a radar sweep, a trace (a face of the box is the screen)
@@ -34,6 +35,8 @@ uniform vec3 plate_half = vec3(10.0, 0.05, 10.0);
 uniform float window_energy = 2.2;
 uniform float screen_energy = 1.6;
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
+
+#include "res://src/systems/look/shaders/pad_metal.gdshaderinc"
 
 varying vec3 lpos;
 varying vec3 lnorm;
@@ -293,16 +296,22 @@ void fragment() {
 		vec2 p = lpos.xz;
 		float r = length(p);
 		float edge = min(plate_half.x, plate_half.z);
-		col = deck_color.rgb * 0.8 * (0.9 + n * 0.2);
+		vec2 slope;
+		pad_metal(p, edge, wall_color.rgb * 1.1, deck_color.rgb, 0.45, vec3(0.0), 0.0, col, rough, metal, slope);
+		if (lnorm.y > 0.5) {
+			NORMAL = pad_metal_normal(slope, MODEL_MATRIX, VIEW_MATRIX);
+		}
+		// Paint over the steel, scuffed thin in places.
 		float ring = step(abs(r - edge * 0.78), 0.45);
 		float cross_ = (step(abs(p.x), 0.4) + step(abs(p.y), 0.4)) * step(r, edge * 0.55);
-		col = mix(col, paint.rgb, clamp(ring + cross_, 0.0, 1.0) * 0.85);
+		float painted = clamp(ring + cross_, 0.0, 1.0) * (0.7 + 0.25 * smoothstep(0.3, 0.6, n));
+		col = mix(col, paint.rgb, painted);
+		rough = mix(rough, 0.7, painted);
+		metal = mix(metal, 0.1, painted);
 		// Lights round the rim, every 30 degrees.
 		float ang = atan(p.y, p.x);
 		float dots = step(0.9, fract(ang / 6.2831 * 12.0)) * step(abs(r - edge * 0.93), 0.35);
 		emit = strip_light.rgb * dots * 3.0;
-		rough = 0.6;
-		metal = 0.4;
 	} else if (finish == 11) {
 		col = accent.rgb;
 		emit = vec3(1.0, 0.12, 0.08) * step(0.82, fract(TIME * 0.6)) * 8.0 + vec3(0.4, 0.04, 0.03);

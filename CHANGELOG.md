@@ -18,6 +18,67 @@ Plain English, newest on top. One entry per milestone.
 - Any AI character can do this with a `recap` block on their card (open,
   close, max, cue, instruction); Oda's is in cantina_owner_card.json.
 - Test: tests/test_oda_recap.gut.gd.
+## Textured stalls, and traders show what they sell (2026-10-31, issue #355)
+
+- **Market stalls are made of something now:** sawn planks with grain, seams
+  and nails; canopies and drapes of striped canvas; painted, chipped metal
+  posts. Drawn in code (`StallTextures`), three textures for the whole market.
+- **Each trader's stall shows its trade.** Food stall: fruit, flatbread, jars
+  and a quartz case. Gear trader: the jetpack, an armour case and a cell case.
+  Fence: the contraband he pays for. Droid merchant: droid heads, arms and a
+  cell case. The items are the game's own item looks, listed in
+  `content/look/items.json` under `stalls`.
+- **The droid relays** get painted metal, and their merchant tables get a droid
+  head, an arm, lit cells and a cell case.
+- **Skrugs's stall** gets planks, a canvas canopy, and speeder parts on the
+  counter: a thruster nozzle, fuel cans, a toolbox and a coil.
+- **Crates:** the pit's crate stacks, the crates by hut doors and the stock
+  crates behind each stall are plank crates with iron bands. The stall crates
+  now collide (the others already did).
+
+## No air on the asteroid without armour (issue #298, 2026-10-31)
+
+- **The asteroid's rock has no air.** Step outside the station (past the dome,
+  the hallway and the landing pit) without armour on and you lose 5 health a
+  second, a straight line to death. A message says "Put on armour to roam this
+  planet's surface." every few seconds. Die out there and you wake as from any
+  other death.
+- **Armour keeps you breathing** (anything worn in the armour slot, e.g. the
+  Quantonium armour). Flying a ship is safe too.
+- **Any planet can be harmful**: a `harmful_surface` block on its type
+  (types.json; the asteroid has one) or on its own file, which wins. PlanetGen
+  passes it through and the town adds the hazard (HarmfulSurface). Shelter is
+  AsteroidWorld.sheltered(): the dome's ring, the hallway or the pit.
+- Test: tests/test_harmful_surface.gut.gd.
+## Saves remember where you were (issue #113, 2026-10-31)
+
+- **Quit on the station, load on the station.** The save now remembers which
+  planet you were on and where you stood on it (that planet's own coordinates).
+  Opening the game from that save builds that planet first and puts you back
+  on that spot.
+- The spot is only taken when you're standing on your own feet (not flying,
+  riding, falling or down). Otherwise the last good spot on that planet is
+  kept, or you get the planet's spawn.
+- Older saves, saves on a planet that no longer exists, a flight back from a
+  pad, and headless runs all start as before (the home planet's spawn).
+- Save: a `where` block ({ planet, pos }) via SaveSystem.set_where/get_where;
+  resume: GameFlow.resume_from_save / take_resume_pos (once per run).
+- Test: tests/test_save_where.gut.gd.
+
+## Silent sword kills (issue #307, 2026-10-31)
+
+- **Cut someone down before they notice you and nobody knows.** An energy sword
+  kill on a trooper or a local who had not noticed you raises no alarm, plays no
+  "man down" and wakes nobody else. This applies to the gate, the barracks,
+  outposts, the cruiser and the town's locals.
+- **Seen is still loud.** If the victim had noticed you, or another of them has
+  noticed you, can see you, or has the victim in their sight cone close by
+  (16 m), it is a fight as before. A cut that doesn't kill is a fight too.
+- **Bodies get found.** A trooper or local who later walks within sight of the
+  body shouts a new "found_body" line and raises the alarm.
+- Shots are still loud. Standing changes and kill rewards are unchanged.
+- Code: src/systems/npc/silent_kill.gd, used by Garrison and Townsfolk; NpcBody
+  remembers whether the last cut landed unseen (`cut_unaware`).
 
 ## The beast's rock shell, glowing eyes, and no more spinning (2026-11-01)
 

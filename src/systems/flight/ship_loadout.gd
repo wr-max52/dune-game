@@ -74,8 +74,9 @@ func group_reloading(group: String) -> bool:
 ##   xform        -- the ship's world transform (mount points are local to it)
 ##   ship_vel     -- the ship's velocity; projectiles inherit it
 ##   primary      -- trigger for the primary group
-##   secondary    -- trigger for the secondary group (the caller only pulls it with a lock)
-##   target_id    -- what a homing projectile should chase (-1 for none)
+##   secondary    -- trigger for the secondary group (seekers launch with or without a lock)
+##   target_id    -- what a homing projectile should chase (-1 for none: it flies
+##                   straight off the nose, like a bolt)
 func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secondary: bool,
 		target_id: int = -1) -> Array:
 	var out: Array = []
@@ -111,10 +112,33 @@ func fire(dt: float, xform: Transform3D, ship_vel: Vector3, primary: bool, secon
 			"homing": homing,
 			"turn_rate": float(h.cfg.get("turn_rate", 0.0)),
 			"target_id": target_id if homing else -1,
+			"splash_radius": float(h.cfg.get("splash_radius", 0.0)),
+			"splash_damage": float(h.cfg.get("splash_damage", 0.0)) * power,
+			"blast_size": float(h.cfg.get("blast_size", 0.0)),
 		})
 		if h.group == "secondary":
 			fired_secondary = true
 	return out
+
+
+## A group's rounds and refill clocks, one entry per hardpoint: the seeker rack the
+## air and a space fight share (ShipPilot hands it across both ways).
+func rack(group: String) -> Array:
+	var out: Array = []
+	for h in hardpoints:
+		if h.group == group:
+			out.append({ "ammo": int(h.weapon.ammo), "refill": float(h.refill) })
+	return out
+
+
+func set_rack(group: String, r: Array) -> void:
+	var i := 0
+	for h in hardpoints:
+		if h.group != group or i >= r.size():
+			continue
+		h.weapon.ammo = mini(int(h.weapon.config.get("mag", 10)), int(r[i].ammo))
+		h.refill = float(r[i].refill)
+		i += 1
 
 
 ## One round back into a reload_each weapon every `each` seconds it is short.

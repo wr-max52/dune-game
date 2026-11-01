@@ -110,6 +110,23 @@ func build(look_id: String) -> Node3D:
 	return root
 
 
+## Issue #355: bounds of every visible mesh of a built item, with the item itself
+## at `xf` (it need not be in the tree), e.g. to set it down on a counter.
+static func bounds(item: Node, xf: Transform3D = Transform3D.IDENTITY) -> AABB:
+	var acc := [null]
+	_merge_bounds(item, xf, acc)
+	return acc[0] if acc[0] != null else AABB(Vector3(-0.2, 0, -0.2), Vector3(0.4, 0.3, 0.4))
+
+
+static func _merge_bounds(n: Node, xf: Transform3D, acc: Array) -> void:
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+		var a: AABB = xf * (n as MeshInstance3D).mesh.get_aabb()
+		acc[0] = a if acc[0] == null else acc[0].merge(a)
+	for c in n.get_children():
+		if c is Node3D and (c as Node3D).visible:      # not the hidden flames
+			_merge_bounds(c, xf * (c as Node3D).transform, acc)
+
+
 ## Show or hide the thrust flames; `power` 0..1 scales their length.
 static func set_flames(item: Node3D, on: bool, power: float = 1.0) -> void:
 	var f := item.get_node_or_null("Flames")

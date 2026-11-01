@@ -149,3 +149,28 @@ func test_the_ship_you_fly_is_not_a_parked_target() -> void:
 	t.add_child(v)
 	var i := pilot.add_berth(v, "courier", "ship_2")
 	assert_false(pilot._parked_target(i, pilot.berths[i].hull), "a ship never shoots itself")
+
+
+func test_a_seeker_in_the_air_turns_onto_its_target() -> void:
+	# The seekers fire in the atmosphere too: a locked one is a ship bolt that turns
+	# after the interceptor's hull; an unlocked one (no seek) flies straight.
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var target := Node3D.new()
+	root.add_child(target)
+	target.global_position = Vector3(200, 0, -200)
+	var homing = BoltScene.instantiate()
+	homing.direction = Vector3(0, 0, -1)
+	homing.speed = 130.0
+	homing.range_m = 1500.0
+	homing.seek = target
+	homing.turn_rate = 2.6
+	var straight = BoltScene.instantiate()
+	straight.direction = Vector3(0, 0, -1)
+	straight.speed = 130.0
+	straight.range_m = 1500.0
+	root.add_child(homing)
+	root.add_child(straight)
+	await wait_physics_frames(30)
+	assert_gt(homing.direction.x, 0.3, "the locked seeker has turned toward its target")
+	assert_almost_eq(straight.direction.x, 0.0, 0.0001, "the unlocked one flies straight")

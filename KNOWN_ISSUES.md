@@ -2,6 +2,37 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #298, no air outside (2026-10-31)
+
+**Checked:** tests/test_harmful_surface.gut.gd on its own (4/4). The full suite
+and a walk outside in the game were not run.
+
+- **A speeder counts as shelter** (riding sets `piloting`, the same as a ship).
+- **No air meter or breathing sound.** Just the toast and the health bar.
+- **Shelter is a plan-view check** (the ring, the hallway's rectangle, the pit's
+  circle), not the actual walls.
+## After issue #113, saves remember where you were (2026-10-31)
+
+**Checked:** tests/test_save_where.gut.gd on its own (4/4), and the changed
+scripts compile. A real quit-and-reload wasn't tried.
+
+- **Only a spot where you stood on your own feet is saved.** Saved while
+  flying, riding or down, you load on that planet's spawn, or at the last spot
+  you stood on there.
+- **Mid-flight isn't resumed.** You load on the ground, not in the ship.
+- **Headless runs (traces, CI) never resume**, on purpose, so a save left
+  behind can't move a trace's player.
+
+## After issue #307, silent sword kills (2026-10-31)
+
+**Checked:** compiles; not playtested. As the issue asked, there is no new
+test. Headless `-s` runs can't build NPC bodies right now (NpcVoice isn't
+loaded in that mode), so it can't be traced either.
+
+- **Finding a body has no wall check.** A guard "sees" a body within 16 m in
+  their sight cone, even through a wall.
+- **Hiding bodies isn't possible.** They stay where they fall.
+
 ## After the beast's rock shell and unstick pass (2026-11-01)
 
 **Checked:** `test_smoke`, a headless boot of the town, the beast trace (every
@@ -554,8 +585,6 @@ health bars (hidden calm, filled after damage, gone on death), the new arms.
   - flying home.
 
 **Not done, honestly:**
-- **The game always starts on the home planet.** Save on the station, quit, and
-  you load in the port; the save does not remember which planet you were on.
 - **Generated towns are plainer than the port.** They have no pit bowl (the bays
   are flat pads), no stair tower, stage or alley cables, and no fixer. Their
   layout is a tidy grid of lots, not the port's crooked lanes.

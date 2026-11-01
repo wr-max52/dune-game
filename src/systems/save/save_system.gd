@@ -37,6 +37,32 @@ func new_game() -> void:
 	}
 
 
+## Issue #113: where the player was when the game last saved: the planet and the
+## spot on it (that planet's own coordinates). {} = never saved one (the home
+## planet's spawn, as before).
+func set_where(planet_id: String, p: Vector3, has_pos: bool) -> void:
+	var w := { "planet": planet_id }
+	if has_pos:
+		w["pos"] = [p.x, p.y, p.z]
+	data["where"] = w
+
+
+func get_where() -> Dictionary:
+	var w = data.get("where", {})
+	return w if w is Dictionary else {}
+
+
+## The planet and spot in a save file, without loading the rest: { planet, pos? }.
+static func where_in(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not (parsed is Dictionary):
+		return {}
+	var w = (parsed as Dictionary).get("where", {})
+	return w if w is Dictionary else {}
+
+
 func set_player_position(p: Vector3) -> void:
 	data["player_position"] = [p.x, p.y, p.z]
 

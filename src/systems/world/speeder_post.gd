@@ -512,12 +512,15 @@ func _build_ramp_collider() -> void:
 ## The house, the stall, the display pad, the garage and its bench, in the town's
 ## palette. Shapes from the location file (the garage piece by piece, the boxes it
 ## collides with); colours from docs/ART_DIRECTION.md (plaster, madder red).
+## Issue #355: planks, red canvas and painted metal (StallTextures), and speeder
+## parts on his counter.
 func _dress(loc: Dictionary) -> void:
 	var mats: LookMaterials = demo._flat_mats()
 	var plaster := mats.plaster(origin.y, origin.y + 3.2, Color("#8e3a26"), Color("#d8c2a0"))
-	var red := mats.flat(Color("#a8322a"), 0.8)
-	var wood := mats.flat(Color("#5a3a24"), 0.75)
-	var metal := mats.flat(Color("#4a4c52"), 0.45, 0.6)
+	var red := mats.painted(Color("#a8322a"), 0.7, 0.3)
+	var red_cloth := mats.canvas(Color("#a8322a"))
+	var wood := mats.wood(Color("#5a3a24"), 0.75)
+	var metal := mats.painted(Color("#4a4c52"), 0.45, 0.6)
 	for b in loc.get("buildings", []):
 		var s := WorldGround._v3(b.get("size", [1, 1, 1]))
 		var c := WorldGround._v3(b.get("position", [0, 0, 0]))     # local; _mesh turns it into the world
@@ -529,7 +532,7 @@ func _dress(loc: Dictionary) -> void:
 				_mesh(_dome(dr), plaster, c + Vector3(0, s.y, 0))
 				_dome_collider(c + Vector3(0, s.y, 0), dr)
 				_mesh(_box(Vector3(0.12, 2.1, 1.3)), wood, c + Vector3(s.x * 0.5 + 0.02, 1.05, 2.2))
-				_mesh(_box(Vector3(1.6, 0.08, 2.4)), red, c + Vector3(s.x * 0.5 + 0.8, 2.5, 2.2), Vector3(0, 0, -14))
+				_mesh(_box(Vector3(1.6, 0.08, 2.4)), red_cloth, c + Vector3(s.x * 0.5 + 0.8, 2.5, 2.2), Vector3(0, 0, -14))
 			"stall":
 				_mesh(_box(s), wood, c + Vector3(0, s.y * 0.5, 0))
 				_mesh(_box(Vector3(s.x + 0.3, 0.08, s.z + 0.3)), red, c + Vector3(0, s.y + 0.04, 0))
@@ -537,7 +540,8 @@ func _dress(loc: Dictionary) -> void:
 				for dz in [-s.z * 0.5, s.z * 0.5]:
 					_mesh(_cyl(0.06, 2.6), wood, c + Vector3(-1.2, 1.3, dz))
 					_mesh(_cyl(0.06, 2.6), wood, c + Vector3(0.45, 1.3, dz))
-				_mesh(_box(Vector3(2.2, 0.06, s.z + 0.6)), red, c + Vector3(-0.4, 2.62, 0), Vector3(0, 0, -8))
+				_mesh(_box(Vector3(2.2, 0.06, s.z + 0.6)), red_cloth, c + Vector3(-0.4, 2.62, 0), Vector3(0, 0, -8))
+				_counter_wares(mats, c + Vector3(0, s.y + 0.08, 0), s, red, metal)
 			"display_pad":
 				_mesh(_box(s), metal, c + Vector3(0, s.y * 0.5, 0))
 			"bench":
@@ -550,6 +554,47 @@ func _dress(loc: Dictionary) -> void:
 				if str(b.id).begins_with("garage_"):
 					# Issue #295: back wall, two side walls and a red roof; one side stands open.
 					_mesh(_box(s), red if str(b.id) == "garage_roof" else plaster, c + Vector3(0, s.y * 0.5, 0))
+
+
+## Issue #355: what Skrugs deals in, on his counter (`top`: the middle of its top,
+## post frame; the customer is +x): a thruster nozzle, two fuel canisters, a red
+## toolbox and a coil, and his items (content/look/items.json "stalls" > "skrugs")
+## at the far end.
+func _counter_wares(mats: LookMaterials, top: Vector3, s: Vector3, red: Material, metal: Material) -> void:
+	var dark := mats.painted(Color("#2b2c30"), 0.5, 0.6)
+	var nozzle := CylinderMesh.new()
+	nozzle.top_radius = 0.09
+	nozzle.bottom_radius = 0.17
+	nozzle.height = 0.5
+	nozzle.radial_segments = 12
+	_mesh(nozzle, dark, top + Vector3(-0.05, 0.17, -s.z * 0.5 + 0.45), Vector3(90, 0, 0))
+	_mesh(_cyl(0.13, 0.06), metal, top + Vector3(-0.05, 0.17, -s.z * 0.5 + 0.72), Vector3(90, 0, 0))
+	for k in 2:
+		var can := _cyl(0.1, 0.34)
+		_mesh(can, CampTextures.canister(Color("#a8322a"), Color("#d8c2a0")), top + Vector3(-0.15 + k * 0.08, 0.17, -0.35 + k * 0.24))
+	_mesh(_box(Vector3(0.28, 0.2, 0.5)), red, top + Vector3(-0.12, 0.1, 0.45))
+	_mesh(_box(Vector3(0.3, 0.03, 0.06)), dark, top + Vector3(-0.12, 0.22, 0.45))
+	var coil := TorusMesh.new()
+	coil.inner_radius = 0.05
+	coil.outer_radius = 0.08
+	for k in 4:
+		_mesh(coil, metal, top + Vector3(0.18, 0.015 + k * 0.03, 0.05))
+	var kit := ItemKit.new(mats)
+	var z := s.z * 0.5 - 0.15
+	for l in ItemKit._read_json(ItemKit.LOOKS_PATH).get("stalls", {}).get("skrugs", {}).get("items", []):
+		if not kit.has_look(str(l)):
+			continue
+		var item := kit.build(str(l))
+		var turn := Basis(Vector3.UP, -PI * 0.5)    # a case's latch (-Z) to the customer (+x)
+		var b := ItemKit.bounds(item, Transform3D(turn, Vector3.ZERO))
+		if z - b.size.z < 0.8:
+			item.free()
+			break
+		var local := top + Vector3(-b.get_center().x, -b.position.y, z - b.end.z)
+		add_child(item)
+		item.global_transform = Transform3D(Basis(Vector3.UP, yaw) * turn, origin + local.rotated(Vector3.UP, yaw))
+		item.set_meta("decor", "stall_item")
+		z -= b.size.z + 0.08
 
 
 ## A mesh at a point in the post's own frame (turned and placed into the world).
