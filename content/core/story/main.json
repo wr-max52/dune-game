@@ -14,7 +14,7 @@
       "modes": ["story"],
       "teller": "general",
       "done_on": "general_done",
-      "intro": "Halt! You are trespassing on the Hegemony. State your business.",
+      "intro": "I'm amazed you were able to land this piece of garbage. Looks like you got into some trouble on your flight home? Well, now you're subject to Hegemony rule, search and seizure. State your business.",
       "remind": "Still here? State your business, or get out of my sight."
     },
     {
@@ -170,6 +170,8 @@
       "text": "The nomad packs out in the desert trade anything for sand pig: a blaster for 5, armour for 12. Keep your gun down for a minute and they warm up." },
     { "id": "tower_blade", "title": "The blade on the cantina tower", "target": "marker:cantina_owner", "unlocked_by": "told:bounty", "done_on": "blade_taken",
       "text": "Oda says there's an energy blade stashed up on the cantina tower." },
+    { "id": "general_droids", "title": "Work for the general", "target": "npc:general", "unlocked_by": "heard_of_droid_job", "done_on": "general_droid_sold",
+      "text": "General Vask says outlanders like you will take any work, and he has something in mind. Ask him for work at the barracks." },
     { "id": "crashed_cruiser", "title": "The crashed cruiser", "target": "wreck", "unlocked_by": "heard_of_wreck", "done_on": "red_saber_taken",
       "text": "The general says the old cruiser in the sand is worth a look. Something red is still aboard." },
     { "id": "dark_oath", "title": "The dark master's oath", "target": "marker:trooper_yard_a", "unlocked_by": "dark_pact", "done_on": "town_guards_cleared",
