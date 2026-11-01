@@ -19,7 +19,7 @@ func after_each() -> void:
 func test_talking_quotes_the_rebuild_and_offers_the_quest() -> void:
 	assert_string_contains(s._repair_line(), "500")
 	assert_eq(Quests.state("rebuild_ship"), "open")
-	assert_true(s.shop_options().any(func(o): return o.id == "rebuild"))
+	assert_true(s.top_options().any(func(o): return o.id == "rebuild"))
 
 
 func test_500_credits_rebuild_it() -> void:
@@ -35,7 +35,7 @@ func test_500_credits_rebuild_it() -> void:
 func test_a_comrade_pays_1_credit() -> void:
 	assert_true(s.comrade())
 	assert_eq(s.rebuild_price(), 1)
-	assert_false(s.shop_options().any(func(o): return o.id == "comrade"), "said once")
+	assert_false(s.top_options().any(func(o): return o.id == "comrade"), "said once")
 	assert_eq(s.rebuild(), "rebuilt")
 	assert_eq(WorldState.credits, 59)
 

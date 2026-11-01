@@ -8,8 +8,10 @@ extends Node3D
 ##     controls and how things work, a page at a time. The player already spawns
 ##     armed; he only explains the weapons. Every game after that (the save says he
 ##     has met you) he only calls out one of his "returning" lines,
-##   - [E] beside him opens his shop: every ship in content/core/ships that flies
-##     in the atmosphere. A bought ship lands on the spare pad and is yours to fly
+##   - [E] beside him opens his menu: Talk, "Buy or sell a ship", "Upgrade your
+##     ships" and the tutorial again (and the rebuild while your wreck waits). The
+##     two shops are submenus (Back returns). He sells every ship in
+##     content/core/ships that flies in the atmosphere. A bought ship lands on the spare pad and is yours to fly
 ##     like any other parked ship (ShipPilot.add_berth); one at a time, and he buys
 ##     it back at resale_rate. WorldState.hangar keeps it across saves.
 ##   - when the town has a conversation host, he is an AI character too (his card,
@@ -237,18 +239,10 @@ func _on_offer(id: String) -> void:
 		_say(_line("skipped"))
 
 
-## [E] beside him: a chat (when he has a brain), the shop, and the tutorial again.
+## [E] beside him: his top menu.
 func talk() -> void:
 	_beep()
-	_open(_line("hello_again") + _repair_line() + _story_line(), _talk_options(), _on_shop)
-
-
-func _talk_options() -> Array:
-	var opts := shop_options()
-	if spot != null:
-		opts.push_front({ "id": "chat", "text": _l("chat") })
-	opts.append({ "id": "tutorial", "text": _l("tutorial") })
-	return opts
+	_open(_line("hello_again") + _repair_line() + _story_line(), top_options(), _on_top)
 
 
 ## Issue #64: while the story starts with him, he sends you to Oda.
@@ -383,51 +377,98 @@ func ship_label(ship_id: String) -> String:
 	return str(content.get_ship(ship_id).get("label", ship_id))
 
 
-func shop_options() -> Array:
+## His top menu: a chat (when he has a brain), the rebuild while your wreck waits,
+## the two shops (submenus) and the tutorial again. Upgrades only once you own a ship.
+func top_options() -> Array:
 	var out := []
+	if spot != null:
+		out.append({ "id": "chat", "text": _l("chat") })
 	if needs_rebuild():
 		out.append({ "id": "rebuild", "text": _l("rebuild") % [ship_label(wreck_id()), rebuild_price()] })
 		if not WorldState.has_flag(WorldState.COMRADE):
 			out.append({ "id": "comrade", "text": _l("comrade") })
+	out.append({ "id": "group:ships", "text": _l("menu_ships") })
+	if not ShipUpgrades.owned().is_empty():
+		out.append({ "id": "group:upgrades", "text": _l("menu_upgrades") })
+	out.append({ "id": "tutorial", "text": _l("tutorial") })
+	return out
+
+
+## "Buy or sell a ship": every ship in stock, then yours on the pad to sell back.
+func ship_options() -> Array:
+	var out := []
 	var taken := WorldState.hangar != ""
 	for id in stock():
 		out.append({ "id": "buy:" + id, "text": _l("buy_taken" if taken else "buy") % [ship_label(id), price(id)] })
 	if taken:
 		out.append({ "id": "sell", "text": _l("sell") % [ship_label(WorldState.hangar), resale(WorldState.hangar)] })
+	out.append({ "id": "back", "text": _l("back") })
+	return out
+
+
+## "Upgrade your ships": each upgrade not yet on each ship you own.
+func upgrade_options() -> Array:
+	var out := []
 	for sid in ShipUpgrades.owned():
 		for up in ShipUpgrades.ids():
 			if not ShipUpgrades.has(sid, up):
 				out.append({ "id": "fit:%s:%s" % [sid, up],
 					"text": _l("fit") % [ShipUpgrades.label(up).to_lower(), ship_label(sid), ShipUpgrades.price(up)] })
+	out.append({ "id": "back", "text": _l("back") })
 	return out
 
 
-func _on_shop(id: String) -> void:
-	if id.begins_with("buy:"):
-		buy(id.substr(4))
-		_reopen_shop()
-	elif id == "sell":
-		sell()
-		_reopen_shop()
+## Opening a submenu: his line for it (what each ship you own carries, for upgrades).
+func _group_line(group: String) -> String:
+	if group == "ships":
+		return _line("ships_pitch")
+	var text := _line("upgrades_pitch" if upgrade_options().size() > 1 else "all_fitted")
+	return text + "\n\n" + "\n".join(PackedStringArray(ShipUpgrades.owned_lines()))
+
+
+func _group_options(group: String) -> Array:
+	return ship_options() if group == "ships" else upgrade_options()
+
+
+func _on_top(id: String) -> void:
+	if id.begins_with("group:"):
+		var g := id.substr(6)
+		said = _group_line(g)
+		_menu(_group_options(g), _on_group.bind(g))
 	elif id == "rebuild":
 		rebuild()
-		_reopen_shop()
-	elif id.begins_with("fit:"):
-		fit(id.get_slice(":", 1), id.get_slice(":", 2))
-		_reopen_shop()
+		_menu(top_options(), _on_top, true)
 	elif id == "comrade":
 		comrade()
-		_reopen_shop()
+		_menu(top_options(), _on_top, true)
 	elif id == "tutorial":
 		start_tutorial()
 	elif id == "chat":
 		chat()
 
 
-## A buy or a sale does not end the talk: the shop again, with what he just said
-## and the new prices, the cursor where it was. Esc walks away.
-func _reopen_shop() -> void:
-	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], _talk_options(), _on_shop, said, true)
+## A buy, a sale or a fit does not end the talk: the same submenu again, with what
+## he just said and the new prices, the cursor where it was. Back is his top menu;
+## Esc walks away.
+func _on_group(id: String, group: String) -> void:
+	if id == "back":
+		said = _line("anything_else")
+		_menu(top_options(), _on_top)
+		return
+	if id.begins_with("buy:"):
+		buy(id.substr(4))
+	elif id == "sell":
+		sell()
+	elif id.begins_with("fit:"):
+		fit(id.get_slice(":", 1), id.get_slice(":", 2))
+	else:
+		return
+	_menu(_group_options(group), _on_group.bind(group), true)
+
+
+## The menu again, quietly (no beep, no voice), with his last line on top.
+func _menu(opts: Array, pick: Callable, keep_cursor: bool = false) -> void:
+	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, said, keep_cursor)
 
 
 ## Buy a ship: it lands on the spare pad. Returns "bought", "taken",

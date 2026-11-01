@@ -25,7 +25,7 @@ func after_each() -> void:
 
 
 func test_he_fits_each_upgrade_once_to_a_ship_you_own() -> void:
-	assert_true(s.shop_options().any(func(o): return o.id == "fit:courier:shields"))
+	assert_true(s.upgrade_options().any(func(o): return o.id == "fit:courier:shields"))
 	assert_eq(s.fit("courier", "shields"), "fitted")
 	assert_eq(WorldState.credits, 5000 - ShipUpgrades.price("shields"))
 	assert_eq(s.fit("courier", "shields"), "", "one-time")

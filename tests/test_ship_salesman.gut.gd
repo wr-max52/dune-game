@@ -174,13 +174,39 @@ func test_shop_menu_lists_ships_then_sell_back() -> void:
 	var s: ShipSalesman = t.salesman
 	WorldState.credits = 5000
 	s.talk()
-	assert_eq(s.menu.options.size(), s.stock().size() + 1, "every ship, and the tutorial")
+	assert_eq(_ids(s), ["group:ships", "tutorial"], "the ship shop and the tutorial: nothing to upgrade yet")
+	s.menu.choose("group:ships")
+	assert_eq(s.menu.options.size(), s.stock().size() + 1, "every ship, and Back")
 	s.menu.choose("buy:interceptor")
 	assert_eq(WorldState.hangar, "interceptor")
-	s.talk()
-	assert_true(s.menu.options.any(func(o): return o.id == "sell"))
+	assert_true(s.menu.is_open(), "still in the ship shop after a buy")
+	assert_true(_ids(s).has("sell"))
 	s.menu.choose("sell")
 	assert_eq(WorldState.hangar, "")
+	s.menu.choose("back")
+	assert_eq(_ids(s)[0], "group:ships", "Back: his top menu")
+
+
+func test_upgrades_are_their_own_menu_once_you_own_a_ship() -> void:
+	var t = _town()
+	var s: ShipSalesman = t.salesman
+	WorldState.credits = 5000
+	s.talk()
+	s.menu.choose("group:ships")
+	s.menu.choose("buy:courier")
+	s.menu.choose("back")
+	assert_eq(_ids(s), ["group:ships", "group:upgrades", "tutorial"])
+	s.menu.choose("group:upgrades")
+	assert_true(_ids(s).has("fit:courier:shields"))
+	assert_false(_ids(s).any(func(i): return i.begins_with("buy:")), "no ships in here")
+	s.menu.choose("fit:courier:shields")
+	assert_true(ShipUpgrades.has("courier", "shields"))
+	assert_false(_ids(s).has("fit:courier:shields"), "fitted once, gone from the list")
+	assert_eq(_ids(s)[-1], "back")
+
+
+func _ids(s: ShipSalesman) -> Array:
+	return s.menu.options.map(func(o): return str(o.id))
 
 
 func test_bought_ship_is_saved() -> void:

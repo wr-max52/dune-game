@@ -1,6 +1,6 @@
 {
   "id": "t89",
-  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E to buy a ship: it sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Issue #207: 'upgrades' he fits to any ship you own, each one-time per ship: its price and 'mult', factors on paths in the ship's data (src/systems/flight/ship_upgrades.gd). Read by src/systems/npc/ship_salesman.gd.",
+  "note": "IP-neutral (issue #58). T-89: the ship salesman in the pit. A tall droid built on the assassin droid's frame, but it carries no gun and nothing hurts it. The first time you play it says hello and offers the tutorial (controls and how things work, a page at a time); every game after that (the save's met_t89 flag) it only calls out one of the 'returning' lines. The player already spawns with their weapons; T-89 only explains them. Walk up and press E for his menu: Talk, 'Buy or sell a ship' and 'Upgrade your ships' (submenus; Back returns) and the tutorial again. It sells every ship in content/core/ships that can fly in the atmosphere, at the price below (default_price for any ship not listed), and buys yours back at resale_rate. With the town's conversation host it is also an AI character (content/core/npcs/t89_card.json): 'Talk' in its shop opens the chat, where it reads every ship's price and numbers and recommends one. A bought ship lands on the spare pad (the town box named by 'pad'); one ship on the pad at a time. Issue #206: in a story save the ship you landed in is a wreck on the pit pad until T-89 rebuilds it ('rebuild': price, or comrade_price once you have told him you can't stand the Remnant). Issue #207: 'upgrades' he fits to any ship you own, each one-time per ship: its price and 'mult', factors on paths in the ship's data (src/systems/flight/ship_upgrades.gd). Read by src/systems/npc/ship_salesman.gd.",
   "name": "T-89",
   "marker": "t89",
   "pad": "spare_pad",
@@ -60,7 +60,11 @@
     "rebuilt": "Good as new! Your %s is on the pit pad, and she is all yours.",
     "cant_afford_rebuild": "The rebuild is %d credits. You have %d. Oda at the cantina has work.",
     "fitted": "%s, fitted to your %s. Fly her gently for the first hour. Or do not!",
-    "cant_afford_fit": "%s is %d credits. You have %d."
+    "cant_afford_fit": "%s is %d credits. You have %d.",
+    "ships_pitch": "Every ship on my lot is fuelled and ready. Which one takes your fancy, pilot?",
+    "upgrades_pitch": "What shall I fit, pilot? Each one goes on for good.",
+    "all_fitted": "Your ships carry everything I fit already. Nothing left to sell you here!",
+    "anything_else": "Anything else, pilot?"
   },
   "labels": {
     "talk": "[E] Talk to %s",
@@ -74,6 +78,9 @@
     "buy": "Buy a %s  (%d cr)",
     "buy_taken": "Buy a %s  (%d cr)  - pad taken",
     "sell": "Sell back your %s  (+%d cr)",
+    "menu_ships": "Buy or sell a ship",
+    "menu_upgrades": "Upgrade your ships",
+    "back": "Back",
     "tutorial": "Run me through the basics again",
     "event_bought": "Someone bought a %s from the droid in the pit.",
     "rebuild": "Rebuild your %s  (%d cr)",

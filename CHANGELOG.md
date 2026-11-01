@@ -2,6 +2,17 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## T-89's menu, tidied (2026-11-01)
+
+- **[E] by T-89 is a short menu now**: Talk, "Buy or sell a ship", "Upgrade
+  your ships" and "Run me through the basics again". Each shop is its own
+  submenu, so the ships and the ship-by-ship upgrades are no longer one long
+  list. Buying, selling or fitting keeps you in that submenu with the new
+  prices; Back returns to his menu, Esc walks away. Upgrades show up once you
+  own a ship, with what each one already carries. While your wreck waits, the
+  rebuild and the Remnant talk stay on his top menu.
+- Tests: tests/test_ship_salesman.gut.gd (the menu and both submenus).
+
 ## The Ledger, a live map, and text you can read (2026-11-01)
 
 - **Inventory is now the Ledger** (F11, still on I). Left: what you own:
