@@ -1354,16 +1354,19 @@ func _by_cruiser(c) -> bool:
 
 
 ## Not out in the fight: docking, landing or down in the cruiser's bay, close by the
-## cruiser, parked, on foot, crashed, or (the escort) dived well under the edge of space. The fight goes
-## on without her (Dogfight.player_sheltered) until she is out in it again.
+## cruiser, parked, on foot, crashed, or (the escort) dived away under the edge of space.
+## The fight goes on without her (Dogfight.player_sheltered) until she is out in it again.
+## Diving home lets go of her space_exit_margin under the edge, as a fight that ends does,
+## so normal flight (and the air's speeds) has her for the way down, not the fight's
+## 480+ m/s; she is back in it half that far under the edge, so the line does not flicker.
 func _out_of_fight() -> bool:
 	if not piloting or docking or bay_landing or atmo.state != AtmoFlight.State.FLYING:
 		return true
 	var c = cruiser()
 	if c != null and (c.aboard(atmo.position()) or _by_cruiser(c)):
 		return true
-	return _fight_held() and atmo.altitude() < atmo.space_altitude \
-		- float(c.cfg.get("approach", {}).get("floor", 1500.0))
+	var under := space_exit_margin * (0.5 if fight.sheltered else 1.0)
+	return _fight_held() and atmo.altitude() < atmo.space_altitude - under and not _bound_for_cruiser()
 
 
 ## Into the fight or out of it as she comes and goes. Back in, the director's ship

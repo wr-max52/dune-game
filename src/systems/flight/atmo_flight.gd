@@ -245,11 +245,26 @@ func _step_flying(dt: float) -> void:
 	var climb: float = flight.forward().dot(up())
 	flight.speed_scale = air_scale() * (1.0 - p("climb_drag", 0.3) * maxf(0.0, climb))
 	flight.accel_scale = maxf(air_scale(), 1.0)   # capped under 1, she still brakes as hard as ever
+	_shed_overspeed(dt)
 	flight.set_command_dict(_command)
 	var before: Vector3 = flight.position
 	flight.step(dt)
 	_check_space()
 	_collide(before, dt)
+
+
+## Faster than this air lets her go (a space fight's speed handed on, or diving
+## into thicker air): the excess over its top speed falls away smoothly
+## (overspeed_brake per second), on top of the normal braking, so coming home
+## from space she is back to air speeds well before the ground. Climb drag is
+## left out, so pulling up does not bleed her any harder than before.
+func _shed_overspeed(dt: float) -> void:
+	var top := p("max_speed", 170.0)
+	if bool(_command.get("boost", false)):
+		top = p("boost_speed", top * 1.5)
+	top *= air_scale()
+	if flight.speed > top:
+		flight.speed = top + (flight.speed - top) * exp(-p("overspeed_brake", 1.0) * dt)
 
 
 func _step_landing(dt: float) -> void:
