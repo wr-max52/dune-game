@@ -2,9 +2,11 @@ class_name DevSettingsPanel
 extends CanvasLayer
 ## F11 in the town: the game's settings. Opening it pauses the game and frees
 ## the mouse; closing it resumes and saves (when the bar saves). Six pages:
-##   Map       a globe of the planet with every place that stays put, click one
-##             for a waypoint; the places off planet beside it (GlobeMap; M opens it)
-##   Inventory what you carry and the job log (InventoryPanel; I opens it)
+##   Map       a globe of the planet with every place that stays put, you and the
+##             waypoint, click one for a waypoint; the places off planet beside it
+##             (GlobeMap; M opens it)
+##   Ledger    what you own on the left, the story and your jobs on the right, each
+##             with a waypoint button (InventoryPanel; I opens it)
 ##   Game      the main story's chapter (issue #64), time of day, game speed,
 ##             credits, the space fight switch, the home town's layout, new game
 ##   Player    the outfit from the kit pieces (CharacterBuilder, issue #48), then
@@ -50,7 +52,7 @@ var _off_planet: Array = []            ## GlobeMap.off_planet, last refresh
 var _off_box: VBoxContainer
 var _map_note: Label
 var _no_globe: Label
-var inventory: InventoryPanel          ## the Inventory page
+var inventory: InventoryPanel          ## the Ledger page
 
 const STUCK_WARNING := "If you are stuck, ask the interactive NPCs for advice, they may have a hint.\n\nAre you sure?"
 
@@ -132,7 +134,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-## M opens the Map page, I (the inventory action) the Inventory page; the same key
+## M opens the Map page, I (the inventory action) the Ledger page; the same key
 ## again shuts the panel, the other one swaps pages. Unhandled: typing an M or an I
 ## in a text box is not this.
 func _unhandled_input(event: InputEvent) -> void:
@@ -142,7 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.keycode == KEY_M:
 		page = "Map"
 	elif event.is_action_pressed("inventory"):
-		page = "Inventory"
+		page = "Ledger"
 	if page == "":
 		return
 	if visible and tabs.get_tab_title(tabs.current_tab) == page:
@@ -272,17 +274,23 @@ func _story_note(v: VBoxContainer, text: String) -> void:
 
 # ------------------------------------------------------------------ inventory
 
-## What you carry and the job log, wired to the town's gear (its item names and
-## wear toggle). Rebuilt on open and whenever the page is picked (a cheat on the
-## Player page may have just handed you the jetpack).
+## The Ledger, wired to the town's gear (its item names and wear toggle). Rebuilt
+## on open and whenever the page is picked (a cheat on the Player page may have
+## just handed you the jetpack); a waypoint picked there moves the HUD's pointer.
 func _inventory_tab() -> Control:
 	var gear = demo.get("gear") if demo != null else null
 	inventory = gear.inventory_page() if gear != null else InventoryPanel.new()
+	inventory.on_waypoint = _hud_refresh
 	_refreshers.append(inventory.refresh)
 	tabs.tab_changed.connect(func(i):
 		if tabs.get_tab_control(i) == inventory:
 			inventory.refresh())
 	return inventory
+
+
+func _hud_refresh() -> void:
+	if demo != null and demo.get("objective_hud") != null:
+		demo.objective_hud.refresh()
 
 
 # ------------------------------------------------------------------ map
@@ -333,6 +341,8 @@ func _map_tab() -> Control:
 	_off_box = VBoxContainer.new()
 	side.add_child(_off_box)
 	_section(side, GlobeMap.line("legend"))
+	side.add_child(_legend_row(GlobeMap.look().get("player", {}), GlobeMap.line("you"), Color(str(GlobeMap.look().get("player", {}).get("color", "#4dff88")))))
+	side.add_child(_legend_row(GlobeMap.look().get("goal", {}), GlobeMap.line("goal"), Color(str(GlobeMap.look().get("goal", {}).get("color", "#ffd84a")))))
 	var pins_look: Dictionary = GlobeMap.look().get("pins", {})
 	for kind in ["port", "remnant_outpost", "droid_merchant_outpost", "post", "camp", "wreck", "outpost", "spot"]:
 		var legend := str(GlobeMap.kind_cfg(kind).get("legend", GlobeMap.kind_cfg(kind).get("label", kind)))
@@ -340,6 +350,12 @@ func _map_tab() -> Control:
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(gap)
+	var you := Button.new()
+	you.text = GlobeMap.line("centre_you")
+	you.pressed.connect(func():
+		if globe.player != Vector2.INF:
+			globe.focus(globe.player))
+	side.add_child(you)
 	var home := Button.new()
 	home.text = GlobeMap.line("home")
 	home.pressed.connect(func():
@@ -352,13 +368,20 @@ func _map_tab() -> Control:
 		GlobeMap.clear_waypoint()
 		_refresh_map())
 	side.add_child(clear)
-	_refreshers.append(_refresh_map)
+	_refreshers.append(_refresh_map.bind(true))
+	tabs.tab_changed.connect(func(i):
+		if tabs.get_tab_control(i) == page:
+			_refresh_map())          # a waypoint picked in the Ledger since
 	return page
 
 
 ## One legend line: the pin's shape, drawn the way the globe draws it, and its name.
-func _legend_row(look: Dictionary, text: String) -> HBoxContainer:
+## `col` overrides the look's colour (you and the waypoint keep theirs off the pins).
+func _legend_row(look: Dictionary, text: String, col := Color(0, 0, 0, 0)) -> HBoxContainer:
 	var row := HBoxContainer.new()
+	if col.a > 0.0:
+		look = look.duplicate()
+		look["color"] = col.to_html()
 	row.add_child(_pin_icon(look))
 	var l := Label.new()
 	l.text = text
@@ -378,8 +401,9 @@ func _pin_icon(look: Dictionary, r := 5.0) -> Control:
 
 
 ## Rebuild the map's pins and off-planet list from the scene (the town's stops
-## and the planets in the sky only exist once it is built) and the waypoint.
-func _refresh_map() -> void:
+## and the planets in the sky only exist once it is built), you and the waypoint.
+## `centre`: turn the globe to you (on opening the panel).
+func _refresh_map(centre := false) -> void:
 	var sphere := PlanetSphere.current
 	var world: Dictionary = demo.world if demo != null else {}
 	var planet: Dictionary = demo.planet if demo != null else {}
@@ -394,6 +418,9 @@ func _refresh_map() -> void:
 	var t := str(w.get("target", ""))
 	globe.spot = Vector2(float(t.get_slice(":", 1).get_slice(",", 0)), float(t.get_slice(",", 1))) \
 		if globe.selected == "spot" and t.begins_with("map:") else Vector2.INF
+	_map_marks(sphere)
+	if centre and globe.player != Vector2.INF:
+		globe.focus(globe.player)
 	globe.queue_redraw()
 	var travel = demo.pilot.travel if demo != null and demo.get("pilot") != null and demo.pilot.travel != null else null
 	_off_planet = GlobeMap.off_planet(travel.bodies if travel != null else [], world)
@@ -416,8 +443,42 @@ func _refresh_map() -> void:
 		var l := Label.new()
 		l.text = "-"
 		_off_box.add_child(l)
-	var now := GlobeMap.waypoint()
-	_map_note.text = str(now.text) if not now.is_empty() else GlobeMap.line("none")
+	var now := Objective.current()
+	_map_note.text = (GlobeMap.line("waypoint") % str(now.text) if now.get("key", "") != "map" else str(now.text)) \
+		if not now.is_empty() else GlobeMap.line("none")
+
+
+## Where you are and which way you look, and where the pointer is (the globe
+## flashes the pin there, or marks the spot). Off-planet targets (another planet,
+## the cruiser up there) are not on the globe.
+func _map_marks(sphere: PlanetSphere) -> void:
+	globe.player = Vector2.INF
+	globe.heading = Vector2.ZERO
+	globe.goal_pin = ""
+	globe.goal = Vector2.INF
+	if sphere == null or demo == null:
+		return
+	var p = demo.get("_player")
+	if p is Node3D and is_instance_valid(p):
+		var at: Vector3 = (p as Node3D).global_position
+		globe.player = sphere.world_to_map(at)
+		var cam := get_viewport().get_camera_3d()
+		var fwd: Vector3 = -cam.global_basis.z if cam != null else -(p as Node3D).global_basis.z
+		globe.heading = sphere.world_to_map(at + fwd * 25.0) - globe.player
+	var now := Objective.current()
+	if now.is_empty():
+		return
+	if now.get("key", "") == "map":
+		globe.goal_pin = globe.selected if globe.selected != "spot" else ""
+		return
+	var target := str(now.get("target", ""))
+	var hud = demo.get("objective_hud")
+	if target == "" or target.begins_with("planet:") or target == "cruiser" or hud == null:
+		return
+	var pos: Vector3 = hud.where(target)
+	if pos == Vector3.INF:
+		return
+	globe.goal = sphere.world_to_map(pos)
 
 
 ## Set the waypoint on a pin or an off-planet place; the one already set clears.
@@ -427,8 +488,7 @@ func map_pick(pin: Dictionary) -> void:
 	else:
 		GlobeMap.set_waypoint(pin, GameFlow.current_planet_id())
 	_refresh_map()
-	if demo != null and demo.get("objective_hud") != null:
-		demo.objective_hud.refresh()
+	_hud_refresh()
 
 
 # ------------------------------------------------------------------ world

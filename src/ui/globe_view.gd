@@ -1,8 +1,10 @@
 class_name GlobeView
 extends Control
 ## The F11 Map page's globe: the planet as a ball seen from space, with a small
-## icon at every place that stays put (GlobeMap.pins). Not a tracking map: no
-## player, no people that move.
+## icon at every place that stays put (GlobeMap.pins), you (a green triangle
+## pointing the way the camera looks) and the waypoint, both pulsing. The
+## waypoint flashes the pin it is at, or, out where no pin is (a drop in the
+## desert, a marked spot), shows as its own marker. No people that move.
 ##
 ## Drag turns it, the wheel or the + / - buttons in its top left zoom (zoomed in past the data's town_zoom the
 ## port's pin opens into its own stops). Hover names a pin; a click sets the
@@ -35,6 +37,11 @@ var pitch := 0.0
 var zoom := 1.0
 var hover := -1                         ## index into pins under the mouse, -1 = none
 var spot := Vector2.INF                 ## a marked spot's map position (drawn as a ring)
+var player := Vector2.INF               ## where you are (map x, z), INF = not on this planet
+var heading := Vector2.ZERO             ## the way you look, a map-space direction (ZERO = none)
+var goal_pin := ""                      ## the pin the F11 map's waypoint is on (it flashes), "" = none
+var goal := Vector2.INF                 ## where the pointer is otherwise (map x, z): the nearest pin
+										## showing within its arrive distance flashes, else its own marker
 
 var _press := Vector2.INF
 var _dragged := false
@@ -57,6 +64,17 @@ func _init() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(func(): set_zoom(zoom * z[1]))
 		zb.add_child(b)
+
+
+## Pulse while the page shows: you and the waypoint.
+func _process(_dt: float) -> void:
+	if is_visible_in_tree() and (player != Vector2.INF or goal_pin != "" or goal != Vector2.INF):
+		queue_redraw()
+
+
+## 0..1..0 about once a second.
+static func pulse() -> float:
+	return 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.1)
 
 
 func view() -> Basis:
@@ -189,6 +207,7 @@ func _draw() -> void:
 	draw_arc(c, r, 0.0, TAU, 128, Color(ink, float(lk.get("rim_alpha", 0.85))), 1.5, true)
 	var font := get_theme_default_font()
 	var fs := 13
+	var flash := goal_pin_now()
 	for i in pins.size():
 		var pin: Dictionary = pins[i]
 		if not shown(pin):
@@ -199,18 +218,24 @@ func _draw() -> void:
 		var at := Vector2(s.x, s.y)
 		if not Rect2(Vector2.ZERO, size).grow(10.0).has_point(at):
 			continue
-		_draw_pin(at, pin, i == hover)
-		if str(pin.id) == selected:
-			draw_arc(at, 11.0, 0.0, TAU, 24, Color(ink, 0.95), 2.0, true)
-	if spot != Vector2.INF and selected == "spot":
-		var s := project(spot)
+		if i == flash:
+			_draw_flash(at, pin)
+		else:
+			_draw_pin(at, pin, i == hover)
+	var mark := goal if goal != Vector2.INF and flash < 0 else (spot if selected == "spot" else Vector2.INF)
+	if mark != Vector2.INF:
+		var s := project(mark)
 		if s.z > 0.0:
-			draw_shape(self, Vector2(s.x, s.y), "ring", Color(str(lk.get("pins", {}).get("spot", {}).get("color", "#f2e2b0"))), 6.0)
-	# the hovered (else the selected) pin's name, on a dark tag over it
+			_draw_goal(Vector2(s.x, s.y))
+	if player != Vector2.INF:
+		var s := project(player)
+		if s.z > 0.0:
+			_draw_player(Vector2(s.x, s.y))
+	# the hovered (else the waypoint's) pin's name, on a dark tag over it
 	var named := hover
 	if named < 0:
 		for i in pins.size():
-			if str(pins[i].id) == selected and shown(pins[i]):
+			if (i == flash or str(pins[i].id) == selected) and shown(pins[i]):
 				named = i
 	if named >= 0 and font != null:
 		var s := project(pins[named].map)
@@ -266,6 +291,75 @@ func _draw_pin(at: Vector2, pin: Dictionary, hot: bool) -> void:
 	draw_shape(self, at, str(p.get("shape", "circle")), Color(str(p.get("color", "#f2e2b0"))), size_px)
 
 
+## The index of the pin the waypoint is at, at this zoom (-1 = none): the F11
+## map's own pin, else the nearest pin showing within its arrive distance of goal,
+## or close enough on screen to read as the same place (a stall in the port, zoomed out).
+func goal_pin_now() -> int:
+	var best := -1
+	var best_d := INF
+	var g := project(goal) if goal != Vector2.INF else Vector3.ZERO
+	for i in pins.size():
+		if not shown(pins[i]):
+			continue
+		if goal_pin != "":
+			if str(pins[i].id) == goal_pin:
+				return i
+			continue
+		if goal == Vector2.INF:
+			return -1
+		var d: float = (pins[i].map as Vector2).distance_to(goal)
+		var sp := project(pins[i].map)
+		var near := Vector2(sp.x, sp.y).distance_to(Vector2(g.x, g.y)) <= HIT
+		if (d <= float(pins[i].get("arrive", 30.0)) or near) and d < best_d:
+			best_d = d
+			best = i
+	return best
+
+
+## The waypoint's pin: flashing between its colour and white, a ring going out.
+func _draw_flash(at: Vector2, pin: Dictionary) -> void:
+	var lk := GlobeMap.look()
+	var t := pulse()
+	var gl: Dictionary = lk.get("goal", {})
+	var col := Color(str(gl.get("color", "#ffd84a")))
+	draw_arc(at, 9.0 + 9.0 * (1.0 - t), 0.0, TAU, 32, Color(col, 0.25 + 0.6 * t), 2.0, true)
+	var key := str(pin.kind)
+	if key == "camp" and bool(pin.get("hostile", false)):
+		key = "camp_hostile"
+	var p: Dictionary = lk.get("pins", {}).get(key, {})
+	var base := Color(str(p.get("color", "#f2e2b0")))
+	draw_shape(self, at, str(p.get("shape", "circle")), base.lerp(Color.WHITE, t), float(lk.get("pin_size", 6.0)) * (1.2 + 0.3 * t))
+
+
+## The waypoint out where no pin is: its own marker (a pin standing on the spot)
+## with a ring going out round its foot.
+func _draw_goal(at: Vector2) -> void:
+	var t := pulse()
+	var col := Color(str(GlobeMap.look().get("goal", {}).get("color", "#ffd84a")))
+	draw_arc(at, 4.0 + 10.0 * (1.0 - t), 0.0, TAU, 32, Color(col, 0.2 + 0.7 * t), 2.0, true)
+	draw_shape(self, at, "goal", col.lerp(Color.WHITE, t * 0.5), 7.0)
+
+
+## You: a green triangle pointing the way you look, breathing, with a soft ring.
+func _draw_player(at: Vector2) -> void:
+	var t := pulse()
+	var col := Color(str(GlobeMap.look().get("player", {}).get("color", "#4dff88")))
+	draw_circle(at, 12.0 + 4.0 * t, Color(col, 0.12 + 0.12 * t))
+	draw_arc(at, 12.0 + 4.0 * t, 0.0, TAU, 32, Color(col, 0.5 + 0.4 * t), 1.5, true)
+	var fwd := Vector2.UP
+	if heading != Vector2.ZERO:
+		var a := project(player)
+		var b := project(player + heading.normalized() * 20.0)
+		var d := Vector2(b.x - a.x, b.y - a.y)
+		if d.length() > 0.001:
+			fwd = d.normalized()
+	var side := Vector2(-fwd.y, fwd.x)
+	var r := 8.0 + 1.5 * t
+	var pts := PackedVector2Array([at + fwd * r * 1.45, at - fwd * r * 0.75 + side * r * 0.7, at - fwd * r * 0.75 - side * r * 0.7])
+	draw_colored_polygon(pts, col)
+	draw_polyline(pts + PackedVector2Array([pts[0]]), Color(0, 0, 0, 0.9), 1.5, true)
+
+
 ## A pin's shape on any canvas item (the legend draws with it too).
 static func draw_shape(ci: CanvasItem, at: Vector2, shape: String, col: Color, r: float) -> void:
 	var edge := Color(0, 0, 0, 0.85)
@@ -289,6 +383,20 @@ static func draw_shape(ci: CanvasItem, at: Vector2, shape: String, col: Color, r
 			ci.draw_line(at + Vector2(-h, -h), at + Vector2(h, h), col, 2.5, true)
 			ci.draw_line(at + Vector2(h, -h), at + Vector2(-h, h), col, 2.5, true)
 			return
+		"goal":
+			# a map pin standing on the spot: a head over a point, a dark eye in it
+			var head := at + Vector2(0, -r * 1.7)
+			var hp := PackedVector2Array()
+			for k in 17:
+				var a := PI * 0.15 + (TAU - PI * 0.3) * k / 16.0 + PI / 2.0
+				hp.append(head + Vector2(cos(a), sin(a)) * r * 0.85)
+			hp.append(at)
+			ci.draw_colored_polygon(hp, col)
+			ci.draw_polyline(hp + PackedVector2Array([hp[0]]), edge, 1.4, true)
+			ci.draw_circle(head, r * 0.32, edge)
+			return
+		"you":
+			pts = PackedVector2Array([at + Vector2(0, -r * 1.45), at + Vector2(r * 0.7, r * 0.75), at + Vector2(-r * 0.7, r * 0.75)])
 		"ring":
 			ci.draw_arc(at, r, 0.0, TAU, 24, edge, 4.0, true)
 			ci.draw_arc(at, r, 0.0, TAU, 24, col, 2.0, true)

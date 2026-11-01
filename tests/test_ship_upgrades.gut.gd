@@ -55,7 +55,11 @@ func test_upgrades_are_saved_and_listed() -> void:
 	WorldState.from_save(WorldState.to_save())
 	assert_true(ShipUpgrades.has("courier", "shields"))
 	assert_string_contains(ShipUpgrades.owned_lines()[0], "boosted shields")
-	assert_true(Objective.log_entries().any(func(e): return e.title == Objective.line("log_ships")))
+	assert_false(Objective.log_entries().any(func(e): return e.title == Objective.line("log_ships")), "ships are not jobs")
+	var ledger := InventoryPanel.new()
+	add_child_autofree(ledger)
+	ledger.refresh()
+	assert_true(ledger.owned_rows.any(func(r): return str(r).contains("boosted shields")), "the Ledger lists them with what you own")
 
 
 func test_the_frigate_takes_the_paint_of_its_last_upgrade() -> void:

@@ -53,6 +53,7 @@ static var wreck_ship := ""                ## issue #207: the ship id of the wre
 static var quests: Dictionary = {}         ## issue #201: optional quest id -> { state: "open"|"done", waypoint } (Quests)
 static var control: Dictionary = {}        ## issue #187: who holds each outpost, and the supply run out (Territory)
 static var map_waypoint: Dictionary = {}   ## the F11 map's waypoint: { id, label, target, planet, arrive } (GlobeMap)
+static var objective_pin := ""             ## the job the player made the waypoint in the Ledger ("" = most urgent; Objective.pin)
 
 ## Issue #303: called (with a reason) whenever the game must be saved right now: the
 ## general's death, the dark master's answer, the town changing hands. The town's
@@ -95,6 +96,7 @@ static func reset() -> void:
 	quests = {}
 	control = {}
 	map_waypoint = {}
+	objective_pin = ""
 	Quests.news.clear()
 	ship_fits = {}
 	wreck_ship = ""
@@ -892,6 +894,7 @@ static func to_save() -> Dictionary:
 		"gear_fits": gear_fits.duplicate(),
 		"control": control.duplicate(true),
 		"map_waypoint": map_waypoint.duplicate(),
+		"objective_pin": objective_pin,
 	}
 
 
@@ -933,6 +936,7 @@ static func from_save(d: Dictionary) -> void:
 	gear_fits = d.get("gear_fits", []).duplicate()
 	control = d.get("control", {}).duplicate(true)
 	map_waypoint = d.get("map_waypoint", {}).duplicate()
+	objective_pin = str(d.get("objective_pin", ""))
 	if story.has("chapter"):
 		Story.catch_up()       # the general dead in a save from when the fleet chapter waited on a dogfight
 

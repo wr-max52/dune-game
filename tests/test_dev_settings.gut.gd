@@ -106,7 +106,7 @@ func test_pages_are_built_on_first_open_only() -> void:
 	var titles: Array = []
 	for i in p.tabs.get_tab_count():
 		titles.append(p.tabs.get_tab_title(i))
-	assert_eq(titles, ["Map", "Inventory", "Game", "Player", "Standing", "Options"])
+	assert_eq(titles, ["Map", "Ledger", "Game", "Player", "Standing", "Options"])
 	p.close()
 	p.open_tab("LLM")
 	assert_eq(p.tabs.get_tab_title(p.tabs.current_tab), "Options", "F10 lands on the AI brain, under Options")

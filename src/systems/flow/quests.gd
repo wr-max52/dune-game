@@ -86,15 +86,16 @@ static func toggle_waypoint(id: String) -> bool:
 	WorldState.quests[id].waypoint = on
 	if on:
 		GlobeMap.clear_waypoint()      # one pointer at a time: the F11 map's goes
+		WorldState.objective_pin = ""  # and the Ledger's pick
 	return on
 
 
-## { text, target } for the pointer while a quest's waypoint is on, else {}.
+## { text, target, key } for the pointer while a quest's waypoint is on, else {}.
 static func waypoint() -> Dictionary:
 	for id in WorldState.quests:
 		if bool(WorldState.quests[id].get("waypoint", false)) and can_point(str(id)):
 			var q := cfg(str(id))
-			return { "text": DarkPact.fill(str(q.get("text", ""))), "target": str(q.target) }
+			return { "text": DarkPact.fill(str(q.get("text", ""))), "target": str(q.target), "key": "quest:" + str(id) }
 	return {}
 
 

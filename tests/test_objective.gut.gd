@@ -134,3 +134,39 @@ func test_the_inventory_panel_shows_the_job_log() -> void:
 	assert_eq(panel.job_rows[0], Objective.line("log_story"))
 	assert_true(panel.job_rows.size() >= 3, "story title, its line and the tally")
 	assert_eq(panel.job_rows[-1], Objective.tally())
+
+
+func test_the_ledger_picks_which_job_is_the_waypoint() -> void:
+	Story.skip_to("bounty")
+	Story.beat("cantina_owner")
+	assert_true(WorldState.accept_job("j_bounty"))
+	var b := WorldState.bounty
+	assert_eq(Objective.current_key(), "bounty", "unpicked: the most urgent")
+	assert_true(Objective.can_pin("story"))
+	assert_true(Objective.pin("story"))
+	assert_eq(Objective.current_key(), "story", "the story's objective is the waypoint now")
+	assert_eq(_target(), str(Objective.of("story").target))
+	WorldState.from_save(WorldState.to_save())
+	assert_eq(Objective.current_key(), "story", "saved")
+	assert_false(Objective.pin("story"), "the same button again hands it back")
+	assert_eq(_target(), "outpost:" + str(b.outpost))
+	Objective.pin("story")
+	GlobeMap.set_waypoint(GlobeMap.spot_pin(Vector2(10, 20)), GameFlow.current_planet_id())
+	assert_eq(WorldState.objective_pin, "", "one pointer at a time: the map's wins")
+	assert_eq(Objective.current_key(), "map")
+
+
+func test_the_ledger_lights_the_card_the_pointer_is_on() -> void:
+	Story.skip_to("bounty")
+	Story.beat("cantina_owner")
+	assert_true(WorldState.accept_job("j_bounty"))
+	var panel := InventoryPanel.new()
+	panel.content = content
+	add_child_autofree(panel)
+	panel.refresh()
+	assert_true(panel.point_buttons.has("story") and panel.point_buttons.has("bounty"))
+	assert_true(panel.point_buttons.bounty.button_pressed, "the most urgent is lit")
+	panel.point_buttons.story.pressed.emit()
+	assert_eq(WorldState.objective_pin, "story")
+	assert_true(panel.point_buttons.story.button_pressed)
+	assert_false(panel.point_buttons.bounty.button_pressed)
