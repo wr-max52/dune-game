@@ -1976,18 +1976,18 @@
    "zone": "spaceport",
    "kind": "ship",
    "min": [
-    10.16,
+    9.5,
     -6,
-    -14.9
+    -14.84
    ],
    "max": [
-    17.84,
-    -2.94,
-    -7.1
+    18.5,
+    -3.7,
+    -7.16
    ],
    "ship": "gunship",
    "parked_yaw_deg": -90,
-   "note": "Bay 4: the gunship (flyable, issue #43)."
+   "note": "Bay 4: the gunship (flyable, issue #43), a black and teal Lanner variant."
   },
   {
    "id": "dock_booth",

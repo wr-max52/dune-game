@@ -6,7 +6,8 @@ extends RefCounted
 ##
 ## Two ways to get a design on screen, both data-only:
 ##   1. A real model: set the look's "scene" to a .tscn or .glb path. The kit
-##      instantiates it as-is (forward = -Z, 1 unit = 1 metre).
+##      instantiates it as-is (forward = -Z, 1 unit = 1 metre). Its "parts" (the
+##      same as an upgrade's, see dress) are bolted on every time.
 ##   2. A stand-in: leave "scene" empty and pick a "frame" ("dart", "blade",
 ##      "hauler"). Sizes and colours come from the look entry, shapes from here.
 ##
@@ -79,6 +80,11 @@ func build(look_id: String) -> Node3D:
 		root.add_child(engines)
 		for n in p.get("flames_at", []):
 			_flame(flames, Vector3(float(n[0]), float(n[1]), float(n[2])), float(n[3]))
+		if not (p.get("parts", []) as Array).is_empty():
+			var parts := Node3D.new()     # always on, unlike the upgrades (dress)
+			parts.name = "Parts"
+			root.add_child(parts)
+			_bolt_on(parts, p.parts)
 		throttle_flames(root, 0.0)
 		root.set_meta("source", "scene")
 		return root
@@ -138,6 +144,11 @@ func dress(ship: Node3D, fits: Array) -> void:
 	var root := Node3D.new()
 	root.name = "Upgrades"
 	ship.add_child(root)
+	_bolt_on(root, parts)
+
+
+## Builds each part (see dress) under `root`.
+func _bolt_on(root: Node3D, parts: Array) -> void:
 	for part: Dictionary in parts:
 		var mesh := _part_mesh(part)
 		var col := Color(str(part.get("color", "#8a9099")))
