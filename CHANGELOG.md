@@ -2,6 +2,14 @@
 
 Plain English, newest on top. One entry per milestone.
 
+## The Remnant love you when you clear the locals for the dark master (2026-11-01)
+
+- **On the dark master's oath, clearing the barracks' local guards now takes your
+  Remnant standing to 100.** It was 25 from joining, and an armed player who had
+  just fired still read as hostile, so the troopers coming back to their posts shot
+  on sight. At 100 they wave you through. Number: `standing.retaken` in
+  `content/core/npcs/dark_master.json`.
+
 ## Settings: set up an AI brain with a link or a prompt (2026-11-01)
 
 - **Ollama, the local server (llama.cpp) and the cloud each get two buttons** beside
