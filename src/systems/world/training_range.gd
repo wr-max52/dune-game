@@ -21,6 +21,7 @@ signal record_set(seconds: float)
 signal remote_tamed
 
 var spec: Dictionary = {}
+var layout := ""                           ## the town's saved layout: its "layouts" block wins (issue #545)
 var player: Node3D
 var blade_out: Callable = Callable()      ## () -> bool
 var targets: Array = []                   ## RangeTarget nodes
@@ -37,6 +38,12 @@ var _mats: LookMaterials
 func _ready() -> void:
 	name = "TrainingRange"
 	spec = CharacterKit._read_json(DATA)
+	# Issue #545: a layout's own spots (the round port parks a ship where the square
+	# port's targets stood), laid over the file like a pickup's "layouts" block.
+	var over: Dictionary = spec.get("layouts", {}).get(layout, {})
+	if not over.is_empty():
+		spec = spec.duplicate(true)
+		spec.merge(over, true)
 	_mats = LookMaterials.new()
 	for t in spec.get("targets", []):
 		var n := RangeTarget.new()

@@ -936,13 +936,27 @@ func _player():
 func _character_page(v: VBoxContainer) -> void:
 	_section(v, "Outfit")
 	_story_note(v, "you play the smuggler; every piece and colour of their own kit is yours to pick.")
-	builder = CharacterBuilder.new()
-	builder.outfit_changed.connect(func(o):
+	# Issue #545: the outfit's turntable is a whole character (about 2.3 s to build),
+	# so it is built the first time the Player page shows, not when the panel first
+	# opens: I, M and F11 open at once.
+	var holder := VBoxContainer.new()
+	v.add_child(holder)
+	var make := func():
+		if builder != null or not holder.is_visible_in_tree():
+			return
+		builder = CharacterBuilder.new()
+		builder.outfit_changed.connect(func(o):
+			var a = _avatar()
+			if a != null:
+				a.set_outfit(o))
+		holder.add_child(builder)
 		var a = _avatar()
-		if a != null:
-			a.set_outfit(o))
-	v.add_child(builder)
+		builder.show_outfit(a.worn_outfit() if a != null else PlayerOutfit.load_outfit())
+	tabs.tab_changed.connect(func(_i): make.call())
 	_refreshers.append(func():
+		if builder == null:
+			make.call()
+			return
 		var a = _avatar()
 		builder.show_outfit(a.worn_outfit() if a != null else PlayerOutfit.load_outfit()))
 

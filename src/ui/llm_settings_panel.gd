@@ -9,6 +9,14 @@ extends CanvasLayer
 ## and model to that key's provider. Test works with AI off too, and says in plain
 ## words why a provider failed.
 
+const NpcVoiceT := preload("res://src/systems/voice/npc_voice.gd")
+
+
+## The NpcVoice autoload (issue #545: named through a preload, see get_singleton).
+static func _voice() -> NpcVoiceT:
+	return NpcVoiceT.get_singleton()
+
+
 var llm: LLMService
 var _panel: PanelContainer
 var _mode: OptionButton
@@ -202,8 +210,8 @@ func _load() -> void:
 	_cloud_type.select(1 if str(cfg.profile("cloud").get("type", "")) == "anthropic" else 0)
 	_cloud_on.button_pressed = bool(cfg.profile("cloud").get("enabled", false))
 	_key_now.text = "stored key: " + LLMConfig.masked(cfg.api_key("cloud"))
-	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(NpcVoice.api_key())
-	_speech_speed.value = NpcVoice.speed()
+	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(_voice().api_key())
+	_speech_speed.value = _voice().speed()
 
 
 func _apply() -> void:
@@ -225,15 +233,15 @@ func _apply() -> void:
 				(_fields[path] as LineEdit).text = str(cfg.profile("cloud").get(path.get_file(), ""))
 			_cloud_type.select(1 if str(cfg.profile("cloud").get("type", "")) == "anthropic" else 0)
 	if _elevenlabs_key.text.strip_edges() != "":
-		_voice_settings_saved = NpcVoice.set_api_key(_elevenlabs_key.text.strip_edges())
+		_voice_settings_saved = _voice().set_api_key(_elevenlabs_key.text.strip_edges())
 		if _voice_settings_saved:
 			_elevenlabs_key.text = ""
-	var speed_saved := NpcVoice.set_speed(_speech_speed.value)
+	var speed_saved := _voice().set_speed(_speech_speed.value)
 	_voice_settings_saved = _voice_settings_saved and speed_saved
 	llm.configure(cfg)
 	llm.set_mode(MODES[_mode.selected])
 	_key_now.text = "stored key: " + LLMConfig.masked(cfg.api_key("cloud"))
-	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(NpcVoice.api_key())
+	_elevenlabs_key_now.text = "stored locally: " + LLMConfig.masked(_voice().api_key())
 
 
 func _save() -> void:

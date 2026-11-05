@@ -185,7 +185,7 @@ static func make(cfg: Dictionary, cc = null) -> Dictionary:
 	if not bd.is_empty():
 		trect = Rect2(float(bd.min[0]), float(bd.min[1]), float(bd.max[0]) - float(bd.min[0]), float(bd.max[1]) - float(bd.min[1]))
 	var natives := NativesData.resolve(id, cfg, tcfg, int(cfg.get("seed", NameEngine.fnv(id) % 100000)), trect)
-	var near := neighbours(id, cc)
+	var near := neighbours(id, cc, cfg)
 	return {
 		"id": id,
 		"cfg": cfg,
@@ -263,12 +263,14 @@ static func _world_for(id: String, town_id: String, tcfg: Dictionary) -> Diction
 ## minus the child's own offset, exactly: nothing is mirrored or scaled any more.
 ## A sibling (another child of the same parent) is listed last, with "via": the
 ## parent's id; it is only seen from here, the parent's scene flies you to it.
-static func neighbours(id: String, cc = null) -> Array:
+## `own`: the planet's config when it is not (yet) in the content, so a planet
+## made from a config alone still sees the one it is near (issue #545).
+static func neighbours(id: String, cc = null, own: Dictionary = {}) -> Array:
 	if cc == null:
 		cc = _content()
 	var out: Array = []
 	var all: Dictionary = cc.planets
-	var mine: Dictionary = all.get(id, {})
+	var mine: Dictionary = all.get(id, own)
 	for other in all:
 		if other == id:
 			continue

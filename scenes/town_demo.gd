@@ -1426,6 +1426,7 @@ func _attach_body(with_range: bool = true) -> void:
 	if not with_range:
 		return                       # issue #45: the practice range is the port's
 	training_range = TrainingRange.new()
+	training_range.layout = str(town.data.get("layout", ""))
 	add_child(training_range)
 	training_range.player = _player
 	training_range.blade_out = func(): return player_kit.weapons.holder.current == "energy_blade" and player_kit.weapons.blade_extent > 0.5

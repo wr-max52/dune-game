@@ -30,6 +30,14 @@ extends Node3D
 ## The headless test calls greet(), talk(), buy(), sell() and the menu's choose()
 ## directly: the same code paths as the keys. A headless run never greets on its own.
 
+const NpcVoiceT := preload("res://src/systems/voice/npc_voice.gd")
+
+
+## The NpcVoice autoload (issue #545: named through a preload, see get_singleton).
+static func _voice() -> NpcVoiceT:
+	return NpcVoiceT.get_singleton()
+
+
 const CFG_PATH := "res://content/core/npcs/t89.json"
 const CARD_PATH := "res://content/core/npcs/t89_card.json"
 const PIT_RIM_Y := -0.5              ## above this you are up out of the pit (the street is 0)
@@ -337,7 +345,7 @@ func _open(text: String, opts: Array, pick: Callable) -> void:
 	said = text
 	menu.open(_l("menu_title") % [npc_name(), WorldState.credits], opts, pick, text)
 	if body != null:
-		NpcVoice.speak(text, NpcVoice.profile_for_npc("t89", {}), "calm", body)
+		_voice().speak(text, _voice().profile_for_npc("t89", {}), "calm", body)
 	if player != null and not player.locked:
 		player.locked = true
 		_was_locked = true
@@ -348,12 +356,12 @@ func _say(text: String) -> void:
 	if gear != null and gear.hud != null and text != "":
 		gear.hud.toast("%s: %s" % [npc_name(), text], 4.5)
 	if body != null:
-		NpcVoice.speak(text, NpcVoice.profile_for_npc("t89", {}), "calm", body)
+		_voice().speak(text, _voice().profile_for_npc("t89", {}), "calm", body)
 
 
 func _on_option_selected(_id: String) -> void:
 	if body != null:
-		NpcVoice.stop(body)
+		_voice().stop(body)
 
 
 # ------------------------------------------------------------------ tutorial
@@ -381,8 +389,8 @@ func _show_page() -> void:
 		keys += "\n[Backspace]  %s" % _l("skip")
 	card.show_page("%s   (%d/%d)" % [npc_name(), page + 1, pages.size()], said, keys)
 	if body != null:
-		NpcVoice.stop(body)
-		NpcVoice.speak(said, NpcVoice.profile_for_npc("t89", {}), "calm", body)
+		_voice().stop(body)
+		_voice().speak(said, _voice().profile_for_npc("t89", {}), "calm", body)
 
 
 ## Enter: the next page, or the end of the last one.
@@ -413,7 +421,7 @@ func end_tutorial(why: String) -> void:
 	elif why == "left":
 		_say(_line("tutorial_left"))
 	elif body != null and why != "done":
-		NpcVoice.stop(body)
+		_voice().stop(body)
 
 
 # ------------------------------------------------------------------ shop

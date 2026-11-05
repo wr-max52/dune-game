@@ -17,6 +17,14 @@ extends "res://src/systems/player/character_body.gd"
 ##
 ## Every number comes from a soldier profile (content/core/soldiers/*.json).
 
+const NpcVoiceT := preload("res://src/systems/voice/npc_voice.gd")
+
+
+## The NpcVoice autoload (issue #545: named through a preload, see get_singleton).
+static func _voice() -> NpcVoiceT:
+	return NpcVoiceT.get_singleton()
+
+
 const NpcLocomotion := preload("res://src/systems/ai/npc_locomotion.gd")
 const BodyAnimatorT := preload("res://src/systems/anim/body_animator.gd")
 
@@ -149,6 +157,8 @@ var _repath_s := 1.5
 var _repath_move := 1.5
 var _repath_clock := 0.0
 var _path_goal := Vector3.INF
+var _backoff_t := 0.0                 ## s left stepping back off whatever pinned us
+var _backoff_dir := Vector3.ZERO
 var _last_pos := Vector3.INF
 var _los_clear := false
 var _was_noticed := false
@@ -532,11 +542,11 @@ func say(text: String, seconds: float = 2.6, shout: bool = false) -> void:
 	var stable_id := post_id if post_id != "" else display_name
 	if stable_id == "":
 		stable_id = soldier_id
-	var voice_profile := NpcVoice.profile_for_npc(stable_id, profile)
+	var voice_profile := _voice().profile_for_npc(stable_id, profile)
 	var mood := str(profile.get("voice_mood", ""))
 	if mood == "":
 		mood = "angry" if hostile else ("wary" if faction == "imperial_remnant" else "warm")
-	NpcVoice.speak(text, voice_profile, mood, self, shout)
+	_voice().speak(text, voice_profile, mood, self, shout)
 
 
 func speaking() -> String:
@@ -642,9 +652,21 @@ func _walk(dt: float) -> Vector3:
 	var goal_moved := _path_goal == Vector3.INF or goal.distance_to(_path_goal) > _repath_move
 	if goal_moved or (locomotion.has_path() and _repath_clock <= 0.0):
 		_repath(goal)
+	# Stuck on a corner (a door jamb cut too early): step back off it for a moment,
+	# then a fresh path takes the corner properly from a little way out (issue #545).
+	if _backoff_t > 0.0:
+		_backoff_t -= dt
+		if _backoff_t <= 0.0:
+			_repath(goal)
+		return _backoff_dir * 0.5
 	var out: Dictionary = locomotion.update(dt, global_position, Vector2(velocity.x, velocity.z).length())
 	if out.stuck:
 		stuck_events += 1
+		var m: Vector3 = out.move
+		if m.length() > 0.001:
+			_backoff_dir = -m.normalized()
+			_backoff_t = 0.5
+			return _backoff_dir * 0.5
 		_repath(goal)
 	return (out.move as Vector3) * float(out.speed)
 

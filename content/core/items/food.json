@@ -3,6 +3,6 @@
   "label": "Sand pig",
   "kind": "food",
   "value": 4,
-  "look": "crate",
+  "look": "food_crate",
   "note": "IP-neutral. Issue #96: dried meat and flatbread. Shown to the player as \"sand pig\" (the id stays 'food' so saves keep working). Cheap and plentiful at the town's food stall; also cut from a sand pig. The desert packs take nothing else in trade."
 }

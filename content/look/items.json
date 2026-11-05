@@ -128,6 +128,18 @@
       "trim": "#5a3a24",
       "glow": "#f2ead8",
       "tint": 0.75
+    },
+  "food_crate": {
+      "frame": "case",
+      "scene": "res://assets/gear/cargo_case.glb",
+      "width": 0.5,
+      "height": 0.26,
+      "depth": 0.34,
+      "shell": "#8a6a44",
+      "trim": "#3e2e1e",
+      "glow": "#f0c070",
+      "tint": 0.75,
+      "note": "Issue #545: the food item (sand pig) pointed at a 'crate' look that never existed and built the stand-in."
     }
   },
   "pickup": {

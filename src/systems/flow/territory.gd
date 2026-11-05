@@ -427,13 +427,18 @@ static func _tick_remnant(dt: float) -> void:
 
 ## Every Remnant outpost with no clock yet gets one (the tick after the cruiser
 ## falls, or the first after loading a save from before this): the first in
-## Story.OUTPOSTS a full hold, each one after it stagger_s less.
+## Story.OUTPOSTS a full hold, each one after it stagger_s less. Issue #545: with
+## ten outposts (stagger_s was set for three) the step shrinks so the last still
+## starts above warn_s: none is short the moment the cruiser falls.
 static func _start_remnant_clocks(f: String = HOME) -> void:
+	var ids: Array = outposts(f).filter(func(id): return owner(str(id)) == REMNANT and not WorldState.control.get(id) is Dictionary)
+	var hold := rn("hold_s", 6000.0)
+	var step := rn("stagger_s", 540.0)
+	if ids.size() > 1:
+		step = minf(step, (hold - rn("warn_s", 2400.0)) / float(ids.size()))
 	var i := 0
-	for id in outposts(f):
-		if owner(str(id)) != REMNANT or WorldState.control.get(id) is Dictionary:
-			continue
-		WorldState.control[id] = { "owner": REMNANT, "hold": maxf(1.0, rn("hold_s", 6000.0) - i * rn("stagger_s", 540.0)) }
+	for id in ids:
+		WorldState.control[id] = { "owner": REMNANT, "hold": maxf(1.0, hold - i * step) }
 		i += 1
 
 

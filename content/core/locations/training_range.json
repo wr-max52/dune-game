@@ -10,6 +10,19 @@
     { "id": "t4", "pos": [-11.0, -6, 19.5], "hp": 30 },
     { "id": "t5", "pos": [-7.0, -6, 19.5], "hp": 30 }
   ],
+  "layouts": {
+    "port_round": {
+      "note": "Issue #545: the round pit parks ship_2 at x -18..-10, z 7..15, where t1-t3 stood: they move 8.5 m west, clear of it. t4 and t5 are clear already. Its pit is 76 m across, so firing is sanctioned over all of it.",
+      "zone": { "min": [-38, -7, -38], "max": [38, -1, 38] },
+      "targets": [
+        { "id": "t1", "pos": [-24.0, -6, 9.0], "hp": 30 },
+        { "id": "t2", "pos": [-24.0, -6, 12.5], "hp": 30 },
+        { "id": "t3", "pos": [-24.0, -6, 16.0], "hp": 30 },
+        { "id": "t4", "pos": [-11.0, -6, 19.5], "hp": 30 },
+        { "id": "t5", "pos": [-7.0, -6, 19.5], "hp": 30 }
+      ]
+    }
+  },
   "reset_seconds": 4.0,
   "remote": {
     "pos": [8.0, -4.4, -14.0],

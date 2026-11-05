@@ -30,6 +30,15 @@ func _ready() -> void:
 	_load_settings()
 
 
+## This autoload, found at run time. Scripts reach it through here (a preload of
+## this file) instead of naming the NpcVoice autoload, so they still compile when
+## a headless `-s` trace loads them before the autoloads exist (issue #545: that
+## broke every NPC in the CI traces).
+static func get_singleton() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	return tree.root.get_node_or_null(^"NpcVoice") if tree != null else null
+
+
 func _load_profiles() -> void:
 	_profiles = _read_json(PROFILES_PATH)
 	_library = _read_json(LIBRARY_PATH).get("voices", {})

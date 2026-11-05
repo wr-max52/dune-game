@@ -22,6 +22,14 @@ extends Node
 ## town_demo.gd keeps this as `bar`; `brain`, `npc` and `bar_front` are still the
 ## Cantina Owner's, so code written for the one-character bar keeps working.
 
+const NpcVoiceT := preload("res://src/systems/voice/npc_voice.gd")
+
+
+## The NpcVoice autoload (issue #545: named through a preload, see get_singleton).
+static func _voice() -> NpcVoiceT:
+	return NpcVoiceT.get_singleton()
+
+
 const TALK_RADIUS := 1.9
 const TWO_SHOT_FOV := 34.0
 const GROUP := "conversation_host"      ## issue #303: the end card waits while any host is talking
@@ -362,7 +370,7 @@ func start_talk(s: TalkSpot = null) -> void:
 		return
 	if s == null:
 		s = owner_spot
-	NpcVoice.stop(s.body)
+	_voice().stop(s.body)
 	active = s
 	talking = true
 	_offline_told = false
@@ -427,7 +435,7 @@ func end_talk() -> void:
 	var s := active
 	talking = false
 	active = null
-	NpcVoice.stop(s.body)
+	_voice().stop(s.body)
 	s.brain.end_visit()
 	panel.close()
 	var p: CharacterBody3D = demo._player
@@ -492,7 +500,7 @@ func _on_submit(text: String) -> bool:
 
 ## The player's line into the history, and the box waits for the answer.
 func _before_turn(s: TalkSpot, text: String) -> void:
-	NpcVoice.stop(s.body)
+	_voice().stop(s.body)
 	panel.commit_line()
 	panel.add_player_line(text)
 	if Disclaimers.triggered(text):
@@ -567,7 +575,7 @@ func _on_job(s: TalkSpot, j: Dictionary) -> void:
 
 func _on_job_answer(id: String, accepted: bool) -> void:
 	if active != null:
-		NpcVoice.stop(active.body)
+		_voice().stop(active.body)
 	if accepted and active != null and active.brain.accept_job(id):
 		_toast("Job taken: " + str(WorldState.job(id).get("title", id)))
 		var story_line := _story_mood(active)
@@ -599,8 +607,8 @@ func _story_mood(s: TalkSpot) -> String:
 func _speak(s: TalkSpot, text: String) -> void:
 	if s == null or text.strip_edges() == "":
 		return
-	var voice_profile := NpcVoice.profile_for_npc(s.id(), s.brain.card)
-	NpcVoice.speak(text, voice_profile, s.brain.rel.mood, s.body, false, true, s.near_voice)
+	var voice_profile := _voice().profile_for_npc(s.id(), s.brain.card)
+	_voice().speak(text, voice_profile, s.brain.rel.mood, s.body, false, true, s.near_voice)
 
 
 func _end_soon(_reason: String) -> void:

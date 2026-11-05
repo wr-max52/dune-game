@@ -33,12 +33,18 @@ func _init(nav: Dictionary = {}) -> void:
 
 
 func set_path(points) -> void:
+	var old_goal := goal()
 	path = []
 	for p in points:
 		path.append(p)
 	index = 1 if path.size() > 1 else 0
 	arrived = path.is_empty()
 	stuck = false
+	# A fresh path to the same goal (the body repaths every repath_s, shorter than
+	# stuck_s) keeps the stuck window running: resetting it there meant a body
+	# pinned on a door jamb was never found stuck (issue #545).
+	if old_goal != Vector3.INF and not path.is_empty() and _flat(goal() - old_goal).length() < 0.5:
+		return
 	_stuck_clock = 0.0
 	_best_left = INF
 

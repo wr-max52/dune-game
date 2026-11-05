@@ -170,7 +170,7 @@ func validate() -> Array:
 		for k in range(1, pts.size()):
 			for b in bs:
 				if str(b.kind) in blocking and float(b.min[1]) < 2.2:
-					if _segment_rect_dist(pts[k - 1], pts[k], b) <= clearance:
+					if _segment_rect_dist(pts[k - 1], pts[k], b, clearance) <= clearance:
 						errs.append("V8 route %s segment %d hits %s" % [r.id, k, b.id])
 
 	# V9 (issue #237) a round wall (kind "ring") blocks like a wall, piece by
@@ -238,9 +238,19 @@ func _point_rect_dist(x: float, z: float, b) -> float:
 
 ## 2D distance from segment p->q (each [x, z]) to a box footprint.
 ## Sampled every 0.1 m, the same method as the Python reference.
-func _segment_rect_dist(p, q, b) -> float:
+## `limit`: a caller that only asks "within limit?" gets the box's distance to the
+## segment's bounding rectangle when that is already past it. It is a lower bound
+## on every sample, so the answer is the same, without sampling a segment against
+## a box across town (issue #545: a size-100 town took 23 s to validate).
+func _segment_rect_dist(p, q, b, limit: float = INF) -> float:
 	var a := Vector2(float(p[0]), float(p[1]))
 	var c := Vector2(float(q[0]), float(q[1]))
+	if limit < INF:
+		var dx := maxf(maxf(float(b.min[0]) - maxf(a.x, c.x), 0.0), minf(a.x, c.x) - float(b.max[0]))
+		var dz := maxf(maxf(float(b.min[2]) - maxf(a.y, c.y), 0.0), minf(a.y, c.y) - float(b.max[2]))
+		var lower := sqrt(dx * dx + dz * dz)
+		if lower > limit:
+			return lower
 	var n := maxi(2, int(a.distance_to(c) / 0.1))
 	var best := INF
 	for s in n + 1:

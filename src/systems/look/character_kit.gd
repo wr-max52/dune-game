@@ -165,6 +165,7 @@ func _wear_outfit(root: Node3D, skin: SkinnedBody, cfg: Dictionary, outfit: Dict
 		for mi in skin.model.find_children("*", "MeshInstance3D", true, false):
 			if not keep.has(mi):
 				mi.get_parent().remove_child(mi)
+				mi.mesh = null     # a surface with no material errors on free under the dummy renderer (headless)
 				mi.free()
 	for part in cfg.get("hide_parts", []):
 		var hidden := skin.model.find_child(str(part), true, false) as GeometryInstance3D

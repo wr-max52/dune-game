@@ -17,6 +17,14 @@ extends Node
 ## The headless tests call talk(), buy(), scrap() and the menu's choose() directly:
 ## the same code paths as the keys.
 
+const NpcVoiceT := preload("res://src/systems/voice/npc_voice.gd")
+
+
+## The NpcVoice autoload (issue #545: named through a preload, see get_singleton).
+static func _voice() -> NpcVoiceT:
+	return NpcVoiceT.get_singleton()
+
+
 var demo                              ## town_demo.gd (its speeder_post owns the speeders)
 var gear: GearController              ## for its HUD (toasts)
 var player: CharacterBody3D
@@ -235,9 +243,9 @@ func _say(text: String) -> void:
 
 func _speak(text: String) -> void:
 	if speaker != null and is_instance_valid(speaker):
-		NpcVoice.speak(text, NpcVoice.profile_for_npc(str(cfg.get("voice", "mechanic")), {}), "warm", speaker)
+		_voice().speak(text, _voice().profile_for_npc(str(cfg.get("voice", "mechanic")), {}), "warm", speaker)
 
 
 func _on_option_selected(_id: String) -> void:
 	if speaker != null and is_instance_valid(speaker):
-		NpcVoice.stop(speaker)
+		_voice().stop(speaker)
