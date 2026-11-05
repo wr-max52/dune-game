@@ -260,8 +260,8 @@ under `docs/lookdev/<area>/` (or `docs/<area>/`) and embed with the raw
 GitHub URL on this branch. `tools/lookdev/shoot.sh` captures stills.
 
 ## Checked
-* The suites and probes that ran, with their counts, and what failed on
-  `main` already.
+* The suites and probes that ran, with their counts. `./scripts/ci.sh` is
+  green on `main` (issue #545), so a red suite is this PR's to fix.
 * Not run: the rest, by name.
 
 ## Leaves behind

@@ -2,6 +2,46 @@
 
 Honest list of what is broken or faked. Updated every milestone.
 
+## After issue #545, the CI gate green (2026-11-05)
+
+**Checked:** `./scripts/ci.sh` end to end on the Mac (Godot 4.7.2), inside its
+new 45-minute budget. Most of what was red came from the home planet building
+the round port (3a6017d) while the traces and tests still used the square port's
+numbers; they now read the town's own data (its gate, pit, tower, routes).
+
+**Fixed in the game on the way (real bugs the tests caught):**
+- A barracks-hall trooper who chased you out could never get back in: pinned on
+  the door jamb, and the stuck check never fired because every repath reset it.
+  A stuck body now steps back off the corner and repaths.
+- With ten Remnant outposts (the stagger was set for three) the last ones were
+  already short of supplies the moment the cruiser fell.
+- In the round pit three range targets stood inside a parked ship; the range
+  takes a layout's own spots now, and firing is sanctioned over the whole pit.
+- The back-gap route ran through Skrugs's garage and the lookout route ended a
+  step short of the floor (round port data).
+- Validating a size-100 town took 23 s (every route sampled against every box);
+  0.2 s now, same answers.
+- The first I, M or F11 froze the game for about 2.4 s building the outfit
+  preview; the preview is built when the Player page first shows.
+- A planet made from its config alone did not see the planet it is near.
+
+**Not done, honestly:**
+- **Opening the Player page the first time still takes about 2.3 s** (the
+  outfit turntable builds a whole character). It no longer holds up the panel.
+- **Getting out of the ship in the round pit can put you on its wing**, 1.3 m
+  up: the exit spot (5.5 m to the side) only checks the town's boxes, and hulls
+  now follow the model (f41a420). You are still in the pit.
+- **The natives trace aborts on quit** (`recursive_mutex lock failed` in the
+  engine) after writing its trace; the gate does not read trace exit codes.
+- **m13 (the jetpack trace) is still disabled**; it hung before this issue and
+  was not looked at here.
+- **Frame budgets sit near the line** (40 to 49 ms against 50) in the combat and
+  garrison traces now that the round port has thirteen troopers; a busy machine
+  can tip them. Harness teleports and a fresh town's first half second are not
+  timed (they are not play).
+- **Tests no longer read this machine's graphics settings** where they check
+  render defaults (Low graphics and Indirect light are pinned in memory).
+
 ## After the station's bay (2026-11-04)
 
 **Checked:** `test_station` (19, four new: the six pads fit and the front row
@@ -338,8 +378,7 @@ and draw calls were not measured on the Mac, and nothing was watched on screen.
 **Checked:** tests/test_save_slots.gut.gd (10/10), test_player_outfit (6/6),
 the two new-game tests, test_smoke, and a headless town boot (it copied a
 real story `save.json` into `save_story.json`). A switch in a windowed game
-wasn't tried. `test_story`'s "a new town after the fleet has no garrison"
-fails (7 guards, not 3) on `main` as well.
+wasn't tried.
 
 - **Older builds still write `save.json`.** After the one-time copy, this build
   never reads it again, so whatever an older branch plays afterwards stays in
@@ -429,7 +468,7 @@ fights there). Nothing was played by hand or rendered.
 
 **Checked:** `test_plot_buildout` (17/17: the armour bought, sold back and bought again), `test_skrugs_yard` (22/22, three new: the 100 m reach, the offer
 the moment you talk, the stall by the gate and garage), `test_inventory` (the new
-fence test passes; two old count checks fail on main too), `test_droid_merchant_outposts`,
+fence test passes), `test_droid_merchant_outposts`,
 `test_smoke`, a headless boot, and rendered stills of the stall from the back
 gate and the droid post through the front gate. Nothing was played by hand.
 
@@ -496,8 +535,7 @@ Nothing was played by hand; no fight against the new droids was tried.
 yard inside the wall and clear of every town box, the back gate's gap, a speeder
 driven out of his garage and through the gate, both garages driven into and their
 walls blocking, the bench in free roam and not in story, ship buying),
-`test_speeder_upgrades` (19/19) and `test_speeders` (18/19: "no job board" also
-fails on main, since #188 gave Skrugs jobs). The smoke test and a boot check. The
+`test_speeder_upgrades` (19/19) and `test_speeders`. The smoke test and a boot check. The
 speeder trace was updated but not run.
 
 - **The back gate is tight on purpose.** A speeder lined up on the lane goes
@@ -585,8 +623,6 @@ boot. Five stacked PRs: arms, scope, sword, feel and sprint, animations.
   close to but not the same as third person. Not tested against the duelist.
 - **The town turns hostile in long screenshot runs** (guards, bolts and smoke
   after a few minutes), so `shoot_fpv.sh` is best run a few shots at a time.
-- `test_sword_combo`'s `test_early_press_does_not_buffer` and
-  `test_pose_keys_are_continuous` fail, on main too.
 
 **Follow-up polish (2026-10-31):** the sword hilt now sits in the closed fingers
 (`fist_seat`), an upper arm that shows only near the elbow ends the floating
@@ -698,9 +734,6 @@ interceptor up (`scenes/orbit_trace.gd`): every altitude band p50 ~10 ms, p95
 pass, including high queries straight over every item (exactly the plain scan).
 
 **Not done, honestly:**
-- **`scenes/m14_flight_trace.gd` stops at its crash step:** it looks up
-  `mesa_1500_1700`, which the desert's landforms no longer place (the code that
-  places them was not touched here). Its GUT test fails for that reason.
 - **The interceptor still circles under its ceiling while you are in orbit** (it
   cannot follow you up and keeps hunting until you come down or leave).
 - **The pad's orbital fight still starts at the old edge** (space_altitude), with
@@ -866,9 +899,6 @@ The unit tests and the trace's GUT test were updated but not run.
   scene takes as long to build as a landing does. In this container that was
   8 to 14 s, and it will be much less on a real GPU. Building the town in
   stages while you fly in would hide it; that is a follow-up.
-- **WORST_MS in the planets trace was 273 ms.** Frame-budget tests already fail
-  on main, and the trace teleports the player round the ball, which rebuilds
-  the ground under them.
 - **From the home planet the station is drawn coarse** (no floors, people or
   boulders), and only its outline shows from kilometres away.
 - **In golden-hour light the grey rock reads tan.** It is grey at midday.

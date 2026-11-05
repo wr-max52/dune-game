@@ -110,7 +110,9 @@ func test_sidecar() -> void:
 		check(owned_pid > 0, "real child launched")
 		await create_timer(0.1).timeout
 		child.stop()
-		check(not OS.is_process_running(owned_pid), "stop reaps only its own live child, or skips an exited one")
+		# `kill -0` asks the OS: Godot 4.7's is_process_running logs an ERROR for a
+		# pid it has already reaped, which this runner counts as a failure.
+		check(OS.execute("kill", ["-0", str(owned_pid)]) != 0, "stop reaps only its own live child, or skips an exited one")
 		check(not FileAccess.file_exists(Sidecar.PID_PATH), "owned PID marker removed")
 		child.stop()
 
@@ -185,6 +187,7 @@ func add_unit(kind: String, uid: int, owned: bool):
 	return u
 """
 	source += method_source(text, "_chirps")
+	source += method_source(text, "_chirp")   # issue #538 split the per-droid body out
 	var ctl = fixture(source)
 	if ctl == null:
 		return
@@ -224,7 +227,10 @@ const LLMSidecar = preload("res://sidecar.gd")
 class Config:
 	func profile(_id) -> Dictionary:
 		return {"sidecar": {"enabled": true}}
+	func ai_enabled() -> bool:
+		return true
 var config = Config.new()
+var mode := "local"
 var sidecar
 var _sidecar_start_pending := false
 var callbacks := []
@@ -234,6 +240,7 @@ func _check_health(_id, cb):
 	callbacks.append(cb)
 """
 	source += method_source(text, "start_sidecar")
+	source += method_source(text, "ai_on")   # issue #328: start_sidecar asks it first
 	var svc = fixture(source)
 	if svc == null:
 		return
