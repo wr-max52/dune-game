@@ -32,6 +32,9 @@ var _done := false             # guards against writing the file twice
 func _initialize() -> void:
 	_demo = load("res://scenes/town_demo.gd").new()
 	_demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
+	# Issue #545: and nobody stands in the way. The round port's bar patrons (444b702)
+	# stand on the cantina routes; this trace walks the layout, not a crowd.
+	_demo.with_npcs = false
 	_set_if_present(_demo, "use_look", false)   # keep the trace fast and unchanged
 	get_root().add_child(_demo)
 	_layout = _demo.town

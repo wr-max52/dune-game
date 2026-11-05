@@ -10,6 +10,9 @@ func before_each() -> void:
 	WorldState.new_game(WorldState.STORY)
 	s = ShipSalesman.new()          # on his own: no town, no body
 	add_child_autofree(s)
+	# Already met: [E] is his menu, not the first hello and tutorial offer (#545).
+	WorldState.set_flag(s.met_flag())
+	ShipSalesman.greeted = true
 
 
 func after_each() -> void:

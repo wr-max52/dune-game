@@ -9,7 +9,6 @@ const TownDecor := preload("res://src/systems/world/town_decor.gd")
 
 ## Boxes the addendum's table deliberately leaves greybox (gate lintel: overhead
 ## in the perimeter zone has no row).
-const SKIPPED_IDS := ["gate_lintel"]
 
 
 func after_each() -> void:
@@ -91,19 +90,33 @@ func test_every_box_has_a_material_when_look_on() -> void:
 			continue                       # issue #321: the barracks hall is drawn by BarracksLook and the kit
 		var body: Node = d.get_node("Town/" + str(b.id))
 		var mi: MeshInstance3D = body.get_node("Mesh")
-		if SKIPPED_IDS.has(str(b.id)):
-			assert_null(mi.material_override, "%s keeps greybox on purpose" % b.id)
-		else:
-			assert_not_null(mi.material_override, "%s is dressed" % b.id)
+		# Dressed: its own material, or its greybox hidden because the kit draws it
+		# (the yard's crate stacks, look "crates").
+		assert_true(mi.material_override != null or not mi.visible, "%s is dressed" % b.id)
 
 
+## Issue #545: the street lamps are LookEnvironment's (day and night), at most 12.
+## Since the draw-distance rules (DECISIONS 2026-11-02) the interiors' small
+## shadowless lights (the barracks hall, the club's candles) fade with distance
+## instead: every other omni light must, and none casts a shadow.
 func test_lamps_are_tracked_and_capped() -> void:
-	var d = _demo(true)
+	# A playing town (review mode builds no DrawDistance), without people or a ship.
+	var d = TownDemo.new()
+	d.use_look = true
+	d.with_npcs = false
+	d.with_ship = false
+	add_child_autofree(d)
+	await wait_physics_frames(3)       # DrawDistance sets ranges a frame after a node enters
 	var omnis := _all(d, "OmniLight3D", [])
-	assert_gt(omnis.size(), 0, "the town has lamps")
-	assert_lte(omnis.size(), 12, "no more than 12 omni lights")
+	var lamps := omnis.filter(func(l): return d.look._lamps.has(l))
+	assert_gt(lamps.size(), 0, "the town has lamps")
+	assert_lte(lamps.size(), 12, "no more than 12 street lamps")
 	for l in omnis:
-		assert_true(d.look._lamps.has(l), "%s is tracked by LookEnvironment" % l.name)
+		if d._player != null and d._player.is_ancestor_of(l):
+			continue                   # the player's own (blade, jetpack): left alone on purpose
+		if not d.look._lamps.has(l):
+			assert_true((l as Light3D).distance_fade_enabled, "%s (%s) fades with distance" % [l.name, d.get_path_to(l)])
+			assert_false((l as Light3D).shadow_enabled, "%s casts no shadow" % l.name)
 
 
 func test_cloth_is_banners_and_awnings_no_character_art() -> void:
@@ -175,7 +188,7 @@ func test_market_stalls_have_shade_and_wares_and_differ() -> void:
 	for b in d.town.boxes():
 		if str(b.get("look", "")) == "stall":
 			stalls.append(str(b.id))
-	assert_eq(stalls.size(), 12, "twelve stalls")
+	assert_eq(stalls.size(), 48, "the round market's 48 stalls (the square port had twelve)")
 	stalls.sort()
 	for id in stalls:
 		assert_true(market.wares.has(id), "%s has wares on its table" % id)

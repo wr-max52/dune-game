@@ -6,7 +6,6 @@ extends GutTest
 
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreContent := preload("res://src/systems/dataload/core_content.gd")
-const PORT := "res://content/core/locations/port_town.json"
 
 
 func test_every_loop_poses_every_joint_and_loops_cleanly() -> void:
@@ -43,8 +42,10 @@ func test_the_sip_comes_back_to_the_hold() -> void:
 
 
 func test_the_port_has_a_band_of_three_and_a_crowd() -> void:
+	# c58aad0 turned the port's location file into town layouts: load the town the
+	# port builds (issue #545).
 	var t = TownLayout.new()
-	t.load_from_dict(JSON.parse_string(FileAccess.get_file_as_string(PORT)))
+	assert_true(t.load_town("port_town"))
 	assert_eq(t.validate(), [], "the port's layout still validates")
 	var cc = CoreContent.new()
 	cc.load_from()

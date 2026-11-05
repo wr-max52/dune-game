@@ -28,8 +28,13 @@ func test_gear_content_loads_by_id() -> void:
 	assert_eq(jet.get("slot"), "back", "the jetpack is worn on the back")
 	assert_true(jet.has("jetpack"), "it carries jetpack tuning")
 	assert_eq(trader.get("id"), "gear_trader")
-	assert_eq(content.get_pickups("port_town").size(), 3, "the pit jetpack, (M15) the cache outside the gate and (#148) the wreck's red saber")
-	assert_eq(content.vendors_in("port_town").size(), 2, "the gear trader and (M15) the fence")
+	var pickups: Array = content.get_pickups("port_town").map(func(p): return str(p.id))
+	pickups.sort()
+	assert_eq(pickups, ["barracks_rifle", "desert_cache", "pit_jetpack", "tower_blade", "wreck_red_saber"],
+		"the pit jetpack, (M15) the cache outside the gate, (#148) the wreck's red saber, the barracks rifle and the tower blade")
+	var vendors: Array = content.vendors_in("port_town").map(func(v): return str(v.id))
+	vendors.sort()
+	assert_eq(vendors, ["fence", "food_stall", "gear_trader"], "the gear trader, (M15) the fence and (#96) the food stall")
 
 
 func test_every_gear_reference_resolves() -> void:
@@ -164,16 +169,17 @@ func test_buy_back_needs_stock_and_credits() -> void:
 
 func test_gear_trader_always_sells_jetpacks() -> void:
 	var inv := Inventory.new()
-	assert_eq(inv.vendor_stock(trader), ["jetpack"], "a fresh game: the trader has jetpacks")
+	# (#372) grenades are endless stock too.
+	assert_eq(inv.vendor_stock(trader), ["jetpack", "grenade"], "a fresh game: the trader has jetpacks")
 	var cost := Inventory.buy_price(jet, trader)
 	assert_eq(cost, int(jet.value), "at the jetpack's value")
 	assert_eq(inv.buy("jetpack", jet, trader, cost - 1), -1, "cannot afford it")
 	assert_eq(inv.buy("jetpack", jet, trader, cost * 3), cost)
 	assert_eq(inv.buy("jetpack", jet, trader, cost * 3), cost, "never runs out")
 	assert_eq(inv.count("jetpack"), 2)
-	assert_eq(inv.vendor_stock(trader), ["jetpack"], "still on the stall")
+	assert_eq(inv.vendor_stock(trader), ["jetpack", "grenade"], "still on the stall")
 	assert_eq(inv.sell("jetpack", jet, trader), Inventory.sell_price(jet, trader), "it still buys them back")
-	assert_eq(inv.vendor_stock(trader), ["jetpack"], "a sold jetpack does not pile up")
+	assert_eq(inv.vendor_stock(trader), ["jetpack", "grenade"], "a sold jetpack does not pile up")
 
 
 func test_old_saves_see_the_trader_jetpacks() -> void:

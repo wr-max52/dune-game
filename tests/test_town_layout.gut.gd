@@ -288,9 +288,9 @@ func idx_of(d: Dictionary, id: String, list: String = "boxes") -> int:
 
 func test_town_loads_with_expected_counts() -> void:
 	var t := _town()
-	assert_eq(t.boxes().size(), 182)   # issue #76: + the barracks landing pad
-	assert_eq(t.markers().size(), 42)  # locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen; issue #261: + the band of three and eight club patrons
-	assert_eq(t.routes().size(), 17)   # M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout; issue #261: + three club strolls
+	assert_eq(t.boxes().size(), 239)   # issue #76: + the barracks landing pad; 182 in the file, + 57 the barracks interior stamps in on load (364b7a0)
+	assert_eq(t.markers().size(), 50)  # 388e1e6: + five speeders out the back gate; 364b7a0: + the barracks rifle's spot and its two corridor troopers; locals: five walkers and four stall keepers; art pass 2: + three patrons at the bar; issue #58: + T-89; + three roof riflemen; issue #261: + the band of three and eight club patrons
+	assert_eq(t.routes().size(), 19)   # 364b7a0: + the interior troopers' two corridor loops; M15: + patrol loops; locals: + five walkers' loops; art pass 2: + the climb to the lookout; issue #261: + three club strolls
 	assert_eq(t.zones().size(), 8)
 
 
@@ -326,7 +326,8 @@ func test_spawn_is_on_pit_floor() -> void:
 
 
 func test_eight_trooper_posts() -> void:
-	assert_eq(_town().markers_with_role("trooper_post").size(), 8)
+	# Eight outside, two walking the barracks corridor (364b7a0).
+	assert_eq(_town().markers_with_role("trooper_post").size(), 10)
 
 
 func test_three_riflemen_on_the_barracks_roof() -> void:
@@ -346,7 +347,7 @@ func test_route_lengths_match_reference() -> void:
 	# Art pass 2: round the cantina stage instead of across it, and round the bigger pit.
 	assert_almost_eq(t.route_length("gate_to_cantina"), 255.2, 0.1)
 	assert_almost_eq(t.route_length("spawn_to_cantina"), 218.2, 0.1)
-	assert_almost_eq(t.route_length("backgap_to_cantina"), 150.7, 0.1)
+	assert_almost_eq(t.route_length("backgap_to_cantina"), 162.7, 0.1)   # the route's own points sum to 162.7 m
 
 
 func test_ramp_ne_top_edge_meets_ground() -> void:

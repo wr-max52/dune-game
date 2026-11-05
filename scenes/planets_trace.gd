@@ -274,6 +274,9 @@ func _run() -> void:
 	out("STATION_GUARDS", demo.npcs.size())
 	out("STATION_LOCALS", demo.locals.size())
 	out("STATION_BUILDINGS", t.boxes().filter(func(b): return str(b.get("look", "")).begins_with("hut") or str(b.get("look", "")).begins_with("tower")).size())
+	# Issue #545: the size-1 town's own, not the domes' homes (da2fd02, zone "dome_*").
+	out("STATION_CORE_BUILDINGS", t.boxes().filter(func(b): return (str(b.get("look", "")).begins_with("hut") or str(b.get("look", "")).begins_with("tower")) \
+		and not str(b.get("zone", "")).begins_with("dome_") and not str(b.get("zone", "")).begins_with("moon_")).size())
 	out("STATION_CANTINA", not t.get_box("bar_counter").is_empty())
 	var om: Dictionary = t.get_marker("cantina_owner")
 	out("STATION_OWNER_CARD", om.get("card", ""))
@@ -286,8 +289,8 @@ func _run() -> void:
 	out("STATION_STAGE", not t.get_box("cantina_stage").is_empty())
 	out("STATION_ROAMERS", t.markers().filter(func(m): return str(m.id).begins_with("roamer_")).size())
 	out("STATION_PIT_OUTSIDE", float(t.get_box("pit_bowl").min[0]) > float(t.data.bounds.max[0]))
-	var guard = demo.npcs[0] if not demo.npcs.is_empty() else null
-	out("GUARD_AT_CANTINA_DOOR", guard != null and guard.post_pos.distance_to(t.marker_pos("cantina_door")) < 5.0)
+	# One of them (the domes bring their own) stands at the cantina's door.
+	out("GUARD_AT_CANTINA_DOOR", demo.npcs.any(func(g): return g.post_pos.distance_to(t.marker_pos("cantina_door")) < 5.0))
 	var merchant = demo.locals.filter(func(n): return str(n.profile.get("id", "")) == "local_merchant")
 	# Issue #261: the station's club has no building; its stall is still past the bar's door.
 	out("MERCHANT_IN_FRONT", not merchant.is_empty() and merchant[0].post_pos.x > t.marker_pos("cantina_door").x - 1.5)
@@ -345,6 +348,10 @@ func _run() -> void:
 	# The asteroid is a real ball: stand on its rock, and on its far side.
 	var sp: PlanetSphere = PlanetSphere.current
 	out("ROCK_BALL_RADIUS", int(sp.radius) if sp != null else 0)
+	# Issue #545: these are the trace's own jumps round the ball, not a walk: the
+	# ground is rebuilt under the player in one go (snap_to), so the frame budget
+	# (WORST_MS) is not measured over them or while they settle.
+	_measure = false
 	for m in [["WALK_ON_ROCK", Vector2(500.0, -200.0)], ["WALK_ROUND_THE_BALL", Vector2(PI * sp.radius * 0.8, 0.0)]]:
 		var g := sp.surface_at(m[1].x, m[1].y)
 		var up := sp.up_at(g)
@@ -359,6 +366,7 @@ func _run() -> void:
 	place_player(t.spawn_pos())
 	demo.terrain.snap_to(player.global_position)
 	await frames(10)
+	_measure = true
 	# The dome is solid: a jetpack-high push at it from inside stays inside.
 	var y := stn.wall_h + 3.0
 	var el := asin((y - stn.wall_h) / stn.dome_h)

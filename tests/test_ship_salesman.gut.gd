@@ -23,6 +23,13 @@ func after_each() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+## A salesman you have met: [E] is his shop, not the first hello and tutorial
+## offer (greet(), tested above). Issue #545.
+func _met(s: ShipSalesman) -> void:
+	WorldState.set_flag(s.met_flag())
+	ShipSalesman.greeted = true
+
+
 func _town() -> Node:
 	var t = TownDemo.new()
 	t.use_look = false
@@ -234,6 +241,7 @@ func test_shop_menu_lists_ships_then_sell_back() -> void:
 	var t = _town()
 	var s: ShipSalesman = t.salesman
 	WorldState.credits = 5000
+	_met(s)
 	s.talk()
 	assert_eq(_ids(s), ["group:ships", "tutorial"], "the ship shop and the tutorial: nothing to upgrade yet")
 	s.menu.choose("group:ships")
@@ -252,6 +260,7 @@ func test_upgrades_are_their_own_menu_once_you_own_a_ship() -> void:
 	var t = _town()
 	var s: ShipSalesman = t.salesman
 	WorldState.credits = 5000
+	_met(s)
 	s.talk()
 	s.menu.choose("group:ships")
 	s.menu.choose("buy:courier")
@@ -323,7 +332,8 @@ func test_his_card_has_every_ship_with_its_numbers() -> void:
 	assert_string_contains(persona, "Top speed %d" % int(ship.atmosphere.max_speed))
 	var rules := str(b.builder.rules_message().content)
 	assert_string_contains(rules, "offer_ship")
-	assert_false(rules.contains("offer_job") or rules.contains("pour_drink"), "no jobs, no drinks")
+	assert_true(rules.contains("offer_job"), "#188: he gives Oda's jobs too")
+	assert_false(rules.contains("pour_drink"), "no drinks")
 	WorldState.hangar = "gunship"
 	assert_string_contains(" ".join(s.pad_brief()), s.ship_label("gunship"), "he knows what is on your pad")
 
@@ -364,10 +374,11 @@ func test_talk_from_his_shop_and_buy_on_the_price_card() -> void:
 	t._player.global_position = s.pos + Vector3(1.5, 0, 0)
 	assert_null(t.bar.spot_in_range(), "his own [E] (the shop) starts the talk, not the host's")
 	WorldState.credits = 5000
+	_met(s)
 	s.talk()
-	assert_eq(str(s.menu.options[0].id), "chat", "Talk comes first")
-	s.menu.choose("chat")
-	assert_true(t.bar.is_talking())
+	# [E] on him is the talk straight away now (ShipSalesman.talk: chat() first),
+	# no menu with Talk on it (issue #545).
+	assert_true(t.bar.is_talking(), "Talk comes first")
 	assert_eq(t.bar.active, s.spot)
 	s.spot.brain.sale_offered.emit({ "id": "interceptor", "name": s.ship_label("interceptor"), "price": s.price("interceptor") })
 	assert_true(t.bar.panel.job_open(), "the price card is up")

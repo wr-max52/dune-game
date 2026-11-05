@@ -42,7 +42,8 @@ func test_the_town_and_planet_are_named() -> void:
 
 func test_your_ship_and_gear_are_named() -> void:
 	assert_ne(str(t.get("VESSEL_NAME", "")), "")
-	assert_true(str(t.get("BOARD_PROMPT", "")).ends_with(str(t.get("VESSEL_NAME"))))
+	# "Board  <name>  ·  <berth>  ·  <upgrades>" since the berths (#368): the name is in it.
+	assert_string_contains(str(t.get("BOARD_PROMPT", "")), str(t.get("VESSEL_NAME")))
 	_true("HUD_SHOWS_VESSEL")
 	assert_eq(t.get("SPACE_VESSEL_NAME"), t.get("VESSEL_NAME"), "the same ship in space")
 	assert_eq(t.get("JETPACK_SHOWN"), "Jetpack (%s)" % t.get("JETPACK_MODEL"))

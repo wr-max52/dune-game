@@ -82,7 +82,10 @@ func test_first_wave_arrives_after_its_delay() -> void:
 			if e.type == "wave":
 				saw_wave = true
 	assert_true(saw_wave, "the wave event fires")
-	assert_eq(df.alive_on(Dogfight.TEAM_HOSTILE).size(), 3, "three remnant fighters")
+	var want := 0
+	for sh in content.get_encounter("orbital_skirmish").waves[0].ships:
+		want += int(sh.count)
+	assert_eq(df.alive_on(Dogfight.TEAM_HOSTILE).size(), want, "the first wave's fighters (two since a901f5e)")
 
 
 func test_player_command_flies_the_player_ship() -> void:

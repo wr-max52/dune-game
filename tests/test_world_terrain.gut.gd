@@ -107,7 +107,7 @@ func test_the_desert_rocks_are_solid_to_the_ship() -> void:
 
 func test_obstacles_are_walls_not_floors() -> void:
 	assert_eq(ground.hit(Vector3(40, 1.0, 0), 1.0), "", "the street is ground, not an obstacle")
-	assert_ne(ground.hit(Vector3(0, 3.0, 74), 1.5), "", "the north wall is")
+	assert_ne(ground.hit(Vector3(0, 3.0, 141), 1.5), "", "the north wall is (the round port's, 140-142 m out)")
 	assert_eq(ground.hit(Vector3(0.3, -4.5, 0), 2.0), "", "the parked ship's pad box is not")
 
 

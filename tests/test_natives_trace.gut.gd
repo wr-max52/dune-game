@@ -48,9 +48,12 @@ func test_hostile_and_won_over() -> void:
 	_true("HORN")
 	_true("HOSTILE_ATTACKS")
 	_true("PLAYER_HURT")
-	_true("WON_OVER", "five minutes, nobody killed")
-	assert_between(float(t.get("ATTACK_S", 0)), 299.0, 320.0, "five minutes from the horn")
-	assert_between(float(t.get("SURVIVED_S", 0)), 280.0, 320.0, "counted from the first blow, a few seconds after the horn")
+	# survive_s from the species data (60 s since fb47599; it was five minutes).
+	var sp = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/species/dune_nomads.json"))
+	var survive := float(sp.hostile.survive_s)
+	_true("WON_OVER", "survive_s, nobody killed")
+	assert_between(float(t.get("ATTACK_S", 0)), survive - 1.0, survive + 20.0, "survive_s from the horn")
+	assert_between(float(t.get("SURVIVED_S", 0)), survive - 20.0, survive + 20.0, "counted from the first blow, a few seconds after the horn")
 	assert_eq(int(t.get("HOSTILE_KILLS", 1)), 0)
 	assert_eq(t.get("TRADE_AFTER_WIN"), "traded")
 

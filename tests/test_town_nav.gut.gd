@@ -7,6 +7,7 @@ extends GutTest
 const TownLayout := preload("res://src/systems/world/town_layout.gd")
 const CoreScript := preload("res://src/systems/dataload/core_content.gd")
 const PitBowl := preload("res://src/systems/world/pit_bowl.gd")
+const RingWall := preload("res://src/systems/world/ring_wall.gd")
 
 var town
 
@@ -16,16 +17,32 @@ func before_each() -> void:
 	assert_true(town.load_town("port_town"))
 
 
+## How many vertices box_faces gives box `b`: 36 for a plain box; the round pit
+## (a hollow shell) and a round wall their own triangles; the barracks hall's
+## shell none (its pieces are boxes of their own).
+func _face_count(b: Dictionary) -> int:
+	match str(b.kind):
+		"shell":
+			return 0
+		"bowl":
+			var n := 0
+			for m in PitBowl.parts(b, town).values():
+				n += (m as ArrayMesh).get_faces().size()
+			return n
+		"ring":
+			return RingWall.faces(b).size()
+	return 36
+
+
 func test_every_box_becomes_twelve_triangles() -> void:
 	var faces := TownNav.box_faces(town)
-	# The round pit is a hollow shell: its own triangles, not a box (a lid).
-	var bowl_faces := 0
+	var want := 0
+	var special := 0
 	for b in town.boxes():
-		if str(b.kind) == "bowl":
-			for m in PitBowl.parts(b, town).values():
-				bowl_faces += (m as ArrayMesh).get_faces().size()
-	assert_gt(bowl_faces, 0)
-	assert_eq(faces.size(), (town.boxes().size() - 1) * 36 + bowl_faces)
+		want += _face_count(b)
+		special += 1 if str(b.kind) in ["bowl", "ring"] else 0
+	assert_gt(special, 0, "the round pit and the round wall give their own triangles")
+	assert_eq(faces.size(), want)
 
 
 func test_ramps_keep_their_slope() -> void:
@@ -40,7 +57,7 @@ func test_ramps_keep_their_slope() -> void:
 				hi = maxf(hi, faces[i + k].y)
 			assert_almost_eq(hi, 0.0, 0.05, "the ramp's top reaches the street")
 			assert_lt(lo, -5.9, "and its foot is on the pit floor")
-		i += 36
+		i += _face_count(b)
 
 
 func test_obstructions_are_blocking_boxes_except_stood_on() -> void:
@@ -48,7 +65,7 @@ func test_obstructions_are_blocking_boxes_except_stood_on() -> void:
 	for b in TownNav.obstruction_boxes(town):
 		ids.append(str(b.id))
 	assert_true(ids.has("barracks_bunk"), "buildings are cleared")
-	assert_true(ids.has("stall_n6"), "so are crates and stalls")
+	assert_true(ids.has("stall_01"), "so are crates and stalls")
 	assert_false(ids.has("watchtower"), "the tower top keeps its floor (a post stands there)")
 	var stood := TownNav.stood_on_boxes(town).map(func(b): return str(b.id))
 	assert_true(stood.has("watchtower"), "cleared below its top instead")
@@ -115,8 +132,12 @@ func test_soldier_markers_name_real_profiles() -> void:
 			live += 1
 			var s: Dictionary = cc.get_soldier(str(m.soldier))
 			assert_false(s.is_empty(), "%s names soldier %s" % [m.id, m.soldier])
+			if bool(s.get("band", false)):
+				continue           # the club's band plays on the stage: no senses, no walking (#261)
 			assert_true(s.has("perception") and s.has("nav"), "%s's profile has senses and pathing" % m.id)
-	assert_eq(live, 17, "the gate guards, the tower sentry, the roof riflemen, the barracks pair and the nine locals are live")
+	# Issue #545: the round port's garrison and its 44 locals (walkers, stall
+	# keepers, patrons, the band, dock workers).
+	assert_eq(live, 55)
 
 
 func test_noise_events() -> void:

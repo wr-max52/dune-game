@@ -24,8 +24,13 @@ func test_every_item_look_builds_with_flames_hidden() -> void:
 		var look := str(content.get_item(id).get("look", id))
 		var item := kit.build(look)
 		add_child_autofree(item)
-		assert_eq(item.get_meta("source"), "kit", "%s uses the stand-in" % id)
-		assert_gt(_meshes(item).size(), 6, "%s has real geometry" % id)
+		# Issue #545: most looks name a model now (issue #25's hook, used); the rest
+		# are kit builds, the saber and the grenade only a few parts each.
+		var has_model := str(kit.look(look).get("scene", "")) != ""
+		assert_eq(item.get_meta("source"), "scene" if has_model else "kit", "%s builds from its model if it names one" % id)
+		assert_ne(look, "", "%s has a look" % id)
+		assert_true(kit.look(look).size() > 0, "%s's look %s exists (not the fallback)" % [id, look])
+		assert_gt(_meshes(item).size(), 0 if has_model else 2, "%s has real geometry" % id)
 		var flames := item.get_node_or_null("Flames")
 		assert_not_null(flames, "%s has a Flames node" % id)
 		assert_false(flames.visible, "flames start hidden")

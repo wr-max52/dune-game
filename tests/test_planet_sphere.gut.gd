@@ -57,7 +57,8 @@ func test_map_coordinates_round_trip() -> void:
 func test_town_is_flat_and_the_pit_still_dips() -> void:
 	var s := _sphere()
 	assert_almost_eq(s.height_at(50, -40), -0.12, 0.001, "under the paving, as on the flat desert")
-	assert_almost_eq(s.height_at(130, 40), 0.0, 0.01, "apron at floor level")
+	var apron := Vector2((_site.walls as Rect2).end.x + 1.0, 0.0)     # just past the walls (the round port: 143 m)
+	assert_almost_eq(s.height_at(apron.x, apron.y), 0.0, 0.01, "apron at floor level")
 	assert_lte(s.height_at(0, 0), -6.5, "under the pit floor")
 	assert_eq(s.up_at(Vector3(120, 0, 60)), Vector3.UP, "up is straight up in town")
 
@@ -142,7 +143,7 @@ func test_collider_matches_the_ground_it_was_built_from() -> void:
 
 func test_far_horizon_mesh_is_finer_and_follows_the_sphere() -> void:
 	var t := _terrain()
-	var arrays := t._far_chunk(0)
+	var arrays: Array = t._far_chunk(0).arrays     # { arrays, direction, angle, max_radius }
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	assert_eq(t.far_cells, 64, "the far layer uses a bounded 64-cell chunk")
 	var side := t.far_cells + 1 # a 64-cell span has 65 vertices
@@ -284,7 +285,8 @@ func test_flying_round_the_planet_never_leaves_it() -> void:
 
 func test_crashing_into_a_leaning_mesa() -> void:
 	var a := _flight()
-	var mesa: Dictionary = a.ground.columns.filter(func(c): return str(c.id) == "mesa_1500_1700")[0]
+	# The mesas are on the ball by lat/lon now (issue #545): any one will do.
+	var mesa: Dictionary = a.ground.columns.filter(func(c): return str(c.kind) == "mesa")[0]
 	var up: Vector3 = mesa.up
 	var mid: Vector3 = (mesa.center as Vector3) + up * float(mesa.h) * 0.5
 	var side := up.cross(Vector3.RIGHT).normalized()
@@ -296,7 +298,7 @@ func test_crashing_into_a_leaning_mesa() -> void:
 		if a.state == AtmoFlight.State.CRASHED:
 			break
 	assert_eq(a.state, AtmoFlight.State.CRASHED, "flew into its side")
-	assert_eq(a.last_hit, "mesa_1500_1700")
+	assert_eq(a.last_hit, str(mesa.id))
 
 
 func test_a_speeder_drives_straight_round_the_curve() -> void:

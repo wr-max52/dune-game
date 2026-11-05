@@ -36,6 +36,7 @@ func _initialize() -> void:
 		if a.begins_with("mock_port="):
 			port = int(a.substr(10))
 	WorldState.reset()
+	WorldState.set_flag("ships_unlocked")      # issue #64: the patrol job (turn 2) needs the ships open
 	if FileAccess.file_exists(SAVE):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
 	demo = load("res://scenes/town_demo.gd").new()

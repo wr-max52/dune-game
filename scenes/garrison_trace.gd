@@ -81,7 +81,13 @@ func _yard() -> void:
 	kv("CHECKPOINT", cp.checkpoint.state_name())
 	# The other barracks trooper leaves its loop toward the trouble.
 	var d0 := yb.global_position.distance_to(player.global_position)
-	await _hold(6.0)
+	# Kept on their feet: thirteen troopers drop a player inside six seconds now, and
+	# the downed player wakes in the pit with nobody to close in on (issue #545).
+	for f in 6 * 60:
+		player.set_command(Vector2.ZERO, false, false, false)
+		if f % 30 == 0:
+			player.revive(60.0)
+		await physics_frame
 	kv("B_CLOSED_IN", yb.global_position.distance_to(player.global_position) < d0 - 2.0 or yb.global_position.distance_to(yb_post) > 6.0)
 	kv("FLAG_FIGHT", WorldState.has_flag("gate_fight"))
 	kv("STANDING", int(WorldState.standing.imperial_remnant))
@@ -122,6 +128,8 @@ func _sound() -> void:
 		voice += int(n.sounds_played.get("voice", 0))
 	kv("RIFLE", rifle)
 	kv("VOICE", voice)
+	# Since 96c9782 barks are spoken by NpcVoice (silent headless): count the barks.
+	kv("BARKS", cp.barks_said.size())
 	var g: NpcBody = _by_role("gate")[0]
 	g.apply_damage_from(5.0, player)
 	kv("HURT", int(g.sounds_played.get("hurt", 0)))
@@ -165,9 +173,9 @@ func _crouch() -> void:
 		await physics_frame
 	kv("STOOD_UP", not player.crouched_shape)
 	# Crouched behind the south barricade, a guard on the other side does not see you.
-	_park(Vector3(88.4, 0, -4.8))
+	_park(_gx(-10.6, -4.8))
 	var g: NpcBody = demo.npc("trooper_gate_s")
-	g.global_position = Vector3(97, 0.05, -4.8)
+	g.global_position = _gx(-2.0, -4.8) + Vector3(0, 0.05, 0)
 	g.perception = Perception.new(g.profile.get("perception", {}))
 	cp.brains[g].state = GuardBrain.State.ATTEND
 	for f in 60 * 2:
@@ -255,17 +263,26 @@ func _spot() -> void:
 func _smuggle() -> void:
 	await _fresh("SMUGGLE", 10, "golden", 60)
 	var gear: GearController = demo.gear
+	# Issue #64: loose contraband (the desert cache) only lies out in free play: a
+	# free-play story (WorldState.new_game), the garrison still in town.
+	WorldState.story = { "chapter": "free", "told": true }
+	gear._sync_loose_contraband()
 	var cache: Node3D = gear.pickup_node("desert_cache")
+	kv("CACHE_SHOWN", cache != null and cache.visible)
 	kv("CACHE_PLACED", cache != null)
 	if cache == null:
 		return
 	var at := cache.global_position
+	# The teleport out to the cache moves the ground's collider under the player at
+	# once: the harness's cost, not a frame anyone walking there pays.
+	_timing = false
 	_park(Vector3(at.x - 1.0, 0, at.z))
 	await _frames(10)
+	_timing = true
 	kv("PICKED", gear.interact())
 	kv("CELLS", WorldState.inventory.count("unmarked_cells"))
 	# Through the checkpoint on papers (no spot check here), then to the fence.
-	await _walk(Vector3(104, 0, 1), 30.0)
+	await _walk(_gx(5.0, 1.0), 30.0)
 	await _walk(GATE_INSIDE, 30.0, false, func(): return cp.checkpoint.card_open)
 	# Wait at the gate for the guards to come round and ask (a patrol may be away).
 	kv("CHALLENGED", await _until(func(): return cp.checkpoint.card_open, 40.0) >= 0.0)
@@ -289,7 +306,10 @@ func _smuggle() -> void:
 	kv("SOLD", sold)
 	kv("EARNED", WorldState.credits - credits0)
 	kv("CELLS_AFTER", WorldState.inventory.count("unmarked_cells"))
-	# I opens the settings panel on its Inventory page.
+	# I opens the settings panel on its Ledger page (31524b8: what you own, your jobs).
+	# Its first open builds the pages (about 50 ms) and pauses the game: not a frame
+	# of play, so it is not timed (issue #545).
+	_timing = false
 	for down in [true, false]:
 		var key := InputEventKey.new()
 		key.keycode = KEY_I
@@ -298,7 +318,9 @@ func _smuggle() -> void:
 	await _frames(2)
 	var settings: DevSettingsPanel = demo.dev_settings
 	var open := settings != null and settings.visible
-	kv("PANEL_OPEN", open and settings.tabs.get_tab_title(settings.tabs.current_tab) == "Inventory")
+	kv("PANEL_OPEN", open and settings.tabs.get_tab_title(settings.tabs.current_tab) == "Ledger")
 	kv("PANEL_ROWS", settings.inventory.rows.size() if open else 0)
 	if open:
 		settings.close()
+	await _frames(2)
+	_timing = true

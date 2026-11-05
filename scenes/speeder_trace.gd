@@ -111,6 +111,11 @@ func _run() -> void:
 	var through := await walk_to(gap + Vector3(-8, 0, 0), 10.0)
 	out("THROUGH_THE_BACK_GATE", through and player.global_position.x < gap.x - 2.0)
 	var stall := post.world_point("customer")
+	# Issue #545: the round port keeps Skrugs's yard inside its walls: back in through
+	# the gate first when his stall is in town.
+	var b: Dictionary = demo.town.data.get("bounds", {})
+	if not b.is_empty() and stall.x > float(b.min[0]) and stall.x < float(b.max[0]) and stall.z > float(b.min[1]) and stall.z < float(b.max[1]):
+		await walk_to(gap + Vector3(8, 0, 0), 10.0)
 	var reached := await walk_to(stall, 20.0)
 	await frames(10)
 	out("REACHED_THE_STALL", reached)

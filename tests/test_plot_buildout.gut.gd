@@ -33,6 +33,7 @@ class FakeHost extends ConversationHost:
 class FakeDemo extends Node:
 	var nav = FakeNav.new()
 	var town = null
+	var lan_shared := false     # TownDemo's (LAN, fe60777); GeneralPost reads it
 
 
 class FakeNav extends RefCounted:

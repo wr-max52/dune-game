@@ -397,7 +397,9 @@ func test_assassin_holds_still_in_a_fight() -> void:
 	var ap: AnimationPlayer = look.find_child("AnimationPlayer", true, false)
 	assert_eq(ap.speed_scale, 1.0, "standing about: the idle plays (its little dance)")
 	assert_true(DroidKit.hold_pose(look, "aim", 0.0))
-	assert_eq(ap.speed_scale, 0.0, "in a fight: one still ready stance")
+	# The stance is a one-frame section of the aim clip now, not a paused player.
+	assert_true(ap.has_section(), "in a fight: one still ready stance")
+	assert_almost_eq(ap.get_section_end_time() - ap.get_section_start_time(), 0.001, 0.0005, "a single frame")
 	DroidKit.play_anim(look, "idle")
 	assert_eq(ap.speed_scale, 1.0, "and back to the idle when it is over")
 

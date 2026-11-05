@@ -107,8 +107,9 @@ func test_the_fight() -> void:
 
 func test_you_can_win() -> void:
 	assert_true(_b("FIGHT_WON"), "both guards down")
-	assert_eq(_f("FIGHT_KILLED"), _f("FIGHT_TROOPERS"), "the alarm brings the whole garrison: all of them down")
-	assert_eq(_f("FIGHT_TROOPERS"), 5.0)
+	# A long fight can outlast a respawn delay (#64): one back on its post counts too.
+	assert_gte(_f("FIGHT_KILLED"), _f("FIGHT_TROOPERS") - _f("FIGHT_RESPAWNED"), "the alarm brings the whole garrison: all of them down")
+	assert_gte(_f("FIGHT_TROOPERS"), 13.0, "gate, tower, yard, roof, barracks hall, the general and his guard (and any sent in)")
 	assert_eq(_s("FIGHT_STATE_AFTER"), "IDLE")
 	assert_lte(_f("FIGHT_STANDING_DELTA"), -30.0, "standing drops hard")
 	assert_true(_b("FIGHT_FLAG_FIGHT"))
@@ -126,7 +127,8 @@ func test_you_can_run() -> void:
 	assert_true(_b("FLEE_FLAG_FLED"))
 	assert_lt(_f("FLEE_STANDING_DELTA"), 0.0, "running costs standing too")
 	assert_true(_b("FLEE_SEARCHED"), "they search first")
-	assert_lt(_f("FLEE_FARTHEST_FROM_GATE_AFTER"), 60.0, "on a leash (barracks troopers 55 m from their post)")
+	# Issue #545: measured from each guard's own home, the round port's posts being far apart.
+	assert_lt(_f("FLEE_FARTHEST_FROM_HOME_AFTER"), 40.0, "on a leash (chase_leash 30 m, plus the search)")
 	assert_gt(_f("FLEE_BACK_ON_PATROL_S"), 0.0, "then go back to their loops")
 	assert_true(_b("FLEE_REMEMBERED"), "and remember you when you come back")
 

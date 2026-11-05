@@ -97,10 +97,14 @@ func test_planet_waypoint_clears_on_arrival() -> void:
 
 func test_surface_waypoint_only_on_its_planet() -> void:
 	GlobeMap.set_waypoint(GlobeMap.spot_pin(Vector2(10, 20)), PlanetGen.home_id())
+	# Off its planet the pointer leads to that planet first and does not clear on
+	# the way (GlobeMap.waypoint: arrive -1); on it, to the spot.
 	GameFlow.planet_id = "grit_station"
-	assert_true(GlobeMap.waypoint().is_empty())
+	var w := GlobeMap.waypoint()
+	assert_eq(str(w.get("target", "")), "planet:" + PlanetGen.home_id(), "leads home first")
+	assert_eq(float(w.get("arrive", 0.0)), -1.0)
 	GameFlow.planet_id = PlanetGen.home_id()
-	assert_false(GlobeMap.waypoint().is_empty())
+	assert_true(str(GlobeMap.waypoint().get("target", "")).begins_with("map:"), "then to the spot")
 
 
 func test_zoom_buttons_zoom_the_globe() -> void:

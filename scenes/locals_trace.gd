@@ -84,13 +84,20 @@ func _stroll() -> void:
 	kv("WALKERS", _by_role("local").size())
 	kv("MERCHANTS", _by_role("merchant").size())
 	kv("GARRISON", demo.npcs.size())
+	kv("GARRISON_LOCALS", demo.npcs.filter(func(n): return n.faction == "locals").size())
+	kv("PATROLLERS", demo.locals.filter(func(n): return demo.town.get_marker(n.post_id).has("patrol")).size())
+	# Issue #545: the round market's stalls face along x or z; each keeper faces
+	# the spot its marker names, across its own counter.
 	var faced := true
 	for m in _by_role("merchant"):
-		var f: Vector3 = m.forward()
-		faced = faced and absf(f.z) > 0.9 and signf(-38.0 - m.global_position.z) == signf(f.z)
-	kv("MERCHANTS_FACE_AISLE", faced)
-	_park(Vector3(36, 0, -38))
-	await _walk(Vector3(90, 0, -38), 30.0)
+		var mk: Dictionary = demo.town.get_marker(m.post_id)
+		var face := Vector3(float(mk.face[0]), 0, float(mk.face[2])) - Vector3(m.post_pos.x, 0, m.post_pos.z)
+		# Toward the counter's side; they turn their heads to passers-by (up to ~70 deg).
+		faced = faced and m.forward().dot(face.normalized()) > 0.3
+	kv("MERCHANTS_FACE_COUNTERS", faced)
+	var aisle: Array = demo.town.route_points_3d("stroll_market_1")
+	_park(aisle[0])
+	await _walk(aisle[aisle.size() / 2], 30.0)
 	await _hold_alive(12.0)
 	var walked := 0
 	for n in _by_role("local"):
@@ -109,7 +116,7 @@ func _stroll() -> void:
 func _market() -> void:
 	await _fresh_town("MARKET")
 	var s0 := int(WorldState.standing.get("locals", 0))
-	_park(Vector3(66, 0, -38))
+	_park(demo.town.route_points_3d("stroll_market_1")[0])
 	var shopper: NpcBody = demo.npc("shopper_1")
 	await _until(func(): return _player_sees(shopper) and shopper.global_position.distance_to(player.global_position) < 25.0, 40.0)
 	kv("HIT", await _shoot_until_hit(shopper, 8.0))
@@ -139,7 +146,8 @@ func _houses() -> void:
 	await _fresh_town("HOUSES")
 	var rw: NpcBody = demo.npc("resident_w")
 	var re: NpcBody = demo.npc("resident_e")
-	_park(Vector3(-17.5, 0, -48))
+	var street: Array = demo.town.route_points_3d("stroll_resident_w")
+	_park(street[street.size() / 2])
 	await _until(func(): return _player_sees(rw) and rw.global_position.distance_to(player.global_position) < 22.0, 40.0)
 	kv("HIT", await _shoot_until_hit(rw, 8.0))
 	await _frames(20)

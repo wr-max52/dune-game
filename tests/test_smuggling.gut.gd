@@ -129,7 +129,12 @@ func test_hiding_places_are_reachable() -> void:
 	var d = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/pickups/port_town.json"))
 	var areas: Array = d.drops.areas
 	assert_gte(areas.size(), 4, "east desert, back desert, alleys, rooftops")
-	for a in areas:
+	# Issue #545: the area's spots in the town's own layout (its "layouts" block, as
+	# WorldState._roll_smuggle lays it over), not the square port's.
+	var layout := str(town.data.get("layout", ""))
+	for base in areas:
+		var a: Dictionary = base.duplicate(true)
+		a.merge(base.get("layouts", {}).get(layout, {}), true)
 		assert_false(town.get_marker(str(a.marker)).is_empty(), "%s marker exists" % a.id)
 		assert_gte((a.spots as Array).size(), 3, "%s has several spots" % a.id)
 		for s in a.spots:

@@ -89,7 +89,10 @@ func test_dark_looks_darken_the_models() -> void:
 		if str(ship.get_meta("source", "")) != "scene":
 			pass_test("no model in this build")
 			continue
-		var meshes: Array = ship.find_children("*", "MeshInstance3D", true, false)
+		# The hull's parts; the engine flames (under "Flames") glow, they are not paint.
+		var flames: Node = ship.get_node_or_null("Flames")
+		var meshes: Array = ship.find_children("*", "MeshInstance3D", true, false).filter(
+			func(m): return flames == null or not flames.is_ancestor_of(m))
 		var dark: Array = meshes.filter(func(m): return m.material_override is ShaderMaterial \
 			or m.get_surface_override_material(0) != null)
 		assert_eq(dark.size(), meshes.size(), "%s: every part painted dark" % look)

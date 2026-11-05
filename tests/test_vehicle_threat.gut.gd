@@ -249,9 +249,10 @@ func test_the_cantina_has_fill_light() -> void:
 	add_child_autofree(d)
 	d.dress(town, LookMaterials.new())
 	assert_eq(d.fills.size(), 4, "a fill light over each quarter of the room")
-	var w: Dictionary = town.get_box("cantina_wall_w")
-	var e: Dictionary = town.get_box("cantina_wall_e_s")
+	# Issue #545: the round port's cantina is one round wall (cantina_body), not
+	# the square port's four.
+	var room: Dictionary = town.get_box("cantina_body")
 	for l in d.fills:
 		assert_gt(l.light_energy, 0.0, "on by day too")
-		assert_between(l.position.x, float(w.max[0]), float(e.min[0]), "inside the room")
+		assert_between(l.position.x, float(room.min[0]), float(room.max[0]), "inside the room")
 		assert_gt(l.omni_range, 10.0, "reaches the corners")

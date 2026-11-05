@@ -63,7 +63,7 @@ func test_tower_sentry() -> void:
 func test_sound() -> void:
 	assert_true(_b("SOUND_STEPS"), "footsteps while they walk")
 	assert_gt(_f("SOUND_RIFLE"), 0.0, "rifles")
-	assert_gt(_f("SOUND_VOICE"), 0.0, "radio chatter under the barks")
+	assert_gt(_f("SOUND_BARKS"), 0.0, "they call it in (voiced by NpcVoice since 96c9782; silent headless)")
 	assert_eq(_f("SOUND_HURT"), 1.0, "a grunt when hit")
 	assert_gt(_f("SOUND_KLAXON"), 0.0)
 	assert_true(_b("SOUND_KLAXON_STREAM"))
@@ -105,6 +105,9 @@ func test_smuggling_loop() -> void:
 	assert_true(_b("SMUGGLE_CHALLENGED"))
 	assert_true(_b("SMUGGLE_THROUGH"), "past the checkpoint on papers")
 	assert_eq(_f("SMUGGLE_SOLD"), 3.0)
-	assert_eq(_f("SMUGGLE_EARNED"), 90.0, "the fence pays")
+	# Three cells at the fence's buy_rate (twice their value: 3 x 30 x 2).
+	var cells = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/items/unmarked_cells.json"))
+	var fence = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/vendors/fence.json"))
+	assert_eq(_f("SMUGGLE_EARNED"), 3.0 * roundf(float(cells.value) * float(fence.buy_rate)), "the fence pays")
 	assert_eq(_f("SMUGGLE_CELLS_AFTER"), 0.0)
 	assert_true(_b("SMUGGLE_PANEL_OPEN"), "I opens the inventory")

@@ -277,6 +277,14 @@ func test_detail_hides_and_pauses_groups() -> void:
 
 
 func test_detail_switches_render_features_off_and_back() -> void:
+	# Full graphics, whatever this machine saved (Low graphics cuts GI; issue #545):
+	# in memory only, the saved settings file is left alone.
+	var saved_cut: Dictionary = LookEnvironment._cut.duplicate()
+	var saved_indirect := LookEnvironment._indirect
+	LookEnvironment._cut = {}
+	for p in LookEnvironment.pieces():
+		LookEnvironment._cut[p.id] = false
+	LookEnvironment._indirect = 1.0
 	var look := LookEnvironment.new()
 	add_child_autofree(look)
 	look.apply("noon")
@@ -291,6 +299,8 @@ func test_detail_switches_render_features_off_and_back() -> void:
 	look.set_suppressed([])
 	assert_true(look.env.sdfgi_enabled)
 	assert_true(look.sun.shadow_enabled)
+	LookEnvironment._cut = saved_cut
+	LookEnvironment._indirect = saved_indirect
 
 
 func test_the_town_registers_people_and_props() -> void:

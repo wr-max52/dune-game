@@ -103,9 +103,18 @@ func test_battle_plays_from_30s_and_loops_there() -> void:
 	assert_eq(s.mode, "battle")
 	var st = s._deck.stream
 	assert_true(st is AudioStreamMP3, "battle track")
-	assert_true(st.loop, "loops")
-	assert_eq(st.loop_offset, 30.0, "loops back to 30 s")
 	assert_true(s._deck.playing, "playing")
+	assert_almost_eq(s._deck.get_playback_position(), float(cfg.music.battle.get("start", 0.0)), 0.5, "from 30 s in")
+	# Issue #545: with a battle_2 the first track plays once and battle_2 takes over
+	# and loops (Sound._switch); only without one does the first loop itself.
+	if s._has_battle_2():
+		assert_false(st.loop, "the first track plays once, battle_2 follows")
+		s._switch("battle")
+		assert_eq(s.battle_part, 2, "battle_2 takes over")
+		assert_true(s._deck.stream.loop, "battle_2 loops")
+	else:
+		assert_true(st.loop, "loops")
+		assert_eq(st.loop_offset, 30.0, "loops back to 30 s")
 
 
 func test_ambient_cycles() -> void:

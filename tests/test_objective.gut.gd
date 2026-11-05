@@ -37,6 +37,10 @@ func test_every_chapter_has_an_objective_and_a_target() -> void:
 	var cfg := Objective.cfg()
 	assert_false(cfg.is_empty(), "the lines are in the story data")
 	for id in Story.chapter_ids():
+		# The scripted landing and the end card leave you nothing to do: no line
+		# since fb47599 brought them in (issue #545).
+		if id in ["land", "end"]:
+			continue
 		var o: Dictionary = cfg.chapters.get(id, {})
 		assert_ne(str(o.get("text", "")), "", "chapter %s says what to do" % id)
 		assert_ne(str(o.get("target", "")), "", "chapter %s points somewhere" % id)

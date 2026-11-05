@@ -114,6 +114,24 @@ func fly_to(point: Vector3, throttle: float, max_s: float, done: Callable, boost
 	return -1.0
 
 
+## Issue #545: fly toward a far point over the home planet's 5 km ball in 400 m
+## legs that keep the ship alt metres above sea level, until it is within near
+## metres along the ground. 0.0 there, -2.0 on a crash, -1.0 if it never arrives.
+func cruise_to(target: Vector3, alt: float, near: float) -> float:
+	for leg in 40:
+		var p: Vector3 = pilot.atmo.position()
+		var up: Vector3 = pilot.ground.up_at(p)
+		var flat: Vector3 = (target - p) - up * up.dot(target - p)
+		if flat.length() < near:
+			return 0.0
+		var wp: Vector3 = p + flat.normalized() * minf(400.0, flat.length()) \
+				+ up * (alt - pilot.ground.altitude(p))
+		var r := await fly_to(wp, 0.6, 20.0, func(): return pilot.atmo.position().distance_to(wp) < 120.0)
+		if r == -2.0:
+			return -2.0
+	return -1.0
+
+
 func _run() -> void:
 	# ---------------------------------------------------------------- 1. up
 	_phase = "up"
@@ -319,15 +337,30 @@ func _run() -> void:
 
 	# ---------------------------------------------------------------- 4. crash
 	_phase = "crash"
-	var mesa: Dictionary = pilot.ground.columns.filter(func(m): return str(m.id) == "mesa_1500_1700")[0]
+	# Issue #545: the mesas moved onto the ball (planet_mesas, ids by lat/lon, 40 to
+	# 80 m tall), so crash into the nearest tall one rather than one named by its
+	# old flat-map spot.
+	var here: Vector3 = pilot.atmo.position()
+	var mesas: Array = pilot.ground.columns.filter(func(m): return str(m.kind) == "mesa" \
+			and float(m.get("h", float(m.top) - (m.center as Vector3).y)) >= 60.0)
+	mesas.sort_custom(func(a, b): return here.distance_to(a.center) < here.distance_to(b.center))
+	out("MESA_COUNT", mesas.size())
+	if mesas.is_empty():
+		_finish()
+		return
+	var mesa: Dictionary = mesas[0]
+	out("MESA", mesa.id)
+	out("MESA_DISTANCE_M", int(here.distance_to(mesa.center)))
 	# Issue #77: on the ball the mesa leans with the ground: aim along its own up.
 	var mup: Vector3 = mesa.get("up", Vector3.UP)
-	var mid: Vector3 = (mesa.center as Vector3) + mup * float(mesa.get("h", float(mesa.top) - (mesa.center as Vector3).y)) * 0.4
-	var side := (Vector3.FORWARD - mup * mup.dot(Vector3.FORWARD)).normalized()
-	var start := mid + side * 900.0
-	await fly_to(start, 0.6, 120.0, func(): return pilot.atmo.position().distance_to(start) < 150.0)
+	var mid: Vector3 = (mesa.center as Vector3) + mup * float(mesa.get("h", float(mesa.top) - (mesa.center as Vector3).y)) * 0.5
+	# On the 5 km ball a straight line to a mesa kilometres off runs through the
+	# planet: cruise over it in short legs, then dive onto the wall from 700 m out.
+	var run_in := await cruise_to(mid, 200.0, 700.0)
+	out("CRASH_RUN_IN", run_in)
 	var crash := await fly_to(mid, 1.0, 60.0, func(): return false)
 	out("CRASHED", crash == -2.0)
+	out("CRASH_FROM_MESA_M", int(pilot.atmo.position().distance_to(mid)))
 	out("CRASHED_INTO", pilot.atmo.last_hit if pilot.atmo.last_hit != "" else str(pilot.log_events.back().get("what", "")))
 	await frames(int(60 * (ShipPilot.CRASH_TOW_TIME + 0.5)))
 	out("TOWED_HOME", pilot.is_parked_home())
@@ -368,7 +401,10 @@ func _run() -> void:
 	out("EXIT_AT_PAD", pilot.exit_ship())
 	await frames(20)
 	out("FINAL_ON_FLOOR", player.is_on_floor())
-	out("FINAL_IN_PIT", player.global_position.y < -5.0)
+	# In the 6 m pit, not up on the street. Issue #545: the hull follows the model now
+	# and the 5.5 m exit spot can land you on a wing (1.3 m up), still in the pit.
+	out("FINAL_IN_PIT", player.global_position.y < -3.0)
+	out("FINAL_ABOVE_PIT_FLOOR_M", snappedf(player.global_position.y + 6.0, 0.1))
 	# Walk straight at the parked ship: its hull stops you.
 	var s0: Vector3 = pilot.atmo.position()
 	var to_ship := Vector2(s0.x - player.global_position.x, s0.z - player.global_position.z).normalized()
@@ -380,12 +416,15 @@ func _run() -> void:
 	out("SHIP_IS_SOLID", Vector2(player.global_position.x - s0.x, player.global_position.z - s0.z).length() > 2.5)
 
 	# ---------------------------------------------------------------- 6. jetpack over the wall
-	_phase = "jetpack"
+	_phase = "jetpack_attach"
 	WorldState.inventory.add("jetpack")
 	WorldState.inventory.attach("jetpack", demo.gear.content.get_item("jetpack"))
 	demo.gear.sync_gear()
+	await frames(20)
+	_phase = "jetpack_place"
 	place_player(Vector3(-84, 0, 71))
 	await frames(20)
+	_phase = "jetpack"
 	player.jetpack.refill()
 	var rec0: int = demo.gear.recoveries
 	var top := -INF
@@ -433,6 +472,12 @@ func _run() -> void:
 		out("PERF_JSON_PATH", perf_path)
 		out("PERF_JSON_ERROR", perf_error)
 
+	_finish()
+
+
+## Writes the trace and quits; also the early way out, so a missing piece reads as
+## a failed key in the test instead of a run that never ends (issue #545).
+func _finish() -> void:
 	var f := FileAccess.open(OUT, FileAccess.WRITE)
 	if f == null:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://test_results"))

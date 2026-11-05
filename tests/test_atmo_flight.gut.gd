@@ -194,7 +194,8 @@ func test_full_power_climb_time() -> void:
 			f.set_command(pc, 0, 0, 1.0, boost)
 			f.step(DT)
 			t += DT
-		assert_between(t, 30.0, 40.0, "takeoff to space in 30-40 s (boost %s): %.1f s" % [boost, t])
+		# 515ea7b halved the atmosphere (m14's trace says 15-22 s); 22 s boosted, 25 s not.
+		assert_between(t, 15.0, 27.0, "takeoff to space in 15-27 s (boost %s): %.1f s" % [boost, t])
 
 
 func test_dogfight_flight_is_unchanged() -> void:

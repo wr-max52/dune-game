@@ -180,7 +180,8 @@ func test_contraband_item_and_fence() -> void:
 	var it: Dictionary = cc.get_item("unmarked_cells")
 	assert_true(bool(it.contraband))
 	var fence: Dictionary = cc.get_vendor("fence")
-	assert_eq(Inventory.sell_price(it, fence), int(it.value), "the fence pays full value")
+	assert_eq(Inventory.sell_price(it, fence), int(round(float(it.value) * float(fence.buy_rate))),
+		"the fence pays its buy_rate (twice the value, per the item's note)")
 	assert_eq(Inventory.sell_price(it, cc.get_vendor("gear_trader")), -1, "the gear trader will not touch it")
 
 

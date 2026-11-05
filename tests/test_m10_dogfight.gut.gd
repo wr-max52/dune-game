@@ -50,7 +50,20 @@ func test_encounter_completes() -> void:
 	var r := _result()
 	assert_eq(r.get("state"), "COMPLETE", "the dogfight is won")
 	assert_eq(int(r.get("waves", 0)), 2, "both waves spawned")
-	assert_eq(int(r.get("kills", 0)), 7, "all seven hostiles destroyed")
+	# Issue #545: every hostile in the encounter's waves (a901f5e trimmed them).
+	var enc = JSON.parse_string(FileAccess.get_file_as_string("res://content/core/encounters/orbital_skirmish.json"))
+	var hostiles := 0
+	for w in enc.waves:
+		for sh in w.ships:
+			hostiles += int(sh.count)
+	# `kills` counts every ship lost, the wingman too when the freighter gets him:
+	# count the hostiles' kill events.
+	var hostile_kills := 0
+	for line in FileAccess.get_file_as_string(TRACE).split("\n"):
+		if line.begins_with("EVENT") and line.contains(" kill ") and line.contains("team=hostile"):
+			hostile_kills += 1
+	assert_eq(hostile_kills, hostiles, "every hostile destroyed")
+	assert_gte(int(r.get("kills", 0)), hostiles)
 	assert_gt(int(r.get("player_hull", 0)), 0, "the player survived")
 
 

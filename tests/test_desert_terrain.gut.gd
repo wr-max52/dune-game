@@ -5,6 +5,7 @@ extends GutTest
 
 const TownDemo := preload("res://scenes/town_demo.gd")
 const Landforms := preload("res://src/systems/look/desert_landforms.gd")
+const TownLayout := preload("res://src/systems/world/town_layout.gd")
 
 var _site_terrain: DesertTerrain
 var _site: Dictionary
@@ -30,22 +31,41 @@ func after_each() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+## Issue #545: measured against the town the port builds (the round port since
+## 3a6017d), from its own data, not the square port's numbers.
+func _town_box(id: String) -> Rect2:
+	var t := TownLayout.new()
+	t.load_town("port_town")
+	var b: Dictionary = t.get_box(id)
+	return Rect2(float(b.min[0]), float(b.min[2]), float(b.max[0]) - float(b.min[0]), float(b.max[2]) - float(b.min[2]))
+
+
 func test_site_comes_from_town_data() -> void:
+	var t := TownLayout.new()
+	t.load_town("port_town")
+	var bd: Dictionary = t.data.bounds
 	var floor_rect: Rect2 = _site.floor
-	assert_eq(floor_rect.position, Vector2(-130, -75), "aprons included (back gap)")
-	assert_eq(floor_rect.end, Vector2(160, 75), "aprons included (desert side)")
-	assert_eq(_site.walls, Rect2(-100, -75, 200, 150), "walled area = town bounds")
+	assert_eq(_site.walls, Rect2(float(bd.min[0]), float(bd.min[1]), float(bd.max[0]) - float(bd.min[0]), float(bd.max[1]) - float(bd.min[1])),
+		"walled area = town bounds")
+	assert_true(floor_rect.encloses(_site.walls) and floor_rect != _site.walls, "aprons included, outside the walls")
 	assert_eq(_site.sunken.size(), 1, "one sunken floor: the pit")
-	assert_eq(_site.sunken[0].rect, Rect2(-28, -28, 56, 56), "the round pit's square floor")
+	assert_eq(_site.sunken[0].rect, _town_box("pit_floor"), "the round pit's square floor")
 
 
 func test_sand_meets_the_aprons_and_the_gate_at_floor_level() -> void:
 	var t := _site_terrain
-	for p in [Vector2(101, 0), Vector2(130, 40), Vector2(159, -70), Vector2(-115, -60), Vector2(-129, -41)]:
-		assert_almost_eq(t.height_at(p.x, p.y), 0.0, 0.001, "apron %s is at floor level" % p)
-	# Just outside the walls, all round: flat sand at the floor, so walls stand on it.
-	for p in [Vector2(0, 76), Vector2(0, -76), Vector2(-101, 20), Vector2(50, 78), Vector2(165, 0)]:
+	var fl: Rect2 = _site.floor
+	var w: Rect2 = _site.walls
+	var c := w.get_center()
+	# On the aprons (inside the floor, outside the walls): flat at the floor.
+	for p in [Vector2(w.end.x + 1.0, c.y), Vector2(fl.end.x - 1.0, c.y), Vector2(fl.position.x + 1.0, c.y)]:
+		if fl.has_point(p) and not w.has_point(p):
+			assert_almost_eq(t.height_at(p.x, p.y), 0.0, 0.001, "apron %s is at floor level" % p)
+	# Just outside the floor, all round: flat sand at the floor, so walls stand on it.
+	for p in [Vector2(c.x, fl.end.y + 1.0), Vector2(c.x, fl.position.y - 1.0), Vector2(fl.position.x - 1.0, c.y), Vector2(fl.end.x + 1.0, c.y)]:
 		assert_almost_eq(t.height_at(p.x, p.y), 0.0, 0.05, "outside the wall at %s" % p)
+	# Inside the walls the sand hides 12 cm under the paving (DesertTerrain.under_y).
+	assert_almost_eq(t.height_at(c.x + w.size.x * 0.25, c.y), -0.12, 0.001, "under the paving")
 
 
 func test_ground_never_pokes_through_the_town() -> void:
@@ -177,7 +197,7 @@ func test_town_demo_builds_the_desert() -> void:
 	# test_native_camps checks those.
 	var yards: Array = d.terrain.flat_sites.filter(func(s): return not s.has("plane_u"))
 	assert_eq(yards.size(), 3, "the home planet levels all three droid relay yards")
-	assert_eq(d.terrain.flat_sites.size() - yards.size(), 2, "and a pad under each pack's camp")
+	assert_eq(d.terrain.flat_sites.size() - yards.size(), 12, "and a pad under each pack's camp (2), outpost and ranch (10)")
 	for site in yards:
 		var r: Rect2 = site.rect
 		var y := float(site.y)
@@ -186,14 +206,14 @@ func test_town_demo_builds_the_desert() -> void:
 			for z in [-9.0, 0.0, 9.0]:
 				assert_almost_eq(sp.elevation(sp.map_dir(r.get_center().x + x, r.get_center().y + z)), y,
 					0.001, "merchant and customer positions share flat ground")
-	assert_eq(d.view_far(), 20000.0, "the home planet: the whole ball")
+	assert_eq(d.view_far(), maxf(20000.0, d.sky_giant_reach()), "the home planet: the whole ball (and the ringed giant in its sky)")
 	var off = TownDemo.new()
 	off.use_look = false
 	off.lookdev_mode = true
 	off.with_desert = false
 	add_child_autofree(off)
 	assert_null(off.terrain, "with_desert = false is the old town")
-	assert_eq(off.view_far(), 4000.0)
+	assert_eq(off.view_far(), maxf(4000.0, off.sky_giant_reach()))
 
 
 func test_look_hides_the_aprons_and_raises_landforms() -> void:
@@ -210,7 +230,7 @@ func test_look_hides_the_aprons_and_raises_landforms() -> void:
 		var body: Node = d.get_node("Town/" + id)
 		assert_false((body.get_node("Mesh") as MeshInstance3D).visible, "%s hidden: the sand shows" % id)
 		assert_true(body is StaticBody3D, "%s still solid" % id)
-	assert_true((d.get_node("Town/ground_east/Mesh") as MeshInstance3D).visible, "paving stays")
+	assert_true((d.get_node("Town/ground_01/Mesh") as MeshInstance3D).visible, "paving stays (the round port's ground_01..98)")
 	assert_not_null(d.landforms)
 	assert_gt(d.landforms.solid_count, 8, "mesas and hoodoos are solid")
 	assert_gt(d.landforms.boulder_count, 100)

@@ -77,6 +77,7 @@ func _run() -> void:
 	var north: NpcBody = demo.npc("trooper_gate_n")
 	var south: NpcBody = demo.npc("trooper_gate_s")
 	log_kv("NPCS", demo.npcs.size())
+	log_kv("TROOPER_POSTS", demo.town.markers_with_role("trooper_post").size())
 	if north == null or south == null:
 		fail("gate guards missing")
 		_finish()
@@ -110,7 +111,9 @@ func _run() -> void:
 	log_kv("NAV_NOT_INSIDE_BARRACKS", hall_c.y > 5.0 or absf(hall_c.x - 72.5) + absf(hall_c.z - 56.5) > 1.0)
 
 	# ---- step 1 + 2: a short patrol for the north guard
-	var legs := [Vector3(88, 0, 2), Vector3(84, 0, -3), north.post_pos]
+	# Issue #545: from the guard's own post (the square port's (88, 2) and (84, -3)
+	# off (95, 9)): the round port's gate stands 42 m further out.
+	var legs := [north.post_pos + Vector3(-7, 0, -7), north.post_pos + Vector3(-11, 0, -12), north.post_pos]
 	var leg_i := 0
 	for goal in legs:
 		var t := await _walk(north, goal, false, 20.0)
@@ -218,8 +221,11 @@ func _run() -> void:
 	# Behind the watchtower: the north guard looks right at the player, but the tower is in the way.
 	var n := north
 	await _reset_senses(n)
-	_park_player(Vector3(91, 0, 23))
-	n.face_point(Vector3(91, 0, 23))
+	# 4 m past the tower's far side, from the town's own box (91, 0, 23 in the square port).
+	var tw: Dictionary = demo.town.get_box("watchtower")
+	var behind := Vector3((float(tw.min[0]) + float(tw.max[0])) * 0.5, 0, float(tw.max[2]) + 4.0)
+	_park_player(behind)
+	n.face_point(behind)
 	await _frames(180)
 	log_kv("TOWER_IN_CONE", n.perception.in_cone)
 	log_kv("TOWER_VISIBLE", n.perception.visible)

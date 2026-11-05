@@ -83,7 +83,7 @@ func test_skin_follows_new_nodes_and_colour_changes() -> void:
 	layer.add_child(l)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	assert_eq(l.get_theme_font("font"), RetroUI.font(), "skinned as it appeared")
+	assert_eq(l.get_theme_font("font"), RetroUI.font("Bold"), "skinned as it appeared (bold for legibility, 31524b8)")
 	skin.set_color(Color("#ff4fd8"))
 	assert_eq(l.get_theme_color("font_color"), Color("#ff4fd8"))
 	var cfg := ConfigFile.new()

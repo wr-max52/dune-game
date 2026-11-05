@@ -158,6 +158,9 @@ func test_the_generals_death_pays_once() -> void:
 	WorldState.set_flag("cruiser_taken", false)
 	var reward: Dictionary = CruiserHull.data().get("reward", {})
 	var credits := WorldState.credits
+	# Standing caps at 100, and the chapters skipped past (the heist among them) can
+	# leave the locals near it: start from neutral so the reward shows (issue #545).
+	WorldState.standing["locals"] = 0
 	var locals := int(WorldState.standing.get("locals", 0))
 	var paid := WorldState.on_cruiser_taken("General Test", reward, "%s fell.")
 	assert_eq(paid, int(reward.credits))

@@ -17,7 +17,7 @@ func test_trace_exists() -> void:
 
 func test_body_is_built_with_three_weapons() -> void:
 	assert_eq(t.get("BODY_BUILT"), "true")
-	assert_eq(int(t.get("WEAPON_MODELS", 0)), 3)
+	assert_eq(int(t.get("WEAPON_MODELS", 0)), 4, "pistol, rifle, sniper rifle (#570) and the sword")
 
 
 func test_walk_and_sprint_speeds() -> void:

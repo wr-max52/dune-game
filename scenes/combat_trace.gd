@@ -14,8 +14,16 @@ extends SceneTree
 const OUT := "res://test_results/combat_trace.txt"
 const BoltScene := preload("res://scenes/entities/bolt.tscn")
 const DT := 1.0 / 60.0
-const GATE_INSIDE := Vector3(93.5, 0, 0)   ## in the zone, inside the gate
-const DESERT := Vector3(108, 0, 0)
+## Issue #545: every spot is measured from the town's own gate (the garrison's
+## gate_pos), not the square port's x = 99: the home planet builds the round port.
+var GX := 99.0                               ## the gate's x, set by _fresh
+var GATE_INSIDE := Vector3(93.5, 0, 0)       ## in the zone, inside the gate
+var DESERT := Vector3(108, 0, 0)
+
+
+## A spot dx metres out from the gate (inside is negative), z to the side.
+func _gx(dx: float, z: float = 0.0) -> Vector3:
+	return Vector3(GX + dx, 0, z)
 
 var demo
 var cp: Garrison
@@ -30,6 +38,8 @@ var out_path := OUT              ## a trace that extends this one writes elsewhe
 var _armed := false
 var _scenario := ""
 var _worst_where := ""
+var _timing := true      ## false while the harness teleports (issue #545): not gameplay
+var _untimed := 0        ## frames left untimed after a _park teleport
 
 
 func _initialize() -> void:
@@ -40,7 +50,9 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	frame += 1
 	var now := Time.get_ticks_usec()
-	if _last_usec > 0 and demo != null and demo.nav != null and demo.nav.is_ready:
+	if _untimed > 0:
+		_untimed -= 1
+	elif _last_usec > 0 and _timing and demo != null and demo.nav != null and demo.nav.is_ready:
 		var ms := (now - _last_usec) / 1000.0
 		if ms > worst_ms:
 			worst_ms = ms
@@ -97,6 +109,9 @@ func _fresh(name: String, standing: int, time: String = "golden", credits: int =
 	WorldState.time_of_day = time
 	player = demo._player
 	cp = demo.garrison
+	GX = cp.gate_pos.x
+	GATE_INSIDE = _gx(-5.5)
+	DESERT = _gx(9.0)
 	# No random spot searches in the scripted runs (garrison_trace tests them).
 	cp.checkpoint.cfg["spot_check_chance"] = 0.0
 	cp.player_armed = func(): return _armed
@@ -104,12 +119,20 @@ func _fresh(name: String, standing: int, time: String = "golden", credits: int =
 	_armed = false
 	for n in demo.npcs:
 		n.target_armed = func(): return _armed
-	_park(Vector3(40, 0, 40))
+	_park(_gx(-45.0))          # on the main street, a straight walk to the gate
+	# Still the town's arrival (issue #545): the first frames after the navmesh is
+	# in settle thirteen guards (one ~54 ms frame), so timing starts half a second on.
+	var timing := _timing
+	_timing = false
 	await _until(func(): return demo.nav.is_ready, 10.0)
-	await _frames(5)
+	await _frames(30)
+	_timing = timing
 
 
+## A harness teleport: the ground's collider follows the player there at once, which
+## no one walking pays, so the next few frames are not timed (issue #545).
 func _park(at: Vector3) -> void:
+	_untimed = 5
 	player.global_position = at + Vector3(0, 0.05, 0)
 	player.velocity = Vector3.ZERO
 	player.controller.velocity = Vector3.ZERO
@@ -141,8 +164,10 @@ func _hold(seconds: float) -> void:
 
 ## Come in from the desert to just outside the gate and wait there until the
 ## checkpoint reacts (guards on their loop may need a while to look this way).
-func _arrive_from_desert(to: Vector3 = Vector3(104, 0, 1)) -> void:
-	_park(Vector3(135, 0, 0))
+func _arrive_from_desert(to: Vector3 = Vector3.INF) -> void:
+	if to == Vector3.INF:
+		to = _gx(5.0, 1.0)
+	_park(_gx(36.0))
 	await _walk(to, 30.0, false, func(): return cp.checkpoint.state != Checkpoint.State.IDLE)
 	await _until(func(): return cp.checkpoint.state != Checkpoint.State.IDLE, 40.0)
 
@@ -371,7 +396,7 @@ func _wave() -> void:
 	kv("STATE", _state())
 	kv("CARDS", cp.cards_shown)
 	kv("SAID_WAVE", cp.barks_said.has("wave"))
-	kv("OUTSIDE", player.global_position.x > 101.0)
+	kv("OUTSIDE", player.global_position.x > GX + 2.0)
 	kv("HOSTILE", cp.checkpoint.fights > 0)
 
 
@@ -388,7 +413,7 @@ func _papers() -> void:
 	kv("STANDING_DELTA", int(WorldState.standing.imperial_remnant) - before)
 	await _walk(DESERT, 20.0)
 	await _hold(1.0)
-	kv("OUTSIDE", player.global_position.x > 101.0)
+	kv("OUTSIDE", player.global_position.x > GX + 2.0)
 	kv("HOSTILE", cp.checkpoint.fights > 0)
 
 
@@ -398,7 +423,10 @@ func _search() -> void:
 	kv("BAND", cp.checkpoint.band)
 	var at := player.global_position
 	kv("CHOSE", cp.choose("search"))
-	# The bot keeps pushing toward the desert: the search holds it still.
+	# The walk's momentum settles first (issue #545: it slid 0.47 m), then the bot
+	# keeps pushing toward the desert: the search holds it still.
+	await _hold(0.5)
+	at = player.global_position
 	player.rotation.y = 0.0
 	for f in 60:
 		player.set_command(Vector2(1, 0), false, false, false)
@@ -410,7 +438,7 @@ func _search() -> void:
 	kv("SAID", ",".join(cp.barks_said))
 	await _walk(DESERT, 20.0)
 	await _hold(1.0)
-	kv("OUTSIDE", player.global_position.x > 101.0)
+	kv("OUTSIDE", player.global_position.x > GX + 2.0)
 	kv("HOSTILE", cp.checkpoint.fights > 0)
 
 
@@ -460,7 +488,7 @@ func _armed_escalates() -> void:
 
 func _shot_escalates() -> void:
 	await _fresh("SHOT", 10)
-	await _walk(Vector3(80, 0, 0), 20.0)
+	await _walk(_gx(-19.0), 20.0)
 	NoiseEvents.emit(player.global_position, 45.0, "shot")
 	await _frames(3)
 	await _walk(GATE_INSIDE, 30.0, false, func(): return cp.checkpoint.card_open)
@@ -529,9 +557,16 @@ func _fight_and_win() -> void:
 		for j in range(i + 1, spots.size()):
 			distinct = distinct and (spots[i] as Vector3).distance_to(spots[j]) > 1.2
 	kv("COVER_DISTINCT", distinct)
-	var spot_covers := spots.size() > 0
+	# Issue #545: the gate's defenders' cover (posted within 25 m of it). The round
+	# port's other troopers (roof, yard, hall) come from across town and take cover
+	# where they are, not facing the player at the gate.
+	var gate_spots: Array = []
+	for g in demo.npcs:
+		if cp.claimed.has(g) and g.post_pos.distance_to(cp.gate_pos) < 25.0:
+			gate_spots.append(cp.claimed[g])
+	var spot_covers := gate_spots.size() > 0
 	var same_side := true
-	for at in spots:
+	for at in gate_spots:
 		var ok := false
 		for sp in cp.spots:
 			if (sp.pos as Vector3).distance_to(at) < 0.01:
@@ -561,13 +596,16 @@ func _fight_and_win() -> void:
 	kv("FLAG_DOWN", WorldState.has_flag("gate_guards_down"))
 	kv("KILLED", WorldState.count("guards_killed"))
 	kv("TROOPERS", demo.npcs.size())
+	kv("RESPAWNED", cp.respawned)     # issue #64: the dead come back after a while
 	kv("CHECKPOINT_FLAG_CLEARED", not WorldState.has_flag("gate_checkpoint_up"))
 	var rumors: Array = WorldState.rumors("confidant", [], 99).map(func(r): return str(r.id))
 	kv("RUMOR_FIGHT", rumors.has("r_gate_fight"))
 	kv("RUMOR_DEAD", rumors.has("r_gate_dead"))
-	# And out through the gate nobody holds.
-	await _walk(DESERT + Vector3(10, 0, 0), 20.0)
-	kv("OUTSIDE", player.global_position.x > 101.0)
+	# And out through the gate nobody holds: along the navmesh, since the hunt may have
+	# ended deep in town (the round port's barracks hall), issue #545.
+	for p in demo.nav.path(player.global_position, DESERT + Vector3(10, 0, 0)):
+		await _walk(p, 20.0)
+	kv("OUTSIDE", player.global_position.x > GX + 2.0)
 
 
 func _flee() -> void:
@@ -577,7 +615,7 @@ func _flee() -> void:
 	kv("WAS_HOSTILE", cp.checkpoint.state == Checkpoint.State.HOSTILE)
 	var s0 := int(WorldState.standing.imperial_remnant)
 	player.revive(60.0)                     # do not get dropped while running
-	var t := await _walk(Vector3(178, 0, 2), 40.0, true)
+	var t := await _walk(_gx(79.0, 2.0), 40.0, true)
 	kv("RAN", t >= 0.0)
 	var calm_t := await _until(func(): return cp.checkpoint.state == Checkpoint.State.IDLE, 30.0)
 	kv("GAVE_UP_AFTER_S", snappedf(calm_t, 0.01))
@@ -591,15 +629,27 @@ func _flee() -> void:
 		var all_home := true
 		for g in demo.npcs:
 			all_home = all_home and cp.brains[g].state == GuardBrain.State.PATROL
-		return all_home, 40.0)
+		# 60 s: the barracks hall's troopers chase out from 60 m inside (issue #545).
+		return all_home, 60.0)
 	kv("SEARCHED", _searched)
 	var leash := 0.0
+	var from_home := 0.0
+	var away := PackedStringArray()
 	for g in demo.npcs:
 		leash = maxf(leash, g.global_position.distance_to(cp.gate_pos))
+		var pts: Array = cp.brains[g].patrol_points
+		if not pts.is_empty():
+			from_home = maxf(from_home, g.global_position.distance_to(pts[0]))
+		if cp.brains[g].state != GuardBrain.State.PATROL:
+			away.append("%s:%s" % [g.name, GuardBrain.State.keys()[cp.brains[g].state]])
 	kv("FARTHEST_FROM_GATE_AFTER", snappedf(leash, 0.1))
+	# Issue #545: the round port's garrison posts are spread far from the gate, so
+	# the leash is measured from each guard's own home (its first patrol point).
+	kv("FARTHEST_FROM_HOME_AFTER", snappedf(from_home, 0.1))
+	kv("NOT_ON_PATROL", ",".join(away))
 	kv("BACK_ON_PATROL_S", snappedf(back, 0.01))
 	# They remember: walk back to the gate.
-	await _walk(Vector3(104, 0, 1), 40.0, false, func(): return cp.checkpoint.state == Checkpoint.State.HOSTILE)
+	await _walk(_gx(5.0, 1.0), 40.0, false, func(): return cp.checkpoint.state == Checkpoint.State.HOSTILE)
 	await _until(func(): return cp.checkpoint.state == Checkpoint.State.HOSTILE, 40.0)
 	kv("REMEMBERED", cp.checkpoint.state == Checkpoint.State.HOSTILE)
 	kv("SAID_CONTACT_ON_RETURN", cp.barks_said.count("contact") >= 2)
@@ -633,12 +683,16 @@ func _attack_friendly() -> void:
 	kv("WAVED", cp.checkpoint.state == Checkpoint.State.CLEARED)
 	# Shoot the first guard in sight (wait for one to come round on its loop).
 	_shot = null
+	# Issue #545: the nearest in sight (with thirteen in the garrison, the first in
+	# the list can be a roof rifleman across town).
 	await _until(func():
+		var best := 25.0
 		for g in demo.npcs:
-			if _player_sees(g) and g.global_position.distance_to(player.global_position) < 25.0:
+			var d: float = g.global_position.distance_to(player.global_position)
+			if d < best and _player_sees(g):
+				best = d
 				_shot = g
-				return true
-		return false, 30.0)
+		return _shot != null, 30.0)
 	var shot := _shot
 	for i in 4:
 		if shot != null and _player_sees(shot):
@@ -647,10 +701,13 @@ func _attack_friendly() -> void:
 	await _frames(20)
 	kv("HIT", shot != null and shot.hits_taken > 0)
 	kv("STATE", _state())
+	# The guard standing nearest the one shot (its partner at the gate).
 	var other: NpcBody = null
 	for g in demo.npcs:
-		if g != shot:
+		if g != shot and shot != null and (other == null or g.global_position.distance_to(shot.global_position) < other.global_position.distance_to(shot.global_position)):
 			other = g
+	kv("SHOT_AT", shot.name if shot != null else "")
+	kv("OTHER", other.name if other != null else "")
 	kv("OTHER_FIGHTING", other != null and (other.dead or cp.brains[other].state == GuardBrain.State.COMBAT))
 
 

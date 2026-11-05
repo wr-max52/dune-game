@@ -279,6 +279,9 @@ func test_the_story_plays_landing_to_free_play_with_ai_off() -> void:
 	_talk(svc, ODA, "cantina_owner")
 	for i in 3:
 		Story.on_droid_delivered()
+	assert_eq(Story.chapter(), "heist", "issue #413: the heist before the bounty")
+	assert_eq(str(_talk(svc, ODA, "cantina_owner").get("job", "")), "j_heist")
+	Story.event("heist_paid")                  # the fence paid (test_heists plays it through)
 	assert_eq(Story.chapter(), "bounty")
 	_talk(svc, SKRUGS, "skrugs")
 	assert_eq(str(_talk(svc, ODA, "cantina_owner").get("job", "")), "j_bounty")

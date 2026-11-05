@@ -66,7 +66,12 @@ func _run() -> void:
 	out("GUARDS_ALL_NAMED", all_named)
 	var ranks: Array = WorldState.names.engine.lists.get("remnant_rank", [])
 	var ranked := true
-	for n in g:
+	# The garrison's troopers; the general and his guard have authored names (issue #545).
+	var troopers := PackedStringArray()
+	for npc in demo.npcs:
+		if not str(npc.post_id).begins_with("general"):
+			troopers.append(npc.display_name)
+	for n in troopers:
 		var ok := false
 		for r in ranks:
 			ok = ok or n.begins_with(str(r) + " ")

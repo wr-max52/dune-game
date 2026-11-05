@@ -42,24 +42,37 @@ func _town() -> TownLayout:
 # ------------------------------------------------------------------ data
 
 func test_every_local_has_a_locals_profile() -> void:
+	# Issue #545: the round port's locals are of three kinds: walkers on a loop,
+	# keepers behind a stall, and those who stand or sit at a spot facing
+	# something (bar and club patrons, the band, dock workers).
 	var cc := CoreContent.new()
 	cc.load_from()
+	var t := _town()
 	var walkers := 0
 	var keepers := 0
-	for m in _town().markers():
+	var standing := 0
+	for m in t.markers():
 		if str(m.get("role", "")) != "ambient" or not m.has("soldier"):
-			continue            # a live local; bar patrons are set dressing, not soldiers
+			continue
 		var p: Dictionary = cc.get_soldier(str(m.get("soldier", "")))
 		assert_false(p.is_empty(), "%s names a soldier profile" % m.id)
 		assert_eq(str(p.get("faction", "")), "locals", "%s is a local" % m.id)
-		if bool(p.get("combat", {}).get("hold_ground", false)):
-			keepers += 1
-			assert_false(m.has("patrol"), "%s keeps a stall, it does not walk" % m.id)
-		else:
+		if m.has("patrol"):
 			walkers += 1
-			assert_gte(_town().route_points_3d(str(m.get("patrol", ""))).size(), 2, "%s walks a loop" % m.id)
-	assert_eq(walkers, 5, "five locals walk the houses and the market")
-	assert_eq(keepers, 4, "three merchants and the fence")
+			assert_gte(t.route_points_3d(str(m.patrol)).size(), 2, "%s walks a loop" % m.id)
+		elif _keeper(m):
+			keepers += 1
+		else:
+			standing += 1
+			assert_true(m.has("face"), "%s stands at a spot facing something" % m.id)
+	assert_eq(walkers, 15, "the houses', the market's and the club's walkers")
+	assert_eq(keepers, 12, "eleven merchants and the fence")
+	assert_eq(standing, 17, "patrons, the band and the dock workers")
+
+
+## A stall keeper: a merchant or the fence.
+func _keeper(m: Dictionary) -> bool:
+	return str(m.get("soldier", "")) in ["local_merchant", "local_fence"]
 
 
 func test_every_vendor_has_a_keeper() -> void:
@@ -73,36 +86,38 @@ func test_every_vendor_has_a_keeper() -> void:
 
 
 func test_stalls_face_each_other() -> void:
-	# Each keeper stands between a back panel and a counter, and looks across the
-	# counter into the one aisle both rows open onto.
+	# Each keeper stands between a back panel and a counter and looks across the
+	# counter. Issue #545: the round market's stalls face along x or z, so "in
+	# front" is along each keeper's own facing.
 	var t := _town()
-	var aisle_z := []
+	var keepers := 0
 	for m in t.markers():
-		if not (m.has("face") and m.has("soldier")):
-			continue            # stall keepers only (bar patrons face the cantina owner)
+		if not (m.has("face") and _keeper(m)):
+			continue
+		keepers += 1
 		var p := t.marker_pos(str(m.id))
 		var face := Vector3(float(m.face[0]), float(m.face[1]), float(m.face[2]))
-		aisle_z.append(face.z)
+		var along_x := absf(face.x - p.x) > absf(face.z - p.z)
+		var ahead := signf((face.x - p.x) if along_x else (face.z - p.z))
 		var counter := false
 		var back := false
 		for b in t.boxes():
-			if str(b.zone) != "market" or p.x < float(b.min[0]) or p.x > float(b.max[0]):
+			if str(b.get("zone", "")) != "market":
 				continue
-			var bz := (float(b.min[2]) + float(b.max[2])) * 0.5
-			if str(b.kind) == "cover" and signf(bz - p.z) == signf(face.z - p.z) and absf(bz - p.z) < 2.5:
+			var lo := float(b.min[2 if along_x else 0]) - 0.5
+			var hi := float(b.max[2 if along_x else 0]) + 0.5
+			var side := p.z if along_x else p.x
+			if side < lo or side > hi:
+				continue
+			var c := (float(b.min[0 if along_x else 2]) + float(b.max[0 if along_x else 2])) * 0.5
+			var d := c - (p.x if along_x else p.z)
+			if str(b.kind) == "cover" and signf(d) == ahead and absf(d) < 2.5:
 				counter = true
-			if str(b.kind) == "solid" and signf(bz - p.z) == -signf(face.z - p.z) and absf(bz - p.z) < 2.5:
+			if str(b.kind) == "solid" and signf(d) == -ahead and absf(d) < 2.5:
 				back = true
-		assert_true(counter, "%s has a counter toward the aisle" % m.id)
+		assert_true(counter, "%s has a counter in front" % m.id)
 		assert_true(back, "%s has a back panel behind" % m.id)
-	assert_eq(aisle_z.size(), 4)
-	for z in aisle_z:
-		assert_eq(z, aisle_z[0], "one shared aisle")
-	var north := 0
-	for m in t.markers():
-		if m.has("face") and m.has("soldier"):
-			north += 1 if float(m.pos[2]) > float(m.face[2]) else 0
-	assert_true(north > 0 and north < 4, "keepers on both sides of the aisle")
+	assert_eq(keepers, 12, "every keeper checked")
 
 
 # ------------------------------------------------------------------ trace
@@ -114,11 +129,13 @@ func test_trace_ran_clean() -> void:
 
 
 func test_locals_go_about_their_day() -> void:
-	assert_eq(int(_f("STROLL_LOCALS")), 9)
-	assert_eq(int(_f("STROLL_GARRISON")), 5, "the garrison is still just the troopers")
-	assert_eq(int(_f("STROLL_WALKED")), 5, "every walker walked its loop")
+	assert_eq(int(_f("STROLL_LOCALS")), 41)
+	assert_eq(int(_f("STROLL_MERCHANTS")), 12, "eleven merchants and the fence")
+	assert_eq(int(_f("STROLL_GARRISON_LOCALS")), 0, "the garrison is still just the troopers")
+	assert_eq(int(_f("STROLL_WALKED")), int(_f("STROLL_PATROLLERS")), "every walker walked its loop")
+	assert_gte(int(_f("STROLL_PATROLLERS")), 5)
 	assert_true(_b("STROLL_MERCHANTS_STAYED"), "merchants mind their stalls")
-	assert_true(_b("STROLL_MERCHANTS_FACE_AISLE"), "merchants face the aisle")
+	assert_true(_b("STROLL_MERCHANTS_FACE_COUNTERS"), "merchants face across their counters")
 	assert_eq(_s("STROLL_ALARM"), "CALM", "walking through the market starts nothing")
 	assert_true(_b("STROLL_TRADER_OPEN"))
 

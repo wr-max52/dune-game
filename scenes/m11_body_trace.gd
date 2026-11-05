@@ -134,16 +134,24 @@ func _run() -> void:
 	out("FPV_ARMS_VISIBLE", fpv_meshes.size() > 4 and kit.avatar._fpv.visible and kit_arms_hidden)
 
 	# ---- third person camera never ends up inside a wall
+	# Issue #545: the pit's wall from the town's own bowl (the round port's is 38 m
+	# out), backed onto at 45 degrees, clear of the ramps on the x axis.
 	rig.set_first_person(false)
-	place(Vector3(16.6, -6, 0), -PI * 0.5)      # back to the pit's east wall
+	var bowl: Dictionary = demo.town.get_box("pit_bowl")
+	var pit_c := Vector3((float(bowl.min[0]) + float(bowl.max[0])) * 0.5, -6.0, (float(bowl.min[2]) + float(bowl.max[2])) * 0.5)
+	var pit_r := (float(bowl.max[0]) - float(bowl.min[0])) * 0.5
+	var out_dir := Vector3(0.7071, 0, 0.7071)
+	place(pit_c + out_dir * (pit_r - 0.9), atan2(-out_dir.x, -out_dir.z))      # back to the wall
 	await frames(30)
 	var cam: Camera3D = rig.camera()
-	out("CAM_X_NEAR_WALL", snappedf(cam.global_position.x, 0.01))
-	out("CAM_INSIDE_PIT", cam.global_position.x < 17.5)
+	var cam_r := Vector2(cam.global_position.x - pit_c.x, cam.global_position.z - pit_c.z).length()
+	out("CAM_X_NEAR_WALL", snappedf(cam_r, 0.01))
+	out("CAM_INSIDE_PIT", cam_r < pit_r)
 
-	# ---- swap spam: 1,3,1,2,3 in five frames -> ends on the sword, cleanly
+	# ---- swap spam: 1,8,1,2,8 in five frames -> ends on the sword, cleanly
+	# (371db33 moved the sword to key 8; 3 is the sniper rifle now)
 	place(Vector3(6, -6, 12), PI)
-	for s in [1, 3, 1, 2, 3]:
+	for s in [1, 8, 1, 2, 8]:
 		w.holder.request_slot(s)
 		await frames(1)
 	await frames(40)
@@ -161,7 +169,7 @@ func _run() -> void:
 
 	# ---- pistol at a range target
 	var t2: Node3D = demo.training_range.targets[1]
-	place(Vector3(-6, -6, 12.5), -PI * 0.5)
+	place(t2.global_position + Vector3(8.0, 0, 8.5), -PI * 0.5)     # issue #545: from beside it, a clear line
 	rig.set_first_person(true)
 	aim_at(t2.global_position + Vector3(0, 1.45, 0))
 	w.holder.request("pistol_blaster")
@@ -252,7 +260,7 @@ func _run() -> void:
 
 	# ---- shots in the street are noticed
 	var remnant_before := int(WorldState.standing.imperial_remnant)
-	place(Vector3(-30, 0, 0), PI * 0.5)
+	place(Vector3(pit_c.x - pit_r - 12.0, 0, pit_c.z), PI * 0.5)     # on the street west of the pit (issue #545)
 	w.holder.request("pistol_blaster")
 	await frames(30)
 	w.press_fire()

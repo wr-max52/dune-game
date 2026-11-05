@@ -27,6 +27,7 @@ func _initialize() -> void:
 	WorldState.reset()
 	demo = load("res://scenes/town_demo.gd").new()
 	demo.npc_brains = false   # M15: guards hold their posts; this trace is about something else
+	demo.with_npcs = false    # issue #545: the bar patrons stand on the cantina route
 	demo.use_look = false              # greybox: the collider is the same
 	get_root().add_child(demo)
 	_run()
@@ -99,7 +100,7 @@ func _run() -> void:
 
 	# ---- up the ramp and out of the gate (the town's own route points)
 	var route: Array = demo.town.route_points_3d("cantina_to_gate")
-	place(demo.town.marker_pos("cantina_door"))
+	place(route[0])          # issue #545: the route starts at the bar, past the round cantina's tables
 	await frames(5)
 	var ok := true
 	for pt in route:
@@ -120,7 +121,12 @@ func _run() -> void:
 	var rec0 := terrain.recenters
 	var lowest := INF
 	var highest := -INF
-	var f_out := await walk_to(Vector3(FAR_X, 0, 40.0), 1.0, 9000, true)
+	# Issue #545: out along z = -100, clear of the droid merchant's post (310, 0, 12)
+	# that stands on the old line at z = 40.
+	var lane := await walk_to(Vector3(220.0, 0, -100.0), 1.0, 3000, true)
+	var f_out := await walk_to(Vector3(FAR_X, 0, -100.0), 1.0, 9000, true)
+	if lane >= 0 and f_out >= 0:
+		f_out += lane
 	out("REACHED_FAR", f_out >= 0)
 	var far: Vector3 = player.global_position
 	out("FAR_X", snappedf(far.x, 0.1))

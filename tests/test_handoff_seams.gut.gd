@@ -26,11 +26,13 @@ func _tree(n: int) -> Node:
 func test_reaper_frees_a_scene_over_frames_leaves_first() -> void:
 	var scene := _tree(400)
 	var ref: WeakRef = weakref(scene)
+	# One node a frame at most, from the start: proves it spreads. Issue #545: set
+	# after two frames, a fast machine had freed all 400 inside the 2 ms budget.
+	var reaper := SceneReaper._lib()
+	reaper.budget_ms = 0.0
 	SceneReaper.reap(scene)
 	await wait_physics_frames(2)
-	var reaper := get_tree().root.get_node_or_null("SceneReaper") as SceneReaper
-	assert_not_null(reaper, "one reaper under the root")
-	reaper.budget_ms = 0.0     # one node a frame at most: proves it spreads
+	assert_eq(get_tree().root.get_node_or_null("SceneReaper"), reaper, "one reaper under the root")
 	var before := reaper.freed
 	await wait_process_frames(3)
 	assert_true(ref.get_ref() != null, "not all in one go")
@@ -86,12 +88,15 @@ func test_ambient_eases_to_the_plain_preset_in_space() -> void:
 	for id in look.presets:
 		look.presets[id] = TownDemoMerge.merge(look.presets[id], { "ambient": { "energy": plain * 0.5 } })
 	look.apply()
+	# The player's own settings (Indirect light, Low graphics' fill cut, saved in
+	# user://) scale every ambient: this machine's must not decide the test (#545).
+	var f := look.indirect_level() * (float(look.low_cfg().get("ambient", 1.0)) if look.cut("fill") else 1.0)
 	look.set_ambient_energy_scale(1.6)
-	assert_almost_eq(look.env.ambient_light_energy, plain * 0.5 * 1.6, 0.0001, "down here: its own")
+	assert_almost_eq(look.env.ambient_light_energy, plain * 0.5 * 1.6 * f, 0.0001, "down here: its own")
 	look.set_space_level(1.0)
-	assert_almost_eq(look.env.ambient_light_energy, plain, 0.0001, "in space: the plain preset's")
+	assert_almost_eq(look.env.ambient_light_energy, plain * f, 0.0001, "in space: the plain preset's")
 	look.set_space_level(0.5)
-	assert_almost_eq(look.env.ambient_light_energy, lerpf(plain * 0.8, plain, 0.5), 0.0001)
+	assert_almost_eq(look.env.ambient_light_energy, lerpf(plain * 0.8, plain, 0.5) * f, 0.0001)
 
 
 class TownDemoMerge:

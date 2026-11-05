@@ -330,12 +330,17 @@ func test_terrain_is_flat_inside_the_port_and_drops_to_the_basin() -> void:
 
 func test_every_archetype_builds_with_a_full_skeleton() -> void:
 	var kit := CharacterKit.new(LookMaterials.new())
-	assert_eq(kit.archetypes().size(), 8, "issue #45 added cantina_owner_station (a variant of cantina_owner)")
+	assert_gte(kit.archetypes().size(), 8, "the first eight and every one added since (content/look/characters.json)")
+	assert_true(kit.archetypes().has("cantina_owner_station"), "issue #45 added cantina_owner_station (a variant of cantina_owner)")
 	for a in kit.archetypes():
 		var c := kit.build(a)
 		var joints: Dictionary = c.get_meta("joints")
 		for j in ["pelvis", "chest", "head", "l_wrist", "r_wrist", "l_ankle", "r_ankle"]:
 			assert_true(joints.has(j), "%s has joint %s" % [a, j])
+		# A kit surface with no material errors on free under the headless dummy
+		# renderer (not the game's): let go of the meshes first (issue #545).
+		for mi in c.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).mesh = null
 		c.free()
 
 
@@ -359,14 +364,16 @@ func test_ik_puts_both_hands_on_the_rifle() -> void:
 	trooper.free()
 
 
-func test_duelist_holds_a_yellow_energy_sword_by_default() -> void:
+func test_duelist_holds_the_energy_blade_by_default() -> void:
 	var kit := CharacterKit.new(LookMaterials.new())
 	var duelist := kit.build("duelist")
 	var sword: Node3D = duelist.get_meta("weapon")
 	assert_eq(sword.name, "EnergySword")
 	var light: OmniLight3D = sword.get_node("Blade/BladeLight")
-	var c := light.light_color
-	assert_true(c.r > 0.9 and c.g > 0.7 and c.b < 0.4, "default blade is yellow, got %s" % c)
+	# The hero's blade and the duelist's are one design (CharacterKit.make_energy_sword):
+	# its colour is the energy blade's, from content/core/weapons/energy_blade.json.
+	assert_true(light.light_color.is_equal_approx(Color.html(kit.blade_cfg.get("blade_color", "#3aa0ff"))),
+		"the energy blade's colour, got %s" % light.light_color)
 	var grips: Dictionary = sword.get_meta("grips")
 	assert_lt(_hand_error(kit, duelist, "r", kit._rel(duelist, sword) * (grips["r"] as Vector3)), 0.02, "two-handed grip")
 	assert_lt(_hand_error(kit, duelist, "l", kit._rel(duelist, sword) * (grips["l"] as Vector3)), 0.02, "two-handed grip")

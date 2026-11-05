@@ -143,11 +143,12 @@ func test_the_whole_story_in_order() -> void:
 	oda = Story.beat("cantina_owner")
 	assert_eq(str(oda.job), "j_bounty")
 	var outposts := []
+	var span: Array = Story.bounty_cfg().pay   # main.json bounty.pay (doubled in b60104e)
 	for i in 6:
 		Story.beat("cantina_owner")
 		outposts.append(str(WorldState.bounty.outpost))
 		var pay := _bounty_run()
-		assert_between(pay, 900, 1600, "a lot of money")
+		assert_between(pay, int(span[0]), int(span[1]), "a lot of money")
 		assert_true(_offers("j_smuggle_run"), "smuggling still runs")
 	for i in range(1, outposts.size()):
 		assert_ne(outposts[i], outposts[i - 1], "never the same outpost twice running")
@@ -248,7 +249,9 @@ func test_a_skip_does_not_pay_twice_for_what_was_played() -> void:
 
 # ---- data ----------------------------------------------------------------------
 
-func test_three_outposts_further_and_further_out_the_front_gate() -> void:
+func test_outposts_round_the_town_the_first_three_further_and_further_out() -> void:
+	# 94f68d8 put three outposts out the front gate; 59db83e and 871f062 ring the
+	# town with more. The first bounty goes to the nearest (WorldState._roll_bounty).
 	var world: Dictionary = content.world_for_town("port_town")
 	var town := TownLayout.new()
 	assert_true(town.load_town("port_town"))
@@ -259,7 +262,6 @@ func test_three_outposts_further_and_further_out_the_front_gate() -> void:
 		var lm: Array = world.landmarks.filter(func(l): return str(l.get("location", "")) == id)
 		assert_eq(lm.size(), 1, "%s is in the world" % id)
 		var at := Vector3(float(lm[0].at[0]), 0, float(lm[0].at[2]))
-		assert_gt(at.x, gate.x + 50.0, "%s is out the front gate" % id)
 		dists.append(at.distance_to(gate))
 		var loc: Dictionary = content.get_location(id)
 		assert_eq((loc.buildings as Array).size(), 1, "one building")
@@ -267,11 +269,13 @@ func test_three_outposts_further_and_further_out_the_front_gate() -> void:
 		assert_true(content.ships.has(str(loc.ship)))
 		for p in ["guard_a", "guard_b", "guard_c", "target", "ship", "patrol"]:
 			assert_true(loc.points.has(p), "%s has %s" % [id, p])
-		looks[JSON.stringify([loc.buildings, loc.ship, loc.look])] = true
+		# A village outpost (871f062) is the near one's block with a ranch round it.
+		looks[JSON.stringify([loc.buildings, loc.ship, loc.look, loc.get("props", []), loc.get("village", "")])] = true
 	assert_lt(dists[0], dists[1])
 	assert_lt(dists[1], dists[2], "each further out")
+	assert_eq(dists.min(), dists[0], "the near one is the nearest")
 	assert_gt(dists[0], 100.0, "further out than Skrugs's post")
-	assert_eq(looks.size(), 3, "each a little different")
+	assert_eq(looks.size(), Story.OUTPOSTS.size(), "each a little different")
 
 
 ## Issue #76: crates, canisters and drums lie about each outpost, solid (cover),
@@ -285,7 +289,8 @@ func test_outposts_have_props_and_droid_routes() -> void:
 			assert_false((spec.routes.get(r, []) as Array).is_empty(), "%s has a %s route" % [spec.outpost, r])
 	for op in o.outposts:
 		var list: Array = o.props(op)
-		assert_gte(list.size(), 8, "%s has props lying about" % op.id)
+		# 8 when there were three outposts; the ring added since has 6 to 10.
+		assert_gte(list.size(), 6, "%s has props lying about" % op.id)
 		var body: StaticBody3D = o.get_node_or_null("Props_" + str(op.id))
 		assert_not_null(body, "and they are solid")
 		assert_eq(body.get_child_count(), list.size(), "one shape each")
@@ -341,14 +346,15 @@ func test_outposts_in_the_town_with_guards_droids_and_target() -> void:
 	await wait_physics_frames(2)
 	var o: RemnantOutposts = t.outposts
 	assert_not_null(o, "the town builds the outposts")
-	assert_eq(o.outposts.size(), 3)
-	assert_eq(o.guards.size(), 9, "three troopers each (issue #76)")
+	var n := Story.OUTPOSTS.size()
+	assert_eq(o.outposts.size(), n, "every outpost round the town")
+	assert_eq(o.guards.size(), n * 3, "three troopers each (issue #76)")
 	for g in o.guards:
 		var og: Garrison = o.garrisons.get(str(g.get_meta("outpost")))
 		assert_not_null(og, "each outpost has its own garrison")
 		assert_true(og.members.has(g), "they answer to their outpost's garrison")
 		assert_false(t.garrison.members.has(g), "not the town's: a fight out there is not the town's alarm")
-	assert_eq(o.garrisons.size(), 3)
+	assert_eq(o.garrisons.size(), n)
 	assert_true(t.garrison.handles_player, "the town's handles the player being knocked out")
 	for og in o.garrisons.values():
 		assert_false(og.handles_player)
@@ -441,10 +447,13 @@ func test_after_the_fleet_the_town_is_free_and_outposts_shoot_on_sight() -> void
 	assert_gt(town_troopers, 0)
 	Story.skip_to("fleet")
 	WorldState.on_cruiser_taken("General Test", {})
-	await wait_physics_frames(3)
+	# Issue #540: the town changes hands out of sight, looked for SLOW_HZ times a
+	# second: walk past swap_dist from every trooper post and give it a check.
+	t._player.global_position += Vector3(0, 0, 2000)
+	await wait_seconds(2.0 / TownDemo.SLOW_HZ)
 	assert_eq(t.npcs.filter(func(n): return is_instance_valid(n) and not n.has_meta("outpost")).size(), 0, "the garrison left town")
 	assert_null(t.garrison.members.filter(func(n): return is_instance_valid(n) and not n.dead).front() if not t.garrison.members.is_empty() else null, "the town's garrison is empty")
-	assert_eq(t.outposts.garrisons.size(), 3, "the outposts keep theirs")
+	assert_eq(t.outposts.garrisons.size(), Story.OUTPOSTS.size(), "the outposts keep theirs")
 	assert_false(WorldState.has_flag("gate_checkpoint_up"))
 	if t.droids != null:
 		assert_true(t.droids.remnant.all(func(u): return u.spec.has("outpost")), "the town's droids went too")
@@ -461,7 +470,7 @@ func test_a_new_town_after_the_fleet_has_no_garrison() -> void:
 	await wait_physics_frames(2)
 	assert_eq(t.npcs.filter(func(n): return not n.has_meta("outpost")).size(), 0)
 	assert_null(t.garrison, "no town garrison at all")
-	assert_eq(t.outposts.garrisons.size(), 3)
+	assert_eq(t.outposts.garrisons.size(), Story.OUTPOSTS.size())
 	assert_true(t.outposts.garrisons.values()[0].handles_player, "an outpost's handles the player being knocked out")
 
 

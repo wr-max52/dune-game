@@ -124,12 +124,12 @@ func _skrugs() -> NpcBrain:
 	return NpcBrain.new(null, SpeederPost.CARD_PATH)
 
 
-func test_skrugs_sells_and_never_offers_jobs() -> void:
+func test_skrugs_sells_and_offers_odas_jobs() -> void:
 	var b := _skrugs()
 	assert_eq(b.id(), "skrugs")
 	var rules := str(b.builder.rules_message().content)
 	assert_string_contains(rules, "offer_speeder")
-	assert_false(rules.contains("offer_job"), "no job board")
+	assert_string_contains(rules, "offer_job", "Skrugs offers jobs (#188: the same runs as Oda)")
 	assert_false(rules.contains("pour_drink"), "no drinks")
 	var persona := str(b.builder.persona_message().content)
 	assert_string_contains(persona, "100 credits")
@@ -137,12 +137,13 @@ func test_skrugs_sells_and_never_offers_jobs() -> void:
 	assert_string_contains(persona, "back gate")
 
 
-func test_skrugs_offline_still_sells_and_still_has_no_jobs() -> void:
+func test_skrugs_offline_still_sells_and_with_no_briefing_sends_you_to_the_board() -> void:
 	var b := _skrugs()
 	var buy := b.canned_reply("How much for the speeder?")
 	assert_eq(str(buy.actions[0].type), "offer_speeder")
 	var job := b.canned_reply("Got any jobs for me?")
-	assert_true((job.actions as Array).filter(func(a): return str(a.type) == "offer_job").is_empty())
+	assert_true((job.actions as Array).filter(func(a): return str(a.type) == "offer_job").is_empty(),
+		"no job in his briefing, so none is offered")
 
 
 # ---- buying at the stall -----------------------------------------------------------------

@@ -37,13 +37,29 @@ func test_chain_three_with_buffered_presses() -> void:
 	assert_eq(c.swings_started, 3)
 
 
-func test_early_press_does_not_buffer() -> void:
+func test_quick_second_click_is_the_combo() -> void:
+	# Since e224ff0 a click this early is a double click (DOUBLE_CLICK), never a
+	# buffered swipe: it plays left, right, then the heavy centre chop.
 	var c := SwordCombo.new(CFG)
 	c.attack()
 	_run(c, 0.05)
-	c.attack()        # too early: ignored
-	_run(c, 0.6)
-	assert_eq(c.swings_started, 1)
+	assert_false(c.attack(), "the swipe under way is the combo's first cut")
+	assert_eq(c.combos_started, 1)
+	var ev := _run(c, 1.6)
+	assert_eq(ev.filter(func(e): return str(e).begins_with("swing:")), ["swing:right", "swing:center"])
+	assert_eq(c.swings_started, 3)
+	assert_eq(c.mode, SwordCombo.Mode.GUARD)
+
+
+func test_third_click_in_the_combo_is_ignored() -> void:
+	var c := SwordCombo.new(CFG)
+	c.attack()
+	_run(c, 0.05)
+	c.attack()
+	_run(c, 0.1)
+	assert_false(c.attack(), "the combo plays out")
+	_run(c, 1.6)
+	assert_eq(c.swings_started, 3)
 
 
 func test_active_window_is_mid_swing() -> void:
@@ -76,10 +92,13 @@ func test_cannot_swing_while_blocking() -> void:
 
 func test_pose_keys_are_continuous() -> void:
 	for i in SwordCombo.SWINGS.size():
+		# The heavy centre chop drops 0.64 m between two keys 0.12 of the swing apart
+		# (0.13 a step in a straight line, 0.16 on the curve); swipes stay under 0.1.
+		var limit := 0.2 if SwordCombo.SWINGS[i].heavy else 0.12
 		var prev: Dictionary = SwordCombo.sample(i, 0.0)
 		for k in range(1, 41):
 			var p := SwordCombo.sample(i, k / 40.0)
-			assert_lt((p.pos as Vector3).distance_to(prev.pos), 0.12, "swing %d step %d" % [i, k])
+			assert_lt((p.pos as Vector3).distance_to(prev.pos), limit, "swing %d step %d" % [i, k])
 			prev = p
 		assert_almost_eq((SwordCombo.sample(i, 1.0).pos as Vector3).distance_to(SwordCombo.GUARD.pos), 0.0, 0.001)
 

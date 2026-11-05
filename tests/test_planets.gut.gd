@@ -324,7 +324,7 @@ func test_asteroid_boulders_are_globe_wide_deterministic_and_clear_of_station() 
 	var south := 1.0
 	for rock in a.boulders:
 		var pos: Vector3 = rock.xform.origin
-		var dir := pos.normalized()
+		var dir := (pos - sphere.center).normalized()   # the ball sits under the port, not round the origin
 		north = maxf(north, dir.y)
 		south = minf(south, dir.y)
 		assert_false(sphere.site_rect.grow(14.0).has_point(sphere.world_to_map(pos)),

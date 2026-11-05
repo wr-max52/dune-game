@@ -95,7 +95,7 @@ func _run() -> void:
 	var stall := _vendor("food_stall")
 	out("FOOD_STALL", not stall.is_empty())
 	for i in 3:
-		demo.gear._trade(stall.cfg)
+		demo.gear.buy_item("food", stall.cfg)    # the stall's menu buy (665d725: _trade opens the menu)
 	out("FOOD_BOUGHT", WorldState.inventory.count("food"))
 	out("CREDITS_AFTER_FOOD", WorldState.credits)
 	# ---------------------------------------------------------------- the friendly pack
@@ -125,7 +125,7 @@ func _run() -> void:
 	out("UNSEEN_STILL_FRIENDLY", bool(friendly.rec.friendly))
 	# ---------------------------------------------------------------- sell the quartz
 	var credits0 := WorldState.credits
-	demo.gear._trade(stall.cfg)
+	demo.gear.sell_item("quartz", stall.cfg)     # the stall's menu sell (665d725)
 	out("QUARTZ_SOLD_FOR", WorldState.credits - credits0)
 	# ---------------------------------------------------------------- a sand pig
 	var pig = nat.pigs[0]

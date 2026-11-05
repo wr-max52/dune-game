@@ -32,7 +32,10 @@ func _b(key: String) -> bool:
 func test_trace_ran_clean() -> void:
 	assert_true(FileAccess.file_exists(TRACE), "trace exists (run scenes/npc_trace.gd)")
 	assert_eq(str(kv.get("FAILED", "")), "false", "no FAIL lines")
-	assert_eq(int(_f("NPCS")), 5, "the whole garrison spawned (gate x2, tower, yard x2)")
+	# Issue #545: every trooper post in the town (the round port has ten), and the
+	# general's squad when the story has him in town.
+	assert_gte(int(_f("NPCS")), int(_f("TROOPER_POSTS")), "the whole garrison spawned")
+	assert_gt(int(_f("TROOPER_POSTS")), 0)
 
 
 func test_navmesh_bakes_off_the_main_thread() -> void:

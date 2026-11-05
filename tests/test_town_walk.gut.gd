@@ -72,8 +72,10 @@ func test_every_waypoint_reached() -> void:
 
 func test_built_everything() -> void:
 	var s := _trace_summary()
-	assert_eq(int(s.get("boxes", 0)), 181)
-	assert_eq(int(s.get("markers", 0)), 19)  # art pass 2: + three patrons at the bar
+	# Issue #545: the round port (3a6017d) with its landmarks' boxes and the barracks
+	# interior; the square port built 181 and 19.
+	assert_eq(int(s.get("boxes", 0)), 509)
+	assert_eq(int(s.get("markers", 0)), 57)
 
 
 func test_frame_budget() -> void:

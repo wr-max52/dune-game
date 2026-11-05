@@ -25,7 +25,8 @@ func test_trace_exists() -> void:
 func test_the_station_hangs_in_the_ports_sky() -> void:
 	assert_eq(t.get("HOME_PLANET"), "port_desert")
 	assert_eq(t.get("HOME_TOWN"), "port_town", "the port is still the hand-built town")
-	assert_eq(t.get("HOME_NEIGHBOURS"), "grit_station")
+	# Since the lava moon and the ringed giant (#272, 317d163) home has three neighbours.
+	assert_true(str(t.get("HOME_NEIGHBOURS")).split(",").has("grit_station"))
 	assert_ne(str(t.get("STATION_NAME_IN_PORT_SKY", "")), "")
 	assert_between(float(t.get("STATION_DISTANCE_FROM_PAD_KM", 0)), 8.0, 20.0, "a nearby hop")
 
@@ -49,14 +50,15 @@ func test_a_size_1_asteroid_town() -> void:
 	_true("STATION_TERRAIN", "its rock is a PlanetTerrain all the way round")
 	assert_eq(t.get("STATION_STYLE"), "metallic")
 	_true("STATION_CANTINA")
-	assert_eq(int(t.get("STATION_GUARDS", 0)), 1, "a single Remnant guard")
+	# da2fd02 gave the moon a barracks dome and homes: its own garrison beside the size-1 core.
+	assert_gte(int(t.get("STATION_GUARDS", 0)), 1, "a Remnant guard at least")
 	_true("GUARD_AT_CANTINA_DOOR")
 	_true("MERCHANT_IN_FRONT", "the merchant is in front of the cantina")
 	_true("STATION_STAGE", "the cantina has a stage")
 	assert_gte(int(t.get("STATION_ROAMERS", 0)), 3, "locals walking the street")
 	assert_gte(int(t.get("STATION_LOCALS", 0)), 4, "and the merchant")
 	_true("STATION_PIT_OUTSIDE", "the landing pit is outside the walls")
-	assert_eq(int(t.get("STATION_BUILDINGS", 9)), 0, "nothing else")
+	assert_eq(int(t.get("STATION_CORE_BUILDINGS", 9)), 0, "nothing else in the size-1 town (the domes' huts are the domes')")
 	assert_ne(str(t.get("STATION_NAME", "")), "")
 	assert_eq(t.get("STATION_NAME"), t.get("STATION_NAME_IN_PORT_SKY"), "one name everywhere")
 	assert_ne(str(t.get("STATION_TOWN_NAME", "")), "")
@@ -78,7 +80,7 @@ func test_you_arrive_flying_the_same_ship() -> void:
 	assert_eq(t.get("ARRIVED_SHIP"), t.get("PORT_SHIP"))
 	assert_between(int(t.get("ARRIVED_ALTITUDE", 0)), 2300, 2800, "where the handoff happened, in its space")
 	assert_eq(int(t.get("STATION_SPACE_ALTITUDE", 0)), 700, "a small rock: space starts low")
-	assert_eq(t.get("STATION_NEIGHBOURS"), "port_desert", "and home is in its sky")
+	assert_true(str(t.get("STATION_NEIGHBOURS")).split(",").has("port_desert"), "and home is in its sky")
 
 
 func test_z_lands_you_in_the_pit() -> void:
